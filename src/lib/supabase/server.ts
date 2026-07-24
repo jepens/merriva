@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/env";
+import type { Database } from "@/types/database";
 
 /**
  * Supabase client untuk Server Components / Server Actions / Route Handlers.
@@ -10,7 +11,7 @@ import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/env";
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
-  return createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+  return createServerClient<Database>(getSupabaseUrl(), getSupabaseAnonKey(), {
     cookies: {
       getAll() {
         return cookieStore.getAll();
