@@ -1,0 +1,12 @@
+# Normalisasi EOL: semua file teks disimpan LF di repo (konsisten lintas OS).
+* text=auto eol=lf
+
+# Aset biner
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary

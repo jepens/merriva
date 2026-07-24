@@ -1,34 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Merriva
 
-## Getting Started
+Platform SaaS **undangan digital + digital guestbook** untuk pasar Indonesia — merriva.id.
+Fase saat ini: **MVP Fase 1 — undangan digital self-service**. Status: **Milestone M0 (Fondasi)**.
 
-First, run the development server:
+Dokumen sumber kebenaran ada di [`SPEC.md`](SPEC.md) dan folder [`docs/`](docs/). Instruksi agen coding: [`CLAUDE.md`](CLAUDE.md).
+
+## Stack
+
+Next.js 16 (App Router) · TypeScript strict · Tailwind CSS v4 + shadcn/ui · Supabase cloud (Postgres + RLS + Auth + Storage) · media via `lib/storage/` (driver `supabase` | `r2`) · pembayaran Pakasir · email Resend · anti-spam Turnstile · Sentry · deploy Dockerfile (Next standalone) → Easypanel di VPS.
+
+## Prasyarat
+
+- Node.js **22+**
+- pnpm **11+** (`npm install -g pnpm` atau via corepack)
+- Docker (untuk Supabase lokal & verifikasi image)
+
+## Setup lokal
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local   # lalu isi nilainya (lihat docs/ARCHITECTURE.md §8)
+pnpm dev                     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Perintah
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm dev                  # dev server
+pnpm build && pnpm start  # build & run production lokal
+pnpm lint                 # ESLint + Prettier check
+pnpm format               # Prettier --write
+pnpm typecheck            # tsc --noEmit
+pnpm test                 # unit test (Vitest)
+pnpm test:e2e             # Playwright (butuh env; jalankan `pnpm exec playwright install` sekali)
+pnpm supabase <cmd>       # Supabase CLI (mis. `pnpm supabase db push`)
+```
 
-## Learn More
+## Database (Supabase)
 
-To learn more about Next.js, take a look at the following resources:
+Skema dikelola lewat migrasi di [`supabase/migrations/`](supabase/migrations/).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm supabase start                       # Postgres lokal + terapkan migrasi + seed (butuh Docker)
+pnpm supabase migration new <nama>        # migrasi baru
+pnpm supabase link --project-ref <ref>    # tautkan ke project staging/prod
+pnpm supabase db push                     # terapkan migrasi ke project yang ter-link
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Struktur
 
-## Deploy on Vercel
+Lihat [`SPEC.md` §7](SPEC.md). Ringkas: `src/app/` (route groups + `api/*`), `src/themes/` (satu folder per tema + `registry.ts`), `src/components/`, `src/lib/` (supabase, storage, payment, validation, copy), `src/server/` (actions/services/guards), `supabase/` (migrations + seed), `tests/` (unit + e2e).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Lihat [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (Easypanel + DNS + env) dan [`docs/RUNBOOK.md`](docs/RUNBOOK.md) (pemulihan). Health check: `GET /api/health`.

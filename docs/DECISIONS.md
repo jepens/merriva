@@ -41,6 +41,21 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 ## #9 — 2026-07-24 · RSVP & ucapan digabung satu form; kiriman ulang tamu bertoken = update
 **Alasan:** UX tamu lebih sederhana (satu langkah); mencegah duplikasi data pax; ucapan tampil dari `rsvps.message`.
 
+## #10 — 2026-07-24 · Fondasi teknis M0: Next.js 16, pnpm, Tailwind v4, Vitest+Playwright
+**Keputusan:** Next.js 16 (App Router) + React 19 + TypeScript strict + Tailwind CSS v4 + shadcn/ui (setup manual, base `neutral`); package manager **pnpm 11** (`packageManager` dikunci); testing Vitest (unit) + Playwright (E2E); ESLint flat config + Prettier.
+**Alasan:** SPEC meminta "versi stabil terbaru". `create-next-app@latest` (Jul 2026) menghasilkan **Next 16 + React 19 + Tailwind v4** — bukan Next 15 seperti asumsi awal — dan diadopsi apa adanya. shadcn di-setup manual (components.json + token `globals.css`) agar deterministik di lingkungan non-interaktif.
+**Konsekuensi:** `node:22-alpine` di Dockerfile selaras Node 22. Build script dependency dibatasi via `pnpm-workspace.yaml` `allowBuilds` (hanya `supabase` & `esbuild` yang diizinkan; `sharp`/`@sentry/cli`/`unrs-resolver` ditolak).
+
+## #11 — 2026-07-24 · Fondasi DB & RLS pada migrasi v1
+**Keputusan:** RLS aktif di 12 tabel; `service_role` (server) bypass RLS tanpa policy; admin dibedakan lewat `public.is_admin()` (SECURITY DEFINER, anti-rekursi ke RLS `profiles`), kepemilikan tabel anak lewat `public.owns_invitation()`. Trigger `handle_new_user` membuat baris `profiles` otomatis saat register; trigger `set_updated_at` untuk `invitations` & `rsvps`. Enum Postgres untuk himpunan literal tetap; `packages.code` tetap `text`. Seed `packages` ditaruh **di dalam migrasi** (idempoten `on conflict do nothing`), bukan `seed.sql`.
+**Alasan:** pola standar Supabase; mencegah chicken-egg RLS pada `profiles`; `packages` adalah config esensial yang wajib ada di semua environment (ikut `supabase db push`, sementara `seed.sql` hanya jalan pada `db reset` lokal).
+**Ditolak:** text+CHECK untuk semua status (dipilih enum demi integritas); seed packages hanya di `seed.sql` (tidak terbawa ke staging/prod).
+**Konsekuensi:** fungsi `language sql` yang mereferensikan tabel harus didefinisikan **setelah** tabelnya (body di-parse-check saat CREATE).
+
+## #12 — 2026-07-24 · Health check `/api/health` = probe reachability Supabase
+**Keputusan:** `/api/health` mengembalikan `{status, db, uptime, timestamp}`; `db` diperoleh dari probe HTTP ringan ke endpoint REST Supabase (schema-agnostic, timeout 2,5 dtk). HTTP **200** bila `up`/`not_configured`, **503** bila `down`. Dipakai Docker `HEALTHCHECK` + UptimeRobot.
+**Alasan:** cek reachability tanpa mengikat skema tertentu; `not_configured` → 200 agar container tetap dianggap hidup di lingkungan tanpa env DB (build/CI).
+
 ---
 
 ## Template entri baru
