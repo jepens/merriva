@@ -1,0 +1,8 @@
+# Kontrol build script dependency (pnpm 11).
+# Hanya paket dengan nilai `true` yang boleh menjalankan postinstall/build script.
+allowBuilds:
+  "@sentry/cli": false # tidak upload sourcemap tanpa SENTRY_AUTH_TOKEN
+  sharp: false # tidak ada image optimization on-the-fly (lihat SPEC §6.4)
+  unrs-resolver: false # punya fallback JS untuk resolusi import
+  supabase: true # CLI perlu mengunduh binary platform
+  esbuild: true # dipakai Vitest/Vite

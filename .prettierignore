@@ -1,0 +1,18 @@
+# generated / vendor
+node_modules
+.next
+out
+build
+coverage
+playwright-report
+test-results
+blob-report
+pnpm-lock.yaml
+next-env.d.ts
+
+# dokumen proyek (dikelola manual, di luar format Prettier)
+*.md
+
+# supabase (SQL migrasi & seed dikelola manual)
+supabase/migrations
+supabase/seed.sql
