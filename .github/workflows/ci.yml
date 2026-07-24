@@ -39,3 +39,8 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      # Build tanpa NEXT_PUBLIC_SENTRY_DSN → path config polos ikut teruji,
+      # menangkap regresi build standalone sebelum deploy Easypanel.
+      - name: Build
+        run: pnpm build

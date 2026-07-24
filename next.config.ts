@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   // Image kecil untuk Docker/Easypanel — runtime hanya `.next/standalone`.
   output: "standalone",
   reactStrictMode: true,
+  images: {
+    // Tanpa optimisasi on-the-fly (SPEC §6.4): foto sudah dikompres jadi 2 varian
+    // WebP di klien & disajikan dari domain sendiri; `sharp` sengaja tidak dibundel.
+    unoptimized: true,
+  },
 };
 
 /**

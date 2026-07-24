@@ -51,3 +51,6 @@ yarn-error.log*
 
 # sentry
 .sentryclirc
+
+# konfigurasi MCP lokal (berisi token/secret) — jangan pernah commit
+.mcp.json

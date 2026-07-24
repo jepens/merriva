@@ -290,6 +290,35 @@ create index orders_status_created_idx on public.orders (status, created_at); --
 create index admin_logs_created_idx on public.admin_logs (created_at desc);
 
 -- -----------------------------------------------------------------------------
+-- 5b. Grants peran Supabase (privilege dasar objek — RLS membatasi BARIS)
+--     RLS tidak berguna tanpa privilege objek. Eksplisit + default-privileges
+--     agar PORTABLE (Supabase lokal & hosted) tanpa bergantung konfigurasi
+--     default-privileges environment.
+-- -----------------------------------------------------------------------------
+grant usage on schema public to anon, authenticated, service_role;
+
+-- service_role (server): akses penuh (bypass RLS + tetap butuh privilege objek).
+grant all on all tables in schema public to service_role;
+grant execute on all functions in schema public to service_role;
+
+-- authenticated (klien login): DML dasar; RLS + hardening kolom (§6b) yang membatasi.
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant execute on all functions in schema public to anon, authenticated;
+
+-- anon (publik): hanya SELECT katalog; RLS membatasi ke is_active. Tak pernah menulis.
+grant select on public.themes, public.packages, public.songs to anon;
+
+-- Default privileges untuk objek yang dibuat migrasi berikutnya (dibuat oleh postgres).
+alter default privileges in schema public
+  grant all on tables to service_role;
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to authenticated;
+alter default privileges in schema public
+  grant select on tables to anon;
+alter default privileges in schema public
+  grant execute on functions to anon, authenticated, service_role;
+
+-- -----------------------------------------------------------------------------
 -- 6. Row Level Security (RLS matrix — DATA-MODEL §3)
 -- -----------------------------------------------------------------------------
 alter table public.profiles enable row level security;
@@ -458,6 +487,35 @@ create policy admin_logs_select on public.admin_logs
 create policy admin_logs_insert on public.admin_logs
   for insert to authenticated
   with check (public.is_admin());
+
+-- -----------------------------------------------------------------------------
+-- 6b. Hardening privilege KOLOM (defense-in-depth di atas RLS)
+--
+--     RLS membatasi BARIS mana yang boleh diubah, tapi TIDAK membatasi KOLOM.
+--     Di Postgres, grant UPDATE tabel-level menutupi semua kolom (column-level
+--     REVOKE diabaikan bila grant tabel-level masih ada). Karena itu kita cabut
+--     UPDATE tabel-level dari anon/authenticated lalu grant ULANG hanya kolom
+--     yang boleh ditulis client. Kolom sensitif hanya ditulis service_role
+--     (server action) — sesuai prinsip "semua mutasi lewat server".
+-- -----------------------------------------------------------------------------
+
+-- profiles: client hanya boleh ubah full_name & phone.
+-- Kolom `role` TIDAK diberikan → cegah eskalasi privilege menjadi admin
+-- (role di-set manual via SQL/service_role, tanpa UI — DATA-MODEL §1).
+revoke update on public.profiles from anon, authenticated;
+grant update (full_name, phone) on public.profiles to authenticated;
+
+-- invitations: client ubah konten/tema/slug/kategori/jadwal.
+-- Kolom lifecycle (status, active_until, package_id, published_at) TIDAK diberikan
+-- → cegah self-activation tanpa pembayaran; transisi status hanya via service_role.
+revoke update on public.invitations from anon, authenticated;
+grant update (theme_id, slug, category, content, settings, event_date)
+  on public.invitations to authenticated;
+
+-- rsvps: owner hanya boleh moderasi (is_hidden, is_approved).
+-- Data kiriman tamu (guest_name, attendance, pax, message) TIDAK bisa ditulis ulang.
+revoke update on public.rsvps from anon, authenticated;
+grant update (is_hidden, is_approved) on public.rsvps to authenticated;
 
 -- -----------------------------------------------------------------------------
 -- 7. Seed config esensial: packages (harus ada di semua environment)
