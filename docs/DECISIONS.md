@@ -56,6 +56,11 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Keputusan:** `/api/health` mengembalikan `{status, db, uptime, timestamp}`; `db` diperoleh dari probe HTTP ringan ke endpoint REST Supabase (schema-agnostic, timeout 2,5 dtk). HTTP **200** bila `up`/`not_configured`, **503** bila `down`. Dipakai Docker `HEALTHCHECK` + UptimeRobot.
 **Alasan:** cek reachability tanpa mengikat skema tertentu; `not_configured` → 200 agar container tetap dianggap hidup di lingkungan tanpa env DB (build/CI).
 
+## #13 — 2026-07-24 · Model privilege DB eksplisit + hardening kolom (pasca-audit adversarial)
+**Keputusan:** Migrasi v1 memberi GRANT privilege objek EKSPLISIT ke peran Supabase (service_role `ALL`; authenticated `SELECT/INSERT/UPDATE/DELETE`; anon `SELECT` katalog saja) plus `ALTER DEFAULT PRIVILEGES` untuk objek migrasi berikutnya — tidak bergantung pada konfigurasi default-privileges environment. Di ATAS RLS, kolom sensitif dikunci di level privilege: client tidak bisa `UPDATE` `profiles.role` (anti-eskalasi admin), `invitations.status/active_until/package_id/published_at` (anti-aktivasi tanpa bayar), maupun kolom data `rsvps` selain `is_hidden/is_approved`. Kolom terkunci hanya ditulis service_role (server action).
+**Alasan:** temuan audit adversarial M0 — (a) tanpa GRANT eksplisit, RLS jadi moot & seluruh query DB gagal `permission denied` saat deploy (RLS hanya jalan bila peran punya privilege objek); (b) RLS membatasi BARIS, bukan KOLOM, sehingga policy "UPDATE baris sendiri" membuka eskalasi privilege & bypass pembayaran. Semua diverifikasi fungsional di Postgres lokal (`has_column_privilege` + uji akses per-peran).
+**Konsekuensi:** setiap migrasi baru dengan tabel/kolom sensitif WAJIB menyertakan grant + (bila perlu) hardening kolom; mutasi kolom terkunci HARUS lewat server action service_role.
+
 ---
 
 ## Template entri baru
