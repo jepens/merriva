@@ -79,6 +79,12 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Ditolak:** menaruh jadwal/galeri di `content` (melanggar normalisasi); menyimpan URL vendor (boundary §11/§6.4); kolom TZ baru di DB (pakai settings JSONB).
 **Konsekuensi:** menambah field konten = ubah skema kategori terkait; bila berdampak render → ubah `InvitationData` = **"tanya dulu"**. Draft awal (`emptyContent`) sengaja belum lolos validasi penuh (field wajib kosong) — validasi penuh saat preview/aktivasi. Livestream & embed YouTube = Premium (tier ditegakkan server, M1.6). **Review faithfulness (3 lensa) — nihil field SPEC yang hilang**; diperbaiki 2 temuan low: `storagePathSchema` kini bentuk-positif (tolak `//host`, `\`, traversal `..`), dan default `envelope` jadi factory (cegah aliasing array antar-parse).
 
+## #17 — 2026-07-25 · Editor form: react-hook-form + zodResolver (hybrid Server Actions)
+**Keputusan:** Editor multi-step (M1.3) memakai **react-hook-form** (`^7.82`) + **@hookform/resolvers** (`^5.4`, `zodResolver`) untuk state form client, validasi per-field yang **me-reuse skema Zod M1.2**, dan list dinamis via **`useFieldArray`** (sesi acara, rekening, e-wallet, entri cerita). Persistensi tetap lewat **Server Actions** (autosave + aktivasi) dengan validasi ulang Zod di server (pola wajib SPEC §9). Form auth (M1.1) **tetap** `useActionState` native (sederhana, tanpa list dinamis).
+**Alasan:** riset context7 — dokumentasi RHF menunjuk `useFieldArray` untuk list dinamis & pola wizard; dokumentasi Next.js hanya menampilkan `useActionState` untuk form sederhana satu langkah tanpa array dinamis. Editor undangan = permukaan paling form-berat (banyak list berulang + autosave) → RHF meminimalkan boilerplate & re-render, satu sumber skema Zod dipakai client + server. Owner mendelegasikan keputusan ke best-practice hasil riset.
+**Ditolak:** native `useActionState` untuk editor (boilerplate besar untuk array dinamis + autosave); Formik (perawatan kurang, re-render lebih berat).
+**Konsekuensi:** dua pola form di codebase — konvensi: **RHF hanya untuk form dengan list dinamis / multi-step**, native `useActionState` untuk form sederhana. Primitif form shadcn (Form/FormField/FormControl) ditulis lean tanpa Radix bila memungkinkan. +2 dependency klien (~15kb gz).
+
 ---
 
 ## Template entri baru
