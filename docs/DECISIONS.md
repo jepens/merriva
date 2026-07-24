@@ -61,6 +61,11 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Alasan:** temuan audit adversarial M0 — (a) tanpa GRANT eksplisit, RLS jadi moot & seluruh query DB gagal `permission denied` saat deploy (RLS hanya jalan bila peran punya privilege objek); (b) RLS membatasi BARIS, bukan KOLOM, sehingga policy "UPDATE baris sendiri" membuka eskalasi privilege & bypass pembayaran. Semua diverifikasi fungsional di Postgres lokal (`has_column_privilege` + uji akses per-peran).
 **Konsekuensi:** setiap migrasi baru dengan tabel/kolom sensitif WAJIB menyertakan grant + (bila perlu) hardening kolom; mutasi kolom terkunci HARUS lewat server action service_role.
 
+## #14 — 2026-07-24 · Hardening advisor + migrasi remote via Supabase MCP
+**Keputusan:** Migrasi v2 (`harden_functions`) memindah fungsi helper RLS (`is_admin`, `owns_invitation`) ke skema `private` (tak diekspos PostgREST) dan mencabut `EXECUTE` fungsi trigger (`set_updated_at`, `handle_new_user`) dari peran API + mengunci `search_path` `set_updated_at`. Project remote staging (`ophmeifbjsffxklbeqla`) dimigrasikan lewat **Supabase MCP** (`apply_migration`); versi remote `20260724182301_init_schema` & `20260724182817_harden_functions`, dan nama file lokal disamakan agar `supabase db push` konsisten.
+**Alasan:** menutup 7 lint advisor Supabase tanpa memutus policy/trigger — `ALTER FUNCTION ... SET SCHEMA` menjaga referensi via OID sehingga policy tetap valid. Diverifikasi: `get_advisors` bersih + `anon` tetap bisa membaca `packages` (policy memanggil `private.is_admin()`).
+**Konsekuensi:** helper RLS dipanggil sebagai `private.*` di policy mendatang; peran perlu `USAGE` pada skema `private`. MCP `apply_migration` memakai timestamp versinya sendiri — samakan nama file lokal dengan versi remote saat memakai keduanya.
+
 ---
 
 ## Template entri baru
