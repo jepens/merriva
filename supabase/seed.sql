@@ -1,0 +1,11 @@
+-- =============================================================================
+-- Merriva — seed lokal (dijalankan pada `supabase db reset` / `supabase start`).
+--
+-- Catatan:
+--  * `packages` (basic/premium) di-seed lewat MIGRASI, bukan di sini, agar ikut
+--    terpasang ke staging/production via `supabase db push`.
+--  * Seed berikut menyusul saat asetnya lahir:
+--      - themes  : tema pertama `eternal-rose` + demo (M1)
+--      - songs   : ±20 lagu royalty-free (M1/M4, path diisi setelah file diunggah)
+--      - admin   : set role='admin' via SQL setelah akun register (manual)
+-- =============================================================================
