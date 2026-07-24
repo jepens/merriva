@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 import { getSupabaseServiceRoleKey, getSupabaseUrl } from "@/lib/env";
+import type { Database } from "@/types/database";
 
 /**
  * Supabase client service-role (BYPASS RLS). HANYA untuk server:
@@ -10,7 +11,7 @@ import { getSupabaseServiceRoleKey, getSupabaseUrl } from "@/lib/env";
  * JANGAN pernah diekspos ke browser. Lihat SPEC §5 & boundaries.
  */
 export function createSupabaseAdminClient() {
-  return createClient(getSupabaseUrl(), getSupabaseServiceRoleKey(), {
+  return createClient<Database>(getSupabaseUrl(), getSupabaseServiceRoleKey(), {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
