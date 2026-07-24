@@ -1,0 +1,43 @@
+import { z } from "zod";
+
+/**
+ * Input satu sesi acara → baris `invitation_events` (SPEC §4.4 step 3;
+ * DATA-MODEL §1, ternormalisasi karena menjadi fondasi check-in Fase 2).
+ *
+ * `startAt`/`endAt` diterima sebagai string waktu-lokal (mis. `2026-08-15T10:00`);
+ * konversi ke UTC memakai `settings.timezone` dilakukan di server action (M1.3).
+ * Validasi di sini hanya memastikan waktu bisa di-parse & urutan mulai ≤ selesai.
+ */
+
+const localDateTime = z
+  .string()
+  .trim()
+  .min(1, "Tanggal & jam wajib diisi")
+  .refine((v) => !Number.isNaN(Date.parse(v)), "Tanggal & jam tidak valid");
+
+const optionalUrl = z.preprocess(
+  (v) => (v === "" || v == null ? undefined : v),
+  z.url("Tautan tidak valid").max(500).optional(),
+);
+
+export const eventInputSchema = z
+  .object({
+    name: z.string().trim().min(1, "Nama sesi wajib diisi").max(80),
+    startAt: localDateTime,
+    endAt: z.preprocess(
+      (v) => (v === "" || v == null ? undefined : v),
+      localDateTime.optional(),
+    ),
+    venueName: z.string().trim().max(160).optional(),
+    address: z.string().trim().max(400).optional(),
+    mapsUrl: optionalUrl,
+  })
+  .refine((e) => !e.endAt || Date.parse(e.endAt) >= Date.parse(e.startAt), {
+    message: "Waktu selesai tidak boleh sebelum waktu mulai",
+    path: ["endAt"],
+  });
+
+/** Daftar sesi acara (minimal 1 saat aktivasi; kosong diperbolehkan saat draft). */
+export const eventListSchema = z.array(eventInputSchema).max(10);
+
+export type EventInput = z.infer<typeof eventInputSchema>;

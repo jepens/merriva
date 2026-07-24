@@ -1,13 +1,14 @@
 import type { ComponentType } from "react";
 
+import type { InvitationData } from "@/types/invitation";
+
 /**
  * Kontrak sistem tema (SPEC §7.1 / ARCHITECTURE §5).
- * Komponen tema menerima props hasil parse Zod dari `invitations.content` dan
- * DILARANG mengambil data sendiri. Tipe `InvitationData` final ditetapkan di M1.
- *
- * Mengubah kontrak props tema = keputusan "tanya dulu" (berdampak semua tema).
+ * Komponen tema menerima props hasil parse Zod dari `invitations.content`
+ * (tipe `InvitationData` di `@/types/invitation`) dan DILARANG mengambil data
+ * sendiri. Mengubah kontrak props = keputusan "tanya dulu" (berdampak semua tema).
  */
-export type InvitationData = unknown; // TODO(M1): tipe hasil parse Zod per kategori.
+export type { InvitationData };
 
 export interface ThemeComponentProps {
   data: InvitationData;
