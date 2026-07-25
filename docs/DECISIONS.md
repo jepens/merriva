@@ -85,6 +85,11 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Ditolak:** native `useActionState` untuk editor (boilerplate besar untuk array dinamis + autosave); Formik (perawatan kurang, re-render lebih berat).
 **Konsekuensi:** dua pola form di codebase — konvensi: **RHF hanya untuk form dengan list dinamis / multi-step**, native `useActionState` untuk form sederhana. Primitif form shadcn (Form/FormField/FormControl) ditulis lean tanpa Radix bila memungkinkan. +2 dependency klien (~15kb gz).
 
+## #18 — 2026-07-25 · M1.3a: tutup bypass INSERT invitations + alur buat draft
+**Keputusan:** Migrasi **v4** menutup lubang bypass pembayaran yang ditemukan saat M1.3: `authenticated` bisa `INSERT` kolom `status/active_until/package_id` → self-activation tanpa bayar (migrasi v1 §6b hanya mengeraskan UPDATE). Diperbaiki: cabut INSERT tabel-level + grant ULANG hanya kolom aman (`user_id, theme_id, slug, category, content, settings, event_date`) — analog hardening UPDATE. Migrasi **v3** seed metadata tema pertama (`eternal-rose`, wedding/standard). Alur buat draft: `createInvitationAction` (auth → validasi Zod → cek tema mendukung kategori → INSERT draft `status` default `draft` → redirect editor); slug awal sementara `draft-…` (pemilik menetapkan slug asli di editor). Halaman pilih kategori+tema pakai **react-hook-form** (pemakaian RHF pertama).
+**Alasan:** melengkapi model privilege #13 yang melewatkan INSERT; `status`/lifecycle hanya boleh ditulis service_role (pembayaran). Diverifikasi di remote: `has_column_privilege('authenticated','public.invitations','status','INSERT')` = **false**, service_role = **true**; theme seeded.
+**Konsekuensi:** membuat undangan hanya untuk kategori dengan tema aktif (kini wedding/`eternal-rose`; corporate/family menunggu tema tambahan M4). Slug asli + form per-langkah + autosave = M1.3b–d. Setiap tabel baru dengan kolom sensitif WAJIB mengeraskan INSERT **dan** UPDATE.
+
 ---
 
 ## Template entri baru
