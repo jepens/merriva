@@ -1,4 +1,4 @@
-import type { TimezoneId } from "@/lib/validation/content";
+import { TIMEZONES, type TimezoneId } from "@/lib/validation/content";
 
 /**
  * Konversi waktu acara Indonesia. Timestamp disimpan UTC (CLAUDE.md), input/tampil
@@ -37,4 +37,76 @@ export function utcToLocal(utc: string, tz: TimezoneId): string {
   const ms = Date.parse(utc);
   if (Number.isNaN(ms)) return "";
   return new Date(ms + OFFSET_MINUTES[tz] * 60000).toISOString().slice(0, 16);
+}
+
+const HARI = [
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+] as const;
+const BULAN = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+] as const;
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+export interface FormattedEvent {
+  weekday: string; // "Sabtu"
+  date: string; // "15 Agustus 2026"
+  time: string; // "10.00"
+  tzLabel: string; // "WIB"
+  full: string; // "Sabtu, 15 Agustus 2026 · 10.00 WIB"
+}
+
+/**
+ * UTC ISO → tampilan Indonesia di zona `tz`. Memanfaatkan offset tetap: geser
+ * lalu baca komponen UTC = wall-clock zona (tanpa Intl/library). `null` bila tak valid.
+ */
+export function formatEventDateTime(
+  utc: string,
+  tz: TimezoneId,
+): FormattedEvent | null {
+  const ms = Date.parse(utc);
+  if (Number.isNaN(ms)) return null;
+  const d = new Date(ms + OFFSET_MINUTES[tz] * 60000);
+  const weekday = HARI[d.getUTCDay()];
+  const date = `${d.getUTCDate()} ${BULAN[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  const time = `${pad(d.getUTCHours())}.${pad(d.getUTCMinutes())}`;
+  const tzLabel = TIMEZONES[tz];
+  return {
+    weekday,
+    date,
+    time,
+    tzLabel,
+    full: `${weekday}, ${date} · ${time} ${tzLabel}`,
+  };
+}
+
+/** Tanggal-saja `YYYY-MM-DD` → { weekday, date } Indonesia. `null` bila tak valid. */
+export function formatDateOnly(
+  date: string,
+): { weekday: string; date: string } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const day = Number(m[3]);
+  const d = new Date(Date.UTC(y, mo - 1, day));
+  if (Number.isNaN(d.getTime()) || d.getUTCMonth() !== mo - 1) return null;
+  return { weekday: HARI[d.getUTCDay()], date: `${day} ${BULAN[mo - 1]} ${y}` };
 }

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { localToUtc, utcToLocal } from "@/lib/datetime";
+import {
+  formatDateOnly,
+  formatEventDateTime,
+  localToUtc,
+  utcToLocal,
+} from "@/lib/datetime";
 
 describe("localToUtc", () => {
   it("WIB 10:00 → 03:00 UTC", () => {
@@ -38,5 +43,43 @@ describe("utcToLocal", () => {
 
   it("tak valid → ''", () => {
     expect(utcToLocal("nope", "Asia/Jakarta")).toBe("");
+  });
+});
+
+describe("formatEventDateTime", () => {
+  it("UTC → tampilan Indonesia per zona", () => {
+    const wib = formatEventDateTime("2026-11-08T02:00:00.000Z", "Asia/Jakarta");
+    expect(wib).toEqual({
+      weekday: "Minggu",
+      date: "8 November 2026",
+      time: "09.00",
+      tzLabel: "WIB",
+      full: "Minggu, 8 November 2026 · 09.00 WIB",
+    });
+    expect(
+      formatEventDateTime("2026-11-08T02:00:00.000Z", "Asia/Makassar")?.time,
+    ).toBe("10.00");
+    expect(
+      formatEventDateTime("2026-11-08T02:00:00.000Z", "Asia/Jayapura")?.time,
+    ).toBe("11.00");
+  });
+
+  it("tak valid → null", () => {
+    expect(formatEventDateTime("nope", "Asia/Jakarta")).toBeNull();
+  });
+});
+
+describe("formatDateOnly", () => {
+  it("tanggal → weekday + tanggal Indonesia", () => {
+    expect(formatDateOnly("2026-11-08")).toEqual({
+      weekday: "Minggu",
+      date: "8 November 2026",
+    });
+  });
+
+  it("tanggal tak valid → null", () => {
+    expect(formatDateOnly("bukan")).toBeNull();
+    expect(formatDateOnly("2026-02-30")).toBeNull();
+    expect(formatDateOnly("2026-13-01")).toBeNull();
   });
 });
