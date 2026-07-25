@@ -25,3 +25,11 @@ export function draftSlug(): string {
 export function randomToken(len = 14): string {
   return randomChars(len);
 }
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** True bila string berbentuk UUID (guard sebelum query `.eq('id', …)`). */
+export function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}

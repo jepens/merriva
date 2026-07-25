@@ -90,6 +90,11 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Alasan:** melengkapi model privilege #13 yang melewatkan INSERT; `status`/lifecycle hanya boleh ditulis service_role (pembayaran). Diverifikasi di remote: `has_column_privilege('authenticated','public.invitations','status','INSERT')` = **false**, service_role = **true**; theme seeded.
 **Konsekuensi:** membuat undangan hanya untuk kategori dengan tema aktif (kini wedding/`eternal-rose`; corporate/family menunggu tema tambahan M4). Slug asli + form per-langkah + autosave = M1.3b–d. Setiap tabel baru dengan kolom sensitif WAJIB mengeraskan INSERT **dan** UPDATE.
 
+## #19 — 2026-07-25 · Editor M1.3b: arsitektur draft + autosave
+**Keputusan:** Editor **per-kategori konkret** (mulai `WeddingEditor`), bukan satu editor generik di atas union `content` — menghindari friksi tipe `register` RHF pada union. **Autosave berbasis perubahan** (`useDraftAutosave`: subscribe RHF → debounce 800ms → `saveInvitationDraftAction`). Persistensi draft memakai **skema draft longgar** (`draftContentSchema`: field wajib direlaksasi menjadi opsional, TAPI batas panjang, format `storage_path`/URL/YouTube, dan batas jumlah array TETAP ditegakkan); validasi **strict penuh** hanya saat preview/aktivasi. Server menyimpan **hasil parse** (unknown key ter-strip Zod), bukan input mentah client. Primitif `Input`/`Textarea` diubah ke `ComponentProps<...>` agar `ref` dari `register` diteruskan (React 19, tanpa `forwardRef`). Slug tetap sementara `draft-…` (edit slug + cek ketersediaan real-time = M1.3d).
+**Alasan:** union `content` menyulitkan path `register`; editor per-kategori memberi tipe konkret & UX terarah. Draft schema memungkinkan simpan bertahap tanpa mengorbankan keamanan/ukuran JSONB. Menyimpan hasil parse mencegah injeksi key liar & membatasi payload.
+**Konsekuensi:** tiap kategori punya editor sendiri (corporate/family menyusul saat temanya ada, M4). Langkah 2–7 wedding (mempelai, jadwal, galeri, cerita, amplop, pengaturan) = M1.3c; autosave sudah aktif untuk field yang tersedia. Warning ESLint `react-hooks/incompatible-library` (React Compiler tak memoize RHF) diketahui & tidak menggagalkan lint.
+
 ---
 
 ## Template entri baru
