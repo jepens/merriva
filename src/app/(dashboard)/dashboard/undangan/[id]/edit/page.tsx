@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
+import { utcToLocal } from "@/lib/datetime";
 import { isUuid } from "@/lib/id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -47,6 +48,20 @@ export default async function EditInvitationPage({
     : DEFAULT_SETTINGS;
   const eventDate = inv.event_date ?? "";
 
+  const { data: eventRows } = await supabase
+    .from("invitation_events")
+    .select("name, start_at, end_at, venue_name, address, maps_url")
+    .eq("invitation_id", inv.id)
+    .order("sort_order", { ascending: true });
+  const events = (eventRows ?? []).map((e) => ({
+    name: e.name,
+    startAt: utcToLocal(e.start_at, settings.timezone),
+    endAt: e.end_at ? utcToLocal(e.end_at, settings.timezone) : "",
+    venueName: e.venue_name ?? "",
+    address: e.address ?? "",
+    mapsUrl: e.maps_url ?? "",
+  }));
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-xl font-semibold tracking-tight">
@@ -57,7 +72,7 @@ export default async function EditInvitationPage({
         <WeddingEditor
           invitationId={inv.id}
           slug={inv.slug}
-          defaultValues={{ eventDate, content, settings }}
+          defaultValues={{ eventDate, content, settings, events }}
         />
       ) : (
         <div className="space-y-4">

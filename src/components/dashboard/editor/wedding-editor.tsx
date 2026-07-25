@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
-import type { WeddingDraft } from "@/lib/validation/content";
+import type { EventDraft, WeddingDraft } from "@/lib/validation/content";
 
 import { CoupleStep } from "./steps/couple-step";
 import { EnvelopeStep } from "./steps/envelope-step";
 import { InfoStep } from "./steps/info-step";
+import { ScheduleStep } from "./steps/schedule-step";
 import { SettingsStep } from "./steps/settings-step";
 import { StoryStep } from "./steps/story-step";
 import type { WeddingEditorValues } from "./types";
@@ -32,6 +33,7 @@ function isStepComplete(
   key: StepKey,
   content: WeddingDraft,
   eventDate: string,
+  events: EventDraft[],
 ): boolean {
   switch (key) {
     case "info":
@@ -42,6 +44,8 @@ function isStepComplete(
       );
     case "couple":
       return Boolean(content.groom?.name && content.bride?.name);
+    case "schedule":
+      return events.some((e) => Boolean(e.startAt));
     case "story":
       return (content.story?.length ?? 0) > 0;
     case "envelope":
@@ -49,7 +53,7 @@ function isStepComplete(
     case "settings":
       return Boolean(content.greetingOpen || content.greetingClose);
     default:
-      // schedule (M1.3c-2) & gallery (M1.4) belum ada.
+      // gallery (M1.4) belum ada.
       return false;
   }
 }
@@ -106,6 +110,8 @@ export function WeddingEditor({
             <InfoStep form={form} />
           ) : currentKey === "couple" ? (
             <CoupleStep form={form} />
+          ) : currentKey === "schedule" ? (
+            <ScheduleStep form={form} />
           ) : currentKey === "story" ? (
             <StoryStep form={form} />
           ) : currentKey === "envelope" ? (
@@ -170,11 +176,17 @@ function StepNav({
 }) {
   const content = useWatch({ control, name: "content" });
   const eventDate = useWatch({ control, name: "eventDate" });
+  const events = useWatch({ control, name: "events" });
 
   return (
     <ol className="flex flex-wrap gap-2">
       {STEP_KEYS.map((key, i) => {
-        const done = isStepComplete(key, content, eventDate ?? "");
+        const done = isStepComplete(
+          key,
+          content,
+          eventDate ?? "",
+          events ?? [],
+        );
         const active = i === current;
         return (
           <li key={key}>

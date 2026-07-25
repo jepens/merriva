@@ -41,3 +41,25 @@ export const eventInputSchema = z
 export const eventListSchema = z.array(eventInputSchema).max(10);
 
 export type EventInput = z.infer<typeof eventInputSchema>;
+
+/**
+ * Skema sesi DRAFT (longgar) untuk autosave — semua field opsional & format
+ * tidak dipaksa (pengguna masih mengetik). Server hanya menyimpan sesi yang
+ * punya `startAt` valid; validasi penuh saat aktivasi memakai `eventInputSchema`.
+ * `startAt`/`endAt` = waktu-lokal (`YYYY-MM-DDTHH:mm`) di `settings.timezone`.
+ */
+export const eventDraftSchema = z.object({
+  name: z.string().trim().max(80).optional(),
+  startAt: z.string().trim().max(40).optional(),
+  endAt: z.string().trim().max(40).optional(),
+  venueName: z.string().trim().max(160).optional(),
+  address: z.string().trim().max(400).optional(),
+  mapsUrl: z.string().trim().max(500).optional(),
+});
+
+export const eventDraftListSchema = z
+  .array(eventDraftSchema)
+  .max(10)
+  .default([]);
+
+export type EventDraft = z.infer<typeof eventDraftSchema>;

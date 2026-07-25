@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { copy } from "@/lib/copy";
+import { localToUtc } from "@/lib/datetime";
 import { draftSlug, isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -88,7 +89,7 @@ export async function saveInvitationDraftAction(
   if (!parsed.success) {
     return fieldErrorState(parsed.error.flatten().fieldErrors);
   }
-  const { content, settings, eventDate } = parsed.data;
+  const { content, settings, eventDate, events } = parsed.data;
 
   const { error } = await supabase
     .from("invitations")
@@ -101,5 +102,31 @@ export async function saveInvitationDraftAction(
     .eq("user_id", user.id);
 
   if (error) return errorState(copy.common.error);
+
+  // Jadwal: konversi waktu-lokal (settings.timezone) → UTC, ganti sesi atomik
+  // via RPC (SECURITY INVOKER → RLS membatasi ke undangan sendiri).
+  const tz = settings.timezone;
+  const eventRows = events
+    .map((e, i) => {
+      const startUtc = e.startAt ? localToUtc(e.startAt, tz) : null;
+      if (!startUtc) return null;
+      return {
+        name: e.name ?? "",
+        start_at: startUtc,
+        end_at: e.endAt ? localToUtc(e.endAt, tz) : null,
+        venue_name: e.venueName ?? null,
+        address: e.address ?? null,
+        maps_url: e.mapsUrl ?? null,
+        sort_order: i,
+      };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+
+  const { error: evError } = await supabase.rpc("replace_invitation_events", {
+    inv_id: id,
+    events: toDbJson(eventRows),
+  });
+  if (evError) return errorState(copy.common.error);
+
   return { status: "success" };
 }

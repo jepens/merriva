@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { draftContentSchema, settingsSchema } from "@/lib/validation/content";
+import {
+  draftContentSchema,
+  eventDraftListSchema,
+  settingsSchema,
+} from "@/lib/validation/content";
 
 /** Input pembuatan draft undangan (SPEC Flow A: pilih kategori → pilih tema). */
 export const createInvitationSchema = z.object({
@@ -26,6 +30,7 @@ export const saveDraftSchema = z.object({
       "Tanggal tidak valid",
     )
     .optional(),
+  events: eventDraftListSchema,
 });
 
 export type SaveDraftInput = z.infer<typeof saveDraftSchema>;

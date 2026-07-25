@@ -1,4 +1,5 @@
 import type {
+  EventDraft,
   InvitationSettings,
   WeddingDraft,
 } from "@/lib/validation/content";
@@ -8,4 +9,5 @@ export type WeddingEditorValues = {
   eventDate: string;
   content: WeddingDraft;
   settings: InvitationSettings;
+  events: EventDraft[];
 };
