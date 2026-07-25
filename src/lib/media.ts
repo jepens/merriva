@@ -1,3 +1,4 @@
+import { BASIC_LIMITS, resolveLimits } from "@/lib/limits";
 import type { InvitationMediaView } from "@/types/invitation";
 
 /**
@@ -23,7 +24,7 @@ export const MEDIA_MAX_BYTES = {
 } as const;
 
 /** Batas foto paket Basic — dipakai untuk draft tanpa paket (SPEC §2). */
-export const BASIC_MAX_PHOTOS = 8;
+export const BASIC_MAX_PHOTOS = BASIC_LIMITS.maxPhotos;
 
 /** Prefix objek media satu foto (path relatif; UUID tak tertebak). */
 export function mediaPrefix(invitationId: string, mediaId: string): string {
@@ -62,10 +63,12 @@ export function toMediaView(
   };
 }
 
-/** Batas foto efektif: dari paket bila valid, jika tidak Basic. */
+/**
+ * Batas foto efektif: dari paket bila valid, jika tidak Basic. Delegasi ke
+ * `resolveLimits` (satu sumber kebenaran di `lib/limits.ts`).
+ */
 export function photoLimitFromPackage(
   limits: { max_photos?: number | null } | null | undefined,
 ): number {
-  const n = limits?.max_photos;
-  return typeof n === "number" && n > 0 ? n : BASIC_MAX_PHOTOS;
+  return resolveLimits(limits).maxPhotos;
 }
