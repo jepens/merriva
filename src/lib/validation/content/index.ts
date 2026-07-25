@@ -12,6 +12,7 @@ export * from "./shared";
 export * from "./categories";
 export * from "./settings";
 export * from "./event";
+export * from "./draft";
 
 /** Amplop kosong baru (referensi array segar tiap panggilan). */
 function freshEnvelope(): Envelope {

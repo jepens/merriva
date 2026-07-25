@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { copy } from "@/lib/copy";
-import { draftSlug } from "@/lib/id";
+import { draftSlug, isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DEFAULT_SETTINGS, emptyContent } from "@/lib/validation/content";
 import {
   createInvitationSchema,
+  saveDraftSchema,
   type CreateInvitationInput,
 } from "@/lib/validation/invitation";
 
@@ -64,4 +65,41 @@ export async function createInvitationAction(
 
   revalidatePath("/dashboard");
   redirect(`/dashboard/undangan/${inv.id}/edit`);
+}
+
+/**
+ * Autosave draft (SPEC §4.4). Pola: auth → validasi Zod longgar (draft) →
+ * UPDATE `content/settings/event_date` (RLS + grant kolom §6b membatasi ke
+ * baris sendiri; kolom lifecycle tak tersentuh). Jadwal & slug punya jalur
+ * tersendiri (M1.3c/d).
+ */
+export async function saveInvitationDraftAction(
+  id: string,
+  patch: unknown,
+): Promise<ActionState> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return errorState(copy.auth.genericAuthError);
+  if (!isUuid(id)) return errorState(copy.common.error);
+
+  const parsed = saveDraftSchema.safeParse(patch);
+  if (!parsed.success) {
+    return fieldErrorState(parsed.error.flatten().fieldErrors);
+  }
+  const { content, settings, eventDate } = parsed.data;
+
+  const { error } = await supabase
+    .from("invitations")
+    .update({
+      content: toDbJson(content),
+      settings: toDbJson(settings),
+      event_date: eventDate ? eventDate : null,
+    })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) return errorState(copy.common.error);
+  return { status: "success" };
 }

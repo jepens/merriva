@@ -105,10 +105,37 @@ export const copy = {
     title: "Edit Undangan",
     address: "Alamat undangan",
     category: "Jenis acara",
-    stepsSoon:
-      "Formulir pengisian per-langkah (info, jadwal, galeri, dst.) hadir pada tahap berikutnya.",
     backToDashboard: "Kembali ke dashboard",
     notFound: "Undangan tidak ditemukan.",
+    unsupportedCategory:
+      "Editor untuk kategori ini segera hadir. Saat ini tersedia untuk pernikahan.",
+    slugFixedNote: "Alamat undangan dapat diatur pada tahap berikutnya.",
+    stepSoon: "Bagian ini hadir pada tahap berikutnya.",
+    steps: {
+      info: "Info dasar",
+      couple: "Mempelai",
+      schedule: "Jadwal",
+      gallery: "Galeri",
+      story: "Cerita",
+      envelope: "Amplop",
+      settings: "Pengaturan",
+    },
+    fields: {
+      title: "Judul undangan",
+      titlePlaceholder: "The Wedding of …",
+      groomNickname: "Panggilan mempelai pria",
+      brideNickname: "Panggilan mempelai wanita",
+      eventDate: "Tanggal acara utama",
+    },
+    save: {
+      saving: "Menyimpan…",
+      saved: "Tersimpan",
+      error: "Gagal menyimpan",
+    },
+    nav: {
+      prev: "Sebelumnya",
+      next: "Berikutnya",
+    },
   },
 } as const;
 
