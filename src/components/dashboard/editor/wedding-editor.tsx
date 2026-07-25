@@ -9,8 +9,11 @@ import { copy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import type { EventDraft, WeddingDraft } from "@/lib/validation/content";
 
+import type { InvitationMediaView } from "@/types/invitation";
+
 import { CoupleStep } from "./steps/couple-step";
 import { EnvelopeStep } from "./steps/envelope-step";
+import { GalleryStep } from "./steps/gallery-step";
 import { InfoStep } from "./steps/info-step";
 import { ScheduleStep } from "./steps/schedule-step";
 import { SettingsStep } from "./steps/settings-step";
@@ -34,6 +37,7 @@ function isStepComplete(
   content: WeddingDraft,
   eventDate: string,
   events: EventDraft[],
+  mediaCount: number,
 ): boolean {
   switch (key) {
     case "info":
@@ -46,6 +50,8 @@ function isStepComplete(
       return Boolean(content.groom?.name && content.bride?.name);
     case "schedule":
       return events.some((e) => Boolean(e.startAt));
+    case "gallery":
+      return mediaCount > 0;
     case "story":
       return (content.story?.length ?? 0) > 0;
     case "envelope":
@@ -53,7 +59,6 @@ function isStepComplete(
     case "settings":
       return Boolean(content.greetingOpen || content.greetingClose);
     default:
-      // gallery (M1.4) belum ada.
       return false;
   }
 }
@@ -80,15 +85,20 @@ export function WeddingEditor({
   invitationId,
   slug,
   defaultValues,
+  initialMedia,
+  maxPhotos,
 }: {
   invitationId: string;
   slug: string;
   defaultValues: WeddingEditorValues;
+  initialMedia: InvitationMediaView[];
+  maxPhotos: number;
 }) {
   const form = useForm<WeddingEditorValues>({
     defaultValues: withSectionDefaults(defaultValues),
   });
   const [step, setStep] = useState(0);
+  const [media, setMedia] = useState<InvitationMediaView[]>(initialMedia);
   const saveStatus = useDraftAutosave(form, invitationId);
   const currentKey = STEP_KEYS[step];
 
@@ -102,7 +112,12 @@ export function WeddingEditor({
         <SaveIndicator status={saveStatus} />
       </div>
 
-      <StepNav control={form.control} current={step} onSelect={setStep} />
+      <StepNav
+        control={form.control}
+        current={step}
+        onSelect={setStep}
+        mediaCount={media.length}
+      />
 
       <Card>
         <CardContent className="py-6">
@@ -112,6 +127,13 @@ export function WeddingEditor({
             <CoupleStep form={form} />
           ) : currentKey === "schedule" ? (
             <ScheduleStep form={form} />
+          ) : currentKey === "gallery" ? (
+            <GalleryStep
+              invitationId={invitationId}
+              maxPhotos={maxPhotos}
+              media={media}
+              setMedia={setMedia}
+            />
           ) : currentKey === "story" ? (
             <StoryStep form={form} />
           ) : currentKey === "envelope" ? (
@@ -169,10 +191,12 @@ function StepNav({
   control,
   current,
   onSelect,
+  mediaCount,
 }: {
   control: Control<WeddingEditorValues>;
   current: number;
   onSelect: (index: number) => void;
+  mediaCount: number;
 }) {
   const content = useWatch({ control, name: "content" });
   const eventDate = useWatch({ control, name: "eventDate" });
@@ -186,6 +210,7 @@ function StepNav({
           content,
           eventDate ?? "",
           events ?? [],
+          mediaCount,
         );
         const active = i === current;
         return (

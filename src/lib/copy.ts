@@ -187,6 +187,19 @@ export const copy = {
       story: "Cerita / love story",
       envelope: "Amplop digital",
     },
+    gallery: {
+      add: "Tambah foto",
+      addHint:
+        "JPG, PNG, atau WebP dari galeri/kamera. Otomatis dikompres di perangkat.",
+      empty: "Belum ada foto. Tambahkan momen terbaik kalian.",
+      photosLabel: "foto",
+      remove: "Hapus foto",
+      working: "Menyiapkan & mengunggah…",
+      limitReached: "Jumlah foto sudah mencapai batas paket.",
+      invalidFile: "Berkas harus berupa gambar (JPG, PNG, atau WebP).",
+      tooLarge: "Foto terlalu besar setelah dikompres. Coba foto lain.",
+      error: "Gagal mengunggah foto. Coba lagi.",
+    },
     schedule: {
       tzHint: "Waktu mengikuti zona yang dipilih di langkah Pengaturan.",
       empty: "Belum ada sesi. Tambahkan akad, resepsi, dan sesi lainnya.",

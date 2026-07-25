@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
     // WebP di klien & disajikan dari domain sendiri; `sharp` sengaja tidak dibundel.
     unoptimized: true,
   },
+  experimental: {
+    // Upload galeri (M1.4) mengirim 2 varian WebP satu foto per aksi lewat
+    // Server Action. Default 1MB terlalu ketat untuk varian 1600px berkualitas;
+    // 3MB memberi ruang aman (storage tetap membatasi 2MB/berkas).
+    serverActions: { bodySizeLimit: "3mb" },
+  },
 };
 
 /**

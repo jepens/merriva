@@ -1,5 +1,5 @@
 /**
- * Tipe database — DIGENERATE dari skema Supabase (migrasi v1+v2).
+ * Tipe database — DIGENERATE dari skema Supabase (migrasi v1+).
  * Regenerate setelah migrasi baru:
  *   pnpm supabase gen types typescript --project-id <ref> > src/types/database.ts
  *   # atau via Supabase MCP: generate_typescript_types
@@ -554,6 +554,31 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      insert_gallery_media: {
+        Args: {
+          h: number;
+          inv_id: string;
+          media_id: string;
+          path: string;
+          w: number;
+        };
+        Returns: {
+          created_at: string;
+          height: number | null;
+          id: string;
+          invitation_id: string;
+          sort_order: number;
+          storage_path: string;
+          type: Database["public"]["Enums"]["media_type"];
+          width: number | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "media";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       replace_invitation_events: {
         Args: { events: Json; inv_id: string };
         Returns: undefined;

@@ -7,6 +7,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { utcToLocal } from "@/lib/datetime";
 import { isUuid } from "@/lib/id";
+import { photoLimitFromPackage, toMediaView } from "@/lib/media";
+import { getStorage } from "@/lib/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   DEFAULT_SETTINGS,
@@ -31,7 +33,9 @@ export default async function EditInvitationPage({
   // RLS membatasi ke undangan milik pemilik; baris orang lain → tidak ditemukan.
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, slug, category, status, content, settings, event_date")
+    .select(
+      "id, slug, category, status, content, settings, event_date, package_id",
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -62,6 +66,29 @@ export default async function EditInvitationPage({
     mapsUrl: e.maps_url ?? "",
   }));
 
+  // Galeri: baris `media` → view (URL domain sendiri) + batas foto paket.
+  const { data: mediaRows } = await supabase
+    .from("media")
+    .select("id, storage_path, width, height")
+    .eq("invitation_id", inv.id)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  const storage = getStorage();
+  const media = (mediaRows ?? []).map((r) =>
+    toMediaView(r, (p) => storage.getPublicUrl(p)),
+  );
+
+  let pkgLimits: { max_photos?: number | null } | null = null;
+  if (inv.package_id) {
+    const { data: pkg } = await supabase
+      .from("packages")
+      .select("limits")
+      .eq("id", inv.package_id)
+      .maybeSingle();
+    pkgLimits = (pkg?.limits as { max_photos?: number | null } | null) ?? null;
+  }
+  const maxPhotos = photoLimitFromPackage(pkgLimits);
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-xl font-semibold tracking-tight">
@@ -73,6 +100,8 @@ export default async function EditInvitationPage({
           invitationId={inv.id}
           slug={inv.slug}
           defaultValues={{ eventDate, content, settings, events }}
+          initialMedia={media}
+          maxPhotos={maxPhotos}
         />
       ) : (
         <div className="space-y-4">
