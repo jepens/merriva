@@ -1,40 +1,31 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { CreateInvitationForm } from "@/components/dashboard/create-invitation-form";
 import { copy } from "@/lib/copy";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser } from "@/server/guards/auth";
 
-export const metadata: Metadata = { title: copy.dashboard.builderSoonTitle };
+export const metadata: Metadata = { title: copy.create.title };
 
-/**
- * Placeholder pembuat undangan. Pembuat multi-langkah 3 kategori diimplementasikan
- * pada increment M1.3 (form + autosave + slug checker).
- */
 export default async function NewInvitationPage() {
   await requireUser();
+  const supabase = await createSupabaseServerClient();
+
+  const { data: themes } = await supabase
+    .from("themes")
+    .select("slug, name, categories, tier")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
 
   return (
-    <Card className="mx-auto max-w-lg">
-      <CardHeader>
-        <CardTitle>{copy.dashboard.builderSoonTitle}</CardTitle>
-        <CardDescription>{copy.dashboard.builderSoon}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Link
-          href="/dashboard"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          {copy.dashboard.backToList}
-        </Link>
-      </CardContent>
-    </Card>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">
+          {copy.create.title}
+        </h1>
+        <p className="text-muted-foreground text-sm">{copy.create.subtitle}</p>
+      </div>
+      <CreateInvitationForm themes={themes ?? []} />
+    </div>
   );
 }

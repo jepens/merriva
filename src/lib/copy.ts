@@ -80,6 +80,36 @@ export const copy = {
       "Pembuat undangan multi-langkah sedang disiapkan dan hadir pada tahap M1 berikutnya.",
     backToList: "Kembali ke daftar undangan",
   },
+  create: {
+    title: "Buat Undangan Baru",
+    subtitle: "Pilih jenis acara dan tema. Undangan gratis dibuat & dipreview.",
+    chooseCategory: "1. Pilih jenis acara",
+    chooseTheme: "2. Pilih tema",
+    category: {
+      wedding: "Pernikahan",
+      corporate: "Corporate",
+      family: "Keluarga",
+    },
+    categoryDesc: {
+      wedding: "Akad & resepsi, mempelai, love story.",
+      corporate: "Gathering, seminar, rundown acara.",
+      family: "Khitanan, ulang tahun, syukuran.",
+    },
+    noThemeForCategory:
+      "Tema untuk kategori ini segera hadir. Coba kategori lain.",
+    themeUnavailable: "Tema tidak tersedia untuk kategori ini.",
+    submit: "Buat & Lanjut Isi",
+    creating: "Membuat…",
+  },
+  editor: {
+    title: "Edit Undangan",
+    address: "Alamat undangan",
+    category: "Jenis acara",
+    stepsSoon:
+      "Formulir pengisian per-langkah (info, jadwal, galeri, dst.) hadir pada tahap berikutnya.",
+    backToDashboard: "Kembali ke dashboard",
+    notFound: "Undangan tidak ditemukan.",
+  },
 } as const;
 
 export type Copy = typeof copy;
