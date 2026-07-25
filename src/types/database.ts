@@ -554,7 +554,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      replace_invitation_events: {
+        Args: { events: Json; inv_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       gift_note_type: "transfer" | "gift";

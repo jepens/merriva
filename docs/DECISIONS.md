@@ -95,6 +95,11 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Alasan:** union `content` menyulitkan path `register`; editor per-kategori memberi tipe konkret & UX terarah. Draft schema memungkinkan simpan bertahap tanpa mengorbankan keamanan/ukuran JSONB. Menyimpan hasil parse mencegah injeksi key liar & membatasi payload.
 **Konsekuensi:** tiap kategori punya editor sendiri (corporate/family menyusul saat temanya ada, M4). Langkah 2–7 wedding (mempelai, jadwal, galeri, cerita, amplop, pengaturan) = M1.3c; autosave sudah aktif untuk field yang tersedia. Warning ESLint `react-hooks/incompatible-library` (React Compiler tak memoize RHF) diketahui & tidak menggagalkan lint.
 
+## #20 — 2026-07-25 · M1.3c-2 Jadwal: events ternormalisasi + RPC atomik + konversi timezone
+**Keputusan:** Langkah "Jadwal" mengisi `invitation_events` (ternormalisasi — fondasi check-in Fase 2). Autosave mengganti seluruh sesi lewat RPC **`replace_invitation_events(inv_id, events jsonb)`** yang **SECURITY INVOKER** (RLS `owns_invitation` membatasi ke undangan sendiri) dan melakukan delete+insert dalam satu fungsi → **atomik & bebas race** (dua autosave beruntun tak menggandakan baris). Waktu diinput sebagai waktu-lokal zona acara (`settings.timezone`), dikonversi ke **UTC** di server (`src/lib/datetime.ts`, offset tetap Indonesia tanpa DST: WIB+7/WITA+8/WIT+9) sebelum disimpan; dibaca balik UTC→lokal saat load. Skema sesi draft (`eventDraftSchema`) longgar; hanya sesi dengan `startAt` valid yang dipersist (nama default "Acara").
+**Alasan:** RPC atomik mencegah duplikasi akibat delete+insert non-atomik saat autosave (riset context7: pola `supabase.rpc` + SECURITY INVOKER agar RLS berlaku ke pemanggil & bebas advisor `security_definer`). Konversi timezone manual memadai karena Indonesia tanpa DST. Diverifikasi: `get_advisors(security)` = 0 lint.
+**Konsekuensi:** tabel anak lain yang di-autosave (mis. galeri M1.4) sebaiknya memakai pola RPC serupa. RPC baru → regenerasi `src/types/database.ts` (blok `Functions`). Antara update `invitations` dan RPC events tidak atomik lintas-keduanya (self-healing lewat autosave penuh berikutnya).
+
 ---
 
 ## Template entri baru
