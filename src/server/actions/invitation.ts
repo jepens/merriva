@@ -7,6 +7,8 @@ import { copy } from "@/lib/copy";
 import { localToUtc } from "@/lib/datetime";
 import { draftSlug, isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
+import { slugSchema } from "@/lib/slug";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DEFAULT_SETTINGS, emptyContent } from "@/lib/validation/content";
 import {
@@ -129,4 +131,125 @@ export async function saveInvitationDraftAction(
   if (evError) return errorState(copy.common.error);
 
   return { status: "success" };
+}
+
+/** Hasil pengecekan ketersediaan slug (M1.3d). */
+export type SlugCheckResult = {
+  status: "available" | "taken" | "invalid" | "error";
+  message?: string;
+};
+
+/** Hasil penyimpanan slug (M1.3d). */
+export type SlugSaveResult =
+  | { status: "success"; slug: string }
+  | {
+      status: "error";
+      reason?: "taken" | "not_draft" | "invalid";
+      message?: string;
+    };
+
+/**
+ * Cek ketersediaan slug real-time (SPEC §4 Flow A langkah 5). Pola: auth →
+ * validasi format (slugSchema) → pastikan undangan milik pemanggil (RLS) → cek
+ * keunikan LINTAS-pemilik via admin client (RLS SELECT owner-only tak dapat
+ * melihat slug pemilik lain). Hanya membaca kolom `id` → tak membocorkan data;
+ * slug memang alamat publik. Guard keunikan sebenarnya adalah constraint UNIQUE
+ * saat simpan — ini murni untuk UX. TODO(M2): rate-limit endpoint ini.
+ */
+export async function checkSlugAvailabilityAction(
+  invitationId: string,
+  rawSlug: string,
+): Promise<SlugCheckResult> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "error", message: copy.auth.genericAuthError };
+  if (!isUuid(invitationId)) return { status: "error" };
+
+  const parsed = slugSchema.safeParse(rawSlug);
+  if (!parsed.success) {
+    return { status: "invalid", message: parsed.error.issues[0]?.message };
+  }
+  const slug = parsed.data;
+
+  // Kepemilikan (RLS membatasi ke baris sendiri): id asing → tolak. Juga
+  // memastikan `invitationId` sah untuk di-exclude dari cek keunikan.
+  const { data: own } = await supabase
+    .from("invitations")
+    .select("id")
+    .eq("id", invitationId)
+    .maybeSingle();
+  if (!own) return { status: "error" };
+
+  const admin = createSupabaseAdminClient();
+  const { data: clash, error } = await admin
+    .from("invitations")
+    .select("id")
+    .eq("slug", slug)
+    .neq("id", invitationId)
+    .maybeSingle();
+  if (error) return { status: "error" };
+
+  return { status: clash ? "taken" : "available" };
+}
+
+/**
+ * Simpan slug undangan (SPEC §4 Flow A langkah 5). Pola: auth → validasi format
+ * → UPDATE ter-scope owner + `status='draft'` (slug tak boleh berubah setelah
+ * aktif; mengubahnya memutus tautan WA yang sudah tersebar) → revalidate.
+ * Keunikan dijamin constraint UNIQUE: tabrakan balapan → 23505 → "sudah dipakai".
+ */
+export async function updateInvitationSlugAction(
+  invitationId: string,
+  rawSlug: string,
+): Promise<SlugSaveResult> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "error", message: copy.auth.genericAuthError };
+  if (!isUuid(invitationId)) return { status: "error" };
+
+  const parsed = slugSchema.safeParse(rawSlug);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      reason: "invalid",
+      message: parsed.error.issues[0]?.message,
+    };
+  }
+  const slug = parsed.data;
+
+  const { data: updated, error } = await supabase
+    .from("invitations")
+    .update({ slug })
+    .eq("id", invitationId)
+    .eq("user_id", user.id)
+    .eq("status", "draft")
+    .select("slug")
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === "23505") {
+      return {
+        status: "error",
+        reason: "taken",
+        message: copy.editor.slug.taken,
+      };
+    }
+    return { status: "error", message: copy.common.error };
+  }
+  // 0 baris ter-update → bukan draft (atau bukan milik pemanggil).
+  if (!updated) {
+    return {
+      status: "error",
+      reason: "not_draft",
+      message: copy.editor.slug.notDraft,
+    };
+  }
+
+  revalidatePath(`/dashboard/undangan/${invitationId}/edit`);
+  revalidatePath("/dashboard");
+  return { status: "success", slug: updated.slug };
 }

@@ -102,6 +102,14 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #21 — 2026-07-25 · M1.3d Slug: cek ketersediaan real-time + simpan (draft-only)
+**Keputusan:** Slug (alamat publik `merriva.id/{slug}`) punya jalur tersendiri di luar autosave editor. `src/lib/slug.ts` menyediakan `slugSchema` ketat (di atas lantai DB `^[a-z0-9-]{3,60}$`: tolak hubung di tepi/berurutan, awalan sistem `draft-`, dan `RESERVED_SLUGS` yang berbentrok dengan rute root), plus `slugify()` untuk saran dari nama panggilan. Dua Server Action: **`checkSlugAvailabilityAction`** (cek real-time ter-debounce 500ms) dan **`updateInvitationSlugAction`** (simpan). Cek keunikan **lintas-pemilik** memakai **admin client (service_role)** di dalam server action — bukan fungsi DB — karena RLS `invitations_select` owner-only tak bisa melihat slug pemilik lain; hanya membaca kolom `id`. Simpan ter-scope `status='draft'` + owner; keunikan sebenarnya dijamin constraint UNIQUE (balapan → `23505` → "sudah dipakai"). UI: `SlugEditor` (prefix domain, umpan balik format instan klien, tombol simpan aktif hanya saat "tersedia", saran dari mempelai) di langkah Info.
+**Alasan:** Awalnya dibuat fungsi `SECURITY DEFINER is_slug_available()`, tapi `get_advisors(security)` menandai **WARN** `authenticated_security_definer_function_executable` (fungsi DEFINER bisa dipanggil langsung via `/rest/v1/rpc/…`, melewati guard server action). Bar proyek = 0 lint. Admin client server-only tak terekspos ke REST → permukaan serang lebih kecil, cek hanya lewat server action (auth+kepemilikan+TODO rate-limit), dan tanpa migrasi. Riset context7 (Next.js): `useTransition` untuk memanggil Server Action dari event klien (mutasi `updateInvitationSlug` + `router.refresh()`); cek baca murni pakai state "checking" manual + debounce.
+**Ditolak:** (a) fungsi `SECURITY DEFINER` di `public` — kena advisor WARN & terekspos REST; (b) memindah ke schema `private` — tak bisa dipanggil `.rpc()` (PostgREST hanya expose `public`); (c) slug bisa diubah kapan saja — mengubah alamat undangan aktif memutus tautan WA yang tersebar → dikunci ke `status='draft'`.
+**Konsekuensi:** slug terkunci setelah aktivasi (M2). Fungsi DB dibuang & baris migrasinya dihapus dari riwayat (tak ada migrasi M1.3d — murni lapisan aplikasi). Cek ketersediaan bukan endpoint form → tak pakai `ActionState`, melainkan tipe hasil sendiri (`SlugCheckResult`/`SlugSaveResult`). TODO(M2): rate-limit `checkSlugAvailabilityAction`.
+
+---
+
 ## Template entri baru
 
 ```

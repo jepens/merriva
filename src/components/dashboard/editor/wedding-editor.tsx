@@ -107,7 +107,7 @@ export function WeddingEditor({
       <Card>
         <CardContent className="py-6">
           {currentKey === "info" ? (
-            <InfoStep form={form} />
+            <InfoStep form={form} invitationId={invitationId} slug={slug} />
           ) : currentKey === "couple" ? (
             <CoupleStep form={form} />
           ) : currentKey === "schedule" ? (
