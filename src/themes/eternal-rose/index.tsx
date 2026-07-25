@@ -9,6 +9,7 @@ import { isSectionVisible } from "@/lib/validation/content";
 import type { ThemeComponentProps } from "@/themes/registry";
 
 import "./eternal-rose.css";
+import { RevealRoot } from "./reveal-root";
 import {
   CountdownBlock,
   Couple,
@@ -46,11 +47,11 @@ export default function EternalRose({ data }: ThemeComponentProps) {
 
   if (data.content.category !== "wedding") {
     return (
-      <div className={`er ${serif.variable} ${script.variable}`}>
+      <RevealRoot className={`er ${serif.variable} ${script.variable}`}>
         <section className="er-section" style={{ minHeight: "60vh" }}>
           <p className="er-lead">Tema ini khusus untuk undangan pernikahan.</p>
         </section>
-      </div>
+      </RevealRoot>
     );
   }
 
@@ -88,7 +89,7 @@ export default function EternalRose({ data }: ThemeComponentProps) {
       Boolean(envelope.giftAddress));
 
   return (
-    <div className={`er ${serif.variable} ${script.variable}`}>
+    <RevealRoot className={`er ${serif.variable} ${script.variable}`}>
       <Hero
         groomName={groomName}
         brideName={brideName}
@@ -131,6 +132,6 @@ export default function EternalRose({ data }: ThemeComponentProps) {
         brideName={brideName}
         watermark={data.watermark}
       />
-    </div>
+    </RevealRoot>
   );
 }
