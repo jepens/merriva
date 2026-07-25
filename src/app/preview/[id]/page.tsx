@@ -8,6 +8,7 @@ import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildInvitationData } from "@/server/invitation-data";
+import { getEffectiveLimits } from "@/server/limits";
 import { requireUser } from "@/server/guards/auth";
 import { getThemeLoader } from "@/themes/registry";
 
@@ -58,16 +59,8 @@ export default async function PreviewPage({
         .order("created_at", { ascending: true }),
     ]);
 
-  let watermark = true; // Basic default (draft tanpa paket)
-  if (inv.package_id) {
-    const { data: pkg } = await supabase
-      .from("packages")
-      .select("limits")
-      .eq("id", inv.package_id)
-      .maybeSingle();
-    watermark =
-      (pkg?.limits as { watermark?: boolean } | null)?.watermark ?? true;
-  }
+  // Batas paket efektif (satu sumber kebenaran) → watermark. Draft → Basic.
+  const limits = await getEffectiveLimits(supabase, inv.package_id);
 
   const data = buildInvitationData({
     slug: inv.slug,
@@ -77,7 +70,7 @@ export default async function PreviewPage({
     eventDate: inv.event_date,
     eventRows: eventRows ?? [],
     mediaRows: mediaRows ?? [],
-    watermark,
+    watermark: limits.watermark,
   });
 
   const editHref = `/dashboard/undangan/${inv.id}/edit`;

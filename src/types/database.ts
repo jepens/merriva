@@ -579,6 +579,38 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      insert_guest: {
+        Args: {
+          guest_group_label?: string;
+          guest_name: string;
+          guest_notes?: string;
+          guest_pax?: number;
+          guest_phone?: string;
+          guest_token: string;
+          inv_id: string;
+        };
+        Returns: {
+          created_at: string;
+          first_viewed_at: string | null;
+          group_label: string | null;
+          id: string;
+          invitation_id: string;
+          name: string;
+          notes: string | null;
+          pax_allocated: number;
+          phone: string | null;
+          token: string;
+          wa_clicked_at: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "guests";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      invitation_effective_limits: { Args: { inv_id: string }; Returns: Json };
+      normalize_package_limits: { Args: { raw: Json }; Returns: Json };
       replace_invitation_events: {
         Args: { events: Json; inv_id: string };
         Returns: undefined;

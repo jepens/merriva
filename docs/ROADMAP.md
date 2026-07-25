@@ -32,7 +32,7 @@
 - [ ] Form multi-step 3 kategori (skema Zod per kategori — `SPEC.md` §4.4): info dasar & slug checker real-time, detail pihak, jadwal multi-sesi, galeri (kompresi klien 2 varian WebP + upload via `lib/storage/` driver supabase), love story/agenda, amplop digital, pengaturan (tema, toggle section)
 - [ ] Autosave per step + indikator selesai
 - [ ] Tema pertama (`eternal-rose` atau sejenis) via registry + `demo-data.ts` + halaman preview mode draft (hanya pemilik)
-- [ ] Enforcement limit paket server-side (foto/tamu) — struktur siap meski paket baru dibeli di M3
+- [x] Enforcement limit paket server-side (foto/tamu) — struktur siap meski paket baru dibeli di M3
 
 ## M2 — Halaman publik & tamu (~2 minggu)
 
