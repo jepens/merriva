@@ -1,0 +1,445 @@
+/* Tema "eternal-rose" (M1.5) — palet mawar/krem, tipografi serif + skrip.
+   CSS ter-scope di `.er` agar tak bocor ke chrome aplikasi. Mobile-first
+   (target WebView WhatsApp). Animasi via kelas (.er-reveal) + prefers-reduced-motion. */
+
+.er {
+  --er-bg: #fbf6f3;
+  --er-bg-alt: #f5e9e6;
+  --er-panel: #fffdfc;
+  --er-ink: #4a3a39;
+  --er-muted: #927b78;
+  --er-rose: #b76e79;
+  --er-rose-soft: #e8c8cb;
+  --er-rose-deep: #8c4b56;
+  --er-gold: #ad8a56;
+  --er-line: rgba(140, 75, 86, 0.16);
+
+  font-family: var(--er-font-serif), Georgia, "Times New Roman", serif;
+  color: var(--er-ink);
+  background-color: var(--er-bg);
+  line-height: 1.65;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.er * {
+  box-sizing: border-box;
+}
+
+.er-script {
+  font-family: var(--er-font-script), "Brush Script MT", cursive;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+/* ---- Layout primitives ---------------------------------------------------- */
+.er-section {
+  padding: clamp(3.5rem, 9vw, 6rem) 1.4rem;
+  max-width: 46rem;
+  margin: 0 auto;
+  text-align: center;
+}
+.er-section--tint {
+  background-color: var(--er-bg-alt);
+  max-width: none;
+}
+.er-section--tint > .er-inner {
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+.er-eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--er-gold);
+  margin: 0 0 0.75rem;
+}
+.er-h2 {
+  font-size: clamp(1.9rem, 6vw, 2.6rem);
+  font-weight: 500;
+  color: var(--er-rose-deep);
+  margin: 0 0 1.5rem;
+}
+.er-lead {
+  color: var(--er-muted);
+  font-size: 1.05rem;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+/* Pembatas botani sederhana */
+.er-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  margin: 1.25rem auto;
+  color: var(--er-rose);
+}
+.er-divider::before,
+.er-divider::after {
+  content: "";
+  height: 1px;
+  width: clamp(2.5rem, 12vw, 5rem);
+  background: linear-gradient(
+    to var(--er-dir, right),
+    transparent,
+    var(--er-line)
+  );
+}
+.er-divider::after {
+  --er-dir: left;
+}
+
+/* ---- Hero ----------------------------------------------------------------- */
+.er-hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1.4rem;
+  color: #fff;
+  overflow: hidden;
+}
+.er-hero__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.05);
+}
+.er-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(74, 45, 50, 0.45),
+    rgba(74, 45, 50, 0.62)
+  );
+}
+.er-hero--plain {
+  color: var(--er-ink);
+  background: radial-gradient(
+    130% 90% at 50% 0%,
+    var(--er-rose-soft),
+    var(--er-bg) 60%
+  );
+}
+.er-hero__inner {
+  position: relative;
+  z-index: 1;
+}
+.er-hero__names {
+  font-size: clamp(3rem, 15vw, 5.5rem);
+  margin: 0.5rem 0;
+}
+.er-hero--plain .er-hero__names {
+  color: var(--er-rose-deep);
+}
+.er-hero__amp {
+  display: block;
+  font-size: clamp(1.4rem, 6vw, 2rem);
+  opacity: 0.85;
+  margin: 0.1rem 0;
+}
+.er-hero__date {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  margin-top: 1rem;
+}
+.er-hero__scroll {
+  position: absolute;
+  bottom: 1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  animation: er-bounce 2s ease-in-out infinite;
+}
+
+/* ---- Countdown ------------------------------------------------------------ */
+.er-countdown {
+  display: flex;
+  gap: clamp(0.5rem, 3vw, 1.25rem);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.er-count-box {
+  min-width: 4.2rem;
+  padding: 0.9rem 0.4rem;
+  background: var(--er-panel);
+  border: 1px solid var(--er-line);
+  border-radius: 0.9rem;
+  box-shadow: 0 10px 30px -20px rgba(140, 75, 86, 0.5);
+}
+.er-count-num {
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: var(--er-rose-deep);
+  font-variant-numeric: tabular-nums;
+}
+.er-count-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--er-muted);
+}
+
+/* ---- Couple --------------------------------------------------------------- */
+.er-couple {
+  display: grid;
+  gap: 2.25rem;
+}
+.er-person__mono {
+  width: 5rem;
+  height: 5rem;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  border: 1px solid var(--er-rose-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.9rem;
+  color: var(--er-rose);
+  background: var(--er-panel);
+}
+.er-person__photo {
+  width: 8.5rem;
+  height: 8.5rem;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--er-panel);
+  box-shadow: 0 12px 34px -18px rgba(140, 75, 86, 0.6);
+}
+.er-person__name {
+  font-size: 1.7rem;
+  color: var(--er-rose-deep);
+  margin: 0.2rem 0;
+}
+.er-person__meta {
+  color: var(--er-muted);
+  font-size: 0.95rem;
+  margin: 0.15rem 0;
+}
+.er-amp-lg {
+  color: var(--er-rose);
+  font-size: 2.4rem;
+}
+
+/* ---- Cards (schedule / envelope) ----------------------------------------- */
+.er-card {
+  background: var(--er-panel);
+  border: 1px solid var(--er-line);
+  border-radius: 1.1rem;
+  padding: 1.5rem 1.35rem;
+  box-shadow: 0 16px 40px -28px rgba(140, 75, 86, 0.55);
+  text-align: center;
+}
+.er-stack {
+  display: grid;
+  gap: 1.1rem;
+}
+.er-card__title {
+  font-size: 1.35rem;
+  color: var(--er-rose-deep);
+  margin: 0 0 0.35rem;
+}
+.er-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--er-ink);
+  margin: 0.3rem 0;
+  font-size: 0.98rem;
+}
+.er-card__row svg {
+  color: var(--er-rose);
+  flex-shrink: 0;
+}
+.er-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--er-rose);
+  color: var(--er-rose-deep);
+  background: transparent;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.er-btn:hover {
+  background: var(--er-rose);
+  color: #fff;
+}
+.er-btn--solid {
+  background: var(--er-rose);
+  color: #fff;
+}
+
+/* ---- Gallery -------------------------------------------------------------- */
+.er-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+}
+@media (min-width: 640px) {
+  .er-gallery {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.er-gallery__item {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  background: var(--er-bg-alt);
+}
+.er-gallery__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+.er-gallery__item:hover img {
+  transform: scale(1.06);
+}
+.er-gallery__item--wide {
+  grid-column: span 2;
+  aspect-ratio: 2;
+}
+
+/* ---- Story ---------------------------------------------------------------- */
+.er-timeline {
+  text-align: left;
+  display: grid;
+  gap: 1.5rem;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+.er-story {
+  border-left: 2px solid var(--er-rose-soft);
+  padding: 0 0 0.2rem 1.3rem;
+  position: relative;
+}
+.er-story::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 0.4rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--er-rose);
+}
+.er-story__date {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--er-gold);
+}
+.er-story__title {
+  font-size: 1.25rem;
+  color: var(--er-rose-deep);
+  margin: 0.15rem 0 0.35rem;
+}
+.er-story__body {
+  color: var(--er-muted);
+  font-size: 0.98rem;
+  white-space: pre-line;
+}
+
+/* ---- Envelope ------------------------------------------------------------- */
+.er-account__label {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--er-muted);
+}
+.er-account__num {
+  font-size: 1.35rem;
+  letter-spacing: 0.06em;
+  color: var(--er-rose-deep);
+  font-variant-numeric: tabular-nums;
+  margin: 0.2rem 0;
+}
+
+/* ---- Footer --------------------------------------------------------------- */
+.er-footer {
+  text-align: center;
+  padding: 3.5rem 1.4rem 2.5rem;
+  background: var(--er-bg-alt);
+}
+.er-footer__thanks {
+  font-size: clamp(2rem, 9vw, 3rem);
+  color: var(--er-rose-deep);
+}
+.er-watermark {
+  margin-top: 2rem;
+  font-family: var(--er-font-serif), Georgia, serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: var(--er-muted);
+}
+.er-watermark a {
+  color: var(--er-rose-deep);
+  text-decoration: none;
+}
+
+/* ---- Reveal + keyframes --------------------------------------------------- */
+.er-reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease;
+  will-change: opacity, transform;
+}
+.er-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+/* Tanpa JS (mis. hydrasi gagal) konten tetap terlihat — jangan pernah blank. */
+@media (scripting: none) {
+  .er-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes er-bounce {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, 6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .er-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .er-hero__scroll {
+    animation: none;
+  }
+  .er-gallery__item img {
+    transition: none;
+  }
+}

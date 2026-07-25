@@ -223,6 +223,14 @@ export const copy = {
       next: "Berikutnya",
     },
   },
+  preview: {
+    badge: "Pratinjau",
+    note: "Hanya Anda yang melihat ini.",
+    demoBadge: "Contoh Tema",
+    backToEditor: "Edit",
+    themeUnavailable: "Tema undangan ini belum tersedia untuk pratinjau.",
+    backToDashboard: "Kembali ke dashboard",
+  },
 } as const;
 
 export type Copy = typeof copy;

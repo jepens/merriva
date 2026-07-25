@@ -119,6 +119,14 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #23 — 2026-07-25 · M1.5 Tema pertama (eternal-rose) + halaman pratinjau draft
+**Keputusan:** Tema `eternal-rose` (wedding, tier standard) didaftarkan di `themeRegistry` (dynamic import) dan mengonsumsi kontrak `InvitationData` (SPEC §7.1) yang **dirakit di server** (`server/invitation-data.ts` + parser murni `lib/invitation-content.ts`) dari baris DB — tema TIDAK mengambil data sendiri. Section: hero (foto galeri sebagai latar), sapaan+kutipan, mempelai (monogram), hitung mundur, jadwal (tanggal Indonesia per zona + tombol Maps), galeri, kisah, amplop digital (salin nomor), footer + watermark Basic; tampil per `settings.sections`. Rute **`/preview/[id]`** owner-only (RLS membatasi baris ke pemilik) + **`/preview/demo`** (data contoh publik, `demo-data.ts`). Animasi reveal via IntersectionObserver + CSS (`prefers-reduced-motion`). Font self-hosted via `next/font` (Cormorant Garamond + Great Vibes). Formatter tanggal Indonesia zona-tetap di `lib/datetime.ts`.
+**Alasan:** Boundary performa (Lighthouse ≥90, LCP<2,5s di WebView WA) **mengalahkan** default stack Framer Motion → dipilih CSS/IntersectionObserver tanpa dependency (bundle halaman undangan tetap ramping; hanya 3 island klien kecil: reveal, countdown, tombol salin). `next/font` self-host → tanpa request font eksternal saat runtime. Konten di-"coerce" jadi renderable agar draft belum lengkap tetap ter-preview (field wajib → placeholder aman; tema membaca defensif). **Diverifikasi visual di browser** (mobile 390px, production build): semua section render, reveal & countdown live, tanpa error konsol (favicon 404 pra-ada, di luar M1.5).
+**Ditolak:** (a) Framer Motion (bundle berat di halaman kritis — CSS cukup; FM tetap opsi tema premium); (b) fetch data di dalam tema (langgar kontrak §7.1); (c) foto bernama cover/mempelai (belum ada uploader → pakai galeri + monogram, degradasi anggun).
+**Konsekuensi:** Cover reveal + musik + RSVP + dinding ucapan + personalisasi `?g=` = M2 (halaman publik `/{slug}` ISR). Named-photo menyusul saat uploader dibuat. `mapsUrl` di-guard `http(s)` di tema (cegah XSS `javascript:`) karena skema draft belum memvalidasi format URL — sanitasi format penuh saat aktivasi (M2/M3). Menambah tema = folder `src/themes/{slug}/` + baris registry + seed `themes`. Kontrak `InvitationData` tidak berubah.
+
+---
+
 ## Template entri baru
 
 ```

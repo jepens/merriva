@@ -21,9 +21,11 @@ export interface ThemeModule {
 /**
  * Registry tema: slug tema (= folder `src/themes/{slug}/`) → dynamic import komponen.
  * Menambah tema = tambah folder + satu baris di sini + seed metadata `themes`.
- * Kosong di M0; tema pertama (`eternal-rose`) ditambahkan di M1.
+ * Tema pertama (`eternal-rose`, wedding) ditambahkan di M1.5.
  */
-export const themeRegistry: Record<string, () => Promise<ThemeModule>> = {};
+export const themeRegistry: Record<string, () => Promise<ThemeModule>> = {
+  "eternal-rose": () => import("./eternal-rose"),
+};
 
 export function getThemeLoader(
   slug: string,
