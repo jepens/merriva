@@ -35,10 +35,16 @@ export function Hero({
     <header className={bgUrl ? "er-hero" : "er-hero er-hero--plain"}>
       {bgUrl ? (
         <>
-          <div
+          {/* Eager <img> (bukan CSS background) → LCP ter-preload saat parse HTML,
+              dan menghindari interpolasi nilai ke string CSS url("…"). */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             className="er-hero__bg"
-            style={{ backgroundImage: `url("${bgUrl}")` }}
+            src={bgUrl}
+            alt=""
             aria-hidden
+            fetchPriority="high"
+            decoding="async"
           />
           <div className="er-hero__scrim" aria-hidden />
         </>
