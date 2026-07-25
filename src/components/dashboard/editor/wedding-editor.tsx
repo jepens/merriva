@@ -1,31 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import {
-  useForm,
-  useWatch,
-  type Control,
-  type UseFormReturn,
-} from "react-hook-form";
+import { useForm, useWatch, type Control } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { copy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
-import type {
-  InvitationSettings,
-  WeddingDraft,
-} from "@/lib/validation/content";
+import type { WeddingDraft } from "@/lib/validation/content";
 
+import { CoupleStep } from "./steps/couple-step";
+import { EnvelopeStep } from "./steps/envelope-step";
+import { InfoStep } from "./steps/info-step";
+import { SettingsStep } from "./steps/settings-step";
+import { StoryStep } from "./steps/story-step";
+import type { WeddingEditorValues } from "./types";
 import { useDraftAutosave, type SaveStatus } from "./use-autosave";
-
-export type WeddingEditorValues = {
-  eventDate: string;
-  content: WeddingDraft;
-  settings: InvitationSettings;
-};
 
 const STEP_KEYS = [
   "info",
@@ -50,10 +40,36 @@ function isStepComplete(
         (content.groom?.nickname && content.bride?.nickname) ||
         eventDate,
       );
+    case "couple":
+      return Boolean(content.groom?.name && content.bride?.name);
+    case "story":
+      return (content.story?.length ?? 0) > 0;
+    case "envelope":
+      return Boolean(content.envelope?.enabled);
+    case "settings":
+      return Boolean(content.greetingOpen || content.greetingClose);
     default:
-      // Langkah lain menyusul (M1.3c) — belum ada kriteria selesai.
+      // schedule (M1.3c-2) & gallery (M1.4) belum ada.
       return false;
   }
+}
+
+/** Isi default toggle section yang belum di-set (tampil = true). */
+function withSectionDefaults(values: WeddingEditorValues): WeddingEditorValues {
+  const s = values.settings.sections;
+  return {
+    ...values,
+    settings: {
+      ...values.settings,
+      sections: {
+        ...s,
+        countdown: s.countdown ?? true,
+        gallery: s.gallery ?? true,
+        story: s.story ?? true,
+        envelope: s.envelope ?? true,
+      },
+    },
+  };
 }
 
 export function WeddingEditor({
@@ -65,7 +81,9 @@ export function WeddingEditor({
   slug: string;
   defaultValues: WeddingEditorValues;
 }) {
-  const form = useForm<WeddingEditorValues>({ defaultValues });
+  const form = useForm<WeddingEditorValues>({
+    defaultValues: withSectionDefaults(defaultValues),
+  });
   const [step, setStep] = useState(0);
   const saveStatus = useDraftAutosave(form, invitationId);
   const currentKey = STEP_KEYS[step];
@@ -86,6 +104,14 @@ export function WeddingEditor({
         <CardContent className="py-6">
           {currentKey === "info" ? (
             <InfoStep form={form} />
+          ) : currentKey === "couple" ? (
+            <CoupleStep form={form} />
+          ) : currentKey === "story" ? (
+            <StoryStep form={form} />
+          ) : currentKey === "envelope" ? (
+            <EnvelopeStep form={form} />
+          ) : currentKey === "settings" ? (
+            <SettingsStep form={form} />
           ) : (
             <p className="text-muted-foreground text-sm">
               {copy.editor.stepSoon}
@@ -181,38 +207,5 @@ function StepNav({
         );
       })}
     </ol>
-  );
-}
-
-function InfoStep({ form }: { form: UseFormReturn<WeddingEditorValues> }) {
-  const { register } = form;
-  return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="title">{copy.editor.fields.title}</Label>
-        <Input
-          id="title"
-          placeholder={copy.editor.fields.titlePlaceholder}
-          {...register("content.title")}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="groomNick">{copy.editor.fields.groomNickname}</Label>
-          <Input id="groomNick" {...register("content.groom.nickname")} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="brideNick">{copy.editor.fields.brideNickname}</Label>
-          <Input id="brideNick" {...register("content.bride.nickname")} />
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="eventDate">{copy.editor.fields.eventDate}</Label>
-        <Input id="eventDate" type="date" {...register("eventDate")} />
-      </div>
-      <p className="text-muted-foreground text-xs">
-        {copy.editor.slugFixedNote}
-      </p>
-    </div>
   );
 }
