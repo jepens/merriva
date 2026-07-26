@@ -154,6 +154,53 @@ export const copy = {
       waSent: "WA terkirim",
       actionError: "Gagal menyimpan. Coba lagi.",
     },
+    // Impor / ekspor tamu (SPEC §4.7).
+    guestsImport: {
+      // Pesan parser (dipakai lib/guest-import.ts)
+      emptyFile: "Berkas kosong atau tak terbaca.",
+      missingNameColumn:
+        "Kolom 'Nama' tidak ditemukan. Unduh template untuk format yang benar.",
+      invalidRow: "Baris tidak valid.",
+      // UI impor
+      importTitle: "Impor Tamu",
+      importHint:
+        "Unggah file Excel (.xlsx) atau CSV. Wajib ada kolom Nama; kolom lain opsional.",
+      chooseFile: "Pilih berkas (.xlsx / .csv)",
+      template: "Unduh template",
+      parsing: "Membaca berkas…",
+      previewValid: "siap diimpor",
+      previewInvalid: "baris bermasalah",
+      previewRow: "Baris",
+      confirmImport: "Impor",
+      importing: "Mengimpor…",
+      cancel: "Batal",
+      resultInserted: "tamu berhasil ditambahkan.",
+      resultSkippedLimit: "dilewati karena kuota paket penuh.",
+      resultNothing: "Tidak ada tamu yang ditambahkan.",
+      parseError:
+        "Gagal membaca berkas. Pastikan format .xlsx atau .csv yang benar.",
+      // UI ekspor
+      exportCta: "Ekspor ke Excel",
+      exporting: "Menyiapkan…",
+      exportEmpty: "Belum ada tamu untuk diekspor.",
+      // Header kolom ekspor
+      col: {
+        name: "Nama",
+        phone: "No. WhatsApp",
+        group: "Label",
+        pax: "Alokasi Kursi",
+        link: "Link Personal",
+        opened: "Sudah Dibuka",
+        rsvp: "Kehadiran",
+        rsvpPax: "Jumlah Hadir",
+        message: "Ucapan",
+      },
+      rsvpYes: "Hadir",
+      rsvpNo: "Tidak hadir",
+      rsvpNone: "Belum RSVP",
+      yes: "Ya",
+      no: "Tidak",
+    },
   },
   create: {
     title: "Buat Undangan Baru",

@@ -16,6 +16,8 @@ import {
   updateGuestAction,
 } from "@/server/actions/guests";
 
+import { GuestImportExport } from "./guest-import-export";
+
 interface FormValues {
   name: string;
   phone: string;
@@ -148,6 +150,14 @@ export function GuestManager({
 
   return (
     <div className="space-y-6">
+      {/* Impor / ekspor */}
+      <GuestImportExport
+        invitationId={invitationId}
+        slug={slug}
+        guestCount={guests.length}
+        onImported={(imported) => setGuests((prev) => [...imported, ...prev])}
+      />
+
       {/* Tambah tamu */}
       <Card>
         <CardContent className="space-y-4 py-5">
