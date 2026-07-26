@@ -1,5 +1,6 @@
 import { Calendar, Clock, MapPin } from "lucide-react";
 
+import { GiftConfirm } from "@/components/public/guestbook/gift-confirm";
 import { formatEventDateTime } from "@/lib/datetime";
 import type {
   Envelope as EnvelopeType,
@@ -286,7 +287,13 @@ export function Story({ story }: { story: StoryEntry[] }) {
 }
 
 /* ---------------------------------------------------------- Envelope ------ */
-export function Envelope({ envelope }: { envelope: EnvelopeType }) {
+export function Envelope({
+  envelope,
+  slug,
+}: {
+  envelope: EnvelopeType;
+  slug: string;
+}) {
   return (
     <section className="er-section er-section--tint">
       <div className="er-inner">
@@ -338,6 +345,9 @@ export function Envelope({ envelope }: { envelope: EnvelopeType }) {
             </Reveal>
           ) : null}
         </div>
+        <Reveal>
+          <GiftConfirm slug={slug} />
+        </Reveal>
       </div>
     </section>
   );

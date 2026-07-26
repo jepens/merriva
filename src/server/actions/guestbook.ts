@@ -7,7 +7,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { settingsSchema } from "@/lib/validation/content";
 import {
+  giftNoteSchema,
   rsvpSchema,
+  type GiftNoteInput,
   type GuestbookEntry,
   type RsvpInput,
 } from "@/lib/validation/guestbook";
@@ -22,6 +24,7 @@ import {
  */
 
 const RSVP_LIMIT = { max: 5, windowMs: 60_000 };
+const GIFT_LIMIT = { max: 5, windowMs: 60_000 };
 const READ_LIMIT = { max: 40, windowMs: 60_000 };
 const PAGE_SIZE = 8;
 
@@ -141,6 +144,96 @@ export async function submitRsvpAction(input: RsvpInput): Promise<RsvpResult> {
   }
 
   return { status: "success", moderated };
+}
+
+export type GiftNoteResult =
+  | { status: "success" }
+  | {
+      status: "error";
+      reason?: "rate" | "captcha" | "invalid" | "closed";
+      message?: string;
+      fieldErrors?: Record<string, string[] | undefined>;
+    };
+
+/**
+ * Konfirmasi amplop/kado (SPEC §4.6) — **privat** untuk pemilik. Sama seperti
+ * RSVP: INSERT `gift_notes` tak boleh dari anon (RLS tanpa policy anon) → via
+ * **service-role** SETELAH honeypot → rate limit → Turnstile → cek undangan
+ * AKTIF. Data ini TIDAK pernah diserve ke publik (hanya dashboard pemilik).
+ */
+export async function submitGiftNoteAction(
+  input: GiftNoteInput,
+): Promise<GiftNoteResult> {
+  const parsed = giftNoteSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      reason: "invalid",
+      message: copy.guestbook.gift.invalid,
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+  const d = parsed.data;
+
+  // Honeypot: field tersembunyi terisi = bot → pura-pura sukses (silent drop).
+  if (d.website) return { status: "success" };
+
+  const rl = checkRateLimit(await clientRateKey("gift"), GIFT_LIMIT);
+  if (!rl.ok) {
+    return {
+      status: "error",
+      reason: "rate",
+      message: copy.guestbook.form.rateLimited,
+    };
+  }
+
+  const passed = await verifyTurnstile(d.turnstileToken, await getClientIp());
+  if (!passed) {
+    return {
+      status: "error",
+      reason: "captcha",
+      message: copy.guestbook.form.captchaFailed,
+    };
+  }
+
+  const admin = createSupabaseAdminClient();
+
+  const { data: inv } = await admin
+    .from("invitations")
+    .select("id, status")
+    .eq("slug", d.slug)
+    .maybeSingle();
+  if (!inv || inv.status !== "active") {
+    return {
+      status: "error",
+      reason: "closed",
+      message: copy.guestbook.form.closed,
+    };
+  }
+
+  // Tamu bertoken (opsional): pakai nama terdaftar bila cocok — jika tidak,
+  // nama dari form. `gift_notes` tak menyimpan guest_id (privasi minimal).
+  let guestName = d.guestName;
+  if (d.guestToken) {
+    const { data: guest } = await admin
+      .from("guests")
+      .select("name")
+      .eq("invitation_id", inv.id)
+      .eq("token", d.guestToken)
+      .maybeSingle();
+    if (guest?.name) guestName = guest.name;
+  }
+
+  const { error } = await admin.from("gift_notes").insert({
+    invitation_id: inv.id,
+    guest_name: guestName,
+    type: d.type,
+    amount: d.amount ?? null,
+    note: d.note ?? null,
+  });
+  if (error) return { status: "error", message: copy.common.error };
+
+  return { status: "success" };
 }
 
 export interface GuestbookPage {

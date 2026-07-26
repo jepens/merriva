@@ -124,7 +124,7 @@ export default function EternalRose({ data }: ThemeComponentProps) {
       ) : null}
 
       {isSectionVisible(settings, "envelope") && hasEnvelope ? (
-        <Envelope envelope={envelope} />
+        <Envelope envelope={envelope} slug={data.slug} />
       ) : null}
 
       {isSectionVisible(settings, "rsvp") ? (

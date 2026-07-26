@@ -69,21 +69,45 @@ export default async function DashboardPage() {
           {invitations.map((inv) => (
             <li key={inv.id}>
               <Card>
-                <CardContent className="flex items-center justify-between gap-3 py-4">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">/{inv.slug}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {inv.event_date ?? "Tanggal belum diatur"}
-                    </p>
+                <CardContent className="space-y-3 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">/{inv.slug}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {inv.event_date ?? "Tanggal belum diatur"}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
+                        statusBadgeClass[inv.status],
+                      )}
+                    >
+                      {copy.dashboard.status[inv.status]}
+                    </span>
                   </div>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
-                      statusBadgeClass[inv.status],
-                    )}
-                  >
-                    {copy.dashboard.status[inv.status]}
-                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/dashboard/undangan/${inv.id}/edit`}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                      })}
+                    >
+                      {copy.dashboard.cardEdit}
+                    </Link>
+                    {inv.status === "active" || inv.status === "expired" ? (
+                      <Link
+                        href={`/dashboard/undangan/${inv.id}/ucapan`}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
+                      >
+                        {copy.dashboard.cardGuestbook}
+                      </Link>
+                    ) : null}
+                  </div>
                 </CardContent>
               </Card>
             </li>
