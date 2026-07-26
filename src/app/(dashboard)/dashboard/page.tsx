@@ -96,6 +96,15 @@ export default async function DashboardPage() {
                     >
                       {copy.dashboard.cardEdit}
                     </Link>
+                    <Link
+                      href={`/dashboard/undangan/${inv.id}/tamu`}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                      })}
+                    >
+                      {copy.dashboard.cardGuests}
+                    </Link>
                     {inv.status === "active" || inv.status === "expired" ? (
                       <Link
                         href={`/dashboard/undangan/${inv.id}/ucapan`}
