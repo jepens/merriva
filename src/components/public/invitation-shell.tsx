@@ -61,6 +61,9 @@ export function InvitationShell({
   // Saat dibuka: lepas inert lalu pindahkan fokus ke konten (fokus tak
   // tertinggal di tombol Buka yang jadi aria-hidden).
   useEffect(() => {
+    // Kelola `inv-open` via classList (BUKAN className React) agar tak menimpa
+    // `inv-js` yang ditambahkan imperatif — className root sengaja KONSTAN.
+    shellRef.current?.classList.toggle("inv-open", open);
     const el = contentRef.current;
     if (!el) return;
     if (open) {
@@ -98,10 +101,9 @@ export function InvitationShell({
   };
 
   const t = copy.public;
-  const shellClass = `inv-shell${open ? " inv-open" : ""}`;
 
   return (
-    <div ref={shellRef} className={shellClass}>
+    <div ref={shellRef} className="inv-shell">
       <div ref={contentRef} className="inv-content" tabIndex={-1}>
         {children}
       </div>
