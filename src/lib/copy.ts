@@ -253,6 +253,39 @@ export const copy = {
       brand: "Dibuat dengan Merriva",
     },
   },
+
+  guestbook: {
+    eyebrow: "RSVP",
+    heading: "Konfirmasi Kehadiran",
+    subheading:
+      "Mohon konfirmasi kehadiran Anda untuk membantu kami mempersiapkan acara.",
+    form: {
+      name: "Nama",
+      namePlaceholder: "Nama Anda",
+      attendanceLabel: "Apakah Anda akan hadir?",
+      attending: "Ya, saya hadir",
+      notAttending: "Maaf, berhalangan",
+      pax: "Jumlah tamu",
+      message: "Ucapan & doa",
+      messagePlaceholder: "Tulis ucapan & doa untuk kedua mempelai (opsional)",
+      submit: "Kirim Konfirmasi",
+      submitting: "Mengirim…",
+      success: "Terima kasih, konfirmasi Anda sudah kami terima.",
+      successModerated:
+        "Terima kasih! Ucapan Anda akan tampil setelah ditinjau tuan rumah.",
+      invalid: "Periksa kembali isian Anda.",
+      rateLimited: "Terlalu banyak percobaan. Coba lagi beberapa saat.",
+      captchaFailed:
+        "Verifikasi anti-bot gagal. Muat ulang halaman lalu coba lagi.",
+      closed: "Undangan ini sedang tidak menerima konfirmasi.",
+    },
+    wall: {
+      heading: "Ucapan & Doa",
+      empty: "Belum ada ucapan. Jadilah yang pertama memberi doa!",
+      loadMore: "Muat lebih banyak",
+      loading: "Memuat…",
+    },
+  },
 } as const;
 
 export type Copy = typeof copy;

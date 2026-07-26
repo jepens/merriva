@@ -1,0 +1,194 @@
+/* Dinding & form RSVP (M2.2a). Diselaraskan dengan palet eternal-rose; mewarisi
+   font serif dari root tema (.er). Kelas .gb-* agar tak bentrok dengan tema. */
+
+.gb {
+  max-width: 32rem;
+  margin: 0 auto;
+}
+.gb-eyebrow {
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #7e6532;
+}
+.gb-heading {
+  text-align: center;
+  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  margin-top: 0.4rem;
+  font-weight: 500;
+}
+.gb-sub {
+  text-align: center;
+  color: #7a625f;
+  font-size: 0.95rem;
+  margin: 0.75rem auto 2rem;
+  line-height: 1.6;
+  max-width: 28rem;
+}
+
+.gb-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.gb-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.gb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.gb-field > span {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: #4a2d32;
+}
+.gb-field input,
+.gb-field textarea {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #e2cfc9;
+  border-radius: 0.5rem;
+  background: #fffdfc;
+  font: inherit;
+  font-size: 0.95rem;
+  color: #3a2429;
+}
+.gb-field input:focus,
+.gb-field textarea:focus {
+  outline: none;
+  border-color: #b98a63;
+  box-shadow: 0 0 0 3px rgba(185, 138, 99, 0.15);
+}
+.gb-field--pax input {
+  max-width: 8rem;
+}
+.gb-field textarea {
+  resize: vertical;
+}
+
+.gb-attend {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.gb-attend legend {
+  font-size: 0.8rem;
+  color: #4a2d32;
+  margin-bottom: 0.35rem;
+  padding: 0;
+}
+.gb-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #3a2429;
+  cursor: pointer;
+}
+.gb-radio input {
+  accent-color: #a15c4a;
+}
+
+.gb-turnstile {
+  margin: 0.25rem 0;
+}
+.gb-error {
+  color: #b3261e;
+  font-size: 0.85rem;
+}
+.gb-done {
+  text-align: center;
+  color: #4a2d32;
+  font-size: 1rem;
+  padding: 1.5rem 0;
+  line-height: 1.6;
+}
+
+.gb-submit {
+  margin-top: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 999px;
+  background: #7d3b3b;
+  color: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 200ms ease;
+}
+.gb-submit:hover:not(:disabled),
+.gb-submit:focus-visible:not(:disabled) {
+  background: #6a3232;
+}
+.gb-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.gb-wall {
+  margin-top: 3rem;
+}
+.gb-wall__title {
+  text-align: center;
+  font-size: 1.3rem;
+  margin-bottom: 1.25rem;
+  font-weight: 500;
+}
+.gb-wall__empty {
+  text-align: center;
+  color: #7a625f;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+.gb-wall__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.gb-note {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid #ecdcd6;
+  border-radius: 0.6rem;
+  padding: 0.9rem 1.1rem;
+}
+.gb-note__msg {
+  color: #3a2429;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+.gb-note__name {
+  color: #7e6532;
+  font-size: 0.82rem;
+  margin-top: 0.4rem;
+  letter-spacing: 0.03em;
+}
+.gb-more {
+  display: block;
+  margin: 1.25rem auto 0;
+  padding: 0.6rem 1.4rem;
+  border: 1px solid #cbb4ac;
+  border-radius: 999px;
+  background: transparent;
+  color: #7d3b3b;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.gb-more:disabled {
+  opacity: 0.6;
+}

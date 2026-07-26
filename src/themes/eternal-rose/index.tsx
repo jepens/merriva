@@ -5,6 +5,7 @@ import {
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
+import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
 import { isSectionVisible } from "@/lib/validation/content";
 import type { ThemeComponentProps } from "@/themes/registry";
 
@@ -124,6 +125,12 @@ export default function EternalRose({ data }: ThemeComponentProps) {
 
       {isSectionVisible(settings, "envelope") && hasEnvelope ? (
         <Envelope envelope={envelope} />
+      ) : null}
+
+      {isSectionVisible(settings, "rsvp") ? (
+        <section className="er-section">
+          <GuestbookSection slug={data.slug} />
+        </section>
       ) : null}
 
       <Footer
