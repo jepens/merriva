@@ -93,7 +93,7 @@ export async function saveInvitationDraftAction(
   }
   const { content, settings, eventDate, events } = parsed.data;
 
-  const { error } = await supabase
+  const { data: saved, error } = await supabase
     .from("invitations")
     .update({
       content: toDbJson(content),
@@ -101,7 +101,9 @@ export async function saveInvitationDraftAction(
       event_date: eventDate ? eventDate : null,
     })
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("slug")
+    .maybeSingle();
 
   if (error) return errorState(copy.common.error);
 
@@ -129,6 +131,10 @@ export async function saveInvitationDraftAction(
     events: toDbJson(eventRows),
   });
   if (evError) return errorState(copy.common.error);
+
+  // Segarkan cache ISR halaman publik (efektif saat undangan sudah aktif; no-op
+  // aman selagi draft). Slug bisa berubah, tapi hanya saat draft (belum publik).
+  if (saved?.slug) revalidatePath(`/${saved.slug}`);
 
   return { status: "success" };
 }

@@ -1,10 +1,13 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { parseContentForRender } from "@/lib/invitation-content";
 import { toMediaView } from "@/lib/media";
 import { getStorage } from "@/lib/storage";
 import { DEFAULT_SETTINGS, settingsSchema } from "@/lib/validation/content";
 import type { InvitationCategory } from "@/types";
+import type { Database } from "@/types/database";
 import type {
   InvitationData,
   InvitationEventView,
@@ -36,6 +39,29 @@ interface MediaRow {
   height: number | null;
 }
 
+/**
+ * Resolusi musik latar terpilih (`settings.songId` → `songs`) menjadi URL domain
+ * sendiri. NULL bila tak dipilih / lagu nonaktif / tak ada. Dipakai halaman
+ * publik (M2) & pratinjau. (Library lagu diisi kemudian — SPEC §5; sampai itu
+ * hasil praktisnya null.)
+ */
+export async function resolveMusic(
+  client: SupabaseClient<Database>,
+  songId: string | null | undefined,
+): Promise<InvitationData["music"]> {
+  if (!songId) return null;
+  const { data } = await client
+    .from("songs")
+    .select("title, storage_path, is_active")
+    .eq("id", songId)
+    .maybeSingle();
+  if (!data || !data.is_active || !data.storage_path) return null;
+  return {
+    url: getStorage().getPublicUrl(data.storage_path),
+    title: data.title,
+  };
+}
+
 export function buildInvitationData(args: {
   slug: string;
   category: InvitationCategory;
@@ -45,6 +71,7 @@ export function buildInvitationData(args: {
   eventRows: EventRow[];
   mediaRows: MediaRow[];
   watermark: boolean;
+  music: InvitationData["music"];
 }): InvitationData {
   const settingsParsed = settingsSchema.safeParse(args.settings);
   const settings = settingsParsed.success
@@ -75,7 +102,7 @@ export function buildInvitationData(args: {
     settings,
     events,
     media,
-    music: null, // library musik di-resolve di M2
+    music: args.music,
     watermark: args.watermark,
   };
 }

@@ -231,6 +231,28 @@ export const copy = {
     themeUnavailable: "Tema undangan ini belum tersedia untuk pratinjau.",
     backToDashboard: "Kembali ke dashboard",
   },
+
+  public: {
+    cover: {
+      recipient: "Kepada Yth.",
+      recipientFallback: "Bapak / Ibu / Saudara/i",
+      invited: "Dengan hormat, kami mengundang Anda pada acara",
+      open: "Buka Undangan",
+      weddingKicker: "Undangan Pernikahan",
+      defaultKicker: "Undangan",
+      groomFallback: "Mempelai Pria",
+      brideFallback: "Mempelai Wanita",
+    },
+    music: {
+      play: "Putar musik",
+      pause: "Jeda musik",
+    },
+    expired: {
+      title: "Masa aktif undangan telah berakhir",
+      body: "Terima kasih atas perhatian Anda. Undangan ini sudah tidak aktif. Untuk informasi lebih lanjut, silakan hubungi tuan rumah acara.",
+      brand: "Dibuat dengan Merriva",
+    },
+  },
 } as const;
 
 export type Copy = typeof copy;

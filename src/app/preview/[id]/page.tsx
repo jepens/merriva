@@ -7,9 +7,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { buildInvitationData } from "@/server/invitation-data";
+import { buildInvitationData, resolveMusic } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
 import { requireUser } from "@/server/guards/auth";
+import { settingsSchema } from "@/lib/validation/content";
 import { getThemeLoader } from "@/themes/registry";
 
 export const metadata: Metadata = { title: copy.preview.badge };
@@ -61,6 +62,8 @@ export default async function PreviewPage({
 
   // Batas paket efektif (satu sumber kebenaran) → watermark. Draft → Basic.
   const limits = await getEffectiveLimits(supabase, inv.package_id);
+  const songId = settingsSchema.safeParse(inv.settings).data?.songId;
+  const music = await resolveMusic(supabase, songId);
 
   const data = buildInvitationData({
     slug: inv.slug,
@@ -71,6 +74,7 @@ export default async function PreviewPage({
     eventRows: eventRows ?? [],
     mediaRows: mediaRows ?? [],
     watermark: limits.watermark,
+    music,
   });
 
   const editHref = `/dashboard/undangan/${inv.id}/edit`;

@@ -38,7 +38,7 @@
 
 **Hasil akhir:** alur tamu end-to-end berjalan mulus di WebView WhatsApp.
 
-- [ ] Halaman `/{slug}` ISR + revalidate saat simpan; cover "Kepada Yth." + buka undangan + musik
+- [x] Halaman `/{slug}` ISR + revalidate saat simpan; cover "Kepada Yth." + buka undangan + musik
 - [ ] Section: hero, countdown, jadwal + tombol Maps + simpan kalender (.ics/Google), galeri, love story, amplop (modal salin + konfirmasi privat), footer (watermark utk Basic)
 - [ ] RSVP + ucapan (form gabungan) + dinding ucapan (paginasi, moderasi, sembunyikan) — server action + Turnstile + rate limit + honeypot
 - [ ] Manajemen tamu: CRUD, label, import Excel/CSV (preview + laporan baris gagal), export

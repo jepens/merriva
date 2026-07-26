@@ -90,9 +90,10 @@ export async function uploadGalleryPhotoAction(
 
   // Cek kepemilikan cepat (RLS) agar tak mengunggah untuk undangan asing.
   // Penegakan limit sebenarnya (atomik + anti-override) ada di RPC di bawah.
+  // `slug` diambil untuk revalidasi ISR halaman publik.
   const { data: own } = await supabase
     .from("invitations")
-    .select("id")
+    .select("id, slug")
     .eq("id", invitationId)
     .maybeSingle();
   if (!own) return { status: "error", reason: "auth" };
@@ -143,6 +144,7 @@ export async function uploadGalleryPhotoAction(
   }
 
   revalidatePath(`/dashboard/undangan/${invitationId}/edit`);
+  revalidatePath(`/${own.slug}`); // ISR halaman publik (efektif saat aktif)
   return {
     status: "success",
     item: toMediaView(row, (p) => storage.getPublicUrl(p)),
@@ -184,6 +186,13 @@ export async function deleteGalleryPhotoAction(
     mediaObjectPaths(row.storage_path).map((p) => storage.delete(p)),
   );
 
+  const { data: inv } = await supabase
+    .from("invitations")
+    .select("slug")
+    .eq("id", invitationId)
+    .maybeSingle();
+
   revalidatePath(`/dashboard/undangan/${invitationId}/edit`);
+  if (inv?.slug) revalidatePath(`/${inv.slug}`); // ISR halaman publik
   return { status: "success" };
 }
