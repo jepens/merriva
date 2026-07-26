@@ -16,14 +16,18 @@ import { TurnstileWidget } from "./turnstile-widget";
 export function RsvpForm({
   slug,
   guestToken,
+  prefillName,
   onSubmitted,
 }: {
   slug: string;
   guestToken?: string;
+  prefillName?: string;
   onSubmitted?: () => void;
 }) {
   const t = copy.guestbook.form;
-  const [name, setName] = useState("");
+  // Nilai awal dari personalisasi (`?g=`/`?to=`); komponen di-remount lewat `key`
+  // saat nama tiba (lihat GuestbookSection) → tak perlu efek sinkronisasi.
+  const [name, setName] = useState(prefillName ?? "");
   const [attendance, setAttendance] = useState<"yes" | "no">("yes");
   const [pax, setPax] = useState(1);
   const [message, setMessage] = useState("");

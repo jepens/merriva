@@ -147,7 +147,7 @@ export default async function PublicInvitationPage({
   const Theme = (await loader()).default;
 
   return (
-    <InvitationShell cover={coverFromData(data)} music={music}>
+    <InvitationShell slug={data.slug} cover={coverFromData(data)} music={music}>
       <Theme data={data} />
     </InvitationShell>
   );

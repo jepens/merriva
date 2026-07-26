@@ -201,3 +201,32 @@ export async function deleteGuestAction(
   revalidatePath(`/dashboard/undangan/${invitationId}/tamu`);
   return { status: "success" };
 }
+
+/**
+ * Tandai tombol "Kirim via WA" diklik (SPEC §4.7) → set `wa_clicked_at` sekali
+ * (idempotent: hanya bila masih null). Auth → RLS `guests_update` (kepemilikan).
+ * Best-effort penanda distribusi; kegagalan tak menghentikan alur kirim.
+ */
+export async function markWaClickedAction(
+  invitationId: string,
+  guestId: string,
+): Promise<DeleteGuestResult> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "error" };
+  if (!isUuid(invitationId) || !isUuid(guestId)) return { status: "error" };
+
+  const { error } = await supabase
+    .from("guests")
+    .update({ wa_clicked_at: new Date().toISOString() })
+    .eq("id", guestId)
+    .eq("invitation_id", invitationId)
+    .is("wa_clicked_at", null);
+
+  if (error) return { status: "error", message: copy.common.error };
+
+  revalidatePath(`/dashboard/undangan/${invitationId}/sebar`);
+  return { status: "success" };
+}

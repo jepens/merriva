@@ -201,6 +201,28 @@ export const copy = {
       yes: "Ya",
       no: "Tidak",
     },
+    cardShare: "Sebar",
+    // Sebar Undangan (SPEC §4.7).
+    sebar: {
+      title: "Sebar Undangan",
+      subtitle: "Kirim link personal ke tiap tamu lewat WhatsApp.",
+      back: "Kembali ke undangan",
+      templateLabel: "Template pesan",
+      templateHint:
+        "Gunakan {nama}, {link}, dan {acara} — otomatis terisi untuk tiap tamu.",
+      guestListTitle: "Daftar Tamu",
+      empty: "Belum ada tamu. Tambahkan tamu lewat menu Tamu terlebih dahulu.",
+      noPhone: "Tanpa nomor WA",
+      waSend: "Kirim via WA",
+      copyMsg: "Salin pesan",
+      copied: "Tersalin",
+      copyAll: "Salin semua pesan",
+      copiedAll: "Semua pesan tersalin",
+      sent: "Terkirim",
+      countUnit: "tamu",
+      defaultTemplate:
+        "Kepada Yth. {nama},\n\nDengan penuh sukacita, kami mengundang Anda untuk hadir di {acara}. Doa serta kehadiran Anda sangat berarti bagi kami.\n\nInformasi lengkap & konfirmasi kehadiran dapat diakses melalui tautan berikut:\n{link}\n\nMerupakan suatu kehormatan bila Anda berkenan hadir. Terima kasih 🙏",
+    },
   },
   create: {
     title: "Buat Undangan Baru",
