@@ -48,7 +48,7 @@ const getInvitationBySlug = cache(async (slug: string) => {
   const { data } = await admin
     .from("invitations")
     .select(
-      "id, slug, category, content, settings, event_date, package_id, theme_id, status",
+      "id, slug, category, content, settings, event_date, package_id, theme_id, status, updated_at",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -86,12 +86,42 @@ export async function generateMetadata({
       ? content.greetingOpen.slice(0, 160)
       : copy.public.cover.defaultKicker;
 
+  // OG image dinamis (M2.5). URL di-versikan `?v=updated_at` (milidetik → tak ada
+  // alias dua simpan dalam detik yang sama) untuk mem-bust cache CDN/browser,
+  // sehingga scrape BARU setelah pemilik menyimpan mendapat gambar segar
+  // (revalidatePath sudah dipanggil di action simpan → meta memuat `?v` baru).
+  // Catatan: ini TIDAK mem-bust pratinjau WhatsApp untuk tautan yang SUDAH
+  // tersebar — WA meng-cache per URL halaman (yang tak berubah) tanpa purge
+  // publik; keterbatasan WA yang tak bisa dihindari dari sisi kode.
+  const version = new Date(inv.updated_at).getTime();
+  const ogImage = `/api/og/${slug}?v=${version}`;
+
   return {
     title,
     description,
-    // Undangan privat per tamu → jangan diindeks mesin pencari.
+    // Undangan privat per tamu → jangan diindeks mesin pencari. (Scraper
+    // pratinjau WA/FB tetap boleh mengambil OG image — itu memang diinginkan.)
     robots: { index: false, follow: false },
-    openGraph: { title, description, type: "website" },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          type: "image/png",
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
   };
 }
 
