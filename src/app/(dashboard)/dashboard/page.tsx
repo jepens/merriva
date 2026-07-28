@@ -87,6 +87,20 @@ export default async function DashboardPage() {
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {inv.status === "draft" ||
+                    inv.status === "pending_payment" ||
+                    inv.status === "expired" ? (
+                      <Link
+                        href={`/dashboard/undangan/${inv.id}/aktifkan`}
+                        className={buttonVariants({ size: "sm" })}
+                      >
+                        {inv.status === "draft"
+                          ? copy.dashboard.cardActivate
+                          : inv.status === "pending_payment"
+                            ? copy.dashboard.cardPay
+                            : copy.dashboard.cardRenew}
+                      </Link>
+                    ) : null}
                     <Link
                       href={`/dashboard/undangan/${inv.id}/edit`}
                       className={buttonVariants({

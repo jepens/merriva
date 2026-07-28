@@ -80,6 +80,9 @@ export const copy = {
       "Pembuat undangan multi-langkah sedang disiapkan dan hadir pada tahap M1 berikutnya.",
     backToList: "Kembali ke daftar undangan",
     cardEdit: "Edit",
+    cardActivate: "Aktifkan",
+    cardPay: "Lanjutkan pembayaran",
+    cardRenew: "Perpanjang",
     cardGuestbook: "Ucapan & amplop",
     // Moderasi ucapan & konfirmasi amplop (SPEC §4.6).
     guestbook: {
@@ -222,6 +225,33 @@ export const copy = {
       countUnit: "tamu",
       defaultTemplate:
         "Kepada Yth. {nama},\n\nDengan penuh sukacita, kami mengundang Anda untuk hadir di {acara}. Doa serta kehadiran Anda sangat berarti bagi kami.\n\nInformasi lengkap & konfirmasi kehadiran dapat diakses melalui tautan berikut:\n{link}\n\nMerupakan suatu kehormatan bila Anda berkenan hadir. Terima kasih 🙏",
+    },
+  },
+  // Checkout / aktivasi paket (SPEC §4.8).
+  checkout: {
+    title: "Aktifkan Undangan",
+    subtitle:
+      "Pilih paket untuk mengaktifkan & menyebarkan undangan. Pembayaran aman via QRIS atau Virtual Account.",
+    back: "Kembali ke dashboard",
+    popular: "Terpopuler",
+    choose: "Pilih paket ini",
+    redirecting: "Mengalihkan ke pembayaran…",
+    securedBy: "Pembayaran diproses oleh Pakasir (QRIS & Virtual Account).",
+    perDuration: (months: number) => `Masa aktif ${months} bulan`,
+    notPayable: "Undangan ini tidak dapat dibayar saat ini.",
+    packageUnavailable: "Paket tidak tersedia. Silakan coba lagi.",
+    error: "Gagal memulai pembayaran. Silakan coba lagi.",
+    // Fitur paket (dari packages.limits) untuk daftar centang.
+    feat: {
+      photos: (n: number) => `Galeri hingga ${n} foto`,
+      guestsLimited: (n: number) => `Hingga ${n} tamu`,
+      guestsUnlimited: "Tamu tanpa batas",
+      youtube: "Embed video YouTube",
+      allThemes: "Semua tema (termasuk premium)",
+      standardThemes: "Tema kategori standar",
+      noWatermark: "Tanpa watermark Merriva",
+      watermark: "Watermark kecil di footer",
+      rsvp: "RSVP + ucapan & amplop digital",
     },
   },
   create: {
