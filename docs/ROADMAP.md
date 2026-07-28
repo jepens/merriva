@@ -52,7 +52,7 @@
 **Hasil akhir:** bayar → aktif → kuitansi, tanpa campur tangan manual.
 
 - [x] Halaman pilih paket (data dari `packages`) + checkout → order `pending` + redirect payment link Pakasir — **M3.1**
-- [ ] Webhook `/api/webhooks/pakasir`: verifikasi 2 lapis (match DB + `transactiondetail`), idempotent, aktivasi + hitung `active_until`
+- [x] Webhook `/api/webhooks/pakasir`: verifikasi 2 lapis (match DB + `transactiondetail`), idempotent, aktivasi + hitung `active_until` — **M3.2** (RPC atomik `activate_paid_order`, service_role-only)
 - [ ] Halaman cek status pembayaran (poll `transactiondetail`)
 - [ ] Cron: expire order 24 jam (+ `transactioncancel`), expire undangan, reminder H-14
 - [ ] Email transaksional (Resend): verifikasi, kuitansi + link aktif, pengingat expiry

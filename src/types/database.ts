@@ -554,6 +554,16 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      activate_paid_order: {
+        Args: {
+          p_amount: number;
+          p_order_code: string;
+          p_paid_at: string | null;
+          p_payment_method: string | null;
+          p_raw: Json;
+        };
+        Returns: { result: string; slug: string | null }[];
+      };
       insert_gallery_media: {
         Args: {
           h: number;
