@@ -1,7 +1,9 @@
-import { Calendar, Clock, MapPin } from "lucide-react";
+import { Calendar, CalendarPlus, Clock, MapPin } from "lucide-react";
 
 import { GiftConfirm } from "@/components/public/guestbook/gift-confirm";
+import { googleCalendarUrl } from "@/lib/calendar";
 import { formatEventDateTime } from "@/lib/datetime";
+import { isDraftSlug, isReservedSlug } from "@/lib/slug";
 import type {
   Envelope as EnvelopeType,
   Person,
@@ -171,10 +173,17 @@ export function CountdownBlock({ targetIso }: { targetIso: string }) {
 export function Schedule({
   events,
   tz,
+  slug,
 }: {
   events: InvitationEventView[];
   tz: TimezoneId;
+  slug: string;
 }) {
+  // Berkas .ics hanya dilayani route untuk undangan AKTIF & slug publik. Pada
+  // showcase demo (slug "demo" = reserved) dan pratinjau draft (slug "draft-…")
+  // tautan itu 404 → sembunyikan opsi Apple/Outlook di situ (Google tetap jalan,
+  // tak butuh server). Halaman publik nyata tak pernah reserved/draft → tampil.
+  const icsServable = !isReservedSlug(slug) && !isDraftSlug(slug);
   return (
     <section className="er-section">
       <Reveal>
@@ -188,6 +197,19 @@ export function Schedule({
           // mapsUrl draft belum tervalidasi format).
           const maps =
             e.mapsUrl && /^https?:\/\//i.test(e.mapsUrl) ? e.mapsUrl : null;
+          // Aksi kalender (SPEC §4.5). Google = tautan render langsung; .ics =
+          // route handler (jalur Apple/Outlook). Keduanya dirakit saat render
+          // statis (tanpa JS klien) → ramah WebView & ISR. Tampil hanya bila
+          // waktu mulai valid (googleUrl non-null).
+          const gcal = googleCalendarUrl({
+            id: e.id,
+            title: e.name,
+            startAt: e.startAt,
+            endAt: e.endAt,
+            venueName: e.venueName,
+            address: e.address,
+          });
+          const icsUrl = `/api/ics/${slug}?e=${encodeURIComponent(e.id)}`;
           return (
             <Reveal key={e.id} delay={i * 80}>
               <article className="er-card">
@@ -213,17 +235,50 @@ export function Schedule({
                 {e.address ? (
                   <p className="er-person__meta">{e.address}</p>
                 ) : null}
-                {maps ? (
-                  <a
-                    className="er-btn"
-                    href={maps}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <MapPin size={15} />
-                    {L.schedule.maps}
-                  </a>
-                ) : null}
+                <div className="er-card__actions">
+                  {maps ? (
+                    <a
+                      className="er-btn"
+                      href={maps}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <MapPin size={15} />
+                      {L.schedule.maps}
+                    </a>
+                  ) : null}
+                  {gcal ? (
+                    <details className="er-cal">
+                      <summary className="er-btn er-cal__trigger">
+                        <CalendarPlus size={15} />
+                        {L.schedule.calendar}
+                      </summary>
+                      <div className="er-cal__menu">
+                        <a
+                          className="er-cal__opt"
+                          href={gcal}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {L.schedule.calendarGoogle}
+                        </a>
+                        {icsServable ? (
+                          // target=_blank memberi WebView (WKWebView iOS) jalan
+                          // menyerahkan unduhan .ics ke browser sistem; aman utk
+                          // Android (Content-Disposition tetap memicu unduhan).
+                          <a
+                            className="er-cal__opt"
+                            href={icsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {L.schedule.calendarIcs}
+                          </a>
+                        ) : null}
+                      </div>
+                    </details>
+                  ) : null}
+                </div>
               </article>
             </Reveal>
           );

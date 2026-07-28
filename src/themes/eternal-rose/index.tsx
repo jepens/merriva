@@ -112,7 +112,11 @@ export default function EternalRose({ data }: ThemeComponentProps) {
       ) : null}
 
       {isSectionVisible(settings, "schedule") && data.events.length > 0 ? (
-        <Schedule events={data.events} tz={settings.timezone} />
+        <Schedule
+          events={data.events}
+          tz={settings.timezone}
+          slug={data.slug}
+        />
       ) : null}
 
       {isSectionVisible(settings, "gallery") && data.media.length > 0 ? (

@@ -39,13 +39,13 @@
 **Hasil akhir:** alur tamu end-to-end berjalan mulus di WebView WhatsApp.
 
 - [x] Halaman `/{slug}` ISR + revalidate saat simpan; cover "Kepada Yth." + buka undangan + musik
-- [ ] Section: hero, countdown, jadwal + tombol Maps + simpan kalender (.ics/Google), galeri, love story, amplop (modal salin + konfirmasi privat), footer (watermark utk Basic)
-- [ ] RSVP + ucapan (form gabungan) + dinding ucapan (paginasi, moderasi, sembunyikan) — server action + Turnstile + rate limit + honeypot
-- [ ] Manajemen tamu: CRUD, label, import Excel/CSV (preview + laporan baris gagal), export
-- [ ] Link personal `?g=token`: prefill nama & RSVP, catat `first_viewed_at`
-- [ ] Halaman "Sebar Undangan": template pesan `{nama}/{link}/{acara}`, tombol `wa.me` per tamu (catat `wa_clicked_at`), salin per tamu / semua
-- [ ] OG image otomatis per undangan (`/api/og/[slug]`)
-- [ ] Uji nyata di WebView WA Android & iOS + Lighthouse mobile ≥ 90
+- [x] Section: hero, countdown, jadwal + tombol Maps + simpan kalender (.ics/Google), galeri, love story, amplop (modal salin + konfirmasi privat), footer (watermark utk Basic)
+- [x] RSVP + ucapan (form gabungan) + dinding ucapan (paginasi, moderasi, sembunyikan) — server action + Turnstile + rate limit + honeypot
+- [x] Manajemen tamu: CRUD, label, import Excel/CSV (preview + laporan baris gagal), export
+- [x] Link personal `?g=token`: prefill nama & RSVP, catat `first_viewed_at`
+- [x] Halaman "Sebar Undangan": template pesan `{nama}/{link}/{acara}`, tombol `wa.me` per tamu (catat `wa_clicked_at`), salin per tamu / semua
+- [x] OG image otomatis per undangan (`/api/og/[slug]`)
+- [ ] Uji nyata di WebView WA Android & iOS + Lighthouse mobile ≥ 90 — **QA manual pemilik di staging/production**: kode M2 lengkap & terverifikasi lokal (server + browser mobile 390px), tetapi WebView WA nyata iOS/Android + Lighthouse ≥90 wajib diukur di build produksi/perangkat asli (SPEC §10). Fokus uji M2.6: unduh `.ics` di WebView WA iOS (opsi Google jadi cadangan bila WKWebView menolak unduhan).
 
 ## M3 — Monetisasi (1–2 minggu)
 

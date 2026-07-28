@@ -307,6 +307,54 @@
   color: #fff;
 }
 
+/* Aksi kartu jadwal (Maps + Simpan ke Kalender) — rata & rapi berdampingan. */
+.er-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+.er-card__actions .er-btn {
+  margin-top: 0;
+}
+
+/* Disclosure "Simpan ke Kalender" — native <details>, tanpa JS (ramah WebView). */
+.er-cal {
+  position: relative;
+}
+.er-cal__trigger {
+  list-style: none;
+  user-select: none;
+}
+.er-cal__trigger::-webkit-details-marker {
+  display: none;
+}
+.er-cal__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+.er-cal__opt {
+  padding: 0.5rem 1rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--er-line);
+  background: var(--er-panel);
+  color: var(--er-rose-deep);
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.er-cal__opt:hover {
+  background: var(--er-rose);
+  color: #fff;
+  border-color: var(--er-rose);
+}
+
 /* ---- Gallery -------------------------------------------------------------- */
 .er-gallery {
   display: grid;
