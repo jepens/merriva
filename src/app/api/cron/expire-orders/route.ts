@@ -1,0 +1,118 @@
+import { revalidatePath } from "next/cache";
+
+import { getPaymentGateway } from "@/lib/payment";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isAuthorizedCron } from "@/server/cron/auth";
+import { verifyAndActivate } from "@/server/payment/reconcile";
+
+/**
+ * Cron: kedaluwarsakan order `pending` > 24 jam (SPEC §4.8, ARCHITECTURE §7).
+ * REKONSILIASI DULU, baru batalkan (menutup celah "webhook hilang" M3.3): tiap
+ * order diverifikasi OTORITATIF via `transactiondetail` (`verifyAndActivate`) —
+ * bila ternyata LUNAS, diaktifkan (atau `held` utk suspended, pembayaran tetap
+ * tercatat), BUKAN dibatalkan. Hanya order yang API pastikan BELUM lunas yang
+ * dibatalkan ke Pakasir (`transactioncancel`, best-effort) lalu di-`expired`.
+ *
+ * Auth: header `Authorization: Bearer <CRON_SECRET>`. Mutasi → service_role.
+ */
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+// Batasi kerja per-jalankan (tiap order = 1 panggilan `transactiondetail`).
+// Sisa diambil jalankan berikutnya. Order pending >24 jam seharusnya jarang.
+const BATCH = 100;
+
+function json(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+export async function POST(req: Request) {
+  if (!isAuthorizedCron(req)) return json({ ok: false }, 401);
+
+  const admin = createSupabaseAdminClient();
+  const cutoff = new Date(Date.now() - PENDING_MAX_AGE_MS).toISOString();
+
+  const { data: stale, error } = await admin
+    .from("orders")
+    .select("order_code, amount_idr")
+    .eq("status", "pending")
+    .lt("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(BATCH);
+  if (error) return json({ ok: false }, 503);
+
+  let activated = 0; // rekonsiliasi menemukan lunas → diaktifkan
+  let keptPaid = 0; // lunas tetapi tak dipublikasi (held) / anomali → JANGAN expire
+  let expired = 0; // dipastikan belum lunas → dibatalkan + expired
+  let skipped = 0; // transien/ambigu → coba lagi jalankan berikutnya
+  let cancelFailed = 0; // Pakasir cancel gagal (tetap di-expire; residual link)
+
+  for (const o of stale ?? []) {
+    const outcome = await verifyAndActivate(admin, {
+      order_code: o.order_code,
+      amount_idr: o.amount_idr,
+    });
+
+    if (outcome.kind === "ok") {
+      if (outcome.result === "activated" || outcome.result === "already_paid") {
+        activated += 1;
+        if (outcome.slug) revalidatePath(`/${outcome.slug}`);
+      } else {
+        // held / invalid / not_found → order kini paid atau anomali; jangan expire.
+        keptPaid += 1;
+      }
+      continue;
+    }
+    // Hanya `not_confirmed` (API pastikan BELUM lunas) yang boleh dibatalkan.
+    // Transien (verify_error/rpc_error) & `mismatch` → tunda ke jalankan berikutnya.
+    if (outcome.kind !== "not_confirmed") {
+      skipped += 1;
+      continue;
+    }
+
+    // EXPIRE DULU (atomik, kunci baris), BARU batalkan link. Urutan ini mencegah
+    // membatalkan order yang lunas di detik terakhir: bila webhook/poll
+    // mengaktifkan tepat setelah rekonsiliasi kita, RPC (kunci baris + cek ulang
+    // `status='pending'`) melihat status bukan `pending` → `not_pending` → kita
+    // TAK meng-expire & TAK membatalkan (aktivasi menang). Bila RPC berhasil
+    // meng-`expired`, order PASTI belum lunas saat lock → aman dibatalkan; dan
+    // webhook yang tiba setelahnya melihat `expired` → `invalid` (tak mengaktifkan).
+    const { data: rpc } = await admin.rpc("expire_pending_order", {
+      p_order_code: o.order_code,
+    });
+    if (rpc?.[0]?.result !== "expired") {
+      skipped += 1; // not_pending (keburu lunas) / not_found → jangan batalkan
+      continue;
+    }
+    expired += 1;
+    // Batalkan link Pakasir (best-effort). Gagal → order tetap `expired` lokal;
+    // residual: link mungkin masih hidup (dicatat cancelFailed).
+    try {
+      await getPaymentGateway().cancelTransaction(o.order_code, o.amount_idr);
+    } catch {
+      cancelFailed += 1;
+    }
+  }
+
+  const scanned = stale?.length ?? 0;
+  return json(
+    {
+      ok: true,
+      scanned,
+      // Batch penuh → mungkin masih ada sisa; observabilitas backlog (bukan
+      // truncation senyap). Sisa diproses jalankan berikutnya.
+      truncated: scanned === BATCH,
+      activated,
+      keptPaid,
+      expired,
+      skipped,
+      cancelFailed,
+    },
+    200,
+  );
+}

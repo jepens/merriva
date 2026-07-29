@@ -36,4 +36,10 @@ export interface PaymentGateway {
     orderCode: string,
     amountIdr: number,
   ): Promise<PaymentVerification>;
+  /**
+   * Batalkan payment link yang belum terbayar (cron expire order >24 jam, SPEC §4.8).
+   * Best-effort: melempar bila API menolak. Panggil HANYA setelah verifikasi
+   * memastikan order belum lunas (jangan batalkan yang sudah dibayar).
+   */
+  cancelTransaction(orderCode: string, amountIdr: number): Promise<void>;
 }

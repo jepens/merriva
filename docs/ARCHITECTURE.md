@@ -69,6 +69,12 @@ Aturan yang membuat migrasi = ganti env: DB hanya menyimpan `storage_path` relat
 
 Resend: verifikasi akun, kuitansi + link aktif, pengingat H-14 expiry, (opsional) rekap RSVP mingguan. Cron (Easypanel scheduled job memanggil `/api/cron/*` dengan header `CRON_SECRET`, atau `pg_cron`): expire order pending >24 jam · set `expired` untuk undangan lewat `active_until` · email pengingat · pembersihan data lewat retensi (lihat DATA-MODEL §5).
 
+**Endpoint cron (M3.4).** Semua `POST`, otorisasi `Authorization: Bearer <CRON_SECRET>` (bandingan timing-safe; `CRON_SECRET` kosong = tertutup total). Jadwalkan di Easypanel (mis. `curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://merriva.id/api/cron/<name>`):
+
+- `/api/cron/expire-orders` — order `pending` >24 jam. **Rekonsiliasi dulu**: verifikasi OTORITATIF `transactiondetail` (`verifyAndActivate`) → jika lunas, aktifkan (atau `held`, pembayaran tetap tercatat), JANGAN batalkan; hanya yang API pastikan belum lunas → `transactioncancel` (best-effort) + `expired` via RPC `expire_pending_order` (atomik, kunci baris, service_role-only). Transien → dilewati (retry jalankan berikutnya). Sarankan tiap **~15 menit**.
+- `/api/cron/expire-invitations` — undangan `active` lewat `active_until` → `expired` (satu UPDATE, service_role) + revalidate ISR `/{slug}`. Sarankan tiap **jam** (atau harian).
+- Reminder H-14 & pembersihan retensi: menyusul (M3.5 / pasca-MVP).
+
 ## 8. Deployment (VPS + Easypanel)
 
 `Dockerfile` multi-stage: `node:22-alpine` → install (pnpm, frozen lockfile) → build (`output: 'standalone'`) → runtime hanya `.next/standalone` + `public` + `.next/static`, user non-root, `EXPOSE 3000`, healthcheck `GET /api/health` (cek DB reachable). Easypanel: app dari repo Git (push → auto build+deploy), domain `merriva.id` di-attach (SSL Let's Encrypt otomatis via Traefik), env vars di panel. DNS di Cloudflare (proxy oranye ON untuk cache statis + perlindungan).

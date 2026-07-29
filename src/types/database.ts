@@ -564,6 +564,12 @@ export type Database = {
         };
         Returns: { result: string; slug: string | null }[];
       };
+      expire_pending_order: {
+        Args: {
+          p_order_code: string;
+        };
+        Returns: { result: string }[];
+      };
       insert_gallery_media: {
         Args: {
           h: number;

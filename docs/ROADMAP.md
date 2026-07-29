@@ -54,8 +54,9 @@
 - [x] Halaman pilih paket (data dari `packages`) + checkout → order `pending` + redirect payment link Pakasir — **M3.1**
 - [x] Webhook `/api/webhooks/pakasir`: verifikasi 2 lapis (match DB + `transactiondetail`), idempotent, aktivasi + hitung `active_until` — **M3.2** (RPC atomik `activate_paid_order`, service_role-only)
 - [x] Halaman cek status pembayaran (poll `transactiondetail`) — **M3.3** (`/dashboard/undangan/[id]/bayar` + poller; jalur aktivasi OTORITATIF kedua via `verifyAndActivate` bersama dengan webhook; `pending`→`active` tanpa reload)
-- [ ] Cron: expire order 24 jam (+ `transactioncancel`), expire undangan, reminder H-14 — **rekonsiliasi WAJIB verifikasi `transactiondetail` sebelum `transactioncancel`** (order lunas tapi webhook hilang → catat `paid`/`held`, jangan batalkan; menutup celah "suspended + webhook hilang" M3.3)
-- [ ] Email transaksional (Resend): verifikasi, kuitansi + link aktif, pengingat expiry
+- [x] Cron expiry order + undangan — **M3.4**: `/api/cron/expire-orders` (**rekonsiliasi `transactiondetail` DULU** → aktifkan bila ternyata lunas, jika belum lunas `transactioncancel` + `expired`; menutup celah "webhook hilang" M3.3) · `/api/cron/expire-invitations` (`active` lewat `active_until` → `expired` + revalidate ISR). Auth `Authorization: Bearer <CRON_SECRET>` (timing-safe, fail-closed); RPC `expire_pending_order` service_role-only (atomik + revert `pending_payment`→`draft`)
+- [ ] Reminder expiry H-14 (cron) — **dipindah ke M3.5** (tak terpisah dari email Resend; butuh kolom `reminder_sent_at` untuk idempotensi)
+- [ ] Email transaksional (Resend): verifikasi, kuitansi + link aktif, pengingat expiry — **termasuk cron pemicu reminder H-14** (dipindah dari M3.4) + kolom `reminder_sent_at`
 - [ ] Enforcement penuh limit paket + watermark Basic
 - [ ] E2E: checkout → `paymentsimulation` → webhook → aktif
 

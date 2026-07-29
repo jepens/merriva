@@ -106,4 +106,30 @@ export class PakasirGateway implements PaymentGateway {
     }
     return parsed;
   }
+
+  /**
+   * Batalkan payment link (`POST /api/transactioncancel`, body
+   * `{project, order_id, amount, api_key}` — dok pakasir.com/p/docs). Best-effort:
+   * bentuk respons tak didokumentasikan → sukses ditandai oleh HTTP 2xx. Melempar
+   * bila non-OK / timeout. `api_key` hanya di body, tak pernah di pesan error/log.
+   */
+  async cancelTransaction(orderCode: string, amountIdr: number): Promise<void> {
+    if (!this.apiKey) throw new Error("PAKASIR_API_KEY belum di-set.");
+    const res = await fetch(`${PAKASIR_BASE_URL}/api/transactioncancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project: this.projectSlug,
+        order_id: orderCode,
+        amount: amountIdr,
+        api_key: this.apiKey,
+      }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      // JANGAN sertakan body/URL (tak ada api_key di URL, tapi konsisten aman).
+      throw new Error(`Pakasir transactioncancel HTTP ${res.status}`);
+    }
+  }
 }

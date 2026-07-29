@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildPakasirPaymentUrl,
   mapPakasirStatus,
+  PakasirGateway,
   parseTransactionDetail,
 } from "@/lib/payment/pakasir";
 import { pakasirWebhookSchema } from "@/lib/payment/webhook";
@@ -114,5 +115,58 @@ describe("pakasirWebhookSchema", () => {
     ).toBe(false);
     const { order_id: _drop, ...noOrder } = valid;
     expect(pakasirWebhookSchema.safeParse(noOrder).success).toBe(false);
+  });
+});
+
+describe("PakasirGateway.cancelTransaction", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("melempar bila api_key belum di-set (tak memanggil jaringan)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const gw = new PakasirGateway("merriva"); // tanpa api_key
+    await expect(gw.cancelTransaction("MRV-8F3K2", 99000)).rejects.toThrow(
+      /PAKASIR_API_KEY/,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/transactioncancel dgn body {project,order_id,amount,api_key}; sukses saat 2xx", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    const gw = new PakasirGateway("merriva", "secret-key");
+
+    await expect(
+      gw.cancelTransaction("MRV-8F3K2", 99000),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe("https://app.pakasir.com/api/transactioncancel");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(init?.body as string)).toEqual({
+      project: "merriva",
+      order_id: "MRV-8F3K2",
+      amount: 99000,
+      api_key: "secret-key",
+    });
+  });
+
+  it("melempar saat non-OK; pesan error TIDAK membocorkan api_key", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("gagal", { status: 400 }),
+    );
+    const gw = new PakasirGateway("merriva", "secret-key");
+
+    let message = "";
+    try {
+      await gw.cancelTransaction("MRV-8F3K2", 99000);
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toContain("HTTP 400");
+    expect(message).not.toContain("secret-key");
   });
 });
