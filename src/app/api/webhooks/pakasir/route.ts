@@ -1,11 +1,11 @@
 import { revalidatePath } from "next/cache";
 
 import { toDbJson } from "@/lib/json";
-import { getPaymentGateway } from "@/lib/payment";
 import { pakasirWebhookSchema } from "@/lib/payment/webhook";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { clientRateKey } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { verifyAndActivate } from "@/server/payment/reconcile";
 
 /**
  * Webhook pembayaran Pakasir (SPEC §4.8 / M3.2). Webhook Pakasir **TANPA
@@ -89,45 +89,37 @@ export async function POST(req: Request) {
     return json({ ok: true, activated: false }, 200);
   }
 
-  // Lapisan 2: verifikasi OTORITATIF ke transactiondetail. Error jaringan/HTTP
-  // → 503 agar Pakasir retry nanti (jangan aktifkan atas kegagalan verifikasi).
-  let verification;
-  try {
-    verification = await getPaymentGateway().verifyTransaction(
-      order.order_code,
-      order.amount_idr,
-    );
-  } catch {
-    return json({ ok: false }, 503);
+  // Lapisan 2 + aktivasi: verifikasi OTORITATIF ke transactiondetail lalu
+  // aktivasi ATOMIK (RPC service_role) — inti bersama `verifyAndActivate`
+  // (dipakai juga halaman cek-status M3.3). `raw_notification` menyimpan payload
+  // webhook mentah (untuk rekonsiliasi admin). Kode HTTP dipetakan ke perilaku
+  // retry Pakasir: transien → 5xx (retry), keputusan final → 200.
+  const outcome = await verifyAndActivate(
+    admin,
+    { order_code: order.order_code, amount_idr: order.amount_idr },
+    toDbJson(p),
+  );
+  switch (outcome.kind) {
+    // Error jaringan/HTTP/bentuk saat verifikasi → 503 agar Pakasir retry nanti.
+    case "verify_error":
+      return json({ ok: false }, 503);
+    // RPC gagal (transien) → 500 agar Pakasir retry.
+    case "rpc_error":
+      return json({ ok: false }, 500);
+    // API tak konfirmasi lunas / amount tak cocok → JANGAN aktifkan (ack 200).
+    case "not_confirmed":
+    case "mismatch":
+      return json({ ok: true, activated: false }, 200);
+    case "ok": {
+      // Segarkan cache ISR halaman publik saat baru aktif (DECISIONS #25) — juga
+      // saat already_paid (idempoten, aman) agar cache konsisten pasca-aktivasi.
+      if (
+        outcome.slug &&
+        (outcome.result === "activated" || outcome.result === "already_paid")
+      ) {
+        revalidatePath(`/${outcome.slug}`);
+      }
+      return json({ ok: true, activated: outcome.result === "activated" }, 200);
+    }
   }
-  // API tak mengonfirmasi lunas / amount tak cocok → JANGAN aktifkan (ack 200).
-  if (
-    verification.status !== "paid" ||
-    verification.amountIdr !== order.amount_idr
-  ) {
-    return json({ ok: true, activated: false }, 200);
-  }
-
-  // Aktivasi ATOMIK + idempoten (RPC service_role).
-  const { data: rpc, error } = await admin.rpc("activate_paid_order", {
-    p_order_code: order.order_code,
-    p_amount: verification.amountIdr,
-    // Metode & waktu bayar dari sumber OTORITATIF (transactiondetail), bukan
-    // payload webhook tak-terverifikasi. `raw_notification` tetap menyimpan payload.
-    p_payment_method: verification.paymentMethod,
-    p_paid_at: verification.paidAt,
-    p_raw: toDbJson(p),
-  });
-  if (error) return json({ ok: false }, 500);
-
-  const row = rpc?.[0];
-  // Segarkan cache ISR halaman publik saat baru aktif (DECISIONS #25) — juga saat
-  // already_paid (idempoten, aman) agar cache konsisten pasca-aktivasi.
-  if (
-    row?.slug &&
-    (row.result === "activated" || row.result === "already_paid")
-  ) {
-    revalidatePath(`/${row.slug}`);
-  }
-  return json({ ok: true, activated: row?.result === "activated" }, 200);
 }

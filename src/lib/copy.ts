@@ -254,6 +254,39 @@ export const copy = {
       rsvp: "RSVP + ucapan & amplop digital",
     },
   },
+  // Halaman cek status pembayaran (M3.3) — poll `transactiondetail`.
+  paymentStatus: {
+    title: "Status Pembayaran",
+    order: "Kode order",
+    package: "Paket",
+    amount: "Total",
+    checkNow: "Cek sekarang",
+    checking: "Memeriksa…",
+    waitingTitle: "Menunggu konfirmasi pembayaran",
+    waitingBody:
+      "Setelah pembayaran selesai, undangan aktif otomatis — biasanya hanya beberapa detik. Halaman ini memperbarui sendiri.",
+    successTitle: "Pembayaran berhasil!",
+    successBody: "Undangan Anda kini aktif dan siap disebar.",
+    viewInvitation: "Lihat undangan",
+    shareInvitation: "Sebar undangan",
+    toDashboard: "Ke dashboard",
+    expiredTitle: "Sesi pembayaran kedaluwarsa",
+    expiredBody:
+      "Pembayaran tidak selesai dalam batas waktu. Silakan mulai lagi untuk mengaktifkan undangan.",
+    activateAgain: "Aktifkan lagi",
+    reviewTitle: "Pembayaran diterima — undangan sedang ditinjau",
+    reviewBody:
+      "Terima kasih. Undangan Anda sedang ditinjau dan akan aktif setelah proses selesai. Hubungi kami bila butuh bantuan.",
+    noneTitle: "Belum ada pembayaran",
+    noneBody: "Belum ada order pembayaran untuk undangan ini.",
+    errorTitle: "Tidak dapat memeriksa status",
+    errorBody: "Terjadi kendala saat memeriksa pembayaran. Coba lagi sebentar.",
+    timeoutTitle: "Masih menunggu konfirmasi",
+    timeoutBody:
+      "Konfirmasi belum diterima. Bila Anda sudah membayar, undangan akan aktif otomatis begitu terkonfirmasi — Anda bisa cek lagi atau tutup halaman ini.",
+    retry: "Coba lagi",
+    back: "Kembali ke dashboard",
+  },
   create: {
     title: "Buat Undangan Baru",
     subtitle: "Pilih jenis acara dan tema. Undangan gratis dibuat & dipreview.",

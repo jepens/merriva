@@ -105,13 +105,13 @@ export async function createCheckoutAction(
 
   revalidatePath("/dashboard");
 
-  // Pakasir redirect kembali ke dashboard setelah bayar. TODO(M3.3): arahkan ke
-  // halaman "cek status pembayaran" (`/dashboard/undangan/{id}/bayar`) agar klien
-  // yang kembali sebelum webhook tiba bisa mem-poll `transactiondetail`.
+  // Pakasir mengembalikan klien ke halaman "cek status pembayaran" (M3.3): bila
+  // ia kembali sebelum webhook tiba, poller mem-verifikasi via `transactiondetail`
+  // dan mengaktifkan (jalur OTORITATIF kedua, pendamping webhook M3.2).
   const url = getPaymentGateway().createPaymentLink({
     orderCode,
     amountIdr: pkg.price_idr,
-    redirectUrl: `${appUrl}/dashboard`,
+    redirectUrl: `${appUrl}/dashboard/undangan/${invitationId}/bayar`,
   });
   return { status: "redirect", url };
 }
