@@ -1,6 +1,6 @@
 import "server-only";
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ProfileRole } from "@/types";
@@ -38,4 +38,24 @@ export async function getCurrentRole(): Promise<ProfileRole | null> {
     .single<{ role: ProfileRole }>();
 
   return data?.role ?? "client";
+}
+
+/**
+ * Wajib admin (SPEC §4.9). Belum login → redirect `/masuk`; login tapi bukan
+ * admin → `notFound()` (404) agar keberadaan route admin TAK terkonfirmasi ke
+ * `client` ("role client tidak bisa membuka satu pun route/API admin"). Role
+ * dibaca via RLS `profiles_select` (baris sendiri) → tak bisa dipalsukan klien.
+ * Dipakai di layout `(admin)` + setiap Server Action admin (defense-in-depth di
+ * atas middleware + RLS admin-ALL).
+ */
+export async function requireAdmin() {
+  const user = await requireUser();
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single<{ role: ProfileRole }>();
+  if (data?.role !== "admin") notFound();
+  return user;
 }

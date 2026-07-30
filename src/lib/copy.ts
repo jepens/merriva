@@ -558,6 +558,33 @@ export const copy = {
       outro: "Abaikan email ini bila undangan memang tak perlu diperpanjang.",
     },
   },
+  admin: {
+    brand: "Merriva Admin",
+    nav: {
+      overview: "Ringkasan",
+      invitations: "Undangan",
+      orders: "Order",
+      users: "Pengguna",
+      packages: "Paket",
+      themes: "Tema",
+      toDashboard: "Ke dashboard",
+    },
+    overview: {
+      title: "Ringkasan",
+      subtitle: "Metrik utama Merriva.",
+      newInvitations24h: "Undangan baru (24 jam)",
+      newInvitations7d: "Undangan baru (7 hari)",
+      totalInvitations: "Total undangan",
+      activeInvitations: "Undangan aktif",
+      conversion: "Konversi draft → bayar",
+      convertedOf: (converted: number, total: number) =>
+        `${converted} dari ${total} undangan`,
+      revenueThisMonth: "Revenue bulan ini",
+      paidOrdersThisMonth: (n: number) => `${n} order lunas bulan ini`,
+      recentActivity: "Aktivitas admin terakhir",
+      noActivity: "Belum ada aktivitas admin.",
+    },
+  },
 } as const;
 
 export type Copy = typeof copy;

@@ -8,6 +8,11 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // `server-only` menandai modul agar gagal bila ter-bundle ke klien; di
+      // test tak ada bundle klien → stub kosong agar modul server bisa diuji.
+      "server-only": fileURLToPath(
+        new URL("./tests/stubs/server-only.ts", import.meta.url),
+      ),
     },
   },
   test: {
