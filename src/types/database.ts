@@ -5,6 +5,7 @@
  *   # atau via Supabase MCP: generate_typescript_types
  * Jangan diedit manual.
  */
+
 export type Json =
   | string
   | number
@@ -14,10 +15,30 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5";
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
   public: {
     Tables: {
@@ -561,17 +582,68 @@ export type Database = {
         Args: {
           p_amount: number;
           p_order_code: string;
+          // Nullable di SQL (di-`coalesce`) — generator tak bisa menyatakan arg
+          // fungsi nullable; koreksi manual agar jalur webhook/poll (paidAt/
+          // paymentMethod bisa null) tetap ter-type. Pertahankan saat regen.
           p_paid_at: string | null;
           p_payment_method: string | null;
           p_raw: Json;
         };
-        Returns: { result: string; slug: string | null }[];
+        Returns: {
+          result: string;
+          slug: string;
+        }[];
+      };
+      admin_activate_invitation: {
+        Args: {
+          p_admin_id: string;
+          p_invitation_id: string;
+          p_order_code: string;
+          p_package_id: string;
+        };
+        Returns: {
+          result: string;
+          slug: string;
+        }[];
+      };
+      admin_change_owner: {
+        Args: {
+          p_admin_id: string;
+          p_invitation_id: string;
+          p_new_user_id: string;
+        };
+        Returns: {
+          result: string;
+        }[];
+      };
+      admin_extend_invitation: {
+        Args: { p_admin_id: string; p_invitation_id: string; p_months: number };
+        Returns: {
+          active_until: string;
+          result: string;
+          slug: string;
+        }[];
+      };
+      admin_reinstate_invitation: {
+        Args: { p_admin_id: string; p_invitation_id: string };
+        Returns: {
+          new_status: string;
+          result: string;
+          slug: string;
+        }[];
+      };
+      admin_suspend_invitation: {
+        Args: { p_admin_id: string; p_invitation_id: string; p_reason: string };
+        Returns: {
+          result: string;
+          slug: string;
+        }[];
       };
       expire_pending_order: {
-        Args: {
-          p_order_code: string;
-        };
-        Returns: { result: string }[];
+        Args: { p_order_code: string };
+        Returns: {
+          result: string;
+        }[];
       };
       insert_gallery_media: {
         Args: {
@@ -792,6 +864,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       gift_note_type: ["transfer", "gift"],

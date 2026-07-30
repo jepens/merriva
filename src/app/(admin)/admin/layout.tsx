@@ -36,6 +36,24 @@ export default async function AdminLayout({
               {copy.admin.nav.overview}
             </Link>
             <Link
+              href="/admin/undangan"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              {copy.admin.nav.invitations}
+            </Link>
+            <Link
+              href="/admin/order"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              {copy.admin.nav.orders}
+            </Link>
+            <Link
+              href="/admin/pengguna"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              {copy.admin.nav.users}
+            </Link>
+            <Link
               href="/dashboard"
               className={buttonVariants({ variant: "ghost", size: "sm" })}
             >
