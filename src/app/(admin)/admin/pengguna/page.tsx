@@ -11,6 +11,8 @@ import type { ProfileRole } from "@/types";
 export const metadata: Metadata = { title: copy.admin.users.title };
 
 const PAGE_SIZE = 25;
+const SCAN_PER_PAGE = 100;
+const MAX_SCAN_PAGES = 20; // pindai hingga ~2000 user (skala MVP)
 const c = copy.admin.users;
 
 interface UserRow {
@@ -32,42 +34,53 @@ export default async function AdminUsersPage({
   const page = Math.max(1, Number(sp.page) || 1);
 
   const admin = createSupabaseAdminClient();
-  const { data: list } = await admin.auth.admin.listUsers({
-    page,
-    perPage: PAGE_SIZE,
-  });
-  const users = list?.users ?? [];
-  const hasNext = users.length === PAGE_SIZE;
 
-  // Peran/nama dari `profiles` (auth.users tak menyimpannya).
-  const ids = users.map((u) => u.id);
+  // GoTrue admin `listUsers` TAK punya pencarian/urut server-side → pindai semua
+  // halaman lalu filter + paginasi DI MEMORI (pencarian global + hasNext akurat).
+  const allUsers: { id: string; email?: string; created_at: string }[] = [];
+  let truncated = false;
+  for (let p = 1; p <= MAX_SCAN_PAGES; p += 1) {
+    const { data } = await admin.auth.admin.listUsers({
+      page: p,
+      perPage: SCAN_PER_PAGE,
+    });
+    const chunk = data?.users ?? [];
+    allUsers.push(...chunk);
+    if (chunk.length < SCAN_PER_PAGE) break;
+    if (p === MAX_SCAN_PAGES) truncated = true;
+  }
+  if (truncated) {
+    console.warn(
+      `[admin/pengguna] daftar user dipotong pada ${allUsers.length} (>${MAX_SCAN_PAGES}×${SCAN_PER_PAGE}).`,
+    );
+  }
+
+  // Peran/nama dari `profiles` (auth.users tak menyimpannya). Satu query.
   const profileMap = new Map<
     string,
     { role: ProfileRole; full_name: string | null; phone: string | null }
   >();
-  if (ids.length > 0) {
-    const { data: profiles } = await admin
-      .from("profiles")
-      .select("id, role, full_name, phone")
-      .in("id", ids);
-    for (const p of profiles ?? []) {
-      profileMap.set(p.id, {
-        role: p.role,
-        full_name: p.full_name,
-        phone: p.phone,
-      });
-    }
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, role, full_name, phone")
+    .range(0, MAX_SCAN_PAGES * SCAN_PER_PAGE - 1);
+  for (const pr of profiles ?? []) {
+    profileMap.set(pr.id, {
+      role: pr.role,
+      full_name: pr.full_name,
+      phone: pr.phone,
+    });
   }
 
-  let rows: UserRow[] = users.map((u) => {
-    const p = profileMap.get(u.id);
+  let rows: UserRow[] = allUsers.map((u) => {
+    const pr = profileMap.get(u.id);
     return {
       id: u.id,
       email: u.email ?? null,
       created_at: u.created_at,
-      role: p?.role ?? "client",
-      full_name: p?.full_name ?? null,
-      phone: p?.phone ?? null,
+      role: pr?.role ?? "client",
+      full_name: pr?.full_name ?? null,
+      phone: pr?.phone ?? null,
     };
   });
   if (q) {
@@ -77,6 +90,11 @@ export default async function AdminUsersPage({
         (r.full_name ?? "").toLowerCase().includes(q),
     );
   }
+
+  const total = rows.length;
+  const start = (page - 1) * PAGE_SIZE;
+  const pageRows = rows.slice(start, start + PAGE_SIZE);
+  const hasNext = start + PAGE_SIZE < total;
 
   const href = (p: number) => {
     const params = new URLSearchParams();
@@ -118,7 +136,7 @@ export default async function AdminUsersPage({
               </tr>
             </thead>
             <tbody className="divide-y">
-              {rows.length === 0 ? (
+              {pageRows.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
@@ -128,7 +146,7 @@ export default async function AdminUsersPage({
                   </td>
                 </tr>
               ) : (
-                rows.map((r) => (
+                pageRows.map((r) => (
                   <tr key={r.id} className="hover:bg-muted/30">
                     <td className="px-4 py-2">
                       {r.email ?? copy.admin.common.dash}

@@ -30,13 +30,17 @@ export async function adminUpdatePackageAction(
 ): Promise<never> {
   const adminUser = await requireAdmin();
 
+  // Bila "tanpa batas" dicentang, `maxGuests` DIABAIKAN (→ null). Isi placeholder
+  // valid agar field yang diabaikan tak menggagalkan validasi (mis. admin
+  // mengosongkannya saat mencentang tanpa-batas).
+  const guestsUnlimited = checked(formData, "guestsUnlimited");
   const parsed = adminPackageSchema.safeParse({
     name: formData.get("name"),
     priceIdr: formData.get("priceIdr"),
     durationMonths: formData.get("durationMonths"),
     maxPhotos: formData.get("maxPhotos"),
-    maxGuests: formData.get("maxGuests"),
-    guestsUnlimited: checked(formData, "guestsUnlimited"),
+    maxGuests: guestsUnlimited ? 1 : formData.get("maxGuests"),
+    guestsUnlimited,
     isActive: checked(formData, "isActive"),
     youtube: checked(formData, "youtube"),
     allThemes: checked(formData, "allThemes"),

@@ -1,26 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock service-role client sebelum import modul yang memakainya.
-const fakeAdmin = { from: vi.fn() };
+const fakeAdmin = { from: vi.fn(), rpc: vi.fn() };
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => fakeAdmin,
 }));
 
 import { getAdminMetrics } from "@/server/admin/metrics";
 
-interface PaidRow {
-  amount_idr: number;
-}
-
 /**
- * Susun builder palsu. Query invitations dipanggil berurutan (Promise.all
- * mempertahankan urutan array): total, active, converted, new24h, new7d →
- * masing-masing me-resolve `{count}`. Query orders me-resolve `{data}` +
- * merekam `monthStart` yang diteruskan ke `.gte("paid_at", …)`.
+ * Query invitations dipanggil berurutan (Promise.all mempertahankan urutan
+ * array): total, active, converted, new24h, new7d → masing-masing me-resolve
+ * `{count}`. Revenue lewat RPC `admin_month_revenue` → me-resolve
+ * `{data:[{total,cnt}]}` + merekam `p_since` (batas bulan WIB).
  */
-function setup(invCounts: number[], paidRows: PaidRow[]) {
+function setup(invCounts: number[], revenue: { total: number; cnt: number }) {
   let i = 0;
-  const captured = { monthStart: "" };
+  const captured = { since: "" };
 
   const invBuilder = () => {
     const count = invCounts[i++] ?? 0;
@@ -28,36 +24,29 @@ function setup(invCounts: number[], paidRows: PaidRow[]) {
       eq: () => b,
       in: () => b,
       gte: () => b,
+      not: () => b,
       then: (res: (v: { count: number }) => unknown) => res({ count }),
     };
     return b;
   };
 
-  const ordersBuilder = {
-    eq: () => ordersBuilder,
-    gte: (_col: string, val: string) => {
-      captured.monthStart = val;
-      return ordersBuilder;
-    },
-    then: (res: (v: { data: PaidRow[] }) => unknown) => res({ data: paidRows }),
-  };
-
-  fakeAdmin.from.mockImplementation((table: string) =>
-    table === "invitations"
-      ? { select: () => invBuilder() }
-      : { select: () => ordersBuilder },
-  );
+  fakeAdmin.from.mockImplementation(() => ({ select: () => invBuilder() }));
+  fakeAdmin.rpc.mockImplementation((_fn: string, args: { p_since: string }) => {
+    captured.since = args.p_since;
+    return Promise.resolve({ data: [revenue] });
+  });
 
   return captured;
 }
 
 beforeEach(() => {
   fakeAdmin.from.mockReset();
+  fakeAdmin.rpc.mockReset();
 });
 
 describe("getAdminMetrics", () => {
   it("menghitung konversi & revenue dari hasil query", async () => {
-    setup([10, 4, 6, 2, 5], [{ amount_idr: 99_000 }, { amount_idr: 249_000 }]);
+    setup([10, 4, 6, 2, 5], { total: 348_000, cnt: 2 });
 
     const m = await getAdminMetrics(new Date("2026-07-15T03:00:00Z"));
 
@@ -72,7 +61,7 @@ describe("getAdminMetrics", () => {
   });
 
   it("konversi = 0 saat belum ada undangan (tanpa divide-by-zero)", async () => {
-    setup([0, 0, 0, 0, 0], []);
+    setup([0, 0, 0, 0, 0], { total: 0, cnt: 0 });
 
     const m = await getAdminMetrics(new Date("2026-07-15T03:00:00Z"));
 
@@ -85,20 +74,20 @@ describe("getAdminMetrics", () => {
   it("revenue bulan berjalan memakai batas bulan WIB (bukan UTC)", async () => {
     // 15 Juli 03:00 UTC = 15 Juli 10:00 WIB → awal bulan WIB = 1 Juli 00:00 WIB
     // = 30 Juni 17:00 UTC.
-    const captured = setup([1, 0, 0, 0, 0], []);
+    const captured = setup([1, 0, 0, 0, 0], { total: 0, cnt: 0 });
 
     await getAdminMetrics(new Date("2026-07-15T03:00:00Z"));
 
-    expect(captured.monthStart).toBe("2026-06-30T17:00:00.000Z");
+    expect(captured.since).toBe("2026-06-30T17:00:00.000Z");
   });
 
   it("awal bulan WIB dekat pergantian bulan menghitung bulan yang benar", async () => {
     // 1 Agustus 02:00 UTC = 1 Agustus 09:00 WIB → awal bulan WIB = 1 Agustus
     // 00:00 WIB = 31 Juli 17:00 UTC (bukan Juli awal).
-    const captured = setup([1, 0, 0, 0, 0], []);
+    const captured = setup([1, 0, 0, 0, 0], { total: 0, cnt: 0 });
 
     await getAdminMetrics(new Date("2026-08-01T02:00:00Z"));
 
-    expect(captured.monthStart).toBe("2026-07-31T17:00:00.000Z");
+    expect(captured.since).toBe("2026-07-31T17:00:00.000Z");
   });
 });

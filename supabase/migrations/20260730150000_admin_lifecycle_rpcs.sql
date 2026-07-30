@@ -265,6 +265,12 @@ declare
   v_inv public.invitations%rowtype;
   v_exists boolean;
 begin
+  -- Kunci order DULU lalu undangan → urutan lock GLOBAL "order → invitation"
+  -- yang sama dgn activate_paid_order/expire_pending_order (yang mengunci order
+  -- lalu meng-update undangan). Konsisten → cegah deadlock ABBA saat ganti
+  -- pemilik bertabrakan dengan webhook/poll/cron pada order pending yang sama.
+  perform 1 from public.orders
+    where invitation_id = p_invitation_id for update;
   select * into v_inv from public.invitations
     where id = p_invitation_id for update;
   if not found then
@@ -302,6 +308,23 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
+-- 6) Agregat revenue bulan berjalan (metrik admin). Dihitung DI DB (sum+count)
+--    → tak terkena batas baris PostgREST (`db-max-rows`) yang bisa membuat
+--    penjumlahan sisi-klien undercount saat order lunas/bulan banyak.
+-- -----------------------------------------------------------------------------
+create or replace function public.admin_month_revenue(p_since timestamptz)
+returns table (total bigint, cnt bigint)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(sum(amount_idr), 0)::bigint, count(*)::bigint
+  from public.orders
+  where status = 'paid' and paid_at >= p_since;
+$$;
+
+-- -----------------------------------------------------------------------------
 -- Hardening execute: cabut dari anon/authenticated/public, beri service_role.
 -- -----------------------------------------------------------------------------
 revoke execute on function
@@ -309,7 +332,8 @@ revoke execute on function
   public.admin_extend_invitation(uuid, int, uuid),
   public.admin_suspend_invitation(uuid, uuid, text),
   public.admin_reinstate_invitation(uuid, uuid),
-  public.admin_change_owner(uuid, uuid, uuid)
+  public.admin_change_owner(uuid, uuid, uuid),
+  public.admin_month_revenue(timestamptz)
   from anon, authenticated, public;
 
 grant execute on function
@@ -317,5 +341,6 @@ grant execute on function
   public.admin_extend_invitation(uuid, int, uuid),
   public.admin_suspend_invitation(uuid, uuid, text),
   public.admin_reinstate_invitation(uuid, uuid),
-  public.admin_change_owner(uuid, uuid, uuid)
+  public.admin_change_owner(uuid, uuid, uuid),
+  public.admin_month_revenue(timestamptz)
   to service_role;

@@ -1,7 +1,6 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import type { InvitationStatus } from "@/types";
 
 /** Ringkasan metrik panel admin (SPEC §4.9). */
 export interface AdminMetrics {
@@ -9,7 +8,7 @@ export interface AdminMetrics {
   newInvitations7d: number;
   totalInvitations: number;
   activeInvitations: number;
-  /** Undangan yang pernah dibayar (active/expired/suspended). */
+  /** Undangan yang PERNAH dibayar/diaktifkan (`package_id` terisi & tak pernah dikosongkan). */
   convertedInvitations: number;
   /** convertedInvitations / totalInvitations, 0..1 (0 bila belum ada undangan). */
   conversionRate: number;
@@ -19,11 +18,6 @@ export interface AdminMetrics {
 }
 
 const WIB_OFFSET_MIN = 420; // Asia/Jakarta = UTC+7 (revenue "bulan berjalan" pakai batas WIB).
-const CONVERTED_STATUSES: InvitationStatus[] = [
-  "active",
-  "expired",
-  "suspended",
-];
 
 /** Awal bulan berjalan (wall-clock WIB) sebagai instant UTC ISO. */
 function wibMonthStartIso(now: Date): string {
@@ -35,8 +29,10 @@ function wibMonthStartIso(now: Date): string {
 /**
  * Hitung metrik ringkasan lewat service_role (BYPASS RLS — halaman pemanggil
  * WAJIB sudah `requireAdmin()`). Count memakai `head:true` (tak mentransfer
- * baris); revenue menjumlah `amount_idr` order lunas bulan ini (terbatas skala
- * MVP — bisa dipindah ke RPC agregat bila volume besar).
+ * baris). Revenue dijumlah DI DB (`admin_month_revenue`) → tak terkena batas
+ * baris PostgREST. "Converted" = `package_id` terisi (di-set saat aktivasi &
+ * tak pernah dikosongkan) → sinyal akurat "pernah dibayar" (bukan proksi status
+ * yang bisa keliru bila undangan belum-dibayar di-`suspend`).
  */
 export async function getAdminMetrics(
   now: Date = new Date(),
@@ -49,22 +45,18 @@ export async function getAdminMetrics(
   const invCount = () =>
     admin.from("invitations").select("*", { count: "exact", head: true });
 
-  const [total, active, converted, new24h, new7d, paid] = await Promise.all([
+  const [total, active, converted, new24h, new7d, revenue] = await Promise.all([
     invCount(),
     invCount().eq("status", "active"),
-    invCount().in("status", CONVERTED_STATUSES),
+    invCount().not("package_id", "is", null),
     invCount().gte("created_at", since24h),
     invCount().gte("created_at", since7d),
-    admin
-      .from("orders")
-      .select("amount_idr")
-      .eq("status", "paid")
-      .gte("paid_at", monthStart),
+    admin.rpc("admin_month_revenue", { p_since: monthStart }),
   ]);
 
   const totalInvitations = total.count ?? 0;
   const convertedInvitations = converted.count ?? 0;
-  const paidRows = paid.data ?? [];
+  const rev = revenue.data?.[0];
 
   return {
     newInvitations24h: new24h.count ?? 0,
@@ -74,7 +66,7 @@ export async function getAdminMetrics(
     convertedInvitations,
     conversionRate:
       totalInvitations > 0 ? convertedInvitations / totalInvitations : 0,
-    revenueThisMonthIdr: paidRows.reduce((sum, r) => sum + r.amount_idr, 0),
-    paidOrdersThisMonth: paidRows.length,
+    revenueThisMonthIdr: Number(rev?.total ?? 0),
+    paidOrdersThisMonth: Number(rev?.cnt ?? 0),
   };
 }

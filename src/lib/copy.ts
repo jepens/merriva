@@ -639,7 +639,7 @@ export const copy = {
     },
     users: {
       title: "Pengguna",
-      subtitle: "Akun terdaftar (pencarian dalam halaman ini).",
+      subtitle: "Semua akun terdaftar (cari berdasarkan email / nama).",
       searchPlaceholder: "Cari email / nama…",
       colEmail: "Email",
       colName: "Nama",

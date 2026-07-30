@@ -624,6 +624,13 @@ export type Database = {
           slug: string;
         }[];
       };
+      admin_month_revenue: {
+        Args: { p_since: string };
+        Returns: {
+          cnt: number;
+          total: number;
+        }[];
+      };
       admin_reinstate_invitation: {
         Args: { p_admin_id: string; p_invitation_id: string };
         Returns: {
