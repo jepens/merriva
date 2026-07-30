@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { clientRateKey } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { notifyOrderPaid } from "@/server/email/notify";
 import { verifyAndActivate } from "@/server/payment/reconcile";
 
 /**
@@ -98,6 +99,10 @@ export async function checkPaymentStatusAction(
   switch (outcome.kind) {
     case "ok":
       if (outcome.result === "activated" || outcome.result === "already_paid") {
+        // Kuitansi HANYA pada transisi `activated` (best-effort, tak menggagalkan poll).
+        if (outcome.result === "activated") {
+          await notifyOrderPaid(admin, order.order_code);
+        }
         if (outcome.slug) revalidatePath(`/${outcome.slug}`);
         revalidatePath("/dashboard");
         // Slug absen (anomali) → `pending`; poll berikutnya baca undangan yang

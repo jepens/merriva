@@ -514,6 +514,42 @@ export const copy = {
       close: "Tutup",
     },
   },
+  // Email transaksional (Resend — M3.5). Teks terpusat; markup dirakit di
+  // `lib/email/templates.ts`.
+  email: {
+    brand: "Merriva",
+    footer:
+      "Email ini dikirim otomatis oleh Merriva. Mohon jangan membalas email ini.",
+    // Kuitansi + link aktif (dikirim saat order → paid).
+    receipt: {
+      subject: "Pembayaran berhasil — undangan Anda kini aktif",
+      preheader: "Pembayaran diterima. Undangan Anda aktif & siap disebar.",
+      heading: "Pembayaran berhasil 🎉",
+      greeting: (name: string | null) => (name ? `Halo ${name},` : "Halo,"),
+      intro:
+        "Terima kasih. Pembayaran Anda telah kami terima dan undangan Anda kini aktif serta siap disebar.",
+      pkg: "Paket",
+      total: "Total",
+      order: "Kode order",
+      paidAt: "Tanggal bayar",
+      activeUntil: "Aktif hingga",
+      cta: "Lihat undangan",
+      outro: "Simpan email ini sebagai bukti pembayaran.",
+    },
+    // Pengingat masa aktif (cron H-14).
+    reminder: {
+      subject: (days: number) =>
+        `Masa aktif undangan berakhir dalam ${days} hari`,
+      preheader: "Perpanjang agar undangan tetap dapat diakses tamu.",
+      heading: "Masa aktif undangan akan berakhir",
+      greeting: (name: string | null) => (name ? `Halo ${name},` : "Halo,"),
+      intro: (dateLabel: string, days: number) =>
+        `Undangan Anda aktif hingga ${dateLabel} (${days} hari lagi). Perpanjang sekarang agar tetap dapat diakses tamu setelah tanggal tersebut.`,
+      ctaRenew: "Perpanjang sekarang",
+      ctaView: "Lihat undangan",
+      outro: "Abaikan email ini bila undangan memang tak perlu diperpanjang.",
+    },
+  },
 } as const;
 
 export type Copy = typeof copy;

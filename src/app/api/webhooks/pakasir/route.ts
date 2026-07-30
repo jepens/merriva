@@ -5,6 +5,7 @@ import { pakasirWebhookSchema } from "@/lib/payment/webhook";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { clientRateKey } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { notifyOrderPaid } from "@/server/email/notify";
 import { verifyAndActivate } from "@/server/payment/reconcile";
 
 /**
@@ -111,6 +112,11 @@ export async function POST(req: Request) {
     case "mismatch":
       return json({ ok: true, activated: false }, 200);
     case "ok": {
+      // Kuitansi + link aktif HANYA pada transisi `activated` (sekali; RPC
+      // terkunci baris → pemenang saja). Best-effort (tak menggagalkan webhook).
+      if (outcome.result === "activated") {
+        await notifyOrderPaid(admin, order.order_code);
+      }
       // Segarkan cache ISR halaman publik saat baru aktif (DECISIONS #25) — juga
       // saat already_paid (idempoten, aman) agar cache konsisten pasca-aktivasi.
       if (

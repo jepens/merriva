@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { getPaymentGateway } from "@/lib/payment";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isAuthorizedCron } from "@/server/cron/auth";
+import { notifyOrderPaid } from "@/server/email/notify";
 import { verifyAndActivate } from "@/server/payment/reconcile";
 
 /**
@@ -61,6 +62,11 @@ export async function POST(req: Request) {
     if (outcome.kind === "ok") {
       if (outcome.result === "activated" || outcome.result === "already_paid") {
         activated += 1;
+        // Kuitansi HANYA pada transisi `activated` (webhook hilang → cron yang
+        // mengaktifkan tetap mengirim). Best-effort.
+        if (outcome.result === "activated") {
+          await notifyOrderPaid(admin, o.order_code);
+        }
         if (outcome.slug) revalidatePath(`/${outcome.slug}`);
       } else {
         // held / invalid / not_found → order kini paid atau anomali; jangan expire.

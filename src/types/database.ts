@@ -201,6 +201,7 @@ export type Database = {
           id: string;
           package_id: string | null;
           published_at: string | null;
+          reminder_sent_at: string | null;
           settings: Json;
           slug: string;
           status: Database["public"]["Enums"]["invitation_status"];
@@ -217,6 +218,7 @@ export type Database = {
           id?: string;
           package_id?: string | null;
           published_at?: string | null;
+          reminder_sent_at?: string | null;
           settings?: Json;
           slug: string;
           status?: Database["public"]["Enums"]["invitation_status"];
@@ -233,6 +235,7 @@ export type Database = {
           id?: string;
           package_id?: string | null;
           published_at?: string | null;
+          reminder_sent_at?: string | null;
           settings?: Json;
           slug?: string;
           status?: Database["public"]["Enums"]["invitation_status"];

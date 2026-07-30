@@ -73,7 +73,10 @@ Resend: verifikasi akun, kuitansi + link aktif, pengingat H-14 expiry, (opsional
 
 - `/api/cron/expire-orders` — order `pending` >24 jam. **Rekonsiliasi dulu**: verifikasi OTORITATIF `transactiondetail` (`verifyAndActivate`) → jika lunas, aktifkan (atau `held`, pembayaran tetap tercatat), JANGAN batalkan; hanya yang API pastikan belum lunas → `transactioncancel` (best-effort) + `expired` via RPC `expire_pending_order` (atomik, kunci baris, service_role-only). Transien → dilewati (retry jalankan berikutnya). Sarankan tiap **~15 menit**.
 - `/api/cron/expire-invitations` — undangan `active` lewat `active_until` → `expired` (satu UPDATE, service_role) + revalidate ISR `/{slug}`. Sarankan tiap **jam** (atau harian).
-- Reminder H-14 & pembersihan retensi: menyusul (M3.5 / pasca-MVP).
+- `/api/cron/expiry-reminders` (M3.5) — undangan `active` dengan `active_until` ≤14 hari & `reminder_sent_at is null` → email pengingat (Resend), tandai `reminder_sent_at` saat terkirim (idempoten; di-reset saat perpanjangan). Sarankan tiap **~12 jam** (bukan 24 jam): "tandai saat terkirim" at-least-once — bila email terkirim tetapi mark gagal, retry mengandalkan `idempotencyKey` Resend yang hanya 24 jam, jadi cadence <24 jam mencegah pengingat ganda.
+- Pembersihan retensi (hapus data tamu 6 bln pasca-expired): menyusul (pasca-MVP).
+
+**Email transaksional (M3.5).** App mengirim langsung via Resend (`lib/email/`): **kuitansi + link aktif** saat order→`paid` (dipicu jalur aktivasi webhook/poll/cron pada transisi `activated`, `idempotencyKey=receipt/{orderCode}`), dan **pengingat H-14** (cron di atas). Tanpa `RESEND_API_KEY` → no-op (dev/CI aman). `from` = `EMAIL_FROM` (domain wajib terverifikasi di Resend). **Email verifikasi akun & reset kata sandi tetap dikirim Supabase Auth** — arahkan ke Resend dengan mengatur **Custom SMTP = Resend** di dashboard Supabase (tugas konfigurasi, bukan kode). Email di sini transaksional (tanpa unsubscribe); rekap RSVP mingguan (non-transaksional, opsional) menyusul pasca-MVP.
 
 ## 8. Deployment (VPS + Easypanel)
 
@@ -86,7 +89,7 @@ Env (nilai di Easypanel/`.env`, daftar di `.env.example`):
 ```
 NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
 SUPABASE_SERVICE_ROLE_KEY, PAKASIR_PROJECT_SLUG, PAKASIR_API_KEY,
-RESEND_API_KEY, TURNSTILE_SECRET_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+RESEND_API_KEY, EMAIL_FROM, TURNSTILE_SECRET_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY,
 CRON_SECRET, STORAGE_DRIVER (supabase|r2), NEXT_PUBLIC_MEDIA_URL,
 R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET   # saat driver=r2
 ```

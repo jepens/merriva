@@ -56,7 +56,7 @@
 - [x] Halaman cek status pembayaran (poll `transactiondetail`) — **M3.3** (`/dashboard/undangan/[id]/bayar` + poller; jalur aktivasi OTORITATIF kedua via `verifyAndActivate` bersama dengan webhook; `pending`→`active` tanpa reload)
 - [x] Cron expiry order + undangan — **M3.4**: `/api/cron/expire-orders` (**rekonsiliasi `transactiondetail` DULU** → aktifkan bila ternyata lunas, jika belum lunas `transactioncancel` + `expired`; menutup celah "webhook hilang" M3.3) · `/api/cron/expire-invitations` (`active` lewat `active_until` → `expired` + revalidate ISR). Auth `Authorization: Bearer <CRON_SECRET>` (timing-safe, fail-closed); RPC `expire_pending_order` service_role-only (atomik + revert `pending_payment`→`draft`)
 - [ ] Reminder expiry H-14 (cron) — **dipindah ke M3.5** (tak terpisah dari email Resend; butuh kolom `reminder_sent_at` untuk idempotensi)
-- [ ] Email transaksional (Resend): verifikasi, kuitansi + link aktif, pengingat expiry — **termasuk cron pemicu reminder H-14** (dipindah dari M3.4) + kolom `reminder_sent_at`
+- [x] Email transaksional (Resend) — **M3.5**: **kuitansi + link aktif** (dipicu saat order→`paid` di webhook/poll/cron, `idempotencyKey`) + **pengingat H-14** (cron `/api/cron/expiry-reminders` + kolom `reminder_sent_at`, di-reset saat perpanjangan). Infra `lib/email/` dev-safe (no-op tanpa `RESEND_API_KEY`). **Verifikasi akun/reset** tetap via Supabase Auth → arahkan ke Resend lewat **Custom SMTP** di dashboard Supabase (konfigurasi, bukan kode). Rekap RSVP mingguan (opsional) ditunda pasca-MVP
 - [ ] Enforcement penuh limit paket + watermark Basic
 - [ ] E2E: checkout → `paymentsimulation` → webhook → aktif
 
