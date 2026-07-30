@@ -54,6 +54,18 @@ export default async function AdminLayout({
               {copy.admin.nav.users}
             </Link>
             <Link
+              href="/admin/paket"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              {copy.admin.nav.packages}
+            </Link>
+            <Link
+              href="/admin/tema"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              {copy.admin.nav.themes}
+            </Link>
+            <Link
               href="/dashboard"
               className={buttonVariants({ variant: "ghost", size: "sm" })}
             >
