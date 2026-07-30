@@ -267,6 +267,15 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #40 — 2026-07-30 · M4.2 Tujuh tema tambahan (total 8) + arsitektur tema skala
+**Keputusan:** Item ROADMAP "5 tema tambahan". Pemilik memilih **KEEMPAT** arah wedding (naik dari minimal 2) → total **8 tema**: 5 wedding, 1 corporate, 1 family, 1 universal. **Arsitektur:** primitif interaksi BERSAMA (`_shared/motion.tsx`: `ThemeRoot`/`Reveal`/`Countdown`/`useCountdown` + `copy-button.tsx`) + modul WEDDING bersama ter-parameter (`_shared/wedding-sections.tsx` + `wedding-layout.tsx`; prefix kelas `cx` + `labels`) → 4 skin wedding jadi tipis (font + CSS + labels + demo), IDENTITAS via CSS. `eternal-rose` (M1.5) TETAP pakai section sendiri. corporate/family/universal punya section sendiri (bentuk konten beda). Pratinjau: `/preview/tema/[slug]` + `demoDataRegistry`. Tema baru: **Meridian** (corporate, editorial-keynote ink+brass, Space Grotesk/IBM Plex, signature agenda bernomor → MEMBUKA kategori corporate) · **Barakah** (wedding islami premium, emerald+emas, Amiri/Cairo, bismillah `﷽` + bintang `۞` + kisi) · **Aria** (wedding minimalis, monokrom, Jost/Karla) · **Verdant** (wedding botanikal, olive+krem, Fraunces/Mulish, bingkai lengkung + daun `❧`) · **Noir** (wedding dark-luxe premium, charcoal+emas, Playfair/Jost, `✦`) · **Festa** (family, terracotta+amber, Poppins/Nunito → MEMBUKA kategori family) · **Lumina** (universal premium, menyesuaikan SEMUA kategori dgn menormalkan judul/principals/linimasa, warm-greige+perunggu, Spectral/Karla). Semua: **self-hosted next/font** (tanpa request eksternal → LCP/WebView), reveal ringan IntersectionObserver, `prefers-reduced-motion`, `GuestbookSection`/`GiftConfirm` bersama. **Kontrak props tema (`{data:InvitationData}`) TAK diubah.**
+**Alasan:** modul wedding bersama = satu-satunya cara waras memberi 4 tema wedding berkualitas tanpa 4× duplikasi (CSS + font + ornamen cukup membedakan). Universal menormalkan 3 bentuk konten ke satu sistem netral. Corporate/family membuka kategori yang sebelumnya TANPA tema (tak bisa dibuat).
+**Ditolak:** (a) tiap tema wedding section sendiri (4× duplikasi, tak terkelola); (b) mengubah kontrak props tema demi fitur baru (boundary TANYA DULU); (c) hanya 2 tema wedding (pemilik memilih keempat arah).
+**Verifikasi:** pratinjau browser 390px tiap tema (hero + section kunci) — konsol bersih, hidrasi OK; **`pnpm build` SUKSES** (semua font next/font ter-fetch) dgn `/[slug]` tetap `○` (ISR → performa publik tak turun); seed `20260730160000_seed_more_themes.sql` (8 tema tampil di `/admin/tema`). typecheck 0, lint 0, 203 test.
+**Konsekuensi — DEPLOY:** migrasi `20260730160000_seed_more_themes.sql` (metadata 7 tema) → **owner `supabase db push`**. QA WebView WA nyata + Lighthouse ≥90 per tema di staging (SPEC §10) = tanggung jawab owner. Amplop/RSVP bersama (`GuestbookSection`) belum meng-adopsi warna per-tema (dibiarkan netral MVP). **M4.2 SELESAI.** Lanjut **M4.3** (landing final) atau item infra M4.
+
+---
+
 ## Template entri baru
 
 ```
