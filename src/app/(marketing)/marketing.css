@@ -1,0 +1,864 @@
+/* Merriva — sistem visual halaman marketing (landing, /tema, /harga, /faq,
+   /privasi, /refund). Ter-scope di `.mrv` agar TIDAK bocor ke chrome
+   dashboard/admin (yang memakai token shadcn netral). Warna brand di sini
+   sengaja eksplisit (bukan token shadcn) supaya tampilan konsisten terlepas
+   dari kelas `.dark` pada <html>. Mobile-first.
+
+   Arah desain: "paper" editorial hangat — tinta plum + satu aksen marigold —
+   sebagai bingkai galeri yang tenang, membiarkan poster tema yang berwarna-warni
+   menjadi bintangnya. Tipografi: Bricolage Grotesque (display) + Hanken Grotesk
+   (teks), self-hosted via next/font. */
+
+.mrv {
+  --mrv-paper: #fbf9f6;
+  --mrv-cream: #f3ede4;
+  --mrv-ink: #241f2b;
+  --mrv-ink-soft: #5c5563;
+  --mrv-line: #e7ded2;
+  --mrv-accent: #c68a3c;
+  --mrv-accent-deep: #9a6a22;
+  --mrv-dark: #211a27;
+  --mrv-dark-soft: #2e2635;
+  --mrv-dark-ink: #efe7da;
+  --mrv-dark-muted: #b7ab9d;
+
+  font-family:
+    var(--mrv-body),
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--mrv-ink);
+  background-color: var(--mrv-paper);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+.mrv *,
+.mrv *::before,
+.mrv *::after {
+  box-sizing: border-box;
+}
+
+.mrv-display {
+  font-family: var(--mrv-display), Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.mrv-serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+/* ---- Layout primitives --------------------------------------------------- */
+.mrv-container {
+  width: 100%;
+  max-width: 74rem;
+  margin-inline: auto;
+  padding-inline: clamp(1.15rem, 4vw, 2.5rem);
+}
+
+.mrv-container--narrow {
+  max-width: 48rem;
+}
+
+.mrv-section {
+  padding-block: clamp(3.5rem, 8vw, 6.5rem);
+}
+
+.mrv-section--tight {
+  padding-block: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+.mrv-band-cream {
+  background-color: var(--mrv-cream);
+}
+
+.mrv-band-dark {
+  background-color: var(--mrv-dark);
+  color: var(--mrv-dark-ink);
+}
+
+/* ---- Type ---------------------------------------------------------------- */
+.mrv-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mrv-ink-soft);
+}
+.mrv-eyebrow::before {
+  content: "";
+  width: 1.4rem;
+  height: 1px;
+  background-color: var(--mrv-accent);
+}
+.mrv-band-dark .mrv-eyebrow {
+  color: var(--mrv-dark-muted);
+}
+
+.mrv-h1 {
+  font-size: clamp(2.35rem, 7vw, 4.15rem);
+}
+.mrv-h2 {
+  font-size: clamp(1.7rem, 4.2vw, 2.7rem);
+}
+.mrv-accent-word {
+  color: var(--mrv-accent-deep);
+  font-style: italic;
+}
+.mrv-band-dark .mrv-accent-word {
+  color: var(--mrv-accent);
+}
+
+.mrv-lead {
+  color: var(--mrv-ink-soft);
+  font-size: clamp(1rem, 1.4vw, 1.18rem);
+  line-height: 1.65;
+}
+.mrv-band-dark .mrv-lead {
+  color: var(--mrv-dark-muted);
+}
+
+/* ---- Buttons ------------------------------------------------------------- */
+.mrv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.72rem 1.35rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.94rem;
+  line-height: 1;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.mrv-btn:active {
+  transform: translateY(1px);
+}
+.mrv-btn--primary {
+  background-color: var(--mrv-ink);
+  color: var(--mrv-paper);
+}
+.mrv-btn--primary:hover {
+  background-color: #322a3a;
+}
+.mrv-btn--ghost {
+  background-color: transparent;
+  color: var(--mrv-ink);
+  border-color: var(--mrv-line);
+}
+.mrv-btn--ghost:hover {
+  border-color: var(--mrv-ink);
+}
+.mrv-btn--accent {
+  background-color: var(--mrv-accent);
+  color: #2a1c05;
+}
+.mrv-btn--accent:hover {
+  background-color: #d59a4c;
+}
+.mrv-band-dark .mrv-btn--ghost {
+  color: var(--mrv-dark-ink);
+  border-color: rgba(239, 231, 218, 0.28);
+}
+.mrv-band-dark .mrv-btn--ghost:hover {
+  border-color: var(--mrv-dark-ink);
+}
+
+/* ---- Header -------------------------------------------------------------- */
+.mrv-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background-color: color-mix(in srgb, var(--mrv-paper) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--mrv-line);
+}
+.mrv-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4rem;
+  gap: 1rem;
+}
+.mrv-brand {
+  font-family: var(--mrv-display), Georgia, serif;
+  font-weight: 700;
+  font-size: 1.32rem;
+  letter-spacing: -0.02em;
+  color: var(--mrv-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.mrv-brand__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background-color: var(--mrv-accent);
+  margin-bottom: 0.55rem;
+}
+.mrv-nav {
+  display: none;
+  align-items: center;
+  gap: 1.85rem;
+}
+.mrv-nav a {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--mrv-ink-soft);
+  transition: color 0.15s ease;
+}
+.mrv-nav a:hover {
+  color: var(--mrv-ink);
+}
+.mrv-header__actions {
+  display: none;
+  align-items: center;
+  gap: 0.85rem;
+}
+.mrv-header__login {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--mrv-ink);
+}
+@media (min-width: 60rem) {
+  .mrv-nav,
+  .mrv-header__actions {
+    display: flex;
+  }
+}
+
+/* Menu mobile via <details> (tanpa JS) */
+.mrv-menu {
+  position: relative;
+}
+.mrv-menu__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--mrv-line);
+  color: var(--mrv-ink);
+  cursor: pointer;
+  list-style: none;
+}
+.mrv-menu__toggle::-webkit-details-marker {
+  display: none;
+}
+.mrv-menu[open] .mrv-menu__toggle {
+  background-color: var(--mrv-cream);
+}
+.mrv-menu__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.6rem);
+  width: min(16rem, 80vw);
+  background-color: var(--mrv-paper);
+  border: 1px solid var(--mrv-line);
+  border-radius: 0.9rem;
+  box-shadow: 0 18px 40px -22px rgba(36, 31, 43, 0.4);
+  padding: 0.55rem;
+  display: flex;
+  flex-direction: column;
+}
+.mrv-menu__panel a {
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.55rem;
+  font-weight: 500;
+  color: var(--mrv-ink);
+}
+.mrv-menu__panel a:hover {
+  background-color: var(--mrv-cream);
+}
+.mrv-menu__sep {
+  height: 1px;
+  background-color: var(--mrv-line);
+  margin: 0.4rem 0.4rem;
+}
+@media (min-width: 60rem) {
+  .mrv-menu {
+    display: none;
+  }
+}
+
+/* ---- Hero ---------------------------------------------------------------- */
+.mrv-hero {
+  padding-block: clamp(2.75rem, 7vw, 5.5rem);
+}
+.mrv-hero__grid {
+  display: grid;
+  gap: clamp(2.25rem, 5vw, 3.5rem);
+  align-items: center;
+}
+@media (min-width: 62rem) {
+  .mrv-hero__grid {
+    grid-template-columns: 1.05fr 0.95fr;
+  }
+}
+.mrv-hero__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+  color: var(--mrv-ink-soft);
+}
+.mrv-hero__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+.mrv-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.4rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.mrv-trust li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.83rem;
+  color: var(--mrv-ink-soft);
+}
+.mrv-trust li::before {
+  content: "✓";
+  color: var(--mrv-accent-deep);
+  font-weight: 700;
+}
+
+/* Kipas poster hero */
+.mrv-fan {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+@media (min-width: 62rem) {
+  .mrv-fan {
+    gap: 1rem;
+  }
+  .mrv-fan > :nth-child(1) {
+    transform: rotate(-4deg) translateY(0.6rem);
+  }
+  .mrv-fan > :nth-child(2) {
+    transform: translateY(-0.7rem) scale(1.04);
+    z-index: 2;
+  }
+  .mrv-fan > :nth-child(3) {
+    transform: rotate(4deg) translateY(0.6rem);
+  }
+}
+
+/* ---- Theme poster -------------------------------------------------------- */
+.mrv-poster {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  aspect-ratio: 3 / 4;
+  padding: clamp(0.9rem, 2.4vw, 1.4rem);
+  border-radius: 0.9rem;
+  border: 1px solid var(--mrv-poster-line, var(--mrv-line));
+  background-color: var(--mrv-poster-bg, #fff);
+  color: var(--mrv-poster-ink, var(--mrv-ink));
+  overflow: hidden;
+  box-shadow: 0 20px 45px -30px rgba(36, 31, 43, 0.45);
+}
+.mrv-poster__tag {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  /* Tinta poster (bukan aksen) → kontras AA di atas bg tema; aksen dipakai untuk
+     ornamen dekoratif saja (accent bisa <4.5:1 pada bg terang). */
+  color: var(--mrv-poster-ink, var(--mrv-ink));
+}
+.mrv-poster__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  margin-block: auto;
+}
+.mrv-poster__name {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.25rem, 3.4vw, 1.7rem);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+.mrv-poster__rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  color: var(--mrv-poster-accent, var(--mrv-accent));
+  font-size: 0.85rem;
+}
+.mrv-poster__rule::before,
+.mrv-poster__rule::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  max-width: 2.4rem;
+  background-color: currentColor;
+  opacity: 0.5;
+}
+.mrv-poster__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+}
+.mrv-poster__tier {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-weight: 600;
+}
+
+/* Kartu tema (poster + aksi) */
+.mrv-theme-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  color: inherit;
+}
+.mrv-theme-card .mrv-poster {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+a.mrv-theme-card:hover .mrv-poster {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 55px -30px rgba(36, 31, 43, 0.55);
+}
+a.mrv-theme-card:hover .mrv-theme-card__demo {
+  color: var(--mrv-accent-deep);
+}
+.mrv-theme-card__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.mrv-theme-card__name {
+  font-weight: 600;
+  font-size: 1.02rem;
+}
+.mrv-theme-card__cats {
+  font-size: 0.8rem;
+  color: var(--mrv-ink-soft);
+}
+.mrv-theme-card__demo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--mrv-ink);
+}
+.mrv-theme-card__demo:hover {
+  color: var(--mrv-accent-deep);
+}
+.mrv-theme-card__soon {
+  font-size: 0.85rem;
+  color: var(--mrv-ink-soft);
+}
+
+/* Grid katalog */
+.mrv-grid {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2rem);
+  grid-template-columns: repeat(1, 1fr);
+}
+@media (min-width: 34rem) {
+  .mrv-grid--themes {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 58rem) {
+  .mrv-grid--themes {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ---- Filter tabs --------------------------------------------------------- */
+.mrv-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.mrv-tab {
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--mrv-line);
+  background-color: transparent;
+  color: var(--mrv-ink-soft);
+  font-weight: 600;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.mrv-tab:hover {
+  border-color: var(--mrv-ink);
+  color: var(--mrv-ink);
+}
+.mrv-tab[aria-pressed="true"] {
+  background-color: var(--mrv-ink);
+  border-color: var(--mrv-ink);
+  color: var(--mrv-paper);
+}
+
+/* ---- How / feature / step cards ------------------------------------------ */
+.mrv-steps {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2rem);
+  counter-reset: step;
+}
+@media (min-width: 52rem) {
+  .mrv-steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.mrv-step {
+  position: relative;
+  padding-top: 2.75rem;
+}
+.mrv-step::before {
+  counter-increment: step;
+  content: counter(step, decimal-leading-zero);
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-family: var(--mrv-display), Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--mrv-accent-deep);
+}
+.mrv-step__line {
+  display: none;
+  position: absolute;
+  top: 0.75rem;
+  left: 2.6rem;
+  right: 0;
+  height: 1px;
+  background-color: var(--mrv-line);
+}
+@media (min-width: 52rem) {
+  .mrv-step__line {
+    display: block;
+  }
+}
+.mrv-step h3 {
+  font-size: 1.08rem;
+  font-weight: 600;
+  margin-bottom: 0.45rem;
+}
+.mrv-step p {
+  color: var(--mrv-ink-soft);
+  font-size: 0.95rem;
+}
+
+.mrv-features {
+  display: grid;
+  gap: clamp(1rem, 2.5vw, 1.5rem);
+}
+@media (min-width: 40rem) {
+  .mrv-features {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.mrv-feature {
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border: 1px solid var(--mrv-line);
+  border-radius: 1rem;
+  background-color: #fff;
+}
+.mrv-feature h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mrv-feature h3::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 2px;
+  background-color: var(--mrv-accent);
+  transform: rotate(45deg);
+}
+.mrv-feature p {
+  color: var(--mrv-ink-soft);
+  font-size: 0.94rem;
+}
+
+/* ---- Pricing ------------------------------------------------------------- */
+.mrv-price-grid {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 46rem;
+  margin-inline: auto;
+}
+@media (min-width: 44rem) {
+  .mrv-price-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.mrv-price {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: clamp(1.5rem, 3.5vw, 2.1rem);
+  border: 1px solid var(--mrv-line);
+  border-radius: 1.15rem;
+  background-color: #fff;
+}
+.mrv-price--featured {
+  border-color: var(--mrv-ink);
+  box-shadow: 0 24px 50px -34px rgba(36, 31, 43, 0.55);
+}
+.mrv-price__head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.mrv-price__name {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.mrv-price__badge {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background-color: var(--mrv-accent);
+  color: #2a1c05;
+}
+.mrv-price__amount {
+  font-family: var(--mrv-display), Georgia, serif;
+  font-size: clamp(2rem, 5vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.mrv-price__dur {
+  font-size: 0.85rem;
+  color: var(--mrv-ink-soft);
+  font-weight: 500;
+}
+.mrv-price__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.mrv-price__list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.92rem;
+}
+.mrv-price__list li::before {
+  content: "✓";
+  color: var(--mrv-accent-deep);
+  font-weight: 700;
+  line-height: 1.5;
+}
+.mrv-price .mrv-btn {
+  margin-top: auto;
+}
+
+/* Tabel perbandingan */
+.mrv-compare {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.mrv-compare th,
+.mrv-compare td {
+  text-align: left;
+  padding: 0.8rem 0.75rem;
+  border-bottom: 1px solid var(--mrv-line);
+}
+.mrv-compare thead th {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mrv-ink-soft);
+}
+.mrv-compare td:not(:first-child),
+.mrv-compare th:not(:first-child) {
+  text-align: center;
+}
+/* Kontras AA di band cream: pembeda utama = glyph (✓ vs —) + berat, bukan warna
+   semata (accent-deep <4.5:1 di cream; opacity menurunkan kontras). */
+.mrv-compare .mrv-yes {
+  color: var(--mrv-ink);
+  font-weight: 700;
+}
+.mrv-compare .mrv-no {
+  color: var(--mrv-ink-soft);
+}
+
+/* ---- FAQ (native details, tanpa JS) -------------------------------------- */
+.mrv-faq {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--mrv-line);
+}
+.mrv-faq__item {
+  border-bottom: 1px solid var(--mrv-line);
+}
+.mrv-faq__q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 0.25rem;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+.mrv-faq__q::-webkit-details-marker {
+  display: none;
+}
+.mrv-faq__q::after {
+  content: "+";
+  font-size: 1.4rem;
+  font-weight: 400;
+  color: var(--mrv-accent-deep);
+  transition: transform 0.2s ease;
+}
+.mrv-faq__item[open] .mrv-faq__q::after {
+  content: "−";
+}
+.mrv-faq__a {
+  padding: 0 0.25rem 1.25rem;
+  color: var(--mrv-ink-soft);
+  font-size: 0.95rem;
+  max-width: 54ch;
+}
+
+/* ---- Prose (legal) ------------------------------------------------------- */
+.mrv-prose h2 {
+  font-family: var(--mrv-display), Georgia, serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-top: 2.25rem;
+  margin-bottom: 0.75rem;
+}
+.mrv-prose p,
+.mrv-prose li {
+  color: var(--mrv-ink-soft);
+  font-size: 0.97rem;
+  line-height: 1.7;
+}
+.mrv-prose ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.mrv-prose li::marker {
+  color: var(--mrv-accent);
+}
+
+/* ---- Footer -------------------------------------------------------------- */
+.mrv-footer {
+  border-top: 1px solid var(--mrv-line);
+  background-color: var(--mrv-cream);
+}
+.mrv-footer__grid {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 48rem) {
+  .mrv-footer__grid {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  }
+}
+.mrv-footer h4 {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mrv-ink-soft);
+  margin-bottom: 0.9rem;
+}
+.mrv-footer__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.mrv-footer__links a {
+  font-size: 0.92rem;
+  color: var(--mrv-ink);
+}
+.mrv-footer__links a:hover {
+  color: var(--mrv-accent-deep);
+}
+.mrv-footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1.5rem;
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--mrv-line);
+  font-size: 0.82rem;
+  color: var(--mrv-ink-soft);
+}
+
+/* ---- Divider ornament ---------------------------------------------------- */
+.mrv-page-head {
+  padding-block: clamp(2.75rem, 7vw, 4.5rem) clamp(1.5rem, 4vw, 2.5rem);
+}
+
+/* ---- A11y / motion ------------------------------------------------------- */
+.mrv :where(a, button, summary):focus-visible {
+  outline: 2px solid var(--mrv-accent-deep);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mrv * {
+    transition: none !important;
+  }
+  .mrv-fan > * {
+    transform: none !important;
+  }
+}
