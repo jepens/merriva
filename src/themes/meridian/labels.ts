@@ -1,0 +1,42 @@
+/** Label chrome tema Meridian (corporate, Indonesia) — terpusat dalam tema. */
+export const L = {
+  wrongCategory: "Tema ini khusus untuk undangan acara korporat.",
+  hero: { eyebrow: "Undangan Acara", scroll: "Gulir" },
+  countdown: {
+    eyebrow: "Hitung Mundur",
+    done: "Acara telah dimulai.",
+    days: "Hari",
+    hours: "Jam",
+    minutes: "Menit",
+    seconds: "Detik",
+  },
+  intro: { eyebrow: "Tentang Acara" },
+  agenda: { eyebrow: "Rundown", heading: "Agenda Acara" },
+  schedule: {
+    eyebrow: "Jadwal",
+    heading: "Waktu & Tempat",
+    maps: "Lihat Lokasi",
+    calendar: "Simpan ke Kalender",
+    calendarGoogle: "Google Kalender",
+    calendarIcs: "Apple / Outlook",
+  },
+  gallery: { eyebrow: "Dokumentasi", heading: "Galeri" },
+  contact: {
+    eyebrow: "Narahubung",
+    heading: "Informasi & Konfirmasi",
+    phone: "Telepon",
+    email: "Email",
+    copy: "Salin",
+    copied: "Tersalin",
+  },
+  envelope: {
+    eyebrow: "Tanda Kasih",
+    heading: "Amplop Digital",
+    note: "Bila berkenan memberikan tanda kasih, dapat melalui kanal berikut:",
+    copy: "Salin Nomor",
+    copied: "Tersalin",
+    giftAddress: "Alamat pengiriman",
+    holder: "a.n.",
+  },
+  footer: { thanks: "Terima Kasih", by: "Dibuat dengan", brand: "Merriva" },
+} as const;

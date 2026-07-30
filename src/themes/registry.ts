@@ -25,6 +25,7 @@ export interface ThemeModule {
  */
 export const themeRegistry: Record<string, () => Promise<ThemeModule>> = {
   "eternal-rose": () => import("./eternal-rose"),
+  meridian: () => import("./meridian"),
 };
 
 export function getThemeLoader(
