@@ -64,7 +64,7 @@
 
 **Hasil akhir:** go-live komersial dengan 10 undangan uji lintas kategori.
 
-- [ ] Panel admin: metrik, kelola user/undangan/order (aktivasi manual, perpanjang, suspend, ganti pemilik), CRUD paket & tema, `admin_logs`
+- [x] Panel admin: metrik, kelola user/undangan/order (aktivasi manual, perpanjang, suspend, ganti pemilik), CRUD paket & tema, `admin_logs` — **M4.1** (`requireAdmin` non-admin→404; 5 RPC lifecycle service_role-only + audit dalam-transaksi; aktivasi manual **memakai ulang `activate_paid_order`** = identik bayar; CRUD paket revalidate landing/checkout). Migrasi `20260730150000_admin_lifecycle_rpcs.sql` (+`admin_month_revenue`) — **owner `supabase db push`**. Admin di-set via SQL `role='admin'`
 - [ ] 5 tema tambahan (total 6: 3 wedding, 1 corporate, 1 family, 1 universal)
 - [ ] Landing page final + katalog + demo + harga + FAQ + kebijakan privasi & refund
 - [ ] **Aktivasi R2 + migrasi media dari Supabase** (`ARCHITECTURE.md` §6) + `cdn.merriva.id`
