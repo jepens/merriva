@@ -7,6 +7,7 @@ import { appUrl } from "@/lib/env";
 import { isUuid } from "@/lib/id";
 import { generateOrderCode } from "@/lib/order";
 import { getPaymentGateway } from "@/lib/payment";
+import { isDraftSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { packageCodeSchema } from "@/lib/validation/checkout";
@@ -54,12 +55,17 @@ export async function createCheckoutAction(
   // Kepemilikan + status (RLS membatasi ke baris milik pemanggil).
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status")
+    .select("id, status, slug")
     .eq("id", invitationId)
     .maybeSingle();
   if (!inv) return { status: "error" };
   if (!PAYABLE_STATUSES.has(inv.status)) {
     return { status: "error", message: copy.checkout.notPayable };
+  }
+  // Slug masih placeholder `draft-…` → alamat publik akan 404 & TERKUNCI setelah
+  // aktif (saveSlug hanya saat `draft`). Wajib atur alamat dulu (backstop server).
+  if (isDraftSlug(inv.slug)) {
+    return { status: "error", message: copy.checkout.setSlugFirst };
   }
 
   // Harga otoritatif dari DB (jangan percaya nominal klien).

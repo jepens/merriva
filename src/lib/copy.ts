@@ -240,6 +240,14 @@ export const copy = {
     perDuration: (months: number) => `Masa aktif ${months} bulan`,
     notPayable: "Undangan ini tidak dapat dibayar saat ini.",
     packageUnavailable: "Paket tidak tersedia. Silakan coba lagi.",
+    // Guard: slug masih `draft-…` (belum diatur). Alamat terkunci setelah aktif,
+    // jadi wajib diatur SEBELUM bayar agar halaman publik tak 404 permanen.
+    setSlugTitle: "Atur alamat undangan dulu",
+    setSlugBody:
+      "Undangan belum punya alamat (link). Alamat tidak bisa diubah setelah undangan aktif — atur dulu di editor sebelum membayar.",
+    setSlugCta: "Atur alamat di editor",
+    setSlugFirst:
+      "Atur alamat undangan (link) di editor dulu sebelum membayar — alamat terkunci setelah aktif.",
     error: "Gagal memulai pembayaran. Silakan coba lagi.",
     // Fitur paket (dari packages.limits) untuk daftar centang.
     feat: {

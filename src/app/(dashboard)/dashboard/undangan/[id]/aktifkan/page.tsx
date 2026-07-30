@@ -7,9 +7,11 @@ import {
   type CheckoutPackage,
 } from "@/components/dashboard/package-chooser";
 import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import { resolveLimits } from "@/lib/limits";
+import { isDraftSlug } from "@/lib/slug";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser } from "@/server/guards/auth";
 
@@ -32,12 +34,49 @@ export default async function ActivateInvitationPage({
   const supabase = await createSupabaseServerClient();
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status")
+    .select("id, status, slug")
     .eq("id", id)
     .maybeSingle();
   if (!inv) notFound();
   if (inv.status === "active") redirect("/dashboard");
   if (inv.status === "suspended") notFound();
+
+  // Slug masih `draft-…`: alamat publik 404 & terkunci setelah aktif → arahkan
+  // pemilik mengatur alamat di editor dulu (sebelum bayar). Backstop juga di
+  // createCheckoutAction.
+  if (isDraftSlug(inv.slug)) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-xl font-semibold tracking-tight">
+            {copy.checkout.title}
+          </h1>
+        </div>
+        <Card>
+          <CardContent className="space-y-4 py-8 text-center">
+            <h2 className="text-lg font-medium">
+              {copy.checkout.setSlugTitle}
+            </h2>
+            <p className="text-muted-foreground mx-auto max-w-md text-sm">
+              {copy.checkout.setSlugBody}
+            </p>
+            <Link
+              href={`/dashboard/undangan/${id}/edit`}
+              className={buttonVariants()}
+            >
+              {copy.checkout.setSlugCta}
+            </Link>
+          </CardContent>
+        </Card>
+        <Link
+          href="/dashboard"
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          {copy.checkout.back}
+        </Link>
+      </div>
+    );
+  }
 
   const { data: rows } = await supabase
     .from("packages")

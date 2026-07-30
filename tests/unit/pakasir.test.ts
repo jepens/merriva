@@ -170,3 +170,59 @@ describe("PakasirGateway.cancelTransaction", () => {
     expect(message).not.toContain("secret-key");
   });
 });
+
+describe("PakasirGateway.simulatePayment (sandbox, uji-only)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("DILARANG di production → melempar tanpa memanggil jaringan", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const gw = new PakasirGateway("merriva", "secret-key");
+    await expect(gw.simulatePayment("MRV-8F3K2", 99000)).rejects.toThrow(
+      /production/,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/paymentsimulation dgn body lengkap; sukses saat 2xx", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    const gw = new PakasirGateway("merriva", "secret-key");
+
+    await expect(
+      gw.simulatePayment("MRV-8F3K2", 99000),
+    ).resolves.toBeUndefined();
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe("https://app.pakasir.com/api/paymentsimulation");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(init?.body as string)).toEqual({
+      project: "merriva",
+      order_id: "MRV-8F3K2",
+      amount: 99000,
+      api_key: "secret-key",
+    });
+  });
+
+  it("melempar saat non-OK; pesan TIDAK membocorkan api_key", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("gagal", { status: 500 }),
+    );
+    const gw = new PakasirGateway("merriva", "secret-key");
+
+    let message = "";
+    try {
+      await gw.simulatePayment("MRV-8F3K2", 99000);
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toContain("HTTP 500");
+    expect(message).not.toContain("secret-key");
+  });
+});

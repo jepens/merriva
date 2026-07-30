@@ -55,10 +55,10 @@
 - [x] Webhook `/api/webhooks/pakasir`: verifikasi 2 lapis (match DB + `transactiondetail`), idempotent, aktivasi + hitung `active_until` — **M3.2** (RPC atomik `activate_paid_order`, service_role-only)
 - [x] Halaman cek status pembayaran (poll `transactiondetail`) — **M3.3** (`/dashboard/undangan/[id]/bayar` + poller; jalur aktivasi OTORITATIF kedua via `verifyAndActivate` bersama dengan webhook; `pending`→`active` tanpa reload)
 - [x] Cron expiry order + undangan — **M3.4**: `/api/cron/expire-orders` (**rekonsiliasi `transactiondetail` DULU** → aktifkan bila ternyata lunas, jika belum lunas `transactioncancel` + `expired`; menutup celah "webhook hilang" M3.3) · `/api/cron/expire-invitations` (`active` lewat `active_until` → `expired` + revalidate ISR). Auth `Authorization: Bearer <CRON_SECRET>` (timing-safe, fail-closed); RPC `expire_pending_order` service_role-only (atomik + revert `pending_payment`→`draft`)
-- [ ] Reminder expiry H-14 (cron) — **dipindah ke M3.5** (tak terpisah dari email Resend; butuh kolom `reminder_sent_at` untuk idempotensi)
+- [x] Reminder expiry H-14 (cron) — dikerjakan di **M3.5** (`/api/cron/expiry-reminders` + `reminder_sent_at`)
 - [x] Email transaksional (Resend) — **M3.5**: **kuitansi + link aktif** (dipicu saat order→`paid` di webhook/poll/cron, `idempotencyKey`) + **pengingat H-14** (cron `/api/cron/expiry-reminders` + kolom `reminder_sent_at`, di-reset saat perpanjangan). Infra `lib/email/` dev-safe (no-op tanpa `RESEND_API_KEY`). **Verifikasi akun/reset** tetap via Supabase Auth → arahkan ke Resend lewat **Custom SMTP** di dashboard Supabase (konfigurasi, bukan kode). Rekap RSVP mingguan (opsional) ditunda pasca-MVP
-- [ ] Enforcement penuh limit paket + watermark Basic
-- [ ] E2E: checkout → `paymentsimulation` → webhook → aktif
+- [x] Enforcement penuh limit paket + watermark Basic — **M3.6**: foto & tamu OTORITATIF di DB (`invitation_effective_limits` + RPC atomik `insert_gallery_media`/`insert_guest`/`insert_guests_bulk`), watermark halaman publik dari `getEffectiveLimits(package_id)`. Terverifikasi: draft→Basic (8 foto/150 tamu/watermark) → aktivasi Premium → 20 foto/tanpa batas/tanpa watermark. `youtube`/`all_themes` = limit laten (belum ada fitur/tema kedua)
+- [x] E2E: checkout → `paymentsimulation` → webhook → aktif — **M3.6**: `PakasirGateway.simulatePayment` (sandbox; dilarang di production) + spec Playwright ter-gate `tests/e2e/payment-simulation.spec.ts` (checkout → simulasi → poll `/bayar` → aktif) + runbook `docs/PAYMENT-E2E.md`. Happy-path butuh kredensial sandbox (di-skip tanpa itu); rantai selain hop Pakasir terverifikasi lokal
 
 ## M4 — Launch (~2 minggu)
 

@@ -132,4 +132,33 @@ export class PakasirGateway implements PaymentGateway {
       throw new Error(`Pakasir transactioncancel HTTP ${res.status}`);
     }
   }
+
+  /**
+   * Simulasikan pembayaran (`POST /api/paymentsimulation`, mode SANDBOX Pakasir —
+   * dok pakasir.com/p/docs). Menandai transaksi lunas & memicu webhook TANPA uang
+   * asli. HANYA untuk E2E/uji (M3.6). **DILARANG di production** (boundary SPEC:
+   * "paymentsimulation bukan uang asli di luar production") → melempar bila
+   * `NODE_ENV=production`. `api_key` hanya di body, tak pernah di error/log.
+   */
+  async simulatePayment(orderCode: string, amountIdr: number): Promise<void> {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("paymentsimulation dilarang di production.");
+    }
+    if (!this.apiKey) throw new Error("PAKASIR_API_KEY belum di-set.");
+    const res = await fetch(`${PAKASIR_BASE_URL}/api/paymentsimulation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project: this.projectSlug,
+        order_id: orderCode,
+        amount: amountIdr,
+        api_key: this.apiKey,
+      }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      throw new Error(`Pakasir paymentsimulation HTTP ${res.status}`);
+    }
+  }
 }
