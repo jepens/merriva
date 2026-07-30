@@ -15,6 +15,8 @@ export const demoDataRegistry: Record<
   aria: () => import("./aria/demo-data"),
   verdant: () => import("./verdant/demo-data"),
   noir: () => import("./noir/demo-data"),
+  festa: () => import("./festa/demo-data"),
+  lumina: () => import("./lumina/demo-data"),
 };
 
 export function getThemeDemoLoader(

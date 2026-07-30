@@ -30,6 +30,8 @@ export const themeRegistry: Record<string, () => Promise<ThemeModule>> = {
   aria: () => import("./aria"),
   verdant: () => import("./verdant"),
   noir: () => import("./noir"),
+  festa: () => import("./festa"),
+  lumina: () => import("./lumina"),
 };
 
 export function getThemeLoader(

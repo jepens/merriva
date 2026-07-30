@@ -1,0 +1,35 @@
+/** Label chrome tema Festa (family, Indonesia) — terpusat dalam tema. */
+export const L = {
+  wrongCategory: "Tema ini khusus untuk undangan acara keluarga.",
+  hero: { eyebrow: "Undangan", scroll: "Gulir" },
+  countdown: {
+    eyebrow: "Hitung Mundur",
+    done: "Hari perayaan telah tiba!",
+    days: "Hari",
+    hours: "Jam",
+    minutes: "Menit",
+    seconds: "Detik",
+  },
+  celebrant: { eyebrow: "Yang Berbahagia", parents: "Putra/Putri dari" },
+  intro: { eyebrow: "Sepatah Kata" },
+  wishes: { eyebrow: "Doa & Harapan", heading: "Untaian Doa" },
+  schedule: {
+    eyebrow: "Acara",
+    heading: "Waktu & Tempat",
+    maps: "Lihat Lokasi",
+    calendar: "Simpan ke Kalender",
+    calendarGoogle: "Google Kalender",
+    calendarIcs: "Apple / Outlook",
+  },
+  gallery: { eyebrow: "Galeri", heading: "Momen Bahagia" },
+  envelope: {
+    eyebrow: "Tanda Kasih",
+    heading: "Amplop Digital",
+    note: "Doa restu Anda sudah lebih dari cukup. Bila berkenan memberi tanda kasih, dapat melalui:",
+    copy: "Salin Nomor",
+    copied: "Tersalin",
+    giftAddress: "Alamat pengiriman kado",
+    holder: "a.n.",
+  },
+  footer: { thanks: "Terima Kasih", by: "Dibuat dengan", brand: "Merriva" },
+} as const;

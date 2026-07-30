@@ -1,0 +1,467 @@
+/*
+ * Tema "Festa" — family, hangat & meriah. Selector di-scope `.ft`. Palet:
+ * terracotta + amber + krem hangat. Tipografi: Poppins (geometric membulat,
+ * display) + Nunito (humanist bulat, teks). Bentuk membulat, gradasi hangat,
+ * ornamen bunga (✽). Tanpa aset eksternal (LCP/WebView).
+ */
+.ft {
+  --ft-terra: #c96f4a;
+  --ft-amber: #e2a659;
+  --ft-terra-ink: #a8522e;
+  --ft-cream: #fdf7ee;
+  --ft-cream-2: #f8ecd9;
+  --ft-brown: #5a3c2c;
+  --ft-text: #4a352a;
+  --ft-line: #ecd9c1;
+
+  background: var(--ft-cream);
+  color: var(--ft-text);
+  font-family: var(--ft-body), ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ---- Layout primitives -------------------------------------------------- */
+.ft-section {
+  padding: clamp(3.5rem, 9vw, 6rem) 1.4rem;
+  text-align: center;
+}
+.ft-section--tint {
+  background: var(--ft-cream-2);
+}
+.ft-inner {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.ft-eyebrow {
+  font-family: var(--ft-body), sans-serif;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ft-terra-ink);
+  margin: 0 0 1rem;
+}
+.ft-eyebrow--center {
+  text-align: center;
+}
+.ft-h2 {
+  font-family: var(--ft-display), sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.8rem, 6vw, 2.7rem);
+  line-height: 1.15;
+  color: var(--ft-brown);
+  margin: 0 0 2rem;
+}
+.ft-lead {
+  font-size: 1.05rem;
+  color: var(--ft-text);
+  margin: 0 auto 1.1rem;
+  max-width: 34rem;
+}
+.ft-lead--light {
+  color: rgba(253, 247, 238, 0.92);
+}
+.ft-muted {
+  font-size: 0.92rem;
+  color: var(--ft-brown);
+  opacity: 0.82;
+  margin: 0.3rem 0;
+}
+.ft-quote {
+  margin: 1.6rem auto 0;
+  max-width: 32rem;
+  padding: 1.4rem 1.6rem;
+  background: var(--ft-cream-2);
+  border-radius: 1.25rem;
+  font-family: var(--ft-display), sans-serif;
+  font-weight: 500;
+  font-size: 1.15rem;
+  line-height: 1.5;
+  color: var(--ft-brown);
+}
+.ft-quote p {
+  margin: 0;
+}
+.ft-quote__src {
+  display: block;
+  margin-top: 0.7rem;
+  font-family: var(--ft-body), sans-serif;
+  font-size: 0.8rem;
+  font-style: normal;
+  color: var(--ft-terra-ink);
+}
+
+/* ---- Hero (gradasi hangat) --------------------------------------------- */
+.ft-hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.4rem;
+  background: linear-gradient(155deg, var(--ft-terra), var(--ft-amber));
+  color: var(--ft-cream);
+  text-align: center;
+  overflow: hidden;
+}
+.ft-hero__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) brightness(0.72);
+  z-index: 0;
+}
+.ft-hero__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    160deg,
+    rgba(201, 111, 74, 0.72),
+    rgba(168, 82, 46, 0.82)
+  );
+}
+.ft-hero__inner {
+  position: relative;
+  z-index: 2;
+  max-width: 30rem;
+  padding: clamp(2.5rem, 8vw, 3.75rem) clamp(1.5rem, 6vw, 2.5rem);
+  background: rgba(253, 247, 238, 0.1);
+  border: 1px solid rgba(253, 247, 238, 0.35);
+  border-radius: 2rem;
+  backdrop-filter: blur(2px);
+}
+.ft-hero__crest {
+  display: block;
+  font-size: 2rem;
+  color: var(--ft-cream);
+  line-height: 1;
+  margin-bottom: 0.6rem;
+}
+.ft-eyebrow--hero {
+  color: rgba(253, 247, 238, 0.9);
+}
+.ft-hero__title {
+  font-family: var(--ft-display), sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 10vw, 3.6rem);
+  line-height: 1.05;
+  color: var(--ft-cream);
+  margin: 0.3rem 0 0;
+  text-wrap: balance;
+}
+.ft-hero__celebrant {
+  font-family: var(--ft-display), sans-serif;
+  font-weight: 500;
+  font-size: 1.25rem;
+  color: var(--ft-cream);
+  margin: 0.9rem 0 0;
+}
+.ft-hero__date {
+  margin: 1.1rem 0 0;
+  font-size: 0.88rem;
+  letter-spacing: 0.08em;
+  color: rgba(253, 247, 238, 0.9);
+}
+.ft-hero__scroll {
+  position: absolute;
+  bottom: 1.1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(253, 247, 238, 0.75);
+}
+
+/* ---- Celebrant ---------------------------------------------------------- */
+.ft-celebrant {
+  margin-top: 0.8rem;
+}
+.ft-celebrant__name {
+  font-family: var(--ft-display), sans-serif;
+  font-weight: 700;
+  font-size: clamp(2rem, 7vw, 3rem);
+  color: var(--ft-terra-ink);
+  margin: 0;
+}
+.ft-celebrant__parents {
+  font-size: 0.98rem;
+  color: var(--ft-brown);
+  margin: 0.6rem 0 0;
+}
+
+/* ---- Countdown ---------------------------------------------------------- */
+.ft .countdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+  max-width: 26rem;
+  margin: 0 auto;
+}
+.ft .count-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.1rem 0.3rem;
+  background: #fff;
+  border-radius: 1.25rem;
+  box-shadow: 0 6px 18px rgba(168, 82, 46, 0.1);
+}
+.ft .count-num {
+  font-family: var(--ft-display), sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 6vw, 2.1rem);
+  color: var(--ft-terra);
+}
+.ft .count-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ft-brown);
+  margin-top: 0.35rem;
+}
+.ft .countdown-done {
+  font-family: var(--ft-display), sans-serif;
+  font-weight: 600;
+  font-size: 1.3rem;
+  color: var(--ft-terra);
+}
+
+/* ---- Cards -------------------------------------------------------------- */
+.ft-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 30rem;
+  margin: 0 auto;
+}
+.ft-card {
+  background: #fff;
+  border: 1px solid var(--ft-line);
+  border-radius: 1.5rem;
+  padding: 1.7rem;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(168, 82, 46, 0.06);
+}
+.ft-card--wish {
+  position: relative;
+  text-align: left;
+}
+.ft-wish__mark {
+  position: absolute;
+  top: 0.6rem;
+  left: 1.1rem;
+  font-family: var(--ft-display), sans-serif;
+  font-size: 2.2rem;
+  color: var(--ft-amber);
+  line-height: 1;
+}
+.ft-card--wish .ft-card__title {
+  margin-top: 1.4rem;
+  text-align: left;
+}
+.ft-wish__from {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ft-terra-ink);
+  margin: 1.4rem 0 0.2rem;
+}
+.ft-card__title {
+  font-family: var(--ft-display), sans-serif;
+  font-weight: 600;
+  font-size: 1.3rem;
+  color: var(--ft-brown);
+  margin: 0 0 0.8rem;
+}
+.ft-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  margin: 0.35rem 0;
+}
+.ft-card__row svg {
+  color: var(--ft-terra);
+  flex-shrink: 0;
+}
+.ft-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+.ft-account__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ft-terra-ink);
+  margin: 0 0 0.5rem;
+}
+.ft-account__num {
+  font-family: var(--ft-display), sans-serif;
+  font-weight: 600;
+  font-size: 1.5rem;
+  letter-spacing: 0.03em;
+  color: var(--ft-brown);
+  margin: 0;
+}
+
+/* ---- Buttons ------------------------------------------------------------ */
+.ft-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.3rem;
+  border: 1px solid var(--ft-terra);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ft-terra-ink);
+  font-family: var(--ft-body), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.ft-btn:hover {
+  background: var(--ft-terra);
+  color: var(--ft-cream);
+}
+.ft-btn--solid {
+  background: var(--ft-terra);
+  color: var(--ft-cream);
+  border-color: var(--ft-terra);
+  margin-top: 1.1rem;
+}
+.ft-btn--solid:hover {
+  background: var(--ft-terra-ink);
+}
+
+/* ---- Calendar dropdown -------------------------------------------------- */
+.ft-cal {
+  position: relative;
+}
+.ft-cal__trigger {
+  list-style: none;
+}
+.ft-cal__trigger::-webkit-details-marker {
+  display: none;
+}
+.ft-cal__menu {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.4rem;
+  min-width: 12rem;
+  background: #fff;
+  border: 1px solid var(--ft-line);
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px rgba(168, 82, 46, 0.16);
+  overflow: hidden;
+}
+.ft-cal__opt {
+  display: block;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  color: var(--ft-text);
+  text-decoration: none;
+}
+.ft-cal__opt:hover {
+  background: var(--ft-cream-2);
+}
+
+/* ---- Gallery ------------------------------------------------------------ */
+.ft-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+@media (min-width: 40rem) {
+  .ft-gallery {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.ft-gallery__item {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 1.25rem;
+}
+.ft-gallery__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s ease;
+}
+.ft-gallery__item:hover img {
+  transform: scale(1.06);
+}
+
+/* ---- Footer ------------------------------------------------------------- */
+.ft-footer {
+  background: linear-gradient(155deg, var(--ft-terra), var(--ft-terra-ink));
+  color: var(--ft-cream);
+  padding: clamp(3.5rem, 9vw, 6rem) 1.4rem;
+  text-align: center;
+}
+.ft-footer__thanks {
+  font-family: var(--ft-display), sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.7rem, 6vw, 2.4rem);
+  color: var(--ft-cream);
+  margin: 0;
+}
+.ft-footer__event {
+  font-size: 1.05rem;
+  color: rgba(253, 247, 238, 0.92);
+  margin: 0.3rem 0 0;
+}
+.ft-watermark {
+  margin: 2.2rem 0 0;
+  font-size: 0.78rem;
+  color: rgba(253, 247, 238, 0.7);
+}
+.ft-watermark a {
+  color: var(--ft-cream);
+  text-decoration: underline;
+}
+
+/* ---- Reveal ------------------------------------------------------------- */
+.ft .reveal {
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease;
+}
+.ft.is-js .reveal {
+  opacity: 0;
+  transform: translateY(1.25rem);
+}
+.ft.is-js .reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ft.is-js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .ft-gallery__item img {
+    transition: none;
+  }
+}
