@@ -80,6 +80,7 @@ export async function adminUpdatePackageAction(
   });
 
   revalidatePath("/"); // landing membaca harga paket
+  revalidatePath("/harga"); // halaman harga (kartu + tabel perbandingan)
   revalidatePath("/admin/paket");
   revalidatePath("/admin");
   redirect("/admin/paket?msg=pkg_ok");
@@ -126,6 +127,7 @@ export async function adminUpdateThemeAction(
   });
 
   revalidatePath("/"); // katalog tema di landing
+  revalidatePath("/tema"); // halaman katalog tema
   revalidatePath("/admin/tema");
   revalidatePath("/admin");
   redirect("/admin/tema?msg=theme_ok");

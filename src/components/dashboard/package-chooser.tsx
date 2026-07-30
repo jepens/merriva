@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { formatIdr } from "@/lib/format";
 import type { PackageLimits } from "@/lib/limits";
+import { packageFeatures } from "@/lib/package-features";
 import { cn } from "@/lib/utils";
 import { createCheckoutAction } from "@/server/actions/checkout";
 
@@ -17,20 +18,6 @@ export interface CheckoutPackage {
   priceIdr: number;
   durationMonths: number;
   limits: PackageLimits;
-}
-
-/** Daftar fitur (centang) dari batas paket. */
-function features(l: PackageLimits, durationMonths: number): string[] {
-  const c = copy.checkout.feat;
-  return [
-    c.rsvp,
-    c.photos(l.maxPhotos),
-    l.maxGuests === null ? c.guestsUnlimited : c.guestsLimited(l.maxGuests),
-    l.allThemes ? c.allThemes : c.standardThemes,
-    ...(l.youtube ? [c.youtube] : []),
-    l.watermark ? c.watermark : c.noWatermark,
-    copy.checkout.perDuration(durationMonths),
-  ];
 }
 
 /**
@@ -94,7 +81,7 @@ export function PackageChooser({
                   </p>
                 </div>
                 <ul className="space-y-1.5 text-sm">
-                  {features(pkg.limits, pkg.durationMonths).map((f) => (
+                  {packageFeatures(pkg.limits, pkg.durationMonths).map((f) => (
                     <li key={f} className="flex items-start gap-2">
                       <Check className="text-primary mt-0.5 size-4 shrink-0" />
                       <span>{f}</span>

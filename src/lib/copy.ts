@@ -746,6 +746,331 @@ export const copy = {
       owner_failed: "Gagal mengganti pemilik.",
     },
   },
+  // Halaman marketing publik (SPEC §4.1): landing, katalog tema, harga, FAQ,
+  // kebijakan privasi & refund. Statis + ISR; harga/tema selalu dari DB.
+  marketing: {
+    nav: {
+      themes: "Tema",
+      pricing: "Harga",
+      faq: "FAQ",
+      login: "Masuk",
+      cta: "Buat Undangan",
+      menu: "Menu",
+      close: "Tutup",
+      home: "Beranda",
+    },
+    hero: {
+      eyebrow: "Undangan digital & buku tamu",
+      titleLead: "Undangan digital untuk",
+      titleAccent: "setiap momen bahagia",
+      subtitle:
+        "Pernikahan, acara korporat, hingga syukuran keluarga — rancang undangan yang elegan, sebar lewat WhatsApp, dan kumpulkan RSVP dalam satu tempat.",
+      ctaPrimary: "Buat undangan gratis",
+      ctaSecondary: "Jelajahi tema",
+      note: "Gratis dibuat & dipreview. Bayar hanya saat siap disebar.",
+    },
+    // Sinyal kepercayaan berbasis fakta (bukan logo/testimoni palsu).
+    trust: [
+      "Dioptimalkan untuk WhatsApp",
+      "RSVP + amplop digital",
+      "Link personal per tamu",
+      "QRIS & Virtual Account",
+    ],
+    how: {
+      eyebrow: "Cara kerja",
+      title: "Dari ide ke tersebar dalam tiga langkah",
+      subtitle:
+        "Tidak perlu desainer, tidak perlu aplikasi. Semua dari HP Anda.",
+      steps: [
+        {
+          title: "Pilih tema & isi konten",
+          body: "Pilih kategori acara dan tema, lalu isi form terpandu: mempelai, jadwal, galeri, cerita, dan amplop digital. Tersimpan otomatis.",
+        },
+        {
+          title: "Preview gratis di HP",
+          body: "Lihat hasil nyata undangan dalam bingkai ponsel sebelum membayar. Sesuaikan hingga pas.",
+        },
+        {
+          title: "Aktifkan & sebar via WhatsApp",
+          body: "Bayar sekali untuk mengaktifkan, tetapkan alamat undangan, lalu kirim link personal ke tiap tamu lewat WhatsApp.",
+        },
+      ],
+    },
+    themes: {
+      eyebrow: "Katalog tema",
+      title: "Tema untuk setiap acara",
+      subtitle:
+        "Setiap tema punya demo hidup berisi data contoh — bukan sekadar gambar. Buka, gulir, dan rasakan sebelum memilih.",
+      all: "Lihat semua tema",
+      demo: "Lihat demo",
+      demoOf: (name: string) => `Lihat demo tema ${name}`,
+      soon: "Demo segera hadir",
+      tierPremium: "Premium",
+      tierStandard: "Standar",
+      universal: "Universal",
+      filterAll: "Semua",
+      filterLabel: "Saring per kategori acara",
+      empty: "Belum ada tema pada kategori ini.",
+      // Satuan (bukan fungsi) agar bisa dilewatkan sebagai prop ke komponen client
+      // tanpa menyeret seluruh objek `copy` ke bundel /tema.
+      countUnit: "tema tersedia",
+    },
+    features: {
+      eyebrow: "Kenapa Merriva",
+      title: "Dibuat untuk cara tamu Indonesia membuka undangan",
+      items: [
+        {
+          title: "Mulus di WhatsApp",
+          body: "Mayoritas tamu membuka undangan dari dalam WhatsApp. Halaman kami ringan dan cepat terbuka di sana — bukan hanya di browser desktop.",
+        },
+        {
+          title: "RSVP, ucapan & amplop digital",
+          body: "Satu form untuk konfirmasi kehadiran, ucapan & doa, plus amplop digital (transfer/kado) yang bersifat privat — hanya Anda yang melihatnya.",
+        },
+        {
+          title: "Link personal per tamu",
+          body: "Setiap tamu menerima link berisi namanya, dengan RSVP terisi otomatis. Sebar satu per satu lewat wa.me langsung dari HP Anda.",
+        },
+        {
+          title: "Gratis dicoba dulu",
+          body: "Buat dan preview undangan tanpa biaya. Pembayaran baru diminta saat Anda siap mengaktifkan dan menyebarkannya.",
+        },
+      ],
+    },
+    pricing: {
+      eyebrow: "Harga",
+      title: "Sekali bayar, aktif berbulan-bulan",
+      subtitle:
+        "Tanpa langganan. Pilih paket saat siap menyebarkan undangan Anda.",
+      popular: "Terpopuler",
+      cta: "Pilih paket ini",
+      ctaGeneric: "Mulai buat undangan",
+      seeAll: "Bandingkan paket selengkapnya",
+      note: "Undangan gratis dibuat & dipreview — Anda hanya membayar saat mengaktifkan.",
+    },
+    faq: {
+      eyebrow: "FAQ",
+      title: "Pertanyaan yang sering diajukan",
+      subtitle: "Belum terjawab? Hubungi kami — kami senang membantu.",
+      more: "Lihat semua pertanyaan",
+      items: [
+        {
+          q: "Apa itu Merriva?",
+          a: "Platform undangan digital sekaligus buku tamu digital untuk pernikahan, acara korporat, dan acara keluarga. Anda membuat undangan sendiri, menyebarkannya lewat WhatsApp, dan mengelola RSVP dari satu dashboard.",
+        },
+        {
+          q: "Apakah gratis?",
+          a: "Membuat dan mem-preview undangan sepenuhnya gratis. Pembayaran hanya diminta saat Anda ingin mengaktifkan dan menyebarkan undangan — sekali bayar, bukan langganan.",
+        },
+        {
+          q: "Berapa lama undangan tetap aktif?",
+          a: "Sesuai paket: Basic aktif 6 bulan, Premium aktif 12 bulan sejak diaktifkan. Masa aktif bisa diperpanjang kapan pun sebelum atau sesudah berakhir.",
+        },
+        {
+          q: "Bagaimana tamu membuka undangan?",
+          a: "Lewat tautan seperti merriva.id/nama-anda yang bisa dibuka langsung di WhatsApp. Untuk tiap tamu, Anda bisa mengirim link personal berisi namanya, dengan form RSVP yang sudah terisi otomatis.",
+        },
+        {
+          q: "Metode pembayaran apa saja yang didukung?",
+          a: "QRIS dan Virtual Account bank, diproses secara aman lewat Pakasir. Kami tidak menyimpan data kartu atau rekening Anda.",
+        },
+        {
+          q: "Bisakah saya mengedit undangan setelah aktif?",
+          a: "Bisa. Konten undangan dapat diperbarui kapan saja. Hanya alamat undangan (slug) yang dikunci — bisa diganti maksimal satu kali setelah aktif agar tautan yang sudah tersebar tidak rusak.",
+        },
+        {
+          q: "Apakah data tamu dan amplop saya aman?",
+          a: "Ya. Daftar tamu, RSVP, dan konfirmasi amplop bersifat privat — hanya Anda yang dapat melihatnya di dashboard. Tidak pernah ditampilkan di halaman publik.",
+        },
+        {
+          q: "Apakah bisa pakai lagu favorit saya?",
+          a: "Musik dipilih dari koleksi instrumental bebas royalti bawaan platform. Ini untuk menghindari masalah hak cipta agar undangan Anda aman disebar luas.",
+        },
+        {
+          q: "Perlu mengunduh aplikasi?",
+          a: "Tidak. Semuanya berjalan di browser — baik untuk Anda membuat undangan maupun untuk tamu membukanya.",
+        },
+        {
+          q: "Bagaimana kebijakan pengembalian dana?",
+          a: "Undangan adalah layanan digital yang langsung aktif setelah pembayaran, sehingga umumnya tidak dapat dikembalikan. Kendala teknis dan pembayaran ganda ditangani kasus per kasus. Selengkapnya di halaman Kebijakan Refund.",
+        },
+      ],
+    },
+    finalCta: {
+      title: "Siap membuat undangan pertama Anda?",
+      subtitle:
+        "Gratis untuk dicoba. Rasakan hasilnya dulu, bayar saat benar-benar siap.",
+      cta: "Buat undangan gratis",
+      secondary: "Lihat harga",
+    },
+    footer: {
+      tagline: "Undangan digital & buku tamu untuk setiap momen bahagia.",
+      madeIn: "Dibuat untuk pasar Indonesia.",
+      colProduct: "Produk",
+      colCompany: "Merriva",
+      colLegal: "Legal",
+      rights: (year: number) => `© ${year} Merriva. Semua hak dilindungi.`,
+    },
+    pages: {
+      themes: {
+        title: "Katalog Tema",
+        subtitle:
+          "Delapan tema lintas tiga kategori acara. Buka demo hidup masing-masing tanpa perlu masuk.",
+      },
+      pricing: {
+        title: "Harga",
+        subtitle:
+          "Sekali bayar untuk mengaktifkan undangan. Tanpa langganan, tanpa biaya tersembunyi.",
+        comparisonTitle: "Perbandingan lengkap",
+        featureCol: "Fitur",
+        compare: {
+          price: "Harga",
+          duration: "Masa aktif",
+          photos: "Galeri foto",
+          guests: "Daftar tamu + link WA personal",
+          themes: "Pilihan tema",
+          youtube: "Embed video YouTube",
+          rsvp: "RSVP, ucapan & amplop digital",
+          watermark: "Watermark footer",
+          months: (n: number) => `${n} bulan`,
+          photosVal: (n: number) => `${n} foto`,
+          guestsUnlimited: "Tanpa batas",
+          guestsVal: (n: number) => `${n} tamu`,
+          themesAll: "Semua tema",
+          themesStd: "Tema standar",
+          watermarkYes: "Ada (kecil)",
+          watermarkNo: "Tanpa watermark",
+        },
+      },
+      faq: {
+        title: "Pertanyaan yang Sering Diajukan",
+        subtitle:
+          "Hal-hal yang paling sering ditanyakan sebelum membuat undangan.",
+      },
+    },
+    // Halaman legal. Ketentuan refund adalah draf standar produk digital —
+    // pemilik wajib meninjau/menyesuaikan (SPEC §11: refund kasus per kasus).
+    legal: {
+      contactEmail: "halo@merriva.id",
+      updated: "Terakhir diperbarui 31 Juli 2026",
+      backHome: "Kembali ke beranda",
+      contactHeading: "Hubungi kami",
+      contactBody: "Ada pertanyaan tentang halaman ini? Email kami di",
+      privacy: {
+        title: "Kebijakan Privasi",
+        intro:
+          "Merriva menghargai privasi Anda. Kebijakan ini menjelaskan data yang kami kumpulkan, cara kami menggunakannya, dan hak Anda atas data tersebut.",
+        sections: [
+          {
+            heading: "Data yang kami kumpulkan",
+            body: [
+              "Data akun: nama, alamat email, dan nomor WhatsApp (opsional) yang Anda berikan saat mendaftar.",
+              "Konten undangan: teks, foto, jadwal acara, dan detail lain yang Anda masukkan.",
+              "Data tamu: nama, nomor WhatsApp, status kehadiran (RSVP), dan ucapan — baik yang Anda tambahkan maupun yang diisi tamu.",
+              "Data teknis: alamat IP, jenis perangkat, dan cookie sesi yang menjaga Anda tetap masuk.",
+            ],
+          },
+          {
+            heading: "Cara kami menggunakan data",
+            body: [
+              "Menyediakan dan mengoperasikan layanan undangan digital Anda.",
+              "Memproses pembayaran dan mengirim kuitansi.",
+              "Mengirim notifikasi penting, seperti pengingat masa aktif undangan.",
+              "Menjaga keamanan layanan dan mencegah penyalahgunaan.",
+            ],
+          },
+          {
+            heading: "Pihak ketiga (pemroses data)",
+            body: [
+              "Supabase — hosting basis data dan autentikasi.",
+              "Pakasir — pemroses pembayaran (QRIS & Virtual Account). Kami tidak menyimpan data kartu atau rekening pembayaran Anda.",
+              "Resend — pengiriman email transaksional (kuitansi & pengingat).",
+              "Cloudflare Turnstile — perlindungan anti-bot pada formulir publik.",
+              "Masing-masing memproses data sesuai kebijakan privasinya sendiri.",
+            ],
+          },
+          {
+            heading: "Cookie",
+            body: [
+              "Kami hanya menggunakan cookie esensial untuk menjaga sesi login Anda. Tidak ada cookie iklan atau pelacakan pihak ketiga.",
+            ],
+          },
+          {
+            heading: "Penyimpanan & retensi data",
+            body: [
+              "Data disimpan selama akun dan undangan Anda aktif.",
+              "Undangan yang telah kedaluwarsa tetap kami simpan hingga 6 bulan agar dapat Anda perpanjang, setelah itu dapat dihapus.",
+              "Anda dapat meminta penghapusan data kapan saja.",
+            ],
+          },
+          {
+            heading: "Keamanan",
+            body: [
+              "Akses ke data dibatasi pada tingkat baris (row-level security) sehingga pengguna hanya dapat mengakses datanya sendiri. Seluruh koneksi terenkripsi (HTTPS).",
+            ],
+          },
+          {
+            heading: "Hak Anda",
+            body: [
+              "Anda berhak mengakses, memperbaiki, atau menghapus data pribadi Anda, serta menarik persetujuan. Hubungi kami untuk menggunakan hak-hak ini.",
+            ],
+          },
+          {
+            heading: "Tanggung jawab atas data tamu",
+            body: [
+              "Sebagai pembuat undangan, Anda bertanggung jawab atas data tamu yang Anda unggah dan memastikan Anda berhak membagikannya kepada kami untuk keperluan undangan Anda.",
+            ],
+          },
+          {
+            heading: "Perubahan kebijakan",
+            body: [
+              "Kebijakan ini dapat diperbarui dari waktu ke waktu. Perubahan penting akan kami beritahukan melalui layanan atau email.",
+            ],
+          },
+        ],
+      },
+      refund: {
+        title: "Kebijakan Refund",
+        intro:
+          "Undangan digital adalah layanan yang langsung aktif setelah pembayaran. Berikut ketentuan pengembalian dana kami.",
+        sections: [
+          {
+            heading: "Sebelum pembayaran",
+            body: [
+              "Membuat dan mem-preview undangan sepenuhnya gratis. Selama Anda belum membayar, tidak ada biaya apa pun yang dikenakan.",
+            ],
+          },
+          {
+            heading: "Setelah aktivasi",
+            body: [
+              "Karena layanan langsung diberikan begitu pembayaran berhasil — undangan aktif dan dapat langsung disebar — pembayaran pada umumnya tidak dapat dikembalikan.",
+            ],
+          },
+          {
+            heading: "Pengecualian (ditangani kasus per kasus)",
+            body: [
+              "Kegagalan teknis dari pihak kami yang membuat undangan tidak dapat digunakan dan tidak dapat kami perbaiki dalam waktu wajar.",
+              "Pembayaran ganda atau dana terdebit tanpa undangan menjadi aktif.",
+              "Dalam kasus seperti ini, kami akan meninjau dan memproses pengembalian yang sesuai.",
+            ],
+          },
+          {
+            heading: "Cara mengajukan",
+            body: [
+              "Kirim email ke alamat kontak di bawah, sertakan kode order dan penjelasan singkat, paling lambat 7 hari sejak pembayaran.",
+              "Kami menanggapi setiap permintaan dalam 3 hari kerja.",
+            ],
+          },
+          {
+            heading: "Proses pengembalian",
+            body: [
+              "Bila disetujui, pengembalian dana diproses melalui metode pembayaran asal dalam 7–14 hari kerja, mengikuti waktu proses penyedia pembayaran.",
+            ],
+          },
+        ],
+      },
+    },
+  },
 } as const;
 
 export type Copy = typeof copy;
