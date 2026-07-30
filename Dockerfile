@@ -16,6 +16,26 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 # ---- Builder: build Next standalone ----
 FROM base AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# NEXT_PUBLIC_* di-INLINE saat build (bukan runtime) → WAJIB tersedia ketika
+# `pnpm build` berjalan, jika tidak client Supabase/Turnstile di browser dapat
+# nilai `undefined` (login & RSVP rusak). Easypanel meneruskan env service sebagai
+# build-arg; `ARG` menerimanya lalu `ENV` mengeksposnya ke proses build. Isi nilai
+# ini di Environment service Easypanel SEBELUM build (URL & anon key juga dipakai
+# untuk pra-render statis halaman marketing → Supabase harus terjangkau saat build).
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_MEDIA_URL
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ARG NEXT_PUBLIC_SENTRY_DSN
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    NEXT_PUBLIC_MEDIA_URL=$NEXT_PUBLIC_MEDIA_URL \
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY \
+    NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build
