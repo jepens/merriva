@@ -9,22 +9,25 @@ import { slugify, slugSchema } from "@/lib/slug";
 
 import { Field } from "../field";
 import { SlugEditor } from "../slug-editor";
-import type { WeddingEditorValues } from "../types";
+import type { EditorValues } from "../types";
 
 export function InfoStep({
   form,
   invitationId,
   slug,
 }: {
-  form: UseFormReturn<WeddingEditorValues>;
+  form: UseFormReturn<EditorValues>;
   invitationId: string;
   slug: string;
 }) {
   const { register, control } = form;
 
-  // Saran slug dari nama panggilan mempelai (mis. "rina-dan-bima").
-  const groomNick = useWatch({ control, name: "content.groom.nickname" });
-  const brideNick = useWatch({ control, name: "content.bride.nickname" });
+  // Saran slug dari nama panggilan mempelai (mis. "rina-dan-bima"). Nilai di-cast
+  // karena `content` bertipe union (path ini hanya ada pada anggota wedding).
+  const groomNick = useWatch({ control, name: "content.groom.nickname" }) as
+    string | undefined;
+  const brideNick = useWatch({ control, name: "content.bride.nickname" }) as
+    string | undefined;
   const suggestion = useMemo(() => {
     const base = [groomNick, brideNick].filter(Boolean).join("-dan-");
     const s = slugify(base);

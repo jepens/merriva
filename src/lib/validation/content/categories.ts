@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   commonContentFields,
+  optionalFormat,
   personSchema,
   storagePathSchema,
   storyEntrySchema,
@@ -34,7 +35,9 @@ export const corporateContentSchema = z.object({
     .object({
       name: z.string().trim().max(120).optional(),
       phone: z.string().trim().max(40).optional(),
-      email: z.email("Email PIC tidak valid").max(160).optional(),
+      // "" (input kosong RHF) → undefined agar autosave tak gagal saat email
+      // dibiarkan kosong; format tetap divalidasi bila diisi.
+      email: optionalFormat(z.email("Email PIC tidak valid").max(160)),
     })
     .optional(),
   agenda: z.array(storyEntrySchema).max(30).default([]),

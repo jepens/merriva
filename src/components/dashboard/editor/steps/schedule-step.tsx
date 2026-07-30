@@ -8,13 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { copy } from "@/lib/copy";
 
 import { Field } from "../field";
-import type { WeddingEditorValues } from "../types";
+import type { EditorValues } from "../types";
 
-export function ScheduleStep({
-  form,
-}: {
-  form: UseFormReturn<WeddingEditorValues>;
-}) {
+export function ScheduleStep({ form }: { form: UseFormReturn<EditorValues> }) {
   const { register, control } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "events" });
 

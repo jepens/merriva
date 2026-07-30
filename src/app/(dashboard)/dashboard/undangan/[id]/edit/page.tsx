@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CorporateEditor } from "@/components/dashboard/editor/corporate-editor";
+import { FamilyEditor } from "@/components/dashboard/editor/family-editor";
 import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
-import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { utcToLocal } from "@/lib/datetime";
 import { isUuid } from "@/lib/id";
@@ -103,18 +103,22 @@ export default async function EditInvitationPage({
           initialMedia={media}
           maxPhotos={maxPhotos}
         />
+      ) : content.category === "corporate" ? (
+        <CorporateEditor
+          invitationId={inv.id}
+          slug={inv.slug}
+          defaultValues={{ eventDate, content, settings, events }}
+          initialMedia={media}
+          maxPhotos={maxPhotos}
+        />
       ) : (
-        <div className="space-y-4">
-          <p className="text-muted-foreground text-sm">
-            {copy.editor.unsupportedCategory}
-          </p>
-          <Link
-            href="/dashboard"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            {copy.editor.backToDashboard}
-          </Link>
-        </div>
+        <FamilyEditor
+          invitationId={inv.id}
+          slug={inv.slug}
+          defaultValues={{ eventDate, content, settings, events }}
+          initialMedia={media}
+          maxPhotos={maxPhotos}
+        />
       )}
     </div>
   );

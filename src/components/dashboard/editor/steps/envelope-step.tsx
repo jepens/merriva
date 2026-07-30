@@ -9,13 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { copy } from "@/lib/copy";
 
 import { Field } from "../field";
-import type { WeddingEditorValues } from "../types";
+import type { EditorValues } from "../types";
 
-export function EnvelopeStep({
-  form,
-}: {
-  form: UseFormReturn<WeddingEditorValues>;
-}) {
+export function EnvelopeStep({ form }: { form: UseFormReturn<EditorValues> }) {
   const { register, control } = form;
   const banks = useFieldArray({ control, name: "content.envelope.banks" });
   const ewallets = useFieldArray({

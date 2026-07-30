@@ -88,6 +88,17 @@ export function parseContentForRender(
   if (!draft.success) return emptyContent(category);
   const d = draft.data;
 
+  // Field display bersama (greeting/quote/media/amplop) sama di semua kategori.
+  const common = {
+    coverPhoto: d.coverPhoto,
+    greetingOpen: d.greetingOpen,
+    greetingClose: d.greetingClose,
+    quote: coerceQuote(d.quote),
+    youtubeUrl: d.youtubeUrl,
+    livestreamUrl: d.livestreamUrl,
+    envelope: coerceEnvelope(d.envelope),
+  };
+
   if (d.category === "wedding") {
     return {
       category: "wedding",
@@ -95,15 +106,29 @@ export function parseContentForRender(
       groom: coercePerson(d.groom as RawPerson),
       bride: coercePerson(d.bride as RawPerson),
       story: coerceStories(d.story),
-      coverPhoto: d.coverPhoto,
-      greetingOpen: d.greetingOpen,
-      greetingClose: d.greetingClose,
-      quote: coerceQuote(d.quote),
-      youtubeUrl: d.youtubeUrl,
-      livestreamUrl: d.livestreamUrl,
-      envelope: coerceEnvelope(d.envelope),
+      ...common,
     };
   }
-  // Corporate/Family belum punya editor di M1 → kerangka kosong yang valid.
-  return emptyContent(category);
+
+  if (d.category === "corporate") {
+    return {
+      category: "corporate",
+      eventName: d.eventName ?? "",
+      organizer: d.organizer,
+      description: d.description,
+      logo: d.logo,
+      pic: d.pic,
+      agenda: coerceStories(d.agenda),
+      ...common,
+    };
+  }
+
+  return {
+    category: "family",
+    eventName: d.eventName ?? "",
+    celebrant: d.celebrant,
+    parents: d.parents,
+    wishes: coerceStories(d.wishes),
+    ...common,
+  };
 }

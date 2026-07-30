@@ -6,14 +6,14 @@ import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy";
 
 import { Field } from "../field";
-import type { WeddingEditorValues } from "../types";
+import type { EditorValues } from "../types";
 
 function PersonFields({
   form,
   side,
   title,
 }: {
-  form: UseFormReturn<WeddingEditorValues>;
+  form: UseFormReturn<EditorValues>;
   side: "groom" | "bride";
   title: string;
 }) {
@@ -40,11 +40,7 @@ function PersonFields({
   );
 }
 
-export function CoupleStep({
-  form,
-}: {
-  form: UseFormReturn<WeddingEditorValues>;
-}) {
+export function CoupleStep({ form }: { form: UseFormReturn<EditorValues> }) {
   return (
     <div className="grid gap-6 sm:grid-cols-2">
       <PersonFields

@@ -351,6 +351,10 @@ export const copy = {
       story: "Cerita",
       envelope: "Amplop",
       settings: "Pengaturan",
+      // Corporate & family
+      detail: "Detail acara",
+      agenda: "Agenda",
+      wishes: "Doa & Harapan",
     },
     fields: {
       title: "Judul undangan",
@@ -383,6 +387,22 @@ export const copy = {
       greetingClose: "Sapaan penutup",
       youtubeUrl: "Tautan YouTube (Premium)",
       livestreamUrl: "Tautan live streaming (Premium)",
+      // Corporate
+      eventName: "Nama acara",
+      eventNamePlaceholder: "Annual Summit 2026",
+      organizer: "Penyelenggara",
+      organizerPlaceholder: "PT Merriva Indonesia",
+      description: "Deskripsi acara",
+      descriptionPlaceholder: "Ceritakan tujuan & gambaran acara…",
+      picTitle: "Narahubung (PIC)",
+      picName: "Nama PIC",
+      picPhone: "No. WhatsApp PIC",
+      picEmail: "Email PIC",
+      // Family
+      celebrant: "Nama yang merayakan",
+      celebrantPlaceholder: "Nama anak / yang berulang tahun",
+      parents: "Orang tua / keluarga",
+      parentsPlaceholder: "Bapak & Ibu … (opsional)",
     },
     list: {
       addStory: "Tambah cerita",
@@ -401,6 +421,42 @@ export const copy = {
       gallery: "Galeri foto",
       story: "Cerita / love story",
       envelope: "Amplop digital",
+    },
+    // Label linimasa per kategori (dipakai TimelineStep + label section "story"
+    // di Pengaturan). Section KEY tetap "story" untuk semua kategori (tema
+    // menggerbangi linimasa via isSectionVisible(settings,"story")); hanya
+    // label yang berbeda.
+    timeline: {
+      wedding: {
+        add: "Tambah cerita",
+        item: "Cerita",
+        empty: "Belum ada cerita.",
+        title: "Judul",
+        date: "Tanggal",
+        datePlaceholder: "Maret 2020",
+        narrative: "Narasi",
+        section: "Cerita / love story",
+      },
+      corporate: {
+        add: "Tambah agenda",
+        item: "Agenda",
+        empty: "Belum ada agenda / rundown.",
+        title: "Nama sesi / agenda",
+        date: "Waktu",
+        datePlaceholder: "09.00–10.00 WIB",
+        narrative: "Deskripsi",
+        section: "Agenda / rundown",
+      },
+      family: {
+        add: "Tambah doa / harapan",
+        item: "Doa / Harapan",
+        empty: "Belum ada doa & harapan.",
+        title: "Judul",
+        date: "Tanggal (opsional)",
+        datePlaceholder: "",
+        narrative: "Isi",
+        section: "Doa & harapan",
+      },
     },
     gallery: {
       add: "Tambah foto",

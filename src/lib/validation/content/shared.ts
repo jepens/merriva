@@ -37,6 +37,18 @@ export const youtubeUrlSchema = z
     "Harus tautan YouTube yang valid",
   );
 
+/**
+ * Optional berformat (email/URL) yang menerima "" — nilai default input kosong
+ * dari react-hook-form — sebagai "tidak diisi" (→ undefined). Tanpa ini
+ * `z.email()/z.url()` menolak string kosong, sehingga autosave/aktivasi GAGAL
+ * begitu field opsional dibiarkan kosong (mis. email PIC corporate). Key tetap
+ * opsional (`.optional()` terluar) → aman untuk data lama tanpa field ini.
+ * (Temuan review editor multi-kategori.)
+ */
+export function optionalFormat<T extends z.ZodType>(schema: T) {
+  return schema.or(z.literal("").transform(() => undefined)).optional();
+}
+
 /** Kutipan / ayat pembuka. */
 export const quoteSchema = z.object({
   text: z.string().trim().max(500),
@@ -100,9 +112,9 @@ export const commonContentFields = {
   greetingClose: z.string().trim().max(1000).optional(),
   quote: quoteSchema.optional(),
   /** Embed YouTube (fitur Premium; tier ditegakkan di server). */
-  youtubeUrl: youtubeUrlSchema.optional(),
+  youtubeUrl: optionalFormat(youtubeUrlSchema),
   /** Tautan live streaming (fitur Premium — SPEC §2). */
-  livestreamUrl: z.url("Tautan tidak valid").max(500).optional(),
+  livestreamUrl: optionalFormat(z.url("Tautan tidak valid").max(500)),
   // Factory default: setiap parse dapat array `banks`/`ewallets` SEGAR.
   // `.default(objek)` akan meng-alias referensi array antar-parse (Zod v4
   // shallowClone) → mutasi in-place bocor lintas undangan. (Temuan review M1.2.)

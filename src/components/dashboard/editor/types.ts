@@ -1,13 +1,19 @@
 import type {
+  DraftContent,
   EventDraft,
   InvitationSettings,
-  WeddingDraft,
 } from "@/lib/validation/content";
 
-/** Nilai form editor undangan pernikahan (tipe draft: field boleh belum lengkap). */
-export type WeddingEditorValues = {
+/**
+ * Nilai form editor undangan (tipe draft: field boleh belum lengkap). SATU tipe
+ * lintas kategori — `content` adalah union terdiskriminasi (wedding/corporate/
+ * family) sehingga `Path<EditorValues>` mencakup gabungan path semua anggota;
+ * tiap step me-`register` path kategorinya sendiri. Kategori runtime ditentukan
+ * `content.category` (dari draft awal). Server memvalidasi ulang dgn skema draft.
+ */
+export type EditorValues = {
   eventDate: string;
-  content: WeddingDraft;
+  content: DraftContent;
   settings: InvitationSettings;
   events: EventDraft[];
 };
