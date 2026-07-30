@@ -17,17 +17,17 @@ import { saveDraftSchema } from "@/lib/validation/invitation";
  * karena `parseContentForRender` hanya memetakan kategori wedding.
  */
 
-describe("autosave corporate: email PIC kosong tidak memblokir draft", () => {
-  it("corporateDraftSchema menerima pic.email = '' dan menormalkannya ke undefined", () => {
-    const r = corporateDraftSchema.safeParse({
-      category: "corporate",
-      eventName: "Annual Summit 2026",
-      pic: { name: "Budi", phone: "", email: "" },
-      agenda: [],
-    });
-    expect(r.success).toBe(true);
-    if (r.success && r.data.category === "corporate") {
-      expect(r.data.pic?.email).toBeUndefined();
+describe("autosave corporate: email PIC tidak memblokir draft", () => {
+  it("corporateDraftSchema menerima email PIC kosong & parsial (draft tak validasi format)", () => {
+    // "" = input kosong RHF (blocker awal); "budi@" = mid-typing.
+    for (const email of ["", "budi@"]) {
+      const r = corporateDraftSchema.safeParse({
+        category: "corporate",
+        eventName: "Annual Summit 2026",
+        pic: { name: "Budi", phone: "", email },
+        agenda: [],
+      });
+      expect(r.success).toBe(true);
     }
   });
 

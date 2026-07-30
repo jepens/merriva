@@ -25,6 +25,20 @@ const storyDraftSchema = storyEntrySchema.extend({
 });
 
 /**
+ * PIC draft: email direlaksasi jadi string biasa agar autosave tak gagal saat
+ * pengguna masih mengetik (mis. "budi@"). Format email penuh divalidasi saat
+ * aktivasi (skema strict `corporateContentSchema.pic.email`). Selaras dgn cara
+ * `draftCommonFields` merelaksasi youtube/livestream.
+ */
+const picDraftSchema = z
+  .object({
+    name: z.string().trim().max(120).optional(),
+    phone: z.string().trim().max(40).optional(),
+    email: z.string().trim().max(160).optional(),
+  })
+  .optional();
+
+/**
  * Field format-ketat direlaksasi saat draft agar autosave tidak gagal saat
  * pengguna masih mengetik (URL/quote belum lengkap). Batas panjang tetap ada;
  * format URL/YouTube divalidasi penuh saat preview/aktivasi.
@@ -49,6 +63,7 @@ export const weddingDraftSchema = weddingContentSchema.extend({
 
 export const corporateDraftSchema = corporateContentSchema.extend({
   eventName: z.string().trim().max(160).optional(),
+  pic: picDraftSchema,
   agenda: z.array(storyDraftSchema).max(30).default([]),
   ...draftCommonFields,
 });
