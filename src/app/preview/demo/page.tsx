@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 
-import { PreviewFrame } from "@/components/preview/preview-frame";
+import {
+  PreviewEmbedStyle,
+  PreviewFrame,
+} from "@/components/preview/preview-frame";
 import EternalRose from "@/themes/eternal-rose";
 import { demoInvitationData } from "@/themes/eternal-rose/demo-data";
 
@@ -17,5 +20,10 @@ export default async function DemoPreviewPage({
 }) {
   const { embed } = await searchParams;
   if (!embed) return <PreviewFrame embedSrc="/preview/demo?embed=1" demo />;
-  return <EternalRose data={demoInvitationData} />;
+  return (
+    <>
+      <PreviewEmbedStyle />
+      <EternalRose data={demoInvitationData} />
+    </>
+  );
 }

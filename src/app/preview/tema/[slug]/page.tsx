@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { PreviewFrame } from "@/components/preview/preview-frame";
+import {
+  PreviewEmbedStyle,
+  PreviewFrame,
+} from "@/components/preview/preview-frame";
 import { getThemeDemoLoader } from "@/themes/demo-data-registry";
 import { getThemeLoader } from "@/themes/registry";
 
@@ -31,5 +34,10 @@ export default async function ThemeDemoPage({
 
   const Theme = (await loader()).default;
   const { demoInvitationData } = await demoLoader();
-  return <Theme data={demoInvitationData} />;
+  return (
+    <>
+      <PreviewEmbedStyle />
+      <Theme data={demoInvitationData} />
+    </>
+  );
 }

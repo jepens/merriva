@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { PreviewFrame } from "@/components/preview/preview-frame";
+import {
+  PreviewEmbedStyle,
+  PreviewFrame,
+} from "@/components/preview/preview-frame";
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
@@ -110,5 +113,10 @@ export default async function PreviewPage({
 
   // `?embed=1` → render tema polos sebagai isi iframe bingkai ponsel.
   const Theme = (await loader()).default;
-  return <Theme data={data} />;
+  return (
+    <>
+      <PreviewEmbedStyle />
+      <Theme data={data} />
+    </>
+  );
 }

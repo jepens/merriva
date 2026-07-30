@@ -39,3 +39,21 @@ export function PreviewFrame({
     </div>
   );
 }
+
+/**
+ * Sembunyikan scrollbar dokumen di dalam iframe pratinjau (`?embed=1`) agar
+ * bingkai ponsel tak menampilkan scrollbar desktop yang mengganggu — di ponsel
+ * asli scrollbar memang overlay/auto-hilang. Scroll tetap berfungsi (roda/
+ * sentuh/seret/keyboard); petunjuk "Gulir" tetap ada. Hanya berlaku di dokumen
+ * embed, tak menyentuh halaman undangan publik.
+ */
+export function PreviewEmbedStyle() {
+  return (
+    <style
+      dangerouslySetInnerHTML={{
+        __html:
+          "html{scrollbar-width:none}html::-webkit-scrollbar{width:0;height:0;display:none}",
+      }}
+    />
+  );
+}
