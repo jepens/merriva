@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
 
-import { PreviewBanner } from "@/components/preview/preview-banner";
+import { PreviewFrame } from "@/components/preview/preview-frame";
 import EternalRose from "@/themes/eternal-rose";
 import { demoInvitationData } from "@/themes/eternal-rose/demo-data";
 
 export const metadata: Metadata = { title: "Contoh Tema — Eternal Rose" };
 
-/** Showcase tema `eternal-rose` dengan data contoh (publik, tanpa data nyata). */
-export default function DemoPreviewPage() {
-  return (
-    <>
-      <PreviewBanner demo />
-      <EternalRose data={demoInvitationData} />
-    </>
-  );
+/**
+ * Showcase tema `eternal-rose` dengan data contoh (publik, tanpa data nyata).
+ * Default: dibingkai layar ponsel. `?embed=1` = render tema polos (isi iframe).
+ */
+export default async function DemoPreviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ embed?: string }>;
+}) {
+  const { embed } = await searchParams;
+  if (!embed) return <PreviewFrame embedSrc="/preview/demo?embed=1" demo />;
+  return <EternalRose data={demoInvitationData} />;
 }

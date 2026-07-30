@@ -296,6 +296,16 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #43 — 2026-07-31 · Pratinjau tema dalam bingkai ponsel (iframe viewport bersarang)
+
+**Keputusan:** Ketiga halaman pratinjau (`/preview/tema/[slug]`, `/preview/[id]`, `/preview/demo`) kini **default menampilkan tema di dalam bingkai ponsel** pada desktop; di layar ≤430px (ponsel asli) bingkai **mengempis jadi layar penuh** (tak ada "ponsel di dalam ponsel"). Tema dirender di dalam **`<iframe>`** — mode **`?embed=1`** merender tema polos (isi iframe, tanpa bingkai/banner). Komponen `PreviewFrame` (server) = backdrop + `PreviewBanner` + bezel + iframe (Tailwind arbitrary values, tanpa CSS file). **Shell (non-embed) hanya merender bingkai + iframe**; `requireUser()` + perakitan `InvitationData`/query DB hanya dijalankan pada request `?embed=1` (isi iframe) → hindari kerja & DB ganda.
+**Alasan:** halaman undangan dibuka mayoritas di **WebView WhatsApp ponsel** (CLAUDE.md) → pratinjau harus mencerminkannya. `<iframe>` memberi **viewport BERSARANG** sehingga `100dvh`, elemen `position:fixed` (tombol musik), media query, dan reveal (`IntersectionObserver` root=viewport) berperilaku **persis seperti di ponsel** — bukan meregang ke lebar desktop.
+**Ditolak:** (a) batasi lebar via container `max-width` (`100dvh` jadi tinggi desktop & elemen `fixed` lepas dari bingkai → tampilan rusak); (b) `transform: scale()` atas render fixed-size (IntersectionObserver root = viewport desktop → reveal salah-picu; hasil skala buram); (c) toggle perangkat manual / beberapa ukuran (belum perlu — target tunggal ponsel cukup, sesuai QA 390px).
+**Verifikasi:** browser desktop (bingkai ponsel di tengah backdrop, tema `eternal-rose` render benar, konsol bersih) + emulasi 390px (collapse ke layar penuh). Gate: typecheck 0, lint 0, 215 test, build sukses (rute preview tetap `ƒ`).
+**Konsekuensi:** Tanpa migrasi. Bingkai default juga berlaku untuk tautan katalog landing (`/tema` → poster → `/preview/tema/{slug}`) → pratinjau katalog kini tampil sebagai ponsel. **Tak ada** header `X-Frame-Options`/CSP `frame-ancestors` di app → iframe same-origin lolos; **jaga tetap begitu** bila kelak menambah CSP (izinkan `frame-ancestors 'self'`). Ikon "N" ganda saat dev = tombol Next.js Dev Tools (dokumen luar + dokumen iframe), hanya muncul di dev.
+
+---
+
 ## Template entri baru
 
 ```

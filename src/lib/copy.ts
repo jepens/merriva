@@ -501,6 +501,7 @@ export const copy = {
     backToEditor: "Edit",
     themeUnavailable: "Tema undangan ini belum tersedia untuk pratinjau.",
     backToDashboard: "Kembali ke dashboard",
+    frameTitle: "Pratinjau undangan di layar ponsel",
   },
 
   public: {

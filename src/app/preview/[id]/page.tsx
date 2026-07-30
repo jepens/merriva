@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { PreviewBanner } from "@/components/preview/preview-banner";
+import { PreviewFrame } from "@/components/preview/preview-frame";
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
@@ -22,12 +22,25 @@ export const metadata: Metadata = { title: copy.preview.badge };
  */
 export default async function PreviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ embed?: string }>;
 }) {
   const { id } = await params;
+  const { embed } = await searchParams;
   await requireUser();
   if (!isUuid(id)) notFound();
+
+  const editHref = `/dashboard/undangan/${id}/edit`;
+
+  // Shell: cukup bingkai + iframe. Data dirakit saat request `?embed=1` (isi
+  // iframe) → hindari fetch DB ganda.
+  if (!embed) {
+    return (
+      <PreviewFrame embedSrc={`/preview/${id}?embed=1`} editHref={editHref} />
+    );
+  }
 
   const supabase = await createSupabaseServerClient();
   const { data: inv } = await supabase
@@ -77,7 +90,6 @@ export default async function PreviewPage({
     music,
   });
 
-  const editHref = `/dashboard/undangan/${inv.id}/edit`;
   const loader = theme?.slug ? getThemeLoader(theme.slug) : null;
 
   if (!loader) {
@@ -96,11 +108,7 @@ export default async function PreviewPage({
     );
   }
 
+  // `?embed=1` → render tema polos sebagai isi iframe bingkai ponsel.
   const Theme = (await loader()).default;
-  return (
-    <>
-      <PreviewBanner editHref={editHref} />
-      <Theme data={data} />
-    </>
-  );
+  return <Theme data={data} />;
 }
