@@ -1,0 +1,515 @@
+/*
+ * Tema "Verdant" — wedding botanikal. Selector di-scope `.vd`. Palet: olive/
+ * sage + krem + aksen blush. Tipografi: Fraunces (serif organik, display +
+ * italic) + Mulish (humanist bulat, teks). Ornamen: daun (❧), bingkai lengkung
+ * organik, kartu membulat. Tanpa aset eksternal (LCP/WebView).
+ */
+.vd {
+  --vd-green: #46583a;
+  --vd-green-2: #5d7049;
+  --vd-sage: #869a6a;
+  --vd-sage-ink: #5f7346;
+  --vd-cream: #f5f2e7;
+  --vd-cream-2: #eae5d3;
+  --vd-blush: #bd8368;
+  --vd-text: #3b402f;
+  --vd-line: #d9d3bd;
+
+  background: var(--vd-cream);
+  color: var(--vd-text);
+  font-family: var(--vd-body), ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ---- Layout primitives -------------------------------------------------- */
+.vd-section {
+  padding: clamp(3.5rem, 9vw, 6rem) 1.4rem;
+  text-align: center;
+}
+.vd-section--tint {
+  background: var(--vd-cream-2);
+}
+.vd-inner {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.vd-eyebrow {
+  font-family: var(--vd-body), sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--vd-sage-ink);
+  margin: 0 0 1rem;
+}
+.vd-eyebrow--center {
+  text-align: center;
+}
+.vd-h2 {
+  font-family: var(--vd-display), serif;
+  font-weight: 500;
+  font-size: clamp(2rem, 6.5vw, 3rem);
+  line-height: 1.12;
+  color: var(--vd-green);
+  margin: 0 0 2.2rem;
+}
+.vd-lead {
+  font-size: 1.05rem;
+  color: var(--vd-text);
+  margin: 0 auto 1.1rem;
+  max-width: 34rem;
+}
+.vd-lead--quote {
+  font-family: var(--vd-display), serif;
+  font-style: italic;
+  font-size: 1.35rem;
+  line-height: 1.55;
+  color: var(--vd-green);
+}
+.vd-quote__src {
+  margin-top: 0.9rem;
+}
+
+/* ---- Divider: daun (❧) -------------------------------------------------- */
+.vd-divider {
+  margin: 1.6rem auto;
+  text-align: center;
+  line-height: 1;
+}
+.vd-divider::before {
+  content: "❧";
+  font-family: var(--vd-display), serif;
+  font-size: 1.7rem;
+  color: var(--vd-sage);
+}
+
+/* ---- Hero (bingkai lengkung organik) ----------------------------------- */
+.vd-hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.4rem;
+  background: var(--vd-green);
+  color: var(--vd-cream);
+  text-align: center;
+  overflow: hidden;
+}
+.vd-hero__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.55) saturate(1.05);
+  z-index: 0;
+}
+.vd-hero__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(70, 88, 58, 0.5),
+    rgba(59, 64, 47, 0.8)
+  );
+}
+.vd-hero__inner {
+  position: relative;
+  z-index: 2;
+  max-width: 30rem;
+  padding: clamp(3rem, 9vw, 4.5rem) clamp(1.5rem, 6vw, 2.75rem)
+    clamp(2.5rem, 7vw, 3.5rem);
+  border: 1px solid rgba(245, 242, 231, 0.5);
+  border-radius: 14rem 14rem 1rem 1rem;
+}
+.vd-hero__crest {
+  display: block;
+  line-height: 1;
+  margin-bottom: 0.8rem;
+}
+.vd-hero__crest::before {
+  content: "❧";
+  font-family: var(--vd-display), serif;
+  font-size: 2rem;
+  color: var(--vd-cream);
+  opacity: 0.9;
+}
+.vd-eyebrow--hero {
+  color: rgba(245, 242, 231, 0.85);
+}
+.vd-hero__names {
+  font-family: var(--vd-display), serif;
+  font-weight: 500;
+  color: var(--vd-cream);
+  margin: 0.5rem 0 0;
+  line-height: 1.08;
+}
+.vd-hero__name {
+  display: block;
+  font-size: clamp(2.4rem, 11vw, 3.8rem);
+}
+.vd-hero__amp {
+  display: block;
+  font-family: var(--vd-display), serif;
+  font-style: italic;
+  font-size: 1.5rem;
+  color: var(--vd-cream);
+  opacity: 0.85;
+  margin: 0.1rem 0;
+}
+.vd-hero__date {
+  margin: 1.3rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.16em;
+  color: rgba(245, 242, 231, 0.85);
+}
+.vd-hero__scroll {
+  position: absolute;
+  bottom: 1.1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-size: 0.6rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(245, 242, 231, 0.7);
+}
+
+/* ---- Couple ------------------------------------------------------------- */
+.vd-couple {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.6rem;
+}
+.vd-person__mono {
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--vd-display), serif;
+  font-size: 2rem;
+  color: var(--vd-cream);
+  background: var(--vd-sage);
+  border-radius: 50%;
+}
+.vd-person__name {
+  font-family: var(--vd-display), serif;
+  font-weight: 500;
+  font-size: 1.7rem;
+  color: var(--vd-green);
+  margin: 0 0 0.4rem;
+}
+.vd-person__meta {
+  font-size: 0.9rem;
+  color: var(--vd-text);
+  opacity: 0.85;
+  margin: 0.2rem 0;
+}
+.vd-couple__amp {
+  font-family: var(--vd-display), serif;
+  font-style: italic;
+  font-size: 2rem;
+  color: var(--vd-blush);
+}
+
+/* ---- Countdown ---------------------------------------------------------- */
+.vd .countdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.7rem;
+  max-width: 26rem;
+  margin: 0 auto;
+}
+.vd .count-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.1rem 0.3rem;
+  background: #fffdf6;
+  border: 1px solid var(--vd-line);
+  border-radius: 1.25rem;
+}
+.vd .count-num {
+  font-family: var(--vd-display), serif;
+  font-weight: 500;
+  font-size: clamp(1.5rem, 6vw, 2.1rem);
+  color: var(--vd-green);
+}
+.vd .count-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vd-sage-ink);
+  margin-top: 0.35rem;
+}
+.vd .countdown-done {
+  font-family: var(--vd-display), serif;
+  font-size: 1.3rem;
+  color: var(--vd-green);
+}
+
+/* ---- Cards -------------------------------------------------------------- */
+.vd-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 30rem;
+  margin: 0 auto;
+}
+.vd-card {
+  background: #fffdf6;
+  border: 1px solid var(--vd-line);
+  border-radius: 1.5rem;
+  padding: 1.7rem;
+  text-align: center;
+}
+.vd-card__title {
+  font-family: var(--vd-display), serif;
+  font-weight: 500;
+  font-size: 1.4rem;
+  color: var(--vd-green);
+  margin: 0 0 0.9rem;
+}
+.vd-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  margin: 0.35rem 0;
+}
+.vd-card__row svg {
+  color: var(--vd-sage-ink);
+  flex-shrink: 0;
+}
+.vd-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+.vd-account__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--vd-sage-ink);
+  margin: 0 0 0.5rem;
+}
+.vd-account__num {
+  font-family: var(--vd-display), serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+  color: var(--vd-green);
+  margin: 0;
+}
+
+/* ---- Buttons ------------------------------------------------------------ */
+.vd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.3rem;
+  border: 1px solid var(--vd-green);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--vd-green);
+  font-family: var(--vd-body), sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.vd-btn:hover {
+  background: var(--vd-green);
+  color: var(--vd-cream);
+}
+.vd-btn--solid {
+  background: var(--vd-green);
+  color: var(--vd-cream);
+  margin-top: 1.1rem;
+}
+.vd-btn--solid:hover {
+  background: var(--vd-green-2);
+}
+
+/* ---- Calendar dropdown -------------------------------------------------- */
+.vd-cal {
+  position: relative;
+}
+.vd-cal__trigger {
+  list-style: none;
+}
+.vd-cal__trigger::-webkit-details-marker {
+  display: none;
+}
+.vd-cal__menu {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.4rem;
+  min-width: 12rem;
+  background: #fffdf6;
+  border: 1px solid var(--vd-line);
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px rgba(70, 88, 58, 0.16);
+  overflow: hidden;
+}
+.vd-cal__opt {
+  display: block;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  color: var(--vd-text);
+  text-decoration: none;
+}
+.vd-cal__opt:hover {
+  background: var(--vd-cream-2);
+}
+
+/* ---- Gallery ------------------------------------------------------------ */
+.vd-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+@media (min-width: 40rem) {
+  .vd-gallery {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.vd-gallery__item {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+.vd-gallery__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s ease;
+}
+.vd-gallery__item:hover img {
+  transform: scale(1.05);
+}
+
+/* ---- Story -------------------------------------------------------------- */
+.vd-timeline {
+  max-width: 32rem;
+  margin: 0 auto;
+  text-align: left;
+}
+.vd-story {
+  position: relative;
+  padding: 0 0 2rem 1.8rem;
+  border-left: 2px solid var(--vd-line);
+}
+.vd-story::before {
+  content: "❧";
+  position: absolute;
+  left: -0.75rem;
+  top: -0.2rem;
+  font-family: var(--vd-display), serif;
+  font-size: 1rem;
+  color: var(--vd-sage);
+  background: var(--vd-cream);
+  line-height: 1;
+}
+.vd-story:last-child {
+  border-left-color: transparent;
+}
+.vd-story__date {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vd-sage-ink);
+  margin: 0 0 0.3rem;
+}
+.vd-story__title {
+  font-family: var(--vd-display), serif;
+  font-weight: 500;
+  font-size: 1.35rem;
+  color: var(--vd-green);
+  margin: 0 0 0.4rem;
+}
+.vd-story__body {
+  font-size: 0.96rem;
+  color: var(--vd-text);
+  margin: 0;
+}
+
+/* ---- Footer ------------------------------------------------------------- */
+.vd-footer {
+  background: var(--vd-green);
+  color: var(--vd-cream);
+  padding: clamp(3.5rem, 9vw, 6rem) 1.4rem;
+  text-align: center;
+}
+.vd-footer .vd-lead {
+  color: rgba(245, 242, 231, 0.9);
+}
+.vd-footer .vd-divider::before {
+  color: rgba(245, 242, 231, 0.85);
+}
+.vd-footer__thanks {
+  font-family: var(--vd-display), serif;
+  font-weight: 500;
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
+  color: var(--vd-cream);
+  margin: 0;
+}
+.vd-footer__names {
+  font-family: var(--vd-display), serif;
+  font-style: italic;
+  font-size: 1.2rem;
+  color: rgba(245, 242, 231, 0.9);
+  margin: 0.5rem 0 0;
+}
+.vd-watermark {
+  margin: 2.2rem 0 0;
+  font-size: 0.78rem;
+  color: rgba(245, 242, 231, 0.6);
+}
+.vd-watermark a {
+  color: var(--vd-cream);
+  text-decoration: underline;
+}
+
+/* ---- Reveal ------------------------------------------------------------- */
+.vd .reveal {
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease;
+}
+.vd.is-js .reveal {
+  opacity: 0;
+  transform: translateY(1.25rem);
+}
+.vd.is-js .reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vd.is-js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .vd-gallery__item img {
+    transition: none;
+  }
+}

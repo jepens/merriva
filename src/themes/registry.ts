@@ -27,6 +27,9 @@ export const themeRegistry: Record<string, () => Promise<ThemeModule>> = {
   "eternal-rose": () => import("./eternal-rose"),
   meridian: () => import("./meridian"),
   barakah: () => import("./barakah"),
+  aria: () => import("./aria"),
+  verdant: () => import("./verdant"),
+  noir: () => import("./noir"),
 };
 
 export function getThemeLoader(

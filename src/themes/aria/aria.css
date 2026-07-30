@@ -1,0 +1,468 @@
+/*
+ * Tema "Aria" — wedding minimalis, monokrom. Selector di-scope `.ar`. Palet:
+ * warm-white + near-black + warm-gray; TANPA aksen warna (garis rambut tunggal
+ * = aksen). Tipografi: Jost (geometric sans, bobot ringan) + Karla (teks).
+ * Anti-ornamen: ruang kosong & tipografi yang bicara. Tanpa aset eksternal.
+ */
+.ar {
+  --ar-paper: #f6f5f1;
+  --ar-ink: #1b1a17;
+  --ar-muted: #8a8478;
+  --ar-line: #e0dcd2;
+  --ar-tint: #efece4;
+
+  background: var(--ar-paper);
+  color: var(--ar-ink);
+  font-family: var(--ar-body), ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ---- Layout primitives -------------------------------------------------- */
+.ar-section {
+  padding: clamp(4rem, 12vw, 8rem) 1.5rem;
+  text-align: center;
+}
+.ar-section--tint {
+  background: var(--ar-tint);
+}
+.ar-inner {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.ar-eyebrow {
+  font-family: var(--ar-body), sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--ar-muted);
+  margin: 0 0 1.2rem;
+}
+.ar-eyebrow--center {
+  text-align: center;
+}
+.ar-h2 {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 300;
+  font-size: clamp(1.9rem, 6vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  color: var(--ar-ink);
+  margin: 0 0 2.5rem;
+}
+.ar-lead {
+  font-size: 1.05rem;
+  color: var(--ar-muted);
+  margin: 0 auto 1.2rem;
+  max-width: 32rem;
+}
+.ar-lead--quote {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 300;
+  font-size: 1.35rem;
+  line-height: 1.6;
+  color: var(--ar-ink);
+}
+.ar-quote__src {
+  margin-top: 1rem;
+}
+
+/* ---- Divider: garis rambut pendek -------------------------------------- */
+.ar-divider {
+  width: 2.5rem;
+  height: 1px;
+  background: var(--ar-ink);
+  margin: 1.8rem auto;
+  opacity: 0.5;
+}
+
+/* ---- Hero (minimal, tanpa crest) --------------------------------------- */
+.ar-hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.5rem;
+  background: var(--ar-paper);
+  text-align: center;
+  overflow: hidden;
+}
+.ar-hero__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) brightness(0.95) contrast(0.95);
+  opacity: 0.9;
+  z-index: 0;
+}
+.ar-hero__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(246, 245, 241, 0.55);
+}
+.ar-hero__inner {
+  position: relative;
+  z-index: 2;
+  max-width: 36rem;
+}
+.ar-hero__crest {
+  display: none;
+}
+.ar-eyebrow--hero {
+  color: var(--ar-ink);
+  opacity: 0.7;
+}
+.ar-hero__names {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 300;
+  color: var(--ar-ink);
+  margin: 1.5rem 0;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+}
+.ar-hero__name {
+  display: block;
+  font-size: clamp(2.6rem, 13vw, 4.8rem);
+}
+.ar-hero__amp {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--ar-muted);
+  margin: 0.4rem 0;
+}
+.ar-hero__date {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ar-muted);
+}
+.ar-hero__scroll {
+  position: absolute;
+  bottom: 1.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-size: 0.6rem;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: var(--ar-muted);
+}
+
+/* ---- Couple ------------------------------------------------------------- */
+.ar-couple {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5rem;
+}
+.ar-person__mono {
+  display: none;
+}
+.ar-person__name {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 300;
+  font-size: 1.9rem;
+  color: var(--ar-ink);
+  margin: 0 0 0.5rem;
+}
+.ar-person__meta {
+  font-size: 0.9rem;
+  color: var(--ar-muted);
+  margin: 0.2rem 0;
+}
+.ar-couple__amp {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 300;
+  font-size: 1.6rem;
+  color: var(--ar-muted);
+}
+
+/* ---- Countdown (shared classes) — minimal, garis rambut ---------------- */
+.ar .countdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  max-width: 26rem;
+  margin: 0 auto;
+}
+.ar .count-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.9rem 0.3rem 0;
+  border-top: 1px solid var(--ar-line);
+}
+.ar .count-num {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 300;
+  font-size: clamp(1.7rem, 7vw, 2.6rem);
+  color: var(--ar-ink);
+}
+.ar .count-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ar-muted);
+  margin-top: 0.5rem;
+}
+.ar .countdown-done {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 300;
+  font-size: 1.4rem;
+  color: var(--ar-ink);
+}
+
+/* ---- Cards -------------------------------------------------------------- */
+.ar-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 28rem;
+  margin: 0 auto;
+}
+.ar-card {
+  border-top: 1px solid var(--ar-line);
+  padding: 2rem 0.5rem 0.5rem;
+  text-align: center;
+}
+.ar-card__title {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 400;
+  font-size: 1.4rem;
+  color: var(--ar-ink);
+  margin: 0 0 1rem;
+}
+.ar-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  color: var(--ar-muted);
+  margin: 0.35rem 0;
+}
+.ar-card__row svg {
+  color: var(--ar-ink);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.ar-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.3rem;
+}
+.ar-account__label {
+  font-size: 0.68rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ar-muted);
+  margin: 0 0 0.6rem;
+}
+.ar-account__num {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 300;
+  font-size: 1.7rem;
+  letter-spacing: 0.06em;
+  color: var(--ar-ink);
+  margin: 0;
+}
+
+/* ---- Buttons ------------------------------------------------------------ */
+.ar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.3rem;
+  border: 1px solid var(--ar-ink);
+  background: transparent;
+  color: var(--ar-ink);
+  font-family: var(--ar-body), sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.ar-btn:hover {
+  background: var(--ar-ink);
+  color: var(--ar-paper);
+}
+.ar-btn--solid {
+  background: var(--ar-ink);
+  color: var(--ar-paper);
+  margin-top: 1.2rem;
+}
+.ar-btn--solid:hover {
+  opacity: 0.85;
+}
+
+/* ---- Calendar dropdown -------------------------------------------------- */
+.ar-cal {
+  position: relative;
+}
+.ar-cal__trigger {
+  list-style: none;
+}
+.ar-cal__trigger::-webkit-details-marker {
+  display: none;
+}
+.ar-cal__menu {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.4rem;
+  min-width: 12rem;
+  background: var(--ar-paper);
+  border: 1px solid var(--ar-line);
+  box-shadow: 0 12px 30px rgba(27, 26, 23, 0.1);
+}
+.ar-cal__opt {
+  display: block;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  color: var(--ar-ink);
+  text-decoration: none;
+}
+.ar-cal__opt:hover {
+  background: var(--ar-tint);
+}
+
+/* ---- Gallery ------------------------------------------------------------ */
+.ar-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+}
+@media (min-width: 40rem) {
+  .ar-gallery {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.ar-gallery__item {
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+}
+.ar-gallery__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(1);
+  transition:
+    transform 0.5s ease,
+    filter 0.5s ease;
+}
+.ar-gallery__item:hover img {
+  transform: scale(1.03);
+  filter: grayscale(0);
+}
+
+/* ---- Story -------------------------------------------------------------- */
+.ar-timeline {
+  max-width: 30rem;
+  margin: 0 auto;
+}
+.ar-story {
+  padding: 2rem 0;
+  border-bottom: 1px solid var(--ar-line);
+}
+.ar-story:last-child {
+  border-bottom: none;
+}
+.ar-story__date {
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ar-muted);
+  margin: 0 0 0.5rem;
+}
+.ar-story__title {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 400;
+  font-size: 1.5rem;
+  color: var(--ar-ink);
+  margin: 0 0 0.6rem;
+}
+.ar-story__body {
+  font-size: 0.96rem;
+  color: var(--ar-muted);
+  margin: 0;
+}
+
+/* ---- Footer ------------------------------------------------------------- */
+.ar-footer {
+  background: var(--ar-ink);
+  color: var(--ar-paper);
+  padding: clamp(4rem, 10vw, 7rem) 1.5rem;
+  text-align: center;
+}
+.ar-footer .ar-lead {
+  color: rgba(246, 245, 241, 0.75);
+}
+.ar-footer .ar-divider {
+  background: var(--ar-paper);
+}
+.ar-footer__thanks {
+  font-family: var(--ar-display), sans-serif;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 7vw, 2.8rem);
+  color: var(--ar-paper);
+  margin: 0;
+}
+.ar-footer__names {
+  font-size: 0.85rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(246, 245, 241, 0.7);
+  margin: 0.9rem 0 0;
+}
+.ar-watermark {
+  margin: 2.4rem 0 0;
+  font-size: 0.76rem;
+  color: rgba(246, 245, 241, 0.5);
+}
+.ar-watermark a {
+  color: var(--ar-paper);
+  text-decoration: underline;
+}
+
+/* ---- Reveal ------------------------------------------------------------- */
+.ar .reveal {
+  transition:
+    opacity 0.9s ease,
+    transform 0.9s ease;
+}
+.ar.is-js .reveal {
+  opacity: 0;
+  transform: translateY(1.5rem);
+}
+.ar.is-js .reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ar.is-js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .ar-gallery__item img {
+    transition: none;
+  }
+}

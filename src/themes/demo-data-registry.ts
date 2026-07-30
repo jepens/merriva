@@ -12,6 +12,9 @@ export const demoDataRegistry: Record<
   "eternal-rose": () => import("./eternal-rose/demo-data"),
   meridian: () => import("./meridian/demo-data"),
   barakah: () => import("./barakah/demo-data"),
+  aria: () => import("./aria/demo-data"),
+  verdant: () => import("./verdant/demo-data"),
+  noir: () => import("./noir/demo-data"),
 };
 
 export function getThemeDemoLoader(
