@@ -51,6 +51,19 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #11 — 2026-07-31 · Porting tema (Fase A): adopsi GSAP+Lenis & arsitektur cover per-tema
+
+**Keputusan:** Memulai pemasangan 6 prototipe (`prototypes/*.html`, `docs/THEME-PORTING.md`) ke sistem tema. **(1) Dependensi:** `gsap@3.15` + `lenis@1.3` (MIT/gratis) — **dimuat via `next/dynamic`/`import()` DI DALAM tema Story/Signature saja**; tema Craft tetap **+0KB** (murni CSS + `Reveal` IO). **(2) Arsitektur cover — pergeseran dari `InvitationShell`:** cover "Buka Undangan" + musik + personalisasi tamu kini dipegang shell bersama `InvitationShell` (membungkus tema di `/{slug}`), TAPI prototipe menaruh cover+musik+kelopak **di dalam tema** dan `/preview/tema/{slug}` merender tema **telanjang** → agar benchmark preview menyerupai prototipe, **cover menjadi milik komponen tema**. Maka:
+- **`GuestPersonalizationProvider` bersama** (ekstraksi dari `InvitationShell`, **perilaku identik**: resolusi `?g=token` via `viewGuestByTokenAction` + `?to=Nama`, injeksi client pasca-hidrasi yang **tak membatalkan ISR**) — dipakai `InvitationShell` (jalur shell), jalur tema, DAN preview. **Satu saluran personalisasi**, bukan dua.
+- **`_shared/cover-gate.tsx` = mekanika cover TUNGGAL**: kunci scroll, state `opened`, elemen `<audio data.music.url>` + **mulai-saat-gesture**, pause saat tab hidden, `prefers-reduced-motion`, pola `is-js` (konten tetap terbaca tanpa JS). Enam tema hanya menyuplai **visual + callback koreografi** (`onOpen`) — logika audio/gate **tak disalin per-tema**.
+- **Flag `coverMode: 'theme' | 'shell'` di metadata tema**; `app/[slug]/page.tsx` **membaca flag** (bukan `if (slug === …)`). `'theme'` → bungkus `GuestPersonalizationProvider` saja (tema self-cover); `'shell'` → `InvitationShell` seperti sekarang.
+- **Kontrak props tema `{data: InvitationData}` TIDAK berubah.**
+**Alasan:** prototipe & preview-telanjang mengharuskan cover jadi bagian tema (else cover dobel di publik). Flag via metadata → `[slug]` bebas hard-code slug. Cover-gate bersama → nol duplikasi logika audio/gate/aksesibilitas lintas 6 tema. Provider identik → regresi nol untuk 7 tema jalur-shell (dibuktikan test/E2E tetap hijau). Craft tanpa lib → anggaran §4 (Craft +0KB) terjaga, dibuktikan angka bundle `next build`.
+**Ditolak:** (a) `InvitationShell` tetap pemilik cover tunggal & dibuat theme-aware — menyalurkan shader/kelopak (theme-layer) ke shell (app-layer) canggung, preview jadi butuh shell, dan menyentuh 7 tema lain (risiko); (b) cek `slug` di `[slug]/page.tsx` — rapuh → flag metadata; (c) menyalin `<audio>`/gate per tema (6 salinan) → cover-gate bersama; (d) `framer-motion` (disebut THEME-DESIGN tapi TAK ada di stack; Craft cukup `Reveal` IO — tak ditambah).
+**Konsekuensi:** **Arah akhir: SEMUA tema `coverMode:'theme'`** — setelah 6 tema diport, blok cover/musik di `InvitationShell` **di-deprecate & dihapus** agar tak ada dua sistem cover permanen (dicatat ulang di entri port terakhir). Upgrade 5 tema in-place **tanpa migrasi** (slug tetap); hanya `prisma` (baru) butuh seed baris `themes` (Fase D). gsap/lenis wajib dynamic-import (bukan import statis) — verifikasi rute tema Craft tak membengkak lewat `next build`.
+
+---
+
 ## Template entri baru
 
 ```
