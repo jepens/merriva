@@ -1,23 +1,21 @@
-import type { WeddingLabels } from "@/themes/_shared/wedding-sections";
-
-export const WRONG_CATEGORY = "Tema ini khusus untuk undangan pernikahan.";
-
-/** Label chrome tema Noir (wedding dark-luxe). */
-export const L: WeddingLabels = {
-  hero: { eyebrow: "The Wedding Celebration", scroll: "Gulir" },
-  countdown: {
-    eyebrow: "Menuju Malam Istimewa",
-    done: "Malam yang dinanti telah tiba",
-    days: "Hari",
-    hours: "Jam",
-    minutes: "Menit",
-    seconds: "Detik",
+/** Label chrome tema Noir (wedding sinematik, tier Story) — terpusat di tema. */
+export const L = {
+  cover: {
+    presents: "Merriva Pictures mempersembahkan",
+    tagline: "Sebuah kisah cinta",
+    hint: "Gulir untuk memutar",
+    open: "Putar Undangan",
   },
+  hero: {
+    eyebrow: "A Love Story",
+    scene: "Scene 01 · Pembuka",
+  },
+  quote: { eyebrow: "Logline" },
   couple: {
-    eyebrow: "Kedua Mempelai",
+    eyebrow: "Pemeran Utama",
     groom: "Mempelai Pria",
     bride: "Mempelai Wanita",
-    parents: (father, mother) => {
+    parents: (father?: string, mother?: string) => {
       const f = father?.trim();
       const m = mother?.trim();
       if (f && m) return `Putra/Putri dari Bpk. ${f} & Ibu ${m}`;
@@ -26,24 +24,39 @@ export const L: WeddingLabels = {
       return "";
     },
   },
+  countdown: {
+    eyebrow: "Premiere in",
+    done: "Tayang perdana telah tiba 🖤",
+    days: "Hari",
+    hours: "Jam",
+    minutes: "Menit",
+    seconds: "Detik",
+  },
   schedule: {
-    eyebrow: "Rangkaian Acara",
-    heading: "Waktu & Tempat",
-    maps: "Lihat Lokasi",
-    calendar: "Simpan ke Kalender",
+    eyebrow: "Jadwal Tayang",
+    scene: "Scene",
+    maps: "Petunjuk Arah",
+    calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
   },
-  gallery: { eyebrow: "Galeri", heading: "Momen Kami" },
-  story: { eyebrow: "Perjalanan Kami", heading: "Kisah Cinta" },
+  gallery: { eyebrow: "Behind the Scenes", heading: "Cuplikan Adegan" },
+  story: { eyebrow: "Naskah", heading: "Sinopsis Kami" },
   envelope: {
-    eyebrow: "Amplop Digital",
+    eyebrow: "Wedding Gift",
     heading: "Tanda Kasih",
-    note: "Restu Anda begitu berharga. Bila berkenan memberi tanda kasih, dapat melalui:",
-    copy: "Salin Nomor",
+    note: "Kehadiran Anda adalah hadiah terbaik. Bila ingin turut berbagi kebahagiaan, silakan melalui:",
+    copy: "Salin",
     copied: "Tersalin",
     giftAddress: "Alamat pengiriman kado",
     holder: "a.n.",
   },
-  footer: { thanks: "Terima Kasih", by: "Dibuat dengan", brand: "Merriva" },
-};
+  footer: {
+    credits: "Credits",
+    coupleRole: "Mempelai",
+    fin: "— fin —",
+    thanks: "Terima Kasih",
+    by: "Diproduksi dengan",
+    brand: "Merriva",
+  },
+} as const;

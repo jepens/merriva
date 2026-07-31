@@ -1,425 +1,643 @@
-/*
- * Tema "Noir" — wedding dark-luxe. Selector di-scope `.nr`. Palet: charcoal
- * hangat + emas + gading. Tipografi: Playfair Display (Didone dramatis, display
- * + italic) + Jost (sans, teks). Aksen emas, garis rambut, kilau halus. Tanpa
- * aset eksternal (LCP/WebView).
- */
-.nr {
-  --nr-bg: #14110f;
-  --nr-bg-2: #1d1916;
-  --nr-gold: #c9a86a;
-  --nr-gold-2: #e2ca92;
-  --nr-cream: #efe9df;
-  --nr-muted: #a89e8e;
-  --nr-line: #3a332b;
+/* =============================================================================
+   NOIR — tier Story (acuan: prototypes/midnight-frame-story.html)
+   Arah "Cinematic Foto": undangan sebagai film pendek — letterbox, scene cards,
+   pan foto, wipe horizontal, credits. TANPA WebGL. Semua kelas ter-scope `.nr`.
+   State mask reveal DIMILIKI JS (WAAPI di cover, gsap di konten); CSS hanya
+   menyembunyikan di bawah `.is-js.is-motion` → tanpa JS/motion konten terbaca.
+============================================================================= */
 
+.nr {
+  --nr-bg: #0d0d12;
+  --nr-bg-2: #16161d;
+  --nr-bone: #ece7dd;
+  --nr-champ: #cba15f;
+  --nr-champ-2: #e0c48c;
+  --nr-muted: rgba(236, 231, 221, 0.55);
+  --nr-hairline: rgba(236, 231, 221, 0.14);
+  --nr-serif-stack: var(--nr-serif), "Cormorant Garamond", Georgia, serif;
+  --nr-sans-stack: var(--nr-sans), "Jost", system-ui, sans-serif;
+
+  position: relative;
   background: var(--nr-bg);
-  color: var(--nr-cream);
-  font-family: var(--nr-body), ui-sans-serif, system-ui, sans-serif;
-  font-size: 16px;
-  line-height: 1.7;
+  color: var(--nr-bone);
+  font-family: var(--nr-sans-stack);
+  font-weight: 300;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+.nr *,
+.nr *::before,
+.nr *::after {
+  box-sizing: border-box;
+}
+.nr ::selection {
+  background: var(--nr-champ);
+  color: var(--nr-bg);
 }
 
-/* ---- Layout primitives -------------------------------------------------- */
+/* Grain + vignette + progress ---------------------------------------------- */
+.nr-grain {
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.09;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.nr-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 59;
+  background: radial-gradient(
+    130% 100% at 50% 50%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+.nr-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  z-index: 70;
+  transform-origin: 0 50%;
+  background: var(--nr-champ);
+  transform: scaleX(0);
+}
+
+/* Tipografi ---------------------------------------------------------------- */
+.nr-eyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--nr-muted);
+  margin: 0;
+}
+.nr-eyebrow--gold {
+  color: var(--nr-champ);
+}
+.nr-lead {
+  color: var(--nr-muted);
+  font-size: 14px;
+  line-height: 1.9;
+  font-weight: 300;
+  max-width: 320px;
+  margin: 16px auto 0;
+}
+.nr-h2 {
+  font-family: var(--nr-serif-stack);
+  font-weight: 300;
+  font-size: clamp(30px, 8vw, 42px);
+  line-height: 1.12;
+  margin-top: 14px;
+}
+.nr-scene-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--nr-muted);
+}
+.nr-scene-label::before,
+.nr-scene-label::after {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: var(--nr-hairline);
+}
+
+/* Baris bermask — disembunyikan hanya bila JS + motion aktif. */
+.nr-line {
+  display: block;
+  overflow: hidden;
+}
+.nr-line > span {
+  display: block;
+}
+.nr.is-js.is-motion .nr-line > span {
+  visibility: hidden;
+}
+.nr.is-js.is-motion .nr-reveal {
+  opacity: 0;
+}
+
+/* --------------------------------------------------------------- Cover ----- */
+/* Tanpa JS: cover disembunyikan → konten langsung terbaca (degradasi anggun). */
+.nr-cover {
+  display: none;
+}
+.nr.is-js .nr-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+  color: var(--nr-bone);
+  opacity: 1;
+  /* Fade seluruh cover SETELAH bilah letterbox menutup (delay 1s). Transisi ini
+     ada pada ELEMEN cover sendiri → penanda "wipe selesai" bagi cover-gate. */
+  transition: opacity 0.5s ease 1s;
+}
+.nr.is-js.is-open .nr-cover {
+  opacity: 0;
+}
+.nr-cover__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  background: #000;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: height 0.7s cubic-bezier(0.7, 0, 0.3, 1) 0.35s;
+}
+.nr-cover__bar--top {
+  top: 0;
+}
+.nr-cover__bar--bottom {
+  bottom: 0;
+}
+.nr-cover__bar small {
+  font-size: 9px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(236, 231, 221, 0.4);
+}
+.nr.is-js.is-open .nr-cover__bar {
+  height: 50vh;
+}
+.nr-cover__screen {
+  position: absolute;
+  inset: 11vh 0;
+  background:
+    radial-gradient(
+      90% 70% at 50% 100%,
+      rgba(203, 161, 95, 0.14),
+      transparent 60%
+    ),
+    linear-gradient(180deg, #101017 0%, #0d0d12 60%, #131019 100%);
+}
+.nr-cover__inner {
+  position: relative;
+  z-index: 4;
+  text-align: center;
+  padding: 24px;
+  max-width: 430px;
+  width: 100%;
+  transition: opacity 0.45s ease;
+}
+.nr.is-js.is-open .nr-cover__inner {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nr.is-js .nr-cover,
+  .nr-cover__bar,
+  .nr-cover__inner {
+    transition: none;
+  }
+}
+.nr-cover__names {
+  margin: 24px 0 12px;
+}
+.nr-cover__name {
+  font-family: var(--nr-serif-stack);
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(58px, 17vw, 80px);
+  line-height: 1.02;
+  color: var(--nr-bone);
+  display: block;
+}
+.nr-cover__amp {
+  display: block;
+  font-family: var(--nr-serif-stack);
+  font-style: italic;
+  font-size: 22px;
+  color: var(--nr-champ);
+  margin: 2px 0;
+}
+.nr-cover__date {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--nr-muted);
+}
+.nr-cover__rule {
+  width: 52px;
+  height: 1px;
+  background: var(--nr-champ);
+  opacity: 0.7;
+  margin: 22px auto;
+}
+.nr-guest {
+  margin: 0 auto 24px;
+  max-width: 290px;
+  padding: 13px 18px;
+  border: 1px solid var(--nr-hairline);
+  border-radius: 4px;
+}
+.nr-guest small {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--nr-muted);
+  margin-bottom: 6px;
+}
+.nr-guest strong {
+  font-family: var(--nr-serif-stack);
+  font-weight: 400;
+  font-size: 19px;
+  letter-spacing: 0.02em;
+}
+.nr-open {
+  appearance: none;
+  border: 1px solid var(--nr-champ);
+  background: transparent;
+  color: var(--nr-champ);
+  font-family: var(--nr-sans-stack);
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  padding: 16px 34px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition:
+    background 0.35s,
+    color 0.35s;
+}
+.nr-open:hover {
+  background: var(--nr-champ);
+  color: var(--nr-bg);
+}
+.nr-cover__hint {
+  margin-top: 16px;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(236, 231, 221, 0.4);
+}
+
+/* ------------------------------------------------------------- Section ----- */
 .nr-section {
-  padding: clamp(3.5rem, 9vw, 6.5rem) 1.4rem;
+  position: relative;
+  padding: 92px 26px;
+}
+.nr-center {
   text-align: center;
 }
-.nr-section--tint {
-  background: var(--nr-bg-2);
-}
 .nr-inner {
-  max-width: 42rem;
+  max-width: 480px;
   margin: 0 auto;
 }
 
-.nr-eyebrow {
-  font-family: var(--nr-body), sans-serif;
-  font-size: 0.7rem;
-  font-weight: 400;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: var(--nr-gold);
-  margin: 0 0 1.1rem;
-}
-.nr-eyebrow--center {
-  text-align: center;
-}
-.nr-h2 {
-  font-family: var(--nr-display), serif;
-  font-weight: 500;
-  font-size: clamp(2rem, 6.5vw, 3.1rem);
-  line-height: 1.1;
-  color: var(--nr-cream);
-  margin: 0 0 2.2rem;
-}
-.nr-lead {
-  font-size: 1.04rem;
-  color: var(--nr-muted);
-  margin: 0 auto 1.1rem;
-  max-width: 34rem;
-}
-.nr-lead--quote {
-  font-family: var(--nr-display), serif;
-  font-style: italic;
-  font-size: 1.4rem;
-  line-height: 1.55;
-  color: var(--nr-gold-2);
-}
-.nr-quote__src {
-  margin-top: 0.9rem;
-}
-
-/* ---- Divider: bintang emas (✦) ----------------------------------------- */
-.nr-divider {
-  margin: 1.6rem auto;
-  text-align: center;
-  line-height: 1;
-}
-.nr-divider::before {
-  content: "✦";
-  font-size: 1.1rem;
-  color: var(--nr-gold);
-  letter-spacing: 0.6em;
-}
-
-/* ---- Hero --------------------------------------------------------------- */
+/* Hero (Scene 01) ---------------------------------------------------------- */
 .nr-hero {
-  position: relative;
-  min-height: 100svh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1.4rem;
-  background: var(--nr-bg);
-  text-align: center;
+  padding-top: 76px;
   overflow: hidden;
 }
-.nr-hero__bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: brightness(0.4) saturate(0.9) contrast(1.05);
-  z-index: 0;
+.nr-hero__title {
+  font-family: var(--nr-serif-stack);
+  font-weight: 300;
+  font-size: clamp(46px, 15vw, 76px);
+  line-height: 1.02;
+  margin: 20px 0 0;
 }
-.nr-hero__scrim {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background:
-    radial-gradient(
-      circle at 50% 42%,
-      rgba(201, 168, 106, 0.16),
-      transparent 55%
-    ),
-    linear-gradient(180deg, rgba(20, 17, 15, 0.7), rgba(20, 17, 15, 0.92));
-}
-.nr-hero__inner {
-  position: relative;
-  z-index: 2;
-  max-width: 32rem;
-  padding: clamp(2.5rem, 8vw, 4rem) clamp(1.5rem, 6vw, 3rem);
-  border-top: 1px solid rgba(201, 168, 106, 0.45);
-  border-bottom: 1px solid rgba(201, 168, 106, 0.45);
-}
-.nr-hero__crest {
-  display: block;
-  line-height: 1;
-  margin-bottom: 1rem;
-}
-.nr-hero__crest::before {
-  content: "✦";
-  font-size: 1.2rem;
-  color: var(--nr-gold);
-}
-.nr-eyebrow--hero {
-  color: var(--nr-gold);
-}
-.nr-hero__names {
-  font-family: var(--nr-display), serif;
-  font-weight: 500;
-  color: var(--nr-cream);
-  margin: 0.6rem 0 0;
-  line-height: 1.06;
-}
-.nr-hero__name {
-  display: block;
-  font-size: clamp(2.5rem, 12vw, 4.4rem);
-}
-.nr-hero__amp {
-  display: block;
-  font-family: var(--nr-display), serif;
+.nr-hero__title em {
   font-style: italic;
-  font-size: 1.6rem;
-  color: var(--nr-gold);
-  margin: 0.15rem 0;
+  color: var(--nr-bone);
 }
-.nr-hero__date {
-  margin: 1.4rem 0 0;
-  font-size: 0.82rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(239, 233, 223, 0.75);
-}
-.nr-hero__scroll {
-  position: absolute;
-  bottom: 1.1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  font-size: 0.6rem;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: rgba(201, 168, 106, 0.75);
+.nr-amp {
+  font-size: 0.42em;
+  color: var(--nr-champ);
+  font-style: italic;
 }
 
-/* ---- Couple ------------------------------------------------------------- */
-.nr-couple {
+/* Frame sinematik 21:10 (featured still) */
+.nr-cine {
+  margin: 34px -26px 0;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 21 / 10;
+  border-block: 1px solid var(--nr-hairline);
+}
+.nr-frame__media {
+  position: absolute;
+  inset: -12% 0;
+  width: 100%;
+  height: 124%;
+  object-fit: cover;
+  display: block;
+  filter: brightness(0.82) saturate(0.9) contrast(1.05);
+}
+.nr-cine .nr-frame__ph {
+  background: linear-gradient(115deg, #2a2033 0%, #151221 45%, #3a2a2a 100%);
+}
+
+/* Quote (logline) ---------------------------------------------------------- */
+.nr-quote {
+  background: var(--nr-bg-2);
+  border-block: 1px solid var(--nr-hairline);
+}
+.nr-quote__text {
+  font-family: var(--nr-serif-stack);
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(20px, 5.6vw, 26px);
+  line-height: 1.5;
+  color: var(--nr-champ-2);
+  max-width: 340px;
+  margin: 18px auto 0;
+}
+.nr-quote__src {
+  display: block;
+  margin-top: 18px;
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--nr-muted);
+}
+
+/* Cast (mempelai) ---------------------------------------------------------- */
+.nr-cast {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1.6rem;
+  gap: 70px;
+  margin-top: 44px;
+  max-width: 460px;
+  margin-inline: auto;
 }
-.nr-person__mono {
-  width: 4.6rem;
-  height: 4.6rem;
-  margin: 0 auto 1rem;
+.nr-actor {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--nr-display), serif;
-  font-size: 2rem;
-  color: var(--nr-gold-2);
-  border: 1px solid var(--nr-gold);
-  border-radius: 50%;
+  flex-direction: column;
+  gap: 16px;
 }
-.nr-person__name {
-  font-family: var(--nr-display), serif;
-  font-weight: 500;
-  font-size: 1.75rem;
-  color: var(--nr-cream);
-  margin: 0 0 0.4rem;
+.nr-actor--right {
+  align-items: flex-end;
+  text-align: right;
+}
+.nr-portrait {
+  width: min(70%, 250px);
+  aspect-ratio: 4 / 5;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--nr-hairline);
+}
+.nr-portrait__ph {
+  display: grid;
+  place-items: center;
+  inset: -10% 0;
+  height: 120%;
+  background: linear-gradient(160deg, #241d30, #0f0d16 70%);
+}
+.nr-portrait__ph span {
+  font-family: var(--nr-serif-stack);
+  font-style: italic;
+  font-size: 80px;
+  color: rgba(236, 231, 221, 0.35);
+}
+.nr-actor__role {
+  font-size: 9.5px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--nr-champ);
+  margin-bottom: 6px;
+}
+.nr-actor__name {
+  font-family: var(--nr-serif-stack);
+  font-weight: 300;
+  font-size: clamp(30px, 8.4vw, 38px);
+  line-height: 1.08;
+}
+.nr-actor__name em {
+  font-style: italic;
 }
 .nr-person__meta {
-  font-size: 0.9rem;
+  font-size: 12.5px;
+  line-height: 1.8;
   color: var(--nr-muted);
-  margin: 0.2rem 0;
+  max-width: 290px;
+  margin: 0.2rem 0 0;
 }
-.nr-couple__amp {
-  font-family: var(--nr-display), serif;
-  font-style: italic;
-  font-size: 2rem;
-  color: var(--nr-gold);
+.nr-actor--right .nr-person__meta {
+  margin-left: auto;
 }
 
-/* ---- Countdown ---------------------------------------------------------- */
+/* Countdown ---------------------------------------------------------------- */
+.nr-countdown-sec {
+  background: var(--nr-bg-2);
+  border-block: 1px solid var(--nr-hairline);
+}
 .nr .countdown {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.7rem;
-  max-width: 26rem;
-  margin: 0 auto;
+  max-width: 390px;
+  margin: 26px auto 0;
 }
 .nr .count-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1.1rem 0.3rem;
-  border: 1px solid var(--nr-line);
-  background: rgba(201, 168, 106, 0.04);
+  text-align: center;
+  border-left: 1px solid var(--nr-hairline);
+  padding: 6px 4px;
+}
+.nr .count-box:first-child {
+  border-left: 0;
 }
 .nr .count-num {
-  font-family: var(--nr-display), serif;
-  font-weight: 500;
-  font-size: clamp(1.5rem, 6vw, 2.2rem);
-  color: var(--nr-gold-2);
+  font-family: var(--nr-serif-stack);
+  font-weight: 300;
+  font-size: clamp(34px, 9vw, 44px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  display: block;
 }
 .nr .count-label {
-  font-size: 0.6rem;
-  letter-spacing: 0.16em;
+  font-size: 8.5px;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--nr-muted);
-  margin-top: 0.35rem;
+  margin-top: 8px;
+  display: block;
 }
 .nr .countdown-done {
-  font-family: var(--nr-display), serif;
-  font-size: 1.3rem;
-  color: var(--nr-gold-2);
+  font-family: var(--nr-serif-stack);
+  font-style: italic;
+  font-size: 20px;
+  color: var(--nr-champ-2);
+  margin-top: 20px;
 }
 
-/* ---- Cards -------------------------------------------------------------- */
-.nr-stack {
+/* Schedule (scene) --------------------------------------------------------- */
+.nr-scenes {
+  margin-top: 40px;
+  max-width: 460px;
+  margin-inline: auto;
+}
+.nr-scene {
+  border-top: 1px solid var(--nr-hairline);
+  padding: 36px 0 42px;
+  position: relative;
+}
+.nr-scene:last-of-type {
+  border-bottom: 1px solid var(--nr-hairline);
+}
+.nr-scene__no {
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--nr-champ);
+}
+.nr-scene__title {
+  font-family: var(--nr-serif-stack);
+  font-weight: 300;
+  font-style: italic;
+  font-size: 34px;
+  margin: 10px 0 12px;
+}
+.nr-scene__meta {
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--nr-muted);
+}
+.nr-scene__meta b {
+  color: var(--nr-bone);
+  font-weight: 400;
+}
+.nr-pills {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-width: 30rem;
-  margin: 0 auto;
-}
-.nr-card {
-  background: rgba(201, 168, 106, 0.045);
-  border: 1px solid var(--nr-line);
-  padding: 1.7rem;
-  text-align: center;
-}
-.nr-card__title {
-  font-family: var(--nr-display), serif;
-  font-weight: 500;
-  font-size: 1.4rem;
-  color: var(--nr-gold-2);
-  margin: 0 0 0.9rem;
-}
-.nr-card__row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
-  color: var(--nr-cream);
-  margin: 0.35rem 0;
-}
-.nr-card__row svg {
-  color: var(--nr-gold);
-  flex-shrink: 0;
-}
-.nr-card__actions {
-  display: flex;
+  gap: 10px;
+  margin-top: 20px;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.6rem;
-  margin-top: 1.2rem;
 }
-.nr-account__label {
-  font-size: 0.72rem;
+.nr-pill {
+  font-size: 10.5px;
+  font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--nr-gold);
-  margin: 0 0 0.5rem;
-}
-.nr-account__num {
-  font-family: var(--nr-display), serif;
-  font-size: 1.6rem;
-  letter-spacing: 0.04em;
-  color: var(--nr-cream);
-  margin: 0;
-}
-
-/* ---- Buttons ------------------------------------------------------------ */
-.nr-btn {
+  text-decoration: none;
+  padding: 13px 20px;
+  border: 1px solid var(--nr-bone);
+  color: var(--nr-bone);
+  background: transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: 0.3s;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1.3rem;
-  border: 1px solid var(--nr-gold);
-  background: transparent;
-  color: var(--nr-gold-2);
-  font-family: var(--nr-body), sans-serif;
-  font-size: 0.74rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  text-decoration: none;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
+  gap: 7px;
 }
-.nr-btn:hover {
-  background: var(--nr-gold);
+.nr-pill:hover {
+  background: var(--nr-bone);
   color: var(--nr-bg);
 }
-.nr-btn--solid {
-  background: var(--nr-gold);
+.nr-pill--gold {
+  border-color: var(--nr-champ);
+  color: var(--nr-champ);
+}
+.nr-pill--gold:hover {
+  background: var(--nr-champ);
   color: var(--nr-bg);
-  margin-top: 1.1rem;
 }
-.nr-btn--solid:hover {
-  background: var(--nr-gold-2);
-}
-
-/* ---- Calendar dropdown -------------------------------------------------- */
 .nr-cal {
   position: relative;
 }
-.nr-cal__trigger {
+.nr-cal > summary {
   list-style: none;
 }
-.nr-cal__trigger::-webkit-details-marker {
+.nr-cal > summary::-webkit-details-marker {
   display: none;
 }
 .nr-cal__menu {
-  position: absolute;
-  z-index: 5;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-top: 0.4rem;
-  min-width: 12rem;
-  background: var(--nr-bg-2);
-  border: 1px solid var(--nr-line);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .nr-cal__opt {
-  display: block;
-  padding: 0.7rem 1rem;
-  font-size: 0.85rem;
-  color: var(--nr-cream);
+  font-size: 12px;
   text-decoration: none;
+  color: var(--nr-bone);
+  border: 1px solid var(--nr-hairline);
+  border-radius: 3px;
+  padding: 9px 12px;
 }
 .nr-cal__opt:hover {
-  background: rgba(201, 168, 106, 0.1);
+  background: rgba(203, 161, 95, 0.1);
 }
 
-/* ---- Gallery ------------------------------------------------------------ */
-.nr-gallery {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
+/* Gallery (Behind the Scenes) ---------------------------------------------- */
+.nr-gallery-sec {
+  padding-left: 0;
+  padding-right: 0;
 }
-@media (min-width: 40rem) {
-  .nr-gallery {
-    grid-template-columns: repeat(3, 1fr);
-  }
+.nr-gallery {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 30px 26px;
+  scrollbar-width: none;
+}
+.nr-gallery::-webkit-scrollbar {
+  display: none;
 }
 .nr-gallery__item {
-  aspect-ratio: 1;
+  flex: 0 0 66%;
+  scroll-snap-align: center;
+  aspect-ratio: 3 / 4;
+  position: relative;
   overflow: hidden;
-  border: 1px solid var(--nr-line);
+  border: 1px solid var(--nr-hairline);
 }
 .nr-gallery__item img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
-  filter: brightness(0.9) saturate(0.9);
-  transition:
-    transform 0.5s ease,
-    filter 0.5s ease;
+  filter: brightness(0.88) saturate(0.9);
 }
-.nr-gallery__item:hover img {
-  transform: scale(1.05);
-  filter: brightness(1) saturate(1);
+.nr-gallery__item figcaption {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-size: 8.5px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(236, 231, 221, 0.6);
 }
 
-/* ---- Story -------------------------------------------------------------- */
+/* Story (timeline) --------------------------------------------------------- */
 .nr-timeline {
-  max-width: 32rem;
-  margin: 0 auto;
+  max-width: 460px;
+  margin: 28px auto 0;
   text-align: left;
 }
 .nr-story {
+  border-left: 1px solid var(--nr-hairline);
+  padding: 0 0 30px 20px;
   position: relative;
-  padding: 0 0 2rem 1.6rem;
-  border-left: 1px solid var(--nr-line);
 }
 .nr-story::before {
   content: "✦";
   position: absolute;
-  left: -0.55rem;
+  left: -0.5rem;
   top: 0;
-  font-size: 0.8rem;
-  color: var(--nr-gold);
+  font-size: 0.7rem;
+  color: var(--nr-champ);
   background: var(--nr-bg);
   line-height: 1;
 }
@@ -427,80 +645,133 @@
   border-left-color: transparent;
 }
 .nr-story__date {
-  font-size: 0.74rem;
-  letter-spacing: 0.12em;
+  font-size: 10px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--nr-gold);
+  color: var(--nr-champ);
   margin: 0 0 0.3rem;
 }
 .nr-story__title {
-  font-family: var(--nr-display), serif;
-  font-weight: 500;
-  font-size: 1.35rem;
-  color: var(--nr-cream);
-  margin: 0 0 0.4rem;
+  font-family: var(--nr-serif-stack);
+  font-weight: 400;
+  font-size: 22px;
+  margin: 0 0 6px;
 }
 .nr-story__body {
-  font-size: 0.96rem;
+  font-size: 13px;
+  line-height: 1.8;
   color: var(--nr-muted);
   margin: 0;
 }
 
-/* ---- Footer ------------------------------------------------------------- */
-.nr-footer {
-  background: #0f0d0b;
-  color: var(--nr-cream);
-  padding: clamp(3.5rem, 9vw, 6rem) 1.4rem;
-  text-align: center;
+/* Envelope ----------------------------------------------------------------- */
+.nr-account {
+  display: block;
+  border: 1px solid var(--nr-hairline);
+  border-radius: 4px;
+  padding: 16px;
+  margin-top: 14px;
+  background: var(--nr-bg-2);
+  text-align: left;
 }
-.nr-footer .nr-lead {
-  color: rgba(239, 233, 223, 0.75);
-}
-.nr-footer__thanks {
-  font-family: var(--nr-display), serif;
-  font-weight: 500;
-  font-size: clamp(1.8rem, 6vw, 2.5rem);
-  color: var(--nr-gold-2);
+.nr-account__label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--nr-champ);
   margin: 0;
 }
-.nr-footer__names {
-  font-family: var(--nr-display), serif;
+.nr-account__num {
+  font-family: var(--nr-serif-stack);
+  font-size: 24px;
+  letter-spacing: 0.04em;
+  margin: 6px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+.nr-copy {
+  margin-top: 10px;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: 1px solid var(--nr-champ);
+  color: var(--nr-champ);
+  background: transparent;
+  border-radius: 2px;
+  padding: 10px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: 0.25s;
+}
+.nr-copy:hover {
+  background: var(--nr-champ);
+  color: var(--nr-bg);
+}
+
+/* Footer (Credits) --------------------------------------------------------- */
+.nr-footer {
+  padding: 80px 26px 100px;
+  background: #000;
+}
+.nr-credit__role {
+  font-size: 9px;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: var(--nr-muted);
+  margin-top: 26px;
+}
+.nr-credit__name {
+  font-family: var(--nr-serif-stack);
   font-style: italic;
-  font-size: 1.2rem;
-  color: var(--nr-cream);
-  margin: 0.5rem 0 0;
+  font-weight: 300;
+  font-size: 24px;
+  margin-top: 6px;
+}
+.nr-fin {
+  font-family: var(--nr-serif-stack);
+  font-style: italic;
+  font-size: 44px;
+  color: var(--nr-champ);
+  margin-top: 48px;
+}
+.nr-footer .nr-lead {
+  color: rgba(236, 231, 221, 0.7);
 }
 .nr-watermark {
-  margin: 2.2rem 0 0;
-  font-size: 0.78rem;
-  color: rgba(239, 233, 223, 0.5);
+  display: inline-block;
+  margin-top: 34px;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(236, 231, 221, 0.4);
+  border: 1px solid var(--nr-hairline);
+  padding: 8px 14px;
+  border-radius: 2px;
 }
 .nr-watermark a {
-  color: var(--nr-gold);
+  color: var(--nr-champ);
   text-decoration: none;
 }
 
-/* ---- Reveal ------------------------------------------------------------- */
-.nr .reveal {
-  transition:
-    opacity 0.8s ease,
-    transform 0.8s ease;
+/* Tombol musik — tampil setelah dibuka ------------------------------------- */
+.nr-music {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 55;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--nr-hairline);
+  background: rgba(13, 13, 18, 0.8);
+  backdrop-filter: blur(6px);
+  color: var(--nr-bone);
+  display: none;
+  place-items: center;
+  cursor: pointer;
 }
-.nr.is-js .reveal {
-  opacity: 0;
-  transform: translateY(1.25rem);
-}
-.nr.is-js .reveal.is-visible {
-  opacity: 1;
-  transform: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .nr.is-js .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-  .nr-gallery__item img {
-    transition: none;
-  }
+.nr.is-open .nr-music {
+  display: grid;
 }

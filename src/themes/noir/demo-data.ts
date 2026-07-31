@@ -1,6 +1,10 @@
 import type { InvitationData } from "@/types/invitation";
 
-/** Data contoh pratinjau tema Noir (wedding dark-luxe) — mandiri (SVG data-URI). */
+/**
+ * Data contoh pratinjau tema Noir (wedding sinematik) — acuan
+ * `prototypes/midnight-frame-story.html` (Damar & Sekar). Foto galeri = gradasi
+ * SVG data-URI gelap agar mandiri (tanpa request eksternal).
+ */
 function swatch(from: string, to: string): string {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${from}'/><stop offset='1' stop-color='${to}'/></linearGradient></defs><rect width='800' height='800' fill='url(#g)'/></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -15,61 +19,61 @@ const photo = (from: string, to: string) => ({
 export const demoInvitationData: InvitationData = {
   slug: "demo",
   category: "wedding",
-  eventDate: "2027-01-23",
+  eventDate: "2026-12-19",
   content: {
     category: "wedding",
-    title: "Nadira & Arka",
+    title: "Damar & Sekar",
     groom: {
-      name: "Arka Dewangga",
-      nickname: "Arka",
-      fatherName: "Surya Dewangga",
-      motherName: "Ratih Purnama",
-      childOrder: "Putra kedua",
+      name: "Damar Wicaksana",
+      nickname: "Damar",
+      fatherName: "Rahmat Wicaksana",
+      motherName: "Sari Utami",
+      childOrder: "Putra pertama",
     },
     bride: {
-      name: "Nadira Salsabila",
-      nickname: "Nadira",
-      fatherName: "Firman Hidayat",
-      motherName: "Ayu Lestari",
-      childOrder: "Putri pertama",
+      name: "Sekar Ayuningtyas",
+      nickname: "Sekar",
+      fatherName: "Bambang Prasetyo",
+      motherName: "Ratna Dewi",
+      childOrder: "Putri kedua",
     },
     story: [
       {
-        title: "Pertemuan",
-        date: "Desember 2019",
+        title: "Take 01 — Perkenalan",
+        date: "Bogor, 2019",
         narrative:
-          "Di bawah gemerlap lampu sebuah gala, dua pandangan bertemu dan enggan berpaling.",
+          "Dua pandangan bertemu di sebuah senja, dan enggan berpaling. Babak pertama sebuah kisah pun dimulai.",
       },
       {
-        title: "Komitmen",
-        date: "Februari 2022",
+        title: "Take 02 — Lamaran",
+        date: "Oktober 2025",
         narrative:
-          "Sebuah janji diucapkan di tepi pantai saat senja, menandai babak baru.",
+          "Di hadapan keluarga, sebuah janji diucapkan — menandai bahwa kisah ini layak dilanjutkan ke layar lebar.",
       },
       {
-        title: "Lamaran",
-        date: "Oktober 2026",
+        title: "Take 03 — Premiere",
+        date: "Desember 2026",
         narrative:
-          "Di hadapan keluarga, cincin disematkan sebagai simbol keseriusan.",
+          "Setelah tujuh tahun berbagi cerita, tibalah babak berikutnya: bersama, selamanya.",
       },
     ],
     greetingOpen:
-      "Dengan penuh sukacita, kami mengundang Anda untuk merayakan malam istimewa pernikahan kami.",
+      "Setelah tujuh tahun berbagi cerita, kami memutuskan untuk menulis babak berikutnya — bersama, selamanya.",
     greetingClose:
-      "Sebuah kehormatan bagi kami atas kehadiran dan restu yang Anda berikan.",
+      "Sebuah kehormatan bagi kami bila Anda berkenan hadir dan menjadi bagian dari adegan penutup kisah ini.",
     quote: {
-      text: "Dalam setiap cahaya, aku menemukan bayanganmu; dalam setiap malam, aku menemukan rumah.",
-      source: "Untuk Nadira & Arka",
+      text: "Dalam setiap bingkai, aku menemukan bayanganmu; dalam setiap gelap, aku menemukan rumah.",
+      source: "Untuk Damar & Sekar",
     },
     envelope: {
       enabled: true,
       banks: [
-        { bank: "BNI", number: "0456789123", holder: "Nadira Salsabila" },
+        { bank: "Mandiri", number: "7710228833", holder: "Damar Wicaksana" },
       ],
       ewallets: [
-        { provider: "ShopeePay", number: "081244556677", holder: "Arka D." },
+        { provider: "OVO", number: "085711223344", holder: "Sekar A." },
       ],
-      giftAddress: "The Residence Tower, Jl. Sudirman No. 1, Jakarta Pusat",
+      giftAddress: "Skyline Garden, Bogor Valley, Jawa Barat",
     },
   },
   settings: {
@@ -80,30 +84,30 @@ export const demoInvitationData: InvitationData = {
   events: [
     {
       id: "demo-akad",
-      name: "Pemberkatan",
-      startAt: "2027-01-23T09:00:00.000Z", // 16.00 WIB
-      endAt: "2027-01-23T10:00:00.000Z",
-      venueName: "The Grand Ballroom",
-      address: "Hotel Mulia, Jl. Asia Afrika, Senayan, Jakarta",
-      mapsUrl: "https://maps.google.com/?q=-6.22,106.80",
+      name: "Akad Nikah",
+      startAt: "2026-12-19T01:00:00.000Z", // 08.00 WIB
+      endAt: "2026-12-19T03:00:00.000Z",
+      venueName: "Ballroom Hotel Salak The Heritage",
+      address: "Jl. Ir. H. Juanda No.8, Bogor",
+      mapsUrl: "https://maps.google.com/?q=-6.60,106.79",
     },
     {
       id: "demo-resepsi",
-      name: "Gala Reception",
-      startAt: "2027-01-23T12:00:00.000Z", // 19.00 WIB
-      endAt: "2027-01-23T15:00:00.000Z",
-      venueName: "The Grand Ballroom",
-      address: "Hotel Mulia, Jl. Asia Afrika, Senayan, Jakarta",
-      mapsUrl: "https://maps.google.com/?q=-6.22,106.80",
+      name: "Resepsi",
+      startAt: "2026-12-19T11:30:00.000Z", // 18.30 WIB
+      endAt: "2026-12-19T14:00:00.000Z",
+      venueName: "Skyline Garden, Bogor Valley",
+      address: "Dresscode: Black tie & warna gelap",
+      mapsUrl: "https://maps.google.com/?q=-6.60,106.80",
     },
   ],
   media: [
-    photo("#14110f", "#1d1916"),
-    photo("#c9a86a", "#8a6f3e"),
-    photo("#1d1916", "#c9a86a"),
-    photo("#3a332b", "#14110f"),
-    photo("#e2ca92", "#c9a86a"),
-    photo("#14110f", "#3a332b"),
+    photo("#2c2138", "#12101c"),
+    photo("#37273a", "#0e0c14"),
+    photo("#22293b", "#10131c"),
+    photo("#3b2b26", "#141019"),
+    photo("#241d30", "#0f0d16"),
+    photo("#1a1622", "#2c2138"),
   ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
   music: null,
   watermark: true,

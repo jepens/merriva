@@ -145,7 +145,13 @@ export function CoverGate({
       done = true;
       setCoverGone(true);
     };
-    el?.addEventListener("transitionend", finish, { once: true });
+    // Hanya transisi pada ELEMEN cover sendiri yang menandai wipe selesai. Tema
+    // dengan animasi cover berlapis (mis. bar letterbox noir) memicu transitionend
+    // anak yang ikut menggelembung → jangan membuang cover terlalu dini.
+    const onEnd = (e: TransitionEvent) => {
+      if (e.target === el) finish();
+    };
+    el?.addEventListener("transitionend", onEnd);
     window.setTimeout(finish, wipeMs + 300);
   };
 
