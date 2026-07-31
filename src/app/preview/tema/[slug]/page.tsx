@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { GuestPersonalizationProvider } from "@/components/public/guest-personalization";
 import {
   PreviewEmbedStyle,
   PreviewFrame,
@@ -35,9 +36,9 @@ export default async function ThemeDemoPage({
   const Theme = (await loader()).default;
   const { demoInvitationData } = await demoLoader();
   return (
-    <>
+    <GuestPersonalizationProvider slug={demoInvitationData.slug}>
       <PreviewEmbedStyle />
       <Theme data={demoInvitationData} />
-    </>
+    </GuestPersonalizationProvider>
   );
 }

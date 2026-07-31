@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { GuestPersonalizationProvider } from "@/components/public/guest-personalization";
 import {
   PreviewEmbedStyle,
   PreviewFrame,
@@ -21,9 +22,9 @@ export default async function DemoPreviewPage({
   const { embed } = await searchParams;
   if (!embed) return <PreviewFrame embedSrc="/preview/demo?embed=1" demo />;
   return (
-    <>
+    <GuestPersonalizationProvider slug={demoInvitationData.slug}>
       <PreviewEmbedStyle />
       <EternalRose data={demoInvitationData} />
-    </>
+    </GuestPersonalizationProvider>
   );
 }

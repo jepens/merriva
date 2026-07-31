@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { GuestPersonalizationProvider } from "@/components/public/guest-personalization";
 import {
   PreviewEmbedStyle,
   PreviewFrame,
@@ -114,9 +115,9 @@ export default async function PreviewPage({
   // `?embed=1` → render tema polos sebagai isi iframe bingkai ponsel.
   const Theme = (await loader()).default;
   return (
-    <>
+    <GuestPersonalizationProvider slug={data.slug}>
       <PreviewEmbedStyle />
       <Theme data={data} />
-    </>
+    </GuestPersonalizationProvider>
   );
 }
