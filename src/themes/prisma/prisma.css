@@ -1,0 +1,879 @@
+/* =============================================================================
+   PRISMA — tier Signature, CORPORATE (acuan: prototypes/prisma-signature.html)
+   Arah: Eksperimental Modern. Shader aurora, mega type, agenda mono, tiket RSVP
+   dengan barcode CSS, angka count-up. Semua kelas ter-scope di bawah `.pr` → tak
+   bertabrakan lintas tema. State mask-reveal DIMILIKI JS (WAAPI di cover, gsap di
+   konten); CSS hanya menyembunyikan di bawah `.is-js.is-motion`.
+============================================================================= */
+
+.pr {
+  --pr-void: #0a0a16;
+  --pr-void-2: #05050c;
+  --pr-panel: #111124;
+  --pr-violet: #7c5cff;
+  --pr-cyan: #41e2d8;
+  --pr-lime: #d8ff5f;
+  --pr-white: #f2f2f7;
+  --pr-muted: rgba(242, 242, 247, 0.55);
+  --pr-hairline: rgba(242, 242, 247, 0.14);
+  --pr-disp-stack: var(--pr-disp), system-ui, sans-serif;
+  --pr-mono-stack: var(--pr-mono), ui-monospace, monospace;
+
+  position: relative;
+  background: var(--pr-void);
+  color: var(--pr-white);
+  font-family: var(--pr-disp-stack);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+.pr *,
+.pr *::before,
+.pr *::after {
+  box-sizing: border-box;
+}
+.pr ::selection {
+  background: var(--pr-lime);
+  color: var(--pr-void);
+}
+
+.pr-mono {
+  font-family: var(--pr-mono-stack);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Grain global */
+.pr-grain {
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Progress bab */
+.pr-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  z-index: 70;
+  transform-origin: 0 50%;
+  background: linear-gradient(
+    90deg,
+    var(--pr-violet),
+    var(--pr-cyan),
+    var(--pr-lime)
+  );
+  transform: scaleX(0);
+}
+
+/* Baris bermask & blok reveal — state tersembunyi DIMILIKI JS (WAAPI/gsap). CSS
+   hanya menyembunyikan bila JS + motion aktif → tanpa JS/motion konten terbaca. */
+.pr-line {
+  display: block;
+  overflow: hidden;
+}
+.pr-line > span {
+  display: block;
+}
+.pr.is-js.is-motion .pr-line > span {
+  visibility: hidden;
+}
+.pr.is-js.is-motion .pr-reveal {
+  opacity: 0;
+}
+
+/* --------------------------------------------------------------- Cover ----- */
+/* Tanpa JS: cover disembunyikan → konten langsung terbaca (degradasi anggun). */
+.pr-cover {
+  display: none;
+}
+.pr.is-js .pr-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--pr-void);
+  clip-path: inset(0 0 0 0);
+  transition:
+    clip-path 1s cubic-bezier(0.76, 0, 0.24, 1),
+    opacity 0.5s ease;
+}
+.pr.is-js.is-open .pr-cover {
+  clip-path: inset(0 0 100% 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr.is-js .pr-cover {
+    transition: none;
+  }
+}
+.pr-cover__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.pr-cover__fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(
+      100% 80% at 20% 15%,
+      rgba(124, 92, 255, 0.4),
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 80% at 85% 80%,
+      rgba(65, 226, 216, 0.22),
+      transparent 55%
+    ),
+    linear-gradient(170deg, #0b0b1c, #0a0a16 70%);
+  background-size: 180% 180%;
+  animation: pr-flow 14s ease-in-out infinite alternate;
+}
+@keyframes pr-flow {
+  from {
+    background-position: 0% 0%;
+  }
+  to {
+    background-position: 100% 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr-cover__fallback {
+    animation: none;
+  }
+}
+.pr-cover__inner {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 24px;
+  max-width: 440px;
+  width: 100%;
+}
+.pr-presents {
+  display: inline-block;
+  border: 1px solid var(--pr-hairline);
+  border-radius: 999px;
+  padding: 8px 16px;
+  color: var(--pr-muted);
+}
+.pr-mega {
+  margin: 26px 0 10px;
+  line-height: 0.92;
+}
+.pr-mega .pr-line {
+  display: inline-block;
+  vertical-align: top;
+  margin-right: 0.22em;
+}
+.pr-mega__word {
+  font-weight: 700;
+  font-size: clamp(52px, 16vw, 84px);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+.pr-mega__word--outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--pr-white);
+}
+.pr-mega__word--accent {
+  color: var(--pr-lime);
+}
+.pr-cover__sub {
+  font-size: 13.5px;
+  color: var(--pr-muted);
+  letter-spacing: 0.02em;
+}
+.pr-chip {
+  display: inline-block;
+  margin: 22px auto 6px;
+  padding: 12px 18px;
+  border: 1px dashed var(--pr-cyan);
+  border-radius: 10px;
+  color: var(--pr-cyan);
+  font-family: var(--pr-mono-stack);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.pr-chip b {
+  display: block;
+  font-family: var(--pr-disp-stack);
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pr-white);
+  margin-top: 4px;
+}
+.pr-open {
+  appearance: none;
+  margin-top: 18px;
+  border: 0;
+  background: var(--pr-lime);
+  color: #0b0b14;
+  font-family: var(--pr-disp-stack);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 17px 38px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(216, 255, 95, 0.4);
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s;
+}
+.pr-open:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px -10px rgba(216, 255, 95, 0.45);
+}
+.pr-cover__hint {
+  margin-top: 14px;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(242, 242, 247, 0.4);
+}
+
+/* ------------------------------------------------------------- Marquee ----- */
+.pr-marquee {
+  overflow: hidden;
+  border-block: 1px solid var(--pr-hairline);
+  padding: 13px 0;
+  background: var(--pr-panel);
+}
+.pr-marquee + .pr-marquee {
+  border-top: 0;
+}
+.pr-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: pr-mq 22s linear infinite;
+}
+.pr-marquee--rev .pr-marquee__track {
+  animation-direction: reverse;
+}
+.pr-marquee__track span {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-right: 0.6em;
+}
+.pr-marquee__track .pr-o {
+  color: transparent;
+  -webkit-text-stroke: 1px var(--pr-muted);
+}
+.pr-marquee__track .pr-l {
+  color: var(--pr-lime);
+}
+.pr-marquee__track .pr-c {
+  color: var(--pr-cyan);
+}
+@keyframes pr-mq {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr-marquee__track {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------- Section ----- */
+.pr-section {
+  position: relative;
+  padding: 82px 26px;
+}
+.pr-section--tight {
+  padding-top: 0;
+}
+.pr-sec-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--pr-muted);
+  font-family: var(--pr-mono-stack);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.pr-sec-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--pr-hairline);
+}
+.pr-sec-label .pr-idx {
+  color: var(--pr-lime);
+}
+.pr-head {
+  font-weight: 700;
+  font-size: clamp(34px, 10vw, 50px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin-top: 20px;
+  text-transform: uppercase;
+}
+.pr-head em {
+  font-style: normal;
+  color: transparent;
+  -webkit-text-stroke: 1.3px var(--pr-cyan);
+}
+.pr-lead {
+  color: var(--pr-muted);
+  font-size: 14px;
+  line-height: 1.85;
+  margin-top: 16px;
+  max-width: 340px;
+}
+.pr-cite {
+  color: var(--pr-cyan);
+}
+
+/* Stats count-up */
+.pr-stats {
+  display: grid;
+  gap: 12px;
+  margin-top: 34px;
+}
+.pr-stats[data-n="1"] {
+  grid-template-columns: 1fr;
+}
+.pr-stats[data-n="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+.pr-stats[data-n="3"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+.pr-stat {
+  border: 1px solid var(--pr-hairline);
+  border-radius: 14px;
+  padding: 18px 10px;
+  text-align: center;
+  background: var(--pr-panel);
+}
+.pr-stat__n {
+  font-weight: 700;
+  font-size: clamp(28px, 8vw, 36px);
+  letter-spacing: -0.02em;
+  color: var(--pr-lime);
+  font-variant-numeric: tabular-nums;
+}
+.pr-stat__t {
+  margin-top: 6px;
+  color: var(--pr-muted);
+  font-family: var(--pr-mono-stack);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Agenda */
+.pr-agenda {
+  margin-top: 34px;
+  border-top: 1px solid var(--pr-hairline);
+}
+.pr-row {
+  display: grid;
+  grid-template-columns: 74px 1fr auto;
+  gap: 14px;
+  align-items: baseline;
+  padding: 20px 2px;
+  border-bottom: 1px solid var(--pr-hairline);
+  transition: background 0.25s;
+}
+.pr-row:hover {
+  background: rgba(124, 92, 255, 0.08);
+}
+.pr-row__t {
+  color: var(--pr-cyan);
+  font-family: var(--pr-mono-stack);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+}
+.pr-row__what {
+  font-weight: 500;
+  font-size: 16.5px;
+}
+.pr-row__what small {
+  display: block;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--pr-muted);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+.pr-row__idx {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(242, 242, 247, 0.3);
+  font-weight: 700;
+  font-size: 22px;
+}
+
+/* Countdown (komponen bersama; kelas generik di-styl di sini) */
+.pr .countdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 30px;
+}
+.pr .count-box {
+  border: 1px solid var(--pr-hairline);
+  border-radius: 14px;
+  padding: 16px 6px;
+  text-align: center;
+  background: var(--pr-panel);
+  transition: border-color 0.3s;
+}
+.pr .count-box:hover {
+  border-color: var(--pr-lime);
+}
+.pr .count-num {
+  display: block;
+  font-weight: 700;
+  font-size: clamp(26px, 7.6vw, 34px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.pr .count-label {
+  display: block;
+  margin-top: 6px;
+  color: var(--pr-muted);
+  font-family: var(--pr-mono-stack);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.pr .countdown-done {
+  margin-top: 26px;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--pr-lime);
+}
+
+/* Lokasi */
+.pr-loc {
+  border: 1px solid var(--pr-hairline);
+  border-radius: 18px;
+  padding: 24px;
+  background: var(--pr-panel);
+  margin-top: 30px;
+}
+.pr-loc__when {
+  font-family: var(--pr-mono-stack);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pr-cyan);
+}
+.pr-loc h3 {
+  font-weight: 700;
+  font-size: 23px;
+  letter-spacing: -0.01em;
+  margin-top: 8px;
+}
+.pr-loc p {
+  color: var(--pr-muted);
+  font-size: 13.5px;
+  line-height: 1.8;
+  margin-top: 8px;
+}
+.pr-pills {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.pr-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--pr-white);
+  color: var(--pr-white);
+  background: transparent;
+  cursor: pointer;
+  transition: 0.25s;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.pr-pill:hover {
+  background: var(--pr-white);
+  color: var(--pr-void);
+}
+.pr-pill--lime {
+  background: var(--pr-lime);
+  border-color: var(--pr-lime);
+  color: #0b0b14;
+}
+.pr-pill--lime:hover {
+  background: var(--pr-cyan);
+  border-color: var(--pr-cyan);
+}
+.pr-cal {
+  position: relative;
+}
+.pr-cal > summary {
+  list-style: none;
+}
+.pr-cal > summary::-webkit-details-marker {
+  display: none;
+}
+.pr-cal__menu {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pr-cal__opt {
+  font-size: 12px;
+  text-decoration: none;
+  color: var(--pr-white);
+  border: 1px solid var(--pr-hairline);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+/* -------------------------------------------------------- Ticket RSVP ------ */
+/* Tiket putih membungkus GuestbookSection (form + dinding) yang sudah ada. */
+.pr-ticket {
+  position: relative;
+  margin-top: 30px;
+  background: var(--pr-white);
+  color: #101018;
+  border-radius: 18px;
+  padding: 26px;
+  box-shadow: 0 40px 80px -50px rgba(124, 92, 255, 0.6);
+}
+.pr-ticket__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.pr-ticket__ev {
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+.pr-ticket__ev span {
+  color: var(--pr-violet);
+}
+.pr-ticket__adm {
+  font-family: var(--pr-mono-stack);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #7c7c8a;
+}
+.pr-ticket__tear {
+  position: relative;
+  border-top: 2px dashed #b9b9c4;
+  margin: 22px -26px 16px;
+}
+.pr-ticket__tear::before,
+.pr-ticket__tear::after {
+  content: "";
+  position: absolute;
+  top: -13px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--pr-void);
+}
+.pr-ticket__tear::before {
+  left: -13px;
+}
+.pr-ticket__tear::after {
+  right: -13px;
+}
+.pr-ticket__barcode {
+  height: 44px;
+  background: repeating-linear-gradient(
+    90deg,
+    #101018 0 2px,
+    transparent 2px 5px,
+    #101018 5px 6px,
+    transparent 6px 10px,
+    #101018 10px 13px,
+    transparent 13px 15px
+  );
+}
+.pr-ticket__code {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-family: var(--pr-mono-stack);
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  color: #7c7c8a;
+}
+
+/* GuestbookSection di dalam tiket putih — override palet (default eternal-rose). */
+.pr-ticket .gb {
+  max-width: none;
+  margin: 0;
+}
+.pr-ticket .gb-eyebrow {
+  text-align: left;
+  font-family: var(--pr-mono-stack);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  color: var(--pr-violet);
+}
+.pr-ticket .gb-heading {
+  text-align: left;
+  font-family: var(--pr-disp-stack);
+  font-weight: 700;
+  font-size: clamp(1.4rem, 6vw, 1.7rem);
+  color: #101018;
+}
+.pr-ticket .gb-sub {
+  text-align: left;
+  margin: 0.5rem 0 1.4rem;
+  color: #5b5b68;
+}
+.pr-ticket .gb-field > span,
+.pr-ticket .gb-attend legend {
+  font-family: var(--pr-mono-stack);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #7c7c8a;
+}
+.pr-ticket .gb-field input,
+.pr-ticket .gb-field textarea {
+  border: 1.5px solid #101018;
+  border-radius: 10px;
+  background: #fff;
+  color: #101018;
+  font-family: var(--pr-disp-stack);
+}
+.pr-ticket .gb-field input:focus,
+.pr-ticket .gb-field textarea:focus {
+  outline: 3px solid var(--pr-violet);
+  outline-offset: 0;
+  border-color: #101018;
+  box-shadow: none;
+}
+.pr-ticket .gb-radio {
+  color: #101018;
+}
+.pr-ticket .gb-radio input {
+  accent-color: var(--pr-violet);
+}
+.pr-ticket .gb-submit {
+  background: #101018;
+  color: var(--pr-lime);
+  border-radius: 10px;
+  font-family: var(--pr-disp-stack);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.pr-ticket .gb-submit:hover:not(:disabled),
+.pr-ticket .gb-submit:focus-visible:not(:disabled) {
+  background: #23233a;
+}
+.pr-ticket .gb-done {
+  color: #101018;
+}
+.pr-ticket .gb-wall__title {
+  color: #101018;
+}
+.pr-ticket .gb-wall__empty {
+  color: #5b5b68;
+}
+.pr-ticket .gb-note {
+  background: #f4f4f8;
+  border-color: #e2e2ea;
+}
+.pr-ticket .gb-note__msg {
+  color: #101018;
+}
+.pr-ticket .gb-note__name {
+  color: var(--pr-violet);
+}
+.pr-ticket .gb-more,
+.pr-ticket .gb-gift-trigger,
+.pr-ticket .gb-gift-cancel {
+  color: #101018;
+  border-color: #101018;
+}
+.pr-ticket .gb-gift-form {
+  background: #f4f4f8;
+  border-color: #e2e2ea;
+}
+.pr-ticket .gb-gift-intro {
+  color: #5b5b68;
+}
+
+/* ------------------------------------------------------------ Galeri ------- */
+.pr-gallery__track {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  margin-top: 30px;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+}
+.pr-gallery__track::-webkit-scrollbar {
+  display: none;
+}
+.pr-figure {
+  flex: 0 0 66%;
+  scroll-snap-align: center;
+  position: relative;
+  border: 1px solid var(--pr-hairline);
+  border-radius: 14px;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  background: var(--pr-panel);
+}
+.pr-figure img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pr-figure figcaption {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  font-family: var(--pr-mono-stack);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pr-lime);
+  background: rgba(10, 10, 22, 0.7);
+  padding: 5px 9px;
+  border-radius: 7px;
+  backdrop-filter: blur(4px);
+}
+
+/* --------------------------------------------------------- Envelope -------- */
+.pr-acct {
+  border: 1px solid var(--pr-hairline);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 12px;
+  background: var(--pr-panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.pr-acct b {
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.pr-acct small {
+  display: block;
+  color: var(--pr-muted);
+  font-size: 11.5px;
+  margin-top: 4px;
+}
+.pr-copy {
+  flex: none;
+  font-family: var(--pr-mono-stack);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid var(--pr-white);
+  background: transparent;
+  color: var(--pr-white);
+  border-radius: 999px;
+  padding: 9px 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: 0.25s;
+}
+.pr-copy:hover {
+  background: var(--pr-white);
+  color: var(--pr-void);
+}
+
+/* ------------------------------------------------------------ Footer ------- */
+.pr-footer {
+  padding: 76px 26px 96px;
+  text-align: center;
+  background: var(--pr-void-2);
+}
+.pr-footer__logo {
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+.pr-footer__logo span {
+  color: var(--pr-lime);
+}
+.pr-footer p {
+  color: var(--pr-muted);
+  font-size: 12.5px;
+  margin-top: 10px;
+  line-height: 1.8;
+}
+.pr-watermark {
+  display: inline-block;
+  margin-top: 26px;
+  font-family: var(--pr-mono-stack);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pr-muted);
+  border: 1px solid var(--pr-hairline);
+  padding: 9px 14px;
+  border-radius: 10px;
+}
+.pr-watermark a {
+  color: inherit;
+}
+
+/* Tombol musik — tampil setelah dibuka */
+.pr-music {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 55;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--pr-hairline);
+  background: rgba(17, 17, 36, 0.82);
+  backdrop-filter: blur(6px);
+  color: var(--pr-white);
+  display: none;
+  place-items: center;
+  cursor: pointer;
+}
+.pr.is-open .pr-music {
+  display: grid;
+}

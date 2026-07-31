@@ -95,6 +95,14 @@ export const themeCatalogMeta: Record<string, ThemeCatalogMeta> = {
     line: "rgba(42,39,35,0.16)",
     ornament: "◇",
   },
+  prisma: {
+    bg: "#0a0a16",
+    ink: "#f2f2f7",
+    accent: "#d8ff5f",
+    line: "rgba(242,242,247,0.14)",
+    ornament: "✦",
+    dark: true,
+  },
 };
 
 export function getThemeCatalogMeta(slug: string): ThemeCatalogMeta {

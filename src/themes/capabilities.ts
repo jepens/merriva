@@ -20,6 +20,7 @@ const THEME_CAPABILITIES: Record<string, { coverMode: CoverMode }> = {
   verdant: { coverMode: "theme" },
   festa: { coverMode: "theme" },
   aria: { coverMode: "theme" },
+  prisma: { coverMode: "theme" },
 };
 
 export function getThemeCoverMode(slug: string): CoverMode {

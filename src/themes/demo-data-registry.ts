@@ -17,6 +17,7 @@ export const demoDataRegistry: Record<
   noir: () => import("./noir/demo-data"),
   festa: () => import("./festa/demo-data"),
   lumina: () => import("./lumina/demo-data"),
+  prisma: () => import("./prisma/demo-data"),
 };
 
 export function getThemeDemoLoader(

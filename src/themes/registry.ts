@@ -32,6 +32,7 @@ export const themeRegistry: Record<string, () => Promise<ThemeModule>> = {
   noir: () => import("./noir"),
   festa: () => import("./festa"),
   lumina: () => import("./lumina"),
+  prisma: () => import("./prisma"),
 };
 
 export function getThemeLoader(
