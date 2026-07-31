@@ -18,6 +18,7 @@ const THEME_CAPABILITIES: Record<string, { coverMode: CoverMode }> = {
   "eternal-rose": { coverMode: "theme" },
   noir: { coverMode: "theme" },
   verdant: { coverMode: "theme" },
+  festa: { coverMode: "theme" },
 };
 
 export function getThemeCoverMode(slug: string): CoverMode {

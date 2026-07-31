@@ -1,6 +1,10 @@
 import type { InvitationData } from "@/types/invitation";
 
-/** Data contoh pratinjau tema Festa (family) — mandiri (SVG data-URI). */
+/**
+ * Data contoh pratinjau tema Festa (family, tier Craft) — acuan
+ * `prototypes/family-warm-craft.html` (Tasyakuran Khitan Rafa). Foto galeri =
+ * gradasi SVG data-URI hangat agar mandiri (tanpa request eksternal).
+ */
 function swatch(from: string, to: string): string {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${from}'/><stop offset='1' stop-color='${to}'/></linearGradient></defs><rect width='800' height='800' fill='url(#g)'/></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -15,37 +19,36 @@ const photo = (from: string, to: string) => ({
 export const demoInvitationData: InvitationData = {
   slug: "demo",
   category: "family",
-  eventDate: "2026-09-20",
+  eventDate: "2026-12-20",
   content: {
     category: "family",
-    eventName: "Syukuran Khitan Rafa",
-    celebrant: "Muhammad Rafa Alfarizqi",
-    parents: "Bpk. Andi Saputra & Ibu Dina Marlina",
+    eventName: "Tasyakuran Khitan",
+    celebrant: "Muhammad Rafa Alfarizi",
+    parents: "Bapak Andri Wijaya & Ibu Maya Kusuma",
     wishes: [
       {
-        title: "Semoga Menjadi Anak Saleh",
-        date: "Dari Kakek & Nenek",
+        title: "Keluarga Budi",
+        date: "Sahabat keluarga",
         narrative:
-          "Semoga Rafa tumbuh menjadi anak yang saleh, sehat, dan membanggakan keluarga.",
+          "Selamat ya Rafa! Semoga jadi anak saleh, sehat selalu, dan makin pintar.",
       },
       {
-        title: "Berani & Tangguh",
-        date: "Dari Om & Tante",
-        narrative:
-          "Selamat ya Rafa, kamu hebat dan berani! Semoga selalu ceria dan sehat selalu.",
+        title: "Tante Rini",
+        date: "Keluarga",
+        narrative: "Rafa hebat! Tante bangga. Sampai ketemu hari Minggu ya 🤍",
       },
     ],
     greetingOpen:
-      "Dengan penuh rasa syukur, kami mengundang Bapak/Ibu/Saudara/i untuk hadir dalam acara syukuran khitan putra kami.",
+      "Dengan penuh rasa syukur, kami mengundang Bapak/Ibu untuk hadir dalam tasyakuran khitan putra kami tercinta.",
     greetingClose:
-      "Atas kehadiran dan doa restunya, kami sekeluarga mengucapkan terima kasih.",
+      "Keluarga besar Wijaya menantikan kehadiran & doa terbaik Bapak/Ibu.",
     quote: {
-      text: "Setiap anak lahir membawa harapan dan kebahagiaan bagi keluarga.",
-      source: "Keluarga Saputra",
+      text: "Setiap anak membawa harapan dan kebahagiaan bagi keluarga.",
+      source: "Keluarga Wijaya",
     },
     envelope: {
       enabled: true,
-      banks: [{ bank: "BRI", number: "339801020304", holder: "Dina Marlina" }],
+      banks: [{ bank: "BSI", number: "5566778899", holder: "Andri Wijaya" }],
       ewallets: [],
     },
   },
@@ -57,21 +60,21 @@ export const demoInvitationData: InvitationData = {
   events: [
     {
       id: "demo-acara",
-      name: "Syukuran",
-      startAt: "2026-09-20T03:00:00.000Z", // 10.00 WIB
-      endAt: "2026-09-20T06:00:00.000Z",
-      venueName: "Kediaman Keluarga Saputra",
-      address: "Jl. Melati Indah No. 7, Bekasi, Jawa Barat",
-      mapsUrl: "https://maps.google.com/?q=-6.24,106.99",
+      name: "Tasyakuran",
+      startAt: "2026-12-20T03:00:00.000Z", // 10.00 WIB
+      endAt: "2026-12-20T06:00:00.000Z",
+      venueName: "Kediaman Keluarga Wijaya",
+      address: "Jl. Melati Raya No. 45, Ciputat, Tangerang Selatan",
+      mapsUrl: "https://maps.google.com/?q=-6.30,106.75",
     },
   ],
   media: [
-    photo("#c96f4a", "#e2a659"),
-    photo("#e2a659", "#a8522e"),
-    photo("#f8ecd9", "#c96f4a"),
-    photo("#a8522e", "#c96f4a"),
-    photo("#fdf7ee", "#e2a659"),
-    photo("#c96f4a", "#5a3c2c"),
+    photo("#f5b93f", "#e5953f"),
+    photo("#e56a4e", "#c9532f"),
+    photo("#2e7d6b", "#1d5d4e"),
+    photo("#f0a868", "#d97f42"),
+    photo("#ffd98a", "#f5b93f"),
+    photo("#e56a4e", "#f5b93f"),
   ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
   music: null,
   watermark: true,

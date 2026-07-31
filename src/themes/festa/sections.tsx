@@ -1,4 +1,4 @@
-import { Calendar, CalendarPlus, Clock, MapPin } from "lucide-react";
+import { CalendarPlus, MapPin } from "lucide-react";
 
 import { GiftConfirm } from "@/components/public/guestbook/gift-confirm";
 import { googleCalendarUrl } from "@/lib/calendar";
@@ -20,118 +20,99 @@ import { L } from "./labels";
 
 const PRELINE = { whiteSpace: "pre-line" as const };
 
-/* -------------------------------------------------------------- Hero ------ */
-export function Hero({
-  eventName,
-  celebrant,
-  dateLabel,
-  bgUrl,
-}: {
-  eventName: string;
-  celebrant?: string;
-  dateLabel: string | null;
-  bgUrl?: string;
-}) {
+const initialOf = (s: string) => (s.trim()[0] ?? "✦").toUpperCase();
+
+/* ------------------------------------------------------------ Marquee ------ */
+export function Marquee({ text }: { text: string }) {
   return (
-    <header className={bgUrl ? "ft-hero" : "ft-hero ft-hero--plain"}>
-      {bgUrl ? (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            className="ft-hero__bg"
-            src={bgUrl}
-            alt=""
-            aria-hidden
-            fetchPriority="high"
-            decoding="async"
-          />
-          <div className="ft-hero__scrim" aria-hidden />
-        </>
-      ) : null}
-      <div className="ft-hero__inner">
-        <span className="ft-hero__crest" aria-hidden>
-          ✽
-        </span>
-        <p className="ft-eyebrow ft-eyebrow--hero">{L.hero.eyebrow}</p>
-        <h1 className="ft-hero__title">{eventName}</h1>
-        {celebrant ? <p className="ft-hero__celebrant">{celebrant}</p> : null}
-        {dateLabel ? <p className="ft-hero__date">{dateLabel}</p> : null}
+    <div className="ft-marquee" aria-hidden>
+      <div className="ft-marquee__track">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <span key={i}>{text}&nbsp;</span>
+        ))}
       </div>
-      <span className="ft-hero__scroll" aria-hidden>
-        {L.hero.scroll}
-      </span>
-    </header>
+    </div>
   );
 }
 
-/* ------------------------------------------------------------- Intro ------ */
-export function Intro({
+/** Pembatas scallop (murni CSS). */
+export function Scallop({ teal = false }: { teal?: boolean }) {
+  return (
+    <div
+      className={teal ? "ft-scallop ft-scallop--teal" : "ft-scallop"}
+      aria-hidden
+    />
+  );
+}
+
+/* ------------------------------------------------------------ Opening ------ */
+export function Opening({
+  celebrant,
+  parents,
   greetingOpen,
   quote,
 }: {
+  celebrant?: string;
+  parents?: string;
   greetingOpen?: string;
   quote?: { text: string; source?: string };
 }) {
   return (
-    <section className="ft-section">
+    <section className="ft-section ft-center">
       <div className="ft-inner">
         <Reveal>
           <p className="ft-eyebrow">{L.intro.eyebrow}</p>
-          {greetingOpen ? (
+        </Reveal>
+        {greetingOpen ? (
+          <Reveal>
             <p className="ft-lead" style={PRELINE}>
               {greetingOpen}
             </p>
-          ) : null}
-          {quote ? (
-            <blockquote className="ft-quote">
-              <p>“{quote.text}”</p>
-              {quote.source ? (
-                <cite className="ft-quote__src">— {quote.source}</cite>
-              ) : null}
-            </blockquote>
-          ) : null}
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-/* --------------------------------------------------------- Celebrant ------ */
-export function Celebrant({
-  celebrant,
-  parents,
-}: {
-  celebrant?: string;
-  parents?: string;
-}) {
-  return (
-    <section className="ft-section ft-section--tint">
-      <div className="ft-inner">
+          </Reveal>
+        ) : null}
+        {celebrant ? (
+          <Reveal className="ft-pop">
+            <figure className="ft-polaroid">
+              <span className="ft-polaroid__tape" aria-hidden />
+              <div className="ft-polaroid__ph" aria-hidden>
+                <span>{initialOf(celebrant)}</span>
+              </div>
+              <figcaption>{celebrant}</figcaption>
+            </figure>
+          </Reveal>
+        ) : null}
         <Reveal>
-          <p className="ft-eyebrow ft-eyebrow--center">{L.celebrant.eyebrow}</p>
-          <div className="ft-celebrant">
-            {celebrant ? (
-              <h2 className="ft-celebrant__name">{celebrant}</h2>
-            ) : null}
+          <div className="ft-kid">
+            {celebrant ? <h3 className="ft-kid__name">{celebrant}</h3> : null}
             {parents ? (
-              <p className="ft-celebrant__parents">
-                {L.celebrant.parents} {parents}
+              <p className="ft-kid__parents">
+                {L.celebrant.parents} <b>{parents}</b>
               </p>
             ) : null}
           </div>
         </Reveal>
+        {quote?.text ? (
+          <Reveal>
+            <blockquote className="ft-quote">
+              “{quote.text}”
+              {quote.source ? (
+                <cite className="ft-quote__src">— {quote.source}</cite>
+              ) : null}
+            </blockquote>
+          </Reveal>
+        ) : null}
       </div>
     </section>
   );
 }
 
-/* --------------------------------------------------------- Countdown ------ */
+/* ---------------------------------------------------------- Countdown ------ */
 export function CountdownBlock({ targetIso }: { targetIso: string }) {
   return (
-    <section className="ft-section">
+    <section className="ft-section ft-center" style={{ paddingTop: 0 }}>
       <div className="ft-inner">
         <Reveal>
-          <p className="ft-eyebrow ft-eyebrow--center">{L.countdown.eyebrow}</p>
+          <p className="ft-eyebrow">{L.countdown.eyebrow}</p>
         </Reveal>
         <Reveal>
           <Countdown targetIso={targetIso} labels={L.countdown} />
@@ -141,7 +122,7 @@ export function CountdownBlock({ targetIso }: { targetIso: string }) {
   );
 }
 
-/* ---------------------------------------------------------- Schedule ------ */
+/* ---------------------------------------------------------- Schedule ------- */
 export function Schedule({
   events,
   tz,
@@ -153,151 +134,149 @@ export function Schedule({
 }) {
   const icsServable = !isReservedSlug(slug) && !isDraftSlug(slug);
   return (
-    <section className="ft-section ft-section--tint">
+    <section className="ft-section" style={{ paddingTop: 0 }}>
       <div className="ft-inner">
         <Reveal>
-          <p className="ft-eyebrow ft-eyebrow--center">{L.schedule.eyebrow}</p>
-          <h2 className="ft-h2">{L.schedule.heading}</h2>
+          <p className="ft-eyebrow ft-center">{L.schedule.eyebrow}</p>
         </Reveal>
-        <div className="ft-stack">
-          {events.map((e, i) => {
-            const f = formatEventDateTime(e.startAt, tz);
-            const maps =
-              e.mapsUrl && /^https?:\/\//i.test(e.mapsUrl) ? e.mapsUrl : null;
-            const gcal = googleCalendarUrl({
-              id: e.id,
-              title: e.name,
-              startAt: e.startAt,
-              endAt: e.endAt,
-              venueName: e.venueName,
-              address: e.address,
-            });
-            const icsUrl = `/api/ics/${slug}?e=${encodeURIComponent(e.id)}`;
-            return (
-              <Reveal key={e.id} delay={i * 80}>
-                <article className="ft-card">
-                  <h3 className="ft-card__title">{e.name}</h3>
+        {events.map((e, i) => {
+          const f = formatEventDateTime(e.startAt, tz);
+          const maps =
+            e.mapsUrl && /^https?:\/\//i.test(e.mapsUrl) ? e.mapsUrl : null;
+          const gcal = googleCalendarUrl({
+            id: e.id,
+            title: e.name,
+            startAt: e.startAt,
+            endAt: e.endAt,
+            venueName: e.venueName,
+            address: e.address,
+          });
+          const icsUrl = `/api/ics/${slug}?e=${encodeURIComponent(e.id)}`;
+          return (
+            <Reveal key={e.id} delay={i * 80}>
+              <article className="ft-event">
+                {f ? (
+                  <div className="ft-event__day">
+                    {f.weekday},<br />
+                    {f.date}
+                  </div>
+                ) : null}
+                <div className="ft-event__meta">
                   {f ? (
                     <>
-                      <p className="ft-card__row">
-                        <Calendar size={16} />
-                        {f.weekday}, {f.date}
-                      </p>
-                      <p className="ft-card__row">
-                        <Clock size={16} />
-                        {f.time} {f.tzLabel}
-                      </p>
+                      <b>
+                        Pukul {f.time} {f.tzLabel}
+                      </b>
+                      <br />
                     </>
                   ) : null}
+                  <b>{e.name}</b>
+                  <br />
                   {e.venueName ? (
-                    <p className="ft-card__row">
-                      <MapPin size={16} />
+                    <>
                       {e.venueName}
-                    </p>
+                      <br />
+                    </>
                   ) : null}
-                  {e.address ? <p className="ft-muted">{e.address}</p> : null}
-                  <div className="ft-card__actions">
-                    {maps ? (
-                      <a
-                        className="ft-btn"
-                        href={maps}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <MapPin size={15} />
-                        {L.schedule.maps}
-                      </a>
-                    ) : null}
-                    {gcal ? (
-                      <details className="ft-cal">
-                        <summary className="ft-btn ft-cal__trigger">
-                          <CalendarPlus size={15} />
-                          {L.schedule.calendar}
-                        </summary>
-                        <div className="ft-cal__menu">
+                  {e.address ?? null}
+                </div>
+                <div className="ft-pills">
+                  {maps ? (
+                    <a
+                      className="ft-pill ft-pill--teal"
+                      href={maps}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <MapPin size={15} />
+                      {L.schedule.maps}
+                    </a>
+                  ) : null}
+                  {gcal ? (
+                    <details className="ft-cal">
+                      <summary className="ft-pill">
+                        <CalendarPlus size={15} />
+                        {L.schedule.calendar}
+                      </summary>
+                      <div className="ft-cal__menu">
+                        <a
+                          className="ft-cal__opt"
+                          href={gcal}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {L.schedule.calendarGoogle}
+                        </a>
+                        {icsServable ? (
                           <a
                             className="ft-cal__opt"
-                            href={gcal}
+                            href={icsUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            {L.schedule.calendarGoogle}
+                            {L.schedule.calendarIcs}
                           </a>
-                          {icsServable ? (
-                            <a
-                              className="ft-cal__opt"
-                              href={icsUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {L.schedule.calendarIcs}
-                            </a>
-                          ) : null}
-                        </div>
-                      </details>
-                    ) : null}
-                  </div>
-                </article>
-              </Reveal>
-            );
-          })}
-        </div>
+                        ) : null}
+                      </div>
+                    </details>
+                  ) : null}
+                </div>
+              </article>
+            </Reveal>
+          );
+        })}
       </div>
     </section>
   );
 }
 
-/* ----------------------------------------------------------- Gallery ------ */
+/* ----------------------------------------------------------- Gallery ------- */
 export function Gallery({ media }: { media: InvitationMediaView[] }) {
   return (
-    <section className="ft-section">
-      <div className="ft-inner">
-        <Reveal>
-          <p className="ft-eyebrow ft-eyebrow--center">{L.gallery.eyebrow}</p>
-          <h2 className="ft-h2">{L.gallery.heading}</h2>
-        </Reveal>
-        <Reveal>
-          <div className="ft-gallery">
-            {media.map((m) => (
-              <div key={m.id} className="ft-gallery__item">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={m.thumbUrl}
-                  alt=""
-                  loading="lazy"
-                  width={m.width ?? undefined}
-                  height={m.height ?? undefined}
-                />
-              </div>
-            ))}
-          </div>
-        </Reveal>
+    <section className="ft-section ft-center" style={{ paddingInline: 0 }}>
+      <Reveal>
+        <p className="ft-eyebrow">{L.gallery.eyebrow}</p>
+      </Reveal>
+      <div className="ft-gallery">
+        {media.map((m) => (
+          <figure className="ft-gallery__item" key={m.id}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={m.thumbUrl}
+              alt=""
+              loading="lazy"
+              width={m.width ?? undefined}
+              height={m.height ?? undefined}
+            />
+          </figure>
+        ))}
       </div>
     </section>
   );
 }
 
-/* ------------------------------------------------------------ Wishes ------ */
+/* ------------------------------------------------------------ Wishes ------- */
 export function Wishes({ wishes }: { wishes: StoryEntry[] }) {
   return (
-    <section className="ft-section ft-section--tint">
+    <section className="ft-section" style={{ paddingTop: "20px" }}>
       <div className="ft-inner">
         <Reveal>
-          <p className="ft-eyebrow ft-eyebrow--center">{L.wishes.eyebrow}</p>
-          <h2 className="ft-h2">{L.wishes.heading}</h2>
+          <p className="ft-eyebrow ft-center">{L.wishes.eyebrow}</p>
         </Reveal>
         <div className="ft-stack">
           {wishes.map((w, i) => (
             <Reveal key={i} delay={i * 70}>
-              <article className="ft-card ft-card--wish">
-                <span className="ft-wish__mark" aria-hidden>
-                  ❝
+              <article className="ft-wish">
+                <span className="ft-wish__ava" aria-hidden>
+                  {initialOf(w.title)}
                 </span>
-                {w.date ? <p className="ft-wish__from">{w.date}</p> : null}
-                <h3 className="ft-card__title">{w.title}</h3>
-                <p className="ft-muted" style={PRELINE}>
-                  {w.narrative}
-                </p>
+                <div>
+                  <b>{w.title}</b>
+                  {w.date ? (
+                    <span className="ft-wish__from">{w.date}</span>
+                  ) : null}
+                  <p style={PRELINE}>{w.narrative}</p>
+                </div>
               </article>
             </Reveal>
           ))}
@@ -307,7 +286,7 @@ export function Wishes({ wishes }: { wishes: StoryEntry[] }) {
   );
 }
 
-/* ---------------------------------------------------------- Envelope ------ */
+/* ---------------------------------------------------------- Envelope ------- */
 export function Envelope({
   envelope,
   slug,
@@ -316,60 +295,59 @@ export function Envelope({
   slug: string;
 }) {
   return (
-    <section className="ft-section">
+    <section className="ft-section" style={{ paddingTop: 0 }}>
       <div className="ft-inner">
         <Reveal>
-          <p className="ft-eyebrow ft-eyebrow--center">{L.envelope.eyebrow}</p>
-          <h2 className="ft-h2">{L.envelope.heading}</h2>
-          <p className="ft-lead">{L.envelope.note}</p>
+          <p className="ft-eyebrow ft-center">{L.envelope.eyebrow}</p>
+          <p className="ft-lead ft-center">{L.envelope.note}</p>
         </Reveal>
         <div className="ft-stack">
           {envelope.banks.map((b, i) => (
             <Reveal key={`b${i}`}>
-              <article className="ft-card">
-                <p className="ft-account__label">{b.bank}</p>
-                <p className="ft-account__num">{b.number}</p>
-                <p className="ft-muted">
-                  {L.envelope.holder} {b.holder}
-                </p>
+              <article className="ft-acct">
+                <div>
+                  <b>{b.number}</b>
+                  <small>
+                    {b.bank} · {L.envelope.holder} {b.holder}
+                  </small>
+                </div>
                 <CopyButton
                   value={b.number}
                   labelCopy={L.envelope.copy}
                   labelCopied={L.envelope.copied}
-                  className="ft-btn ft-btn--solid"
+                  className="ft-copy"
                 />
               </article>
             </Reveal>
           ))}
           {envelope.ewallets.map((w, i) => (
             <Reveal key={`w${i}`}>
-              <article className="ft-card">
-                <p className="ft-account__label">{w.provider}</p>
-                <p className="ft-account__num">{w.number}</p>
-                {w.holder ? (
-                  <p className="ft-muted">
-                    {L.envelope.holder} {w.holder}
-                  </p>
-                ) : null}
+              <article className="ft-acct">
+                <div>
+                  <b>{w.number}</b>
+                  <small>
+                    {w.provider}
+                    {w.holder ? ` · ${L.envelope.holder} ${w.holder}` : ""}
+                  </small>
+                </div>
                 <CopyButton
                   value={w.number}
                   labelCopy={L.envelope.copy}
                   labelCopied={L.envelope.copied}
-                  className="ft-btn ft-btn--solid"
+                  className="ft-copy"
                 />
               </article>
             </Reveal>
           ))}
           {envelope.giftAddress ? (
             <Reveal>
-              <article className="ft-card">
-                <p className="ft-account__label">{L.envelope.giftAddress}</p>
-                <p
-                  className="ft-muted"
-                  style={{ ...PRELINE, marginTop: "0.4rem" }}
-                >
-                  {envelope.giftAddress}
-                </p>
+              <article className="ft-acct ft-acct--addr">
+                <div>
+                  <small>{L.envelope.giftAddress}</small>
+                  <p style={{ ...PRELINE, marginTop: "0.3rem" }}>
+                    {envelope.giftAddress}
+                  </p>
+                </div>
               </article>
             </Reveal>
           ) : null}
@@ -382,29 +360,26 @@ export function Envelope({
   );
 }
 
-/* ------------------------------------------------------------ Footer ------ */
+/* ------------------------------------------------------------ Footer ------- */
 export function Footer({
   greetingClose,
-  eventName,
   watermark,
 }: {
   greetingClose?: string;
-  eventName: string;
   watermark: boolean;
 }) {
   return (
-    <footer className="ft-footer">
+    <footer className="ft-footer ft-center">
       <div className="ft-inner">
         <Reveal>
+          <div className="ft-footer__big">{L.footer.thanks}</div>
           {greetingClose ? (
-            <p className="ft-lead ft-lead--light" style={PRELINE}>
+            <p className="ft-footer__note" style={PRELINE}>
               {greetingClose}
             </p>
           ) : null}
-          <p className="ft-footer__thanks">{L.footer.thanks}</p>
-          <p className="ft-footer__event">{eventName}</p>
           {watermark ? (
-            <p className="ft-watermark">
+            <span className="ft-watermark">
               {L.footer.by}{" "}
               <a
                 href="https://merriva.id"
@@ -413,7 +388,7 @@ export function Footer({
               >
                 {L.footer.brand}
               </a>
-            </p>
+            </span>
           ) : null}
         </Reveal>
       </div>
