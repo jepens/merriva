@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Tasyakuran Khitan Rafa · Prototipe Merriva</title>
+<meta name="description" content="Prototipe tema family-warm (Editorial hangat, tier Craft) untuk acara keluarga — Merriva." />
+<!-- ============================================================
+  MERRIVA · PROTOTIPE TEMA "FAMILY WARM" — TIER CRAFT
+  Arah: Editorial hangat & ceria untuk acara keluarga (khitanan,
+  ulang tahun, syukuran). BUKTI TIER CRAFT: tanpa GSAP/Lenis/CDN
+  JS apa pun — hanya CSS + IntersectionObserver (±25 baris) +
+  canvas confetti kecil buatan sendiri. Tetap terasa hidup.
+============================================================ -->
+<script>document.documentElement.classList.add('js')</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Figtree:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#FFF7E8; --cream2:#FCEFD8; --sun:#F5B93F; --coral:#E56A4E; --teal:#2E7D6B;
+    --choco:#4A3423; --muted:rgba(74,52,35,.65); --hairline:rgba(74,52,35,.16);
+    --disp:"Bricolage Grotesque",system-ui,sans-serif; --body:"Figtree",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#F2E3C8;color:var(--choco);font-family:var(--body);-webkit-font-smoothing:antialiased;overflow:hidden}
+  body.opened{overflow:auto}
+  html{scroll-behavior:smooth}
+  ::selection{background:var(--sun);color:var(--choco)}
+  .stage{max-width:480px;margin:0 auto;background:var(--cream);position:relative;box-shadow:0 0 110px rgba(74,52,35,.3)}
+
+  .eyebrow{font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--coral)}
+  .grain{position:fixed;inset:-50%;width:200%;height:200%;pointer-events:none;z-index:60;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* ---- Mesin reveal Craft (CSS + IO) ---- */
+  [data-reveal]{opacity:1;transform:none;transition:opacity .8s ease,transform .8s cubic-bezier(.22,1,.36,1)}
+  .js [data-reveal]{opacity:0;transform:translateY(22px)}
+  .js [data-reveal].in{opacity:1;transform:none}
+  .js [data-reveal="pop"]{transform:translateY(14px) scale(.95) rotate(var(--rot,0deg))}
+  .js [data-reveal="pop"].in{transform:scale(1) rotate(var(--rot,0deg))}
+  @media (prefers-reduced-motion:reduce){
+    .js [data-reveal]{opacity:1 !important;transform:none !important;transition:none}
+  }
+
+  .confetti{position:fixed;inset:0;pointer-events:none;z-index:65}
+
+  /* ================= COVER ================= */
+  .cover{position:fixed;inset:0;z-index:50;display:grid;place-items:center;overflow:hidden;background:var(--cream);
+    transition:transform 1s cubic-bezier(.7,0,.3,1),opacity .9s ease}
+  body.opened .cover{transform:translateY(-100%)}
+  .blob{position:absolute;border-radius:50%;filter:blur(2px);animation:float 9s ease-in-out infinite alternate}
+  .blob.b1{width:46vw;height:46vw;max-width:230px;max-height:230px;background:var(--sun);top:-8%;left:-10%;opacity:.85}
+  .blob.b2{width:34vw;height:34vw;max-width:170px;max-height:170px;background:var(--coral);bottom:6%;right:-8%;opacity:.75;animation-delay:-3s}
+  .blob.b3{width:20vw;height:20vw;max-width:110px;max-height:110px;background:var(--teal);bottom:22%;left:4%;opacity:.6;animation-delay:-6s}
+  @keyframes float{from{transform:translateY(-10px)}to{transform:translateY(16px)}}
+  @media (prefers-reduced-motion:reduce){.blob{animation:none}}
+  .cover-inner{position:relative;text-align:center;padding:24px;max-width:430px;width:100%}
+  .badge{display:inline-block;font-family:var(--disp);font-weight:700;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+    background:var(--coral);color:#fff;padding:10px 18px;border-radius:999px;transform:rotate(-4deg);box-shadow:0 8px 0 rgba(74,52,35,.15)}
+  .cover-name{font-family:var(--disp);font-weight:800;font-size:clamp(72px,23vw,104px);line-height:.94;letter-spacing:-.02em;margin:22px 0 6px;
+    color:var(--choco);text-shadow:4px 4px 0 var(--sun)}
+  .cover-sub{font-family:var(--disp);font-weight:700;font-size:16px;color:var(--muted)}
+  .date-chips{display:flex;gap:8px;justify-content:center;margin:20px 0 24px}
+  .chip{font-family:var(--disp);font-weight:700;font-size:13px;background:#fff;border:2px solid var(--choco);
+    border-radius:12px;padding:10px 14px;box-shadow:3px 3px 0 var(--choco)}
+  .guest-card{margin:0 auto 24px;max-width:290px;padding:14px 18px;background:#fff;border:2px solid var(--choco);border-radius:16px;box-shadow:4px 4px 0 var(--teal)}
+  .guest-card small{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px}
+  .guest-card strong{font-family:var(--disp);font-weight:700;font-size:18px}
+  .btn-open{appearance:none;border:2px solid var(--choco);background:var(--sun);color:var(--choco);font-family:var(--disp);
+    font-weight:800;font-size:14px;letter-spacing:.06em;padding:16px 36px;border-radius:999px;cursor:pointer;
+    box-shadow:5px 5px 0 var(--choco);transition:.2s}
+  .btn-open:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--choco)}
+  .btn-open:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--choco)}
+
+  /* ================= MARQUEE + scallop ================= */
+  .marquee{overflow:hidden;background:var(--coral);color:var(--cream);padding:12px 0}
+  .mq{display:flex;width:max-content;animation:mq 18s linear infinite}
+  @media (prefers-reduced-motion:reduce){.mq{animation:none}}
+  .mq span{font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;padding-right:.5em}
+  @keyframes mq{to{transform:translateX(-50%)}}
+  .scallop{height:16px;background:radial-gradient(circle 10px at 10px 0,var(--coral) 98%,transparent) 0 0/20px 16px repeat-x}
+  .scallop.teal{background:radial-gradient(circle 10px at 10px 0,var(--teal) 98%,transparent) 0 0/20px 16px repeat-x}
+
+  section{position:relative;padding:80px 26px}
+  .center{text-align:center}
+  h2.title{font-family:var(--disp);font-weight:800;font-size:clamp(34px,9.6vw,46px);line-height:1.04;letter-spacing:-.01em;margin-top:14px}
+  h2.title .hl{color:var(--coral)}
+  p.lead{color:var(--muted);font-size:14.5px;line-height:1.85;max-width:320px;margin:14px auto 0}
+
+  /* Polaroid sang bintang */
+  .polaroid{width:min(72%,260px);margin:34px auto 0;background:#fff;border:2px solid var(--choco);border-radius:6px;
+    padding:10px 10px 16px;box-shadow:6px 6px 0 var(--sun);transform:rotate(-2.5deg);position:relative}
+  .polaroid .tape{position:absolute;top:-12px;left:50%;transform:translateX(-50%) rotate(3deg);width:90px;height:26px;
+    background:rgba(245,185,63,.7);border-radius:2px}
+  .polaroid .ph{aspect-ratio:4/5;border-radius:3px;display:grid;place-items:center;
+    background:radial-gradient(90% 90% at 30% 20%,#FFD98A,#F5B93F 60%,#E5953F)}
+  .polaroid .ph span{font-family:var(--disp);font-weight:800;font-size:84px;color:#fff;text-shadow:3px 3px 0 rgba(74,52,35,.3)}
+  .polaroid figcaption{font-family:var(--disp);font-weight:700;text-align:center;font-size:14px;margin-top:10px}
+  .kid-info{margin-top:26px}
+  .kid-info h3{font-family:var(--disp);font-weight:800;font-size:26px}
+  .kid-info p{color:var(--muted);font-size:13.5px;line-height:1.8;margin-top:8px}
+
+  /* Countdown chunky */
+  .cd-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:390px;margin:28px auto 0}
+  .cd-cell{background:#fff;border:2px solid var(--choco);border-radius:16px;padding:14px 4px;text-align:center;box-shadow:4px 4px 0 var(--choco)}
+  .cd-cell:nth-child(1){box-shadow:4px 4px 0 var(--coral)}
+  .cd-cell:nth-child(2){box-shadow:4px 4px 0 var(--sun)}
+  .cd-cell:nth-child(3){box-shadow:4px 4px 0 var(--teal)}
+  .cd-num{font-family:var(--disp);font-weight:800;font-size:clamp(26px,7.8vw,34px);font-variant-numeric:tabular-nums}
+  .cd-label{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:4px}
+
+  /* Kartu acara */
+  .event-card{background:#fff;border:2px solid var(--choco);border-radius:22px;padding:26px;margin-top:30px;box-shadow:6px 6px 0 var(--teal)}
+  .event-card .day{font-family:var(--disp);font-weight:800;font-size:clamp(40px,11vw,52px);line-height:1;color:var(--teal)}
+  .event-card .meta{font-size:14px;line-height:1.85;color:var(--muted);margin-top:12px}
+  .event-card .meta b{color:var(--choco);font-weight:600}
+  .pills{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .pill{font-family:var(--disp);font-weight:700;font-size:12.5px;text-decoration:none;padding:13px 20px;border-radius:999px;
+    border:2px solid var(--choco);color:var(--choco);background:#fff;box-shadow:3px 3px 0 var(--choco);transition:.2s}
+  .pill:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--choco)}
+  .pill.teal{background:var(--teal);border-color:var(--teal);color:#fff;box-shadow:3px 3px 0 var(--choco)}
+
+  /* Galeri polaroid strip */
+  .g-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding:30px 26px;scrollbar-width:none}
+  .g-track::-webkit-scrollbar{display:none}
+  .g-item{flex:0 0 46%;scroll-snap-align:center;background:#fff;border:2px solid var(--choco);border-radius:6px;padding:8px 8px 14px;box-shadow:4px 4px 0 var(--sun)}
+  .g-item:nth-child(even){transform:rotate(2deg);box-shadow:4px 4px 0 var(--coral)}
+  .g-item:nth-child(odd){transform:rotate(-2deg)}
+  .g-item .ph{aspect-ratio:1;border-radius:3px;display:grid;place-items:center;font-family:var(--disp);font-weight:700;font-size:11px;color:#fff}
+  .g-item:nth-child(1) .ph{background:linear-gradient(150deg,#F5B93F,#E5953F)}
+  .g-item:nth-child(2) .ph{background:linear-gradient(150deg,#E56A4E,#c9532f)}
+  .g-item:nth-child(3) .ph{background:linear-gradient(150deg,#2E7D6B,#1d5d4e)}
+  .g-item:nth-child(4) .ph{background:linear-gradient(150deg,#F0A868,#d97f42)}
+
+  /* Doa wall + form */
+  .rsvp .card{background:#fff;border:2px solid var(--choco);border-radius:22px;padding:26px;margin-top:24px;box-shadow:6px 6px 0 var(--coral)}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px}
+  .field input,.field textarea{width:100%;border:2px solid var(--hairline);border-radius:14px;background:var(--cream);
+    padding:13px 14px;font-family:var(--body);font-size:14px;color:var(--choco)}
+  .field input:focus,.field textarea:focus{outline:3px solid var(--sun)}
+  .choices{display:flex;gap:10px}
+  .choice{flex:1;text-align:center;border:2px solid var(--hairline);border-radius:14px;padding:12px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.2s}
+  .choice.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .btn-submit{width:100%;border:2px solid var(--choco);background:var(--sun);color:var(--choco);padding:15px;font-family:var(--disp);
+    font-weight:800;font-size:14px;border-radius:999px;cursor:pointer;box-shadow:4px 4px 0 var(--choco)}
+  .wish{display:flex;gap:12px;background:#fff;border:2px solid var(--hairline);border-radius:16px;padding:14px;margin-top:12px}
+  .wish .ava{flex:0 0 40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:var(--disp);font-weight:800;color:#fff}
+  .wish:nth-child(odd) .ava{background:var(--coral)} .wish:nth-child(even) .ava{background:var(--teal)}
+  .wish b{font-size:13.5px}
+  .wish p{font-size:13px;line-height:1.65;color:var(--muted);margin-top:3px}
+
+  .gift .acct{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;
+    border:2px solid var(--choco);border-radius:16px;padding:16px;margin-top:14px;box-shadow:3px 3px 0 var(--choco)}
+  .gift .acct b{font-family:var(--disp);font-weight:700;font-size:15px}
+  .gift .acct small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+  .copy{font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.06em;border:2px solid var(--choco);
+    background:var(--cream);border-radius:999px;padding:9px 14px;cursor:pointer;transition:.2s}
+  .copy.done{background:var(--teal);border-color:var(--teal);color:#fff}
+
+  footer{padding:64px 26px 90px;text-align:center;background:var(--teal);color:var(--cream)}
+  footer .big{font-family:var(--disp);font-weight:800;font-size:30px}
+  footer p{font-size:13px;opacity:.85;margin-top:10px;line-height:1.8}
+  .watermark{display:inline-block;margin-top:26px;font-family:var(--disp);font-weight:700;font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--cream);border:2px solid rgba(255,247,232,.4);padding:8px 14px;border-radius:999px}
+
+  .music{position:fixed;left:16px;bottom:16px;z-index:55;width:46px;height:46px;border-radius:50%;
+    border:2px solid var(--choco);background:#fff;color:var(--choco);display:none;place-items:center;cursor:pointer;box-shadow:3px 3px 0 var(--choco)}
+  body.opened .music{display:grid}
+  .music svg{width:18px;height:18px}
+  .music.playing svg{animation:spin 3.4s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.music.playing svg{animation:none}}
+  .proto-tag{position:fixed;right:14px;bottom:14px;z-index:70;font-family:var(--disp);font-weight:700;font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--choco);background:#fff;border:2px solid var(--choco);padding:7px 11px;border-radius:999px;box-shadow:2px 2px 0 var(--choco)}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<canvas class="confetti" aria-hidden="true"></canvas>
+
+<div class="cover" id="cover">
+  <div class="blob b1" aria-hidden="true"></div>
+  <div class="blob b2" aria-hidden="true"></div>
+  <div class="blob b3" aria-hidden="true"></div>
+  <div class="cover-inner">
+    <span class="badge" data-reveal="pop" style="--rot:-4deg">Tasyakuran Khitan</span>
+    <div class="cover-name" data-reveal>Rafa</div>
+    <div class="cover-sub" data-reveal>Muhammad Rafa Alfarizi</div>
+    <div class="date-chips" data-reveal>
+      <span class="chip">Minggu</span><span class="chip" style="background:var(--sun)">20 Des 2026</span><span class="chip">10.00 WIB</span>
+    </div>
+    <div class="guest-card" data-reveal>
+      <small>Kepada Yth.</small>
+      <strong id="guestName">Keluarga Tamu Undangan</strong>
+    </div>
+    <div data-reveal><button class="btn-open" id="btnOpen">Buka Undangan ✦</button></div>
+  </div>
+</div>
+
+<main class="stage" id="stage">
+
+  <div class="marquee" aria-hidden="true"><div class="mq" id="mqTrack"><span>Rafa ✦ 20 Desember 2026 ✦ Tasyakuran Khitan ✦ Mohon Doa Restu ✦&nbsp;</span></div></div>
+  <div class="scallop" aria-hidden="true"></div>
+
+  <section class="center">
+    <span class="eyebrow" data-reveal>Bismillahirrahmanirrahim</span>
+    <h2 class="title" data-reveal>Alhamdulillah,<br/><span class="hl">Rafa</span> sudah berani!</h2>
+    <p class="lead" data-reveal>Dengan penuh rasa syukur, kami mengundang Bapak/Ibu untuk hadir dalam tasyakuran khitan putra kami tercinta.</p>
+    <figure class="polaroid" data-reveal="pop" style="--rot:-2.5deg">
+      <div class="tape" aria-hidden="true"></div>
+      <div class="ph"><span>R</span></div>
+      <figcaption>Rafa · 9 tahun</figcaption>
+    </figure>
+    <div class="kid-info" data-reveal>
+      <h3>Muhammad Rafa Alfarizi</h3>
+      <p>Putra kedua dari<br/><b>Bapak Andri Wijaya &amp; Ibu Maya Kusuma</b></p>
+    </div>
+  </section>
+
+  <section class="center" style="padding-top:0">
+    <span class="eyebrow" data-reveal>Hitung Mundur</span>
+    <div class="cd-grid" data-reveal>
+      <div class="cd-cell"><div class="cd-num" id="cdD">–</div><div class="cd-label">Hari</div></div>
+      <div class="cd-cell"><div class="cd-num" id="cdH">–</div><div class="cd-label">Jam</div></div>
+      <div class="cd-cell"><div class="cd-num" id="cdM">–</div><div class="cd-label">Menit</div></div>
+      <div class="cd-cell"><div class="cd-num" id="cdS">–</div><div class="cd-label">Detik</div></div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="center"><span class="eyebrow" data-reveal>Waktu &amp; Tempat</span></div>
+    <div class="event-card" data-reveal>
+      <div class="day">Minggu,<br/>20 Des</div>
+      <div class="meta"><b>Pukul 10.00 – 13.00 WIB</b><br/>Kediaman Keluarga Wijaya<br/>Jl. Melati Raya No. 45, Ciputat, Tangerang Selatan<br/><b>Ada badut &amp; sulap untuk teman-teman Rafa! 🎈</b></div>
+      <div class="pills"><a class="pill teal" href="#" onclick="return false">Petunjuk Arah</a><a class="pill" href="#" onclick="return false">Simpan Kalender</a></div>
+    </div>
+  </section>
+
+  <div class="scallop teal" aria-hidden="true" style="transform:rotate(180deg)"></div>
+  <section style="padding-top:64px;padding-left:0;padding-right:0" class="center">
+    <span class="eyebrow" data-reveal>Galeri Rafa</span>
+    <div class="g-track">
+      <figure class="g-item"><div class="ph">Foto 01</div></figure>
+      <figure class="g-item"><div class="ph">Foto 02</div></figure>
+      <figure class="g-item"><div class="ph">Foto 03</div></figure>
+      <figure class="g-item"><div class="ph">Foto 04</div></figure>
+    </div>
+  </section>
+
+  <section class="rsvp" style="padding-top:20px">
+    <div class="center"><span class="eyebrow" data-reveal>Konfirmasi &amp; Doa</span></div>
+    <div class="card" data-reveal>
+      <div class="field"><label>Nama</label><input value="Keluarga Tamu Undangan" readonly/></div>
+      <div class="field"><label>Kehadiran</label>
+        <div class="choices"><div class="choice active" data-choice>Hadir</div><div class="choice" data-choice>Berhalangan</div></div>
+      </div>
+      <div class="field"><label>Doa untuk Rafa</label><textarea rows="3" placeholder="Tulis doa terbaik untuk Rafa…"></textarea></div>
+      <button class="btn-submit" onclick="return false">Kirim</button>
+    </div>
+    <div style="margin-top:24px">
+      <div class="wish" data-reveal><div class="ava">B</div><div><b>Keluarga Budi</b><p>Selamat ya Rafa! Semoga jadi anak sholeh, sehat selalu, dan makin pinter.</p></div></div>
+      <div class="wish" data-reveal><div class="ava">T</div><div><b>Tante Rini</b><p>Rafa hebat! Tante bangga. Sampai ketemu hari Minggu ya 🤍</p></div></div>
+    </div>
+  </section>
+
+  <section class="gift" style="padding-top:0">
+    <div class="center"><span class="eyebrow" data-reveal>Amplop Digital</span></div>
+    <div data-reveal><p class="lead center" style="margin:14px auto 0">Doa Bapak/Ibu adalah hadiah terbaik. Bila ingin berbagi untuk tabungan Rafa:</p></div>
+    <div class="acct" data-reveal><div><b>5566 7788 9900</b><small>BSI · a.n. Andri Wijaya</small></div><button class="copy" data-copy="556677889900">Salin</button></div>
+  </section>
+
+  <footer>
+    <div class="big" data-reveal>Terima kasih! ✦</div>
+    <p data-reveal>Keluarga besar Wijaya menantikan<br/>kehadiran &amp; doa terbaik Bapak/Ibu.</p>
+    <span class="watermark" data-reveal>Dibuat dengan Merriva</span>
+  </footer>
+</main>
+
+<button class="music" id="btnMusic" aria-label="Putar musik">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>
+</button>
+<div class="proto-tag">Merriva · Family Warm</div>
+
+<script defer>
+/* TIER CRAFT: nol dependency eksternal. IO reveals + confetti kecil + countdown. */
+window.addEventListener('DOMContentLoaded', () => {
+  const params  = new URLSearchParams(location.search);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOn = !reduced;
+  if (!motionOn) document.documentElement.classList.remove('js');
+
+  const to = params.get('to');
+  if (to) document.getElementById('guestName').textContent = to;
+
+  const mq=document.getElementById('mqTrack'); mq.innerHTML+=mq.innerHTML+mq.innerHTML+mq.innerHTML;
+
+  /* Mesin reveal: IntersectionObserver + stagger sederhana per section */
+  if (motionOn && 'IntersectionObserver' in window){
+    const io=new IntersectionObserver(es=>es.forEach(e=>{
+      if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
+    }),{threshold:.18,rootMargin:'0px 0px -6% 0px'});
+    document.querySelectorAll('[data-reveal]').forEach((el,i)=>{
+      const sec=el.closest('section,.cover-inner,footer');
+      const sibs=sec?[...sec.querySelectorAll('[data-reveal]')]:[el];
+      el.style.transitionDelay=(sibs.indexOf(el)*90)+'ms';
+      io.observe(el);
+    });
+    /* Cover langsung tampil tanpa menunggu scroll */
+    document.querySelectorAll('.cover [data-reveal]').forEach(el=>setTimeout(()=>el.classList.add('in'),120));
+  } else {
+    document.documentElement.classList.remove('js');
+  }
+
+  /* Confetti burst singkat saat dibuka (canvas 2D, auto-stop ±3.5 dtk) */
+  function confetti(){
+    if(!motionOn) return;
+    const cv=document.querySelector('.confetti'),cx=cv.getContext('2d');
+    const DPR=Math.min(devicePixelRatio||1,1.5);
+    cv.width=innerWidth*DPR;cv.height=innerHeight*DPR;
+    const colors=['#F5B93F','#E56A4E','#2E7D6B','#FFD98A','#fff'];
+    const ps=Array.from({length:90},()=>({
+      x:cv.width/2+(Math.random()-.5)*cv.width*.5, y:-20*DPR-Math.random()*cv.height*.2,
+      w:(5+Math.random()*6)*DPR, h:(8+Math.random()*8)*DPR,
+      vy:(2.2+Math.random()*2.6)*DPR, vx:(Math.random()-.5)*1.6*DPR,
+      r:Math.random()*Math.PI, vr:(Math.random()-.5)*.22,
+      c:colors[Math.floor(Math.random()*colors.length)]}));
+    const t0=performance.now();
+    (function step(now){
+      const t=now-t0; cx.clearRect(0,0,cv.width,cv.height);
+      if(t>3500) return;
+      for(const p of ps){p.y+=p.vy;p.x+=p.vx;p.r+=p.vr;
+        cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);
+        cx.fillStyle=p.c;cx.fillRect(-p.w/2,-p.h/2,p.w,p.h);cx.restore();}
+      requestAnimationFrame(step);
+    })(t0);
+  }
+
+  document.getElementById('btnOpen').addEventListener('click', function(){
+    this.disabled=true;
+    document.body.classList.add('opened');
+    setTimeout(()=>document.getElementById('cover').remove(),1100);
+    document.getElementById('btnMusic').classList.add('playing');
+    confetti();
+  });
+  document.getElementById('btnMusic').addEventListener('click',function(){this.classList.toggle('playing');});
+
+  const target=new Date('2026-12-20T10:00:00+07:00').getTime();
+  (function tick(){
+    let ms=Math.max(0,target-Date.now());
+    const d=Math.floor(ms/864e5);ms-=d*864e5;
+    const h=Math.floor(ms/36e5);ms-=h*36e5;
+    const m=Math.floor(ms/6e4),s=Math.floor((ms-m*6e4)/1e3);
+    cdD.textContent=d;cdH.textContent=String(h).padStart(2,'0');
+    cdM.textContent=String(m).padStart(2,'0');cdS.textContent=String(s).padStart(2,'0');
+    setTimeout(tick,1000);
+  })();
+
+  document.querySelectorAll('[data-choice]').forEach(c=>c.addEventListener('click',()=>{
+    document.querySelectorAll('[data-choice]').forEach(x=>x.classList.remove('active'));c.classList.add('active');
+  }));
+  document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(b.dataset.copy);}catch(e){}
+    const t=b.textContent;b.textContent='Tersalin ✓';b.classList.add('done');
+    setTimeout(()=>{b.textContent=t;b.classList.remove('done');},1600);
+  }));
+});
+</script>
+
+</body>
+</html>

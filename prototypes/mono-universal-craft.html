@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>25 Tahun — Hartono &amp; Lestari · Prototipe Merriva</title>
+<meta name="description" content="Prototipe tema mono-universal (minimalis galeri, tier Craft) — Merriva." />
+<!-- ============================================================
+  MERRIVA · PROTOTIPE TEMA "MONO UNIVERSAL" — TIER CRAFT
+  Arah: minimalis galeri. Bukti bahwa menahan diri juga premium:
+  satu serif display, whitespace ekstrem, satu aksen merah,
+  tanpa canvas/WebGL/library — hanya IO reveal & CSS.
+  Demo: pesta perak (anniversary) — menunjukkan fleksibilitas
+  kategori "universal" untuk segala acara.
+============================================================ -->
+<script>document.documentElement.classList.add('js')</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#FBFAF7; --ink:#151310; --red:#C0392B; --muted:rgba(21,19,16,.55);
+    --hairline:rgba(21,19,16,.14);
+    --serif:"Instrument Serif",Georgia,serif; --sans:"Inter",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#E8E6E0;color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
+  body.opened{overflow:auto}
+  html{scroll-behavior:smooth}
+  ::selection{background:var(--ink);color:var(--paper)}
+  .stage{max-width:480px;margin:0 auto;background:var(--paper);position:relative;box-shadow:0 0 90px rgba(21,19,16,.18)}
+
+  .label{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  .grain{position:fixed;inset:-50%;width:200%;height:200%;pointer-events:none;z-index:60;opacity:.03;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* Mesin reveal Craft */
+  [data-reveal]{opacity:1;transform:none;transition:opacity .9s ease,transform .9s cubic-bezier(.22,1,.36,1)}
+  .js [data-reveal]{opacity:0;transform:translateY(14px)}
+  .js [data-reveal].in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){.js [data-reveal]{opacity:1 !important;transform:none !important;transition:none}}
+
+  /* Label sisi vertikal */
+  .side-label{position:fixed;right:12px;top:50%;transform:translateY(-50%) rotate(90deg);transform-origin:center;
+    font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:var(--muted);z-index:45;display:none}
+  body.opened .side-label{display:block}
+  @media (max-width:560px){.side-label{display:none !important}}
+
+  /* ================= COVER ================= */
+  .cover{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:var(--paper);
+    transition:opacity .9s ease;overflow:hidden}
+  body.opened .cover{opacity:0;pointer-events:none}
+  .cover-inner{text-align:center;padding:24px;max-width:430px;width:100%}
+  .no{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--muted)}
+  .cover-names{margin:30px 0 26px}
+  .cover-names .name{font-family:var(--serif);font-weight:400;font-size:clamp(56px,16.5vw,76px);line-height:1.02;letter-spacing:-.01em}
+  .cover-names .amp{display:block;font-family:var(--serif);font-style:italic;font-size:28px;color:var(--red);margin:4px 0}
+  .redline{width:44px;height:2px;background:var(--red);margin:26px auto}
+  .cover-date{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+  .guest{margin:26px 0 30px;font-size:13.5px;color:var(--muted)}
+  .guest b{display:block;font-family:var(--serif);font-weight:400;font-style:italic;font-size:21px;color:var(--ink);margin-top:6px}
+  .btn-open{appearance:none;border:0;background:transparent;color:var(--ink);font-family:var(--sans);font-weight:500;
+    font-size:12.5px;letter-spacing:.22em;text-transform:uppercase;padding:14px 6px;cursor:pointer;
+    border-bottom:1.5px solid var(--ink);transition:.3s}
+  .btn-open:hover{color:var(--red);border-color:var(--red);letter-spacing:.28em}
+
+  /* ================= SECTIONS ================= */
+  section{position:relative;padding:96px 30px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:34px}
+  .sec-head .num{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--red)}
+  .sec-head .t{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  .sec-head::after{content:"";flex:1;height:1px;background:var(--hairline)}
+
+  .big-serif{font-family:var(--serif);font-weight:400;font-size:clamp(30px,8.6vw,40px);line-height:1.28}
+  .big-serif em{font-style:italic;color:var(--red)}
+  p.body{font-size:14px;line-height:2;color:var(--muted);margin-top:18px;max-width:330px}
+
+  /* Acara */
+  .when{margin-top:8px}
+  .when .date{font-family:var(--serif);font-size:clamp(52px,15vw,68px);line-height:1.05;letter-spacing:-.01em}
+  .when .date em{font-style:italic}
+  .kv{display:grid;grid-template-columns:96px 1fr;gap:12px 18px;margin-top:30px;font-size:13.5px}
+  .kv dt{color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-size:10px;padding-top:3px}
+  .kv dd{line-height:1.75}
+  .lnk{display:inline-block;margin-top:22px;margin-right:22px;color:var(--ink);text-decoration:none;font-weight:500;
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;border-bottom:1.5px solid var(--ink);padding:10px 2px;transition:.3s}
+  .lnk:hover{color:var(--red);border-color:var(--red)}
+
+  /* Countdown inline */
+  .cd-row{display:flex;gap:0;border-block:1px solid var(--hairline);margin-top:34px}
+  .cd-cell{flex:1;text-align:center;padding:20px 4px;border-left:1px solid var(--hairline)}
+  .cd-cell:first-child{border-left:0}
+  .cd-num{font-family:var(--serif);font-size:clamp(28px,8vw,38px);font-variant-numeric:tabular-nums}
+  .cd-label{font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+
+  /* Galeri figure */
+  .fig{margin-top:44px}
+  .fig .ph{aspect-ratio:4/3;display:grid;place-items:center;color:rgba(251,250,247,.85);
+    font-size:9.5px;letter-spacing:.34em;text-transform:uppercase}
+  .fig:nth-of-type(1) .ph{background:linear-gradient(160deg,#8a8580,#3c3936)}
+  .fig:nth-of-type(2) .ph{background:linear-gradient(200deg,#a39c92,#55504a);aspect-ratio:3/4;width:74%;margin-left:auto}
+  .fig:nth-of-type(3) .ph{background:linear-gradient(150deg,#77726c,#2e2b28);aspect-ratio:1;width:82%}
+  .fig figcaption{display:flex;justify-content:space-between;margin-top:10px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+
+  /* RSVP */
+  .field{margin-bottom:22px}
+  .field label{display:block;font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:10px}
+  .field input,.field textarea{width:100%;border:0;border-bottom:1px solid var(--hairline);border-radius:0;background:transparent;
+    padding:10px 2px;font-family:var(--sans);font-size:15px;color:var(--ink)}
+  .field input:focus,.field textarea:focus{outline:0;border-color:var(--ink)}
+  .choices{display:flex;gap:26px}
+  .choice{font-size:13px;letter-spacing:.06em;cursor:pointer;color:var(--muted);padding:8px 2px;border-bottom:1.5px solid transparent;transition:.25s}
+  .choice.active{color:var(--ink);border-color:var(--red)}
+  .btn-submit{appearance:none;border:0;background:var(--ink);color:var(--paper);padding:16px 34px;font-family:var(--sans);
+    font-weight:500;font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;cursor:pointer;margin-top:8px;transition:.3s}
+  .btn-submit:hover{background:var(--red)}
+  .wish{border-top:1px solid var(--hairline);padding:20px 2px}
+  .wish b{font-size:13.5px;font-weight:500}
+  .wish p{font-family:var(--serif);font-style:italic;font-size:16px;line-height:1.7;color:rgba(21,19,16,.75);margin-top:6px}
+
+  .acct{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-top:1px solid var(--hairline);padding:18px 2px}
+  .acct b{font-family:var(--serif);font-size:19px;font-weight:400}
+  .acct small{display:block;font-size:11px;color:var(--muted);margin-top:3px;letter-spacing:.06em}
+  .copy{font-size:10px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;border:0;border-bottom:1.5px solid var(--ink);
+    background:transparent;padding:6px 2px;cursor:pointer;transition:.25s}
+  .copy.done{color:var(--red);border-color:var(--red)}
+
+  footer{padding:90px 30px 110px;text-align:center}
+  footer .mono{font-family:var(--serif);font-style:italic;font-size:30px}
+  footer .dot{display:block;width:8px;height:8px;border-radius:50%;background:var(--red);margin:22px auto}
+  footer p{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);line-height:2.2}
+  .watermark{display:inline-block;margin-top:30px;font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--hairline);padding-bottom:6px}
+
+  .music{position:fixed;left:16px;bottom:16px;z-index:55;width:44px;height:44px;border-radius:50%;
+    border:1px solid var(--hairline);background:rgba(251,250,247,.92);color:var(--ink);display:none;place-items:center;cursor:pointer}
+  body.opened .music{display:grid}
+  .music svg{width:17px;height:17px}
+  .music.playing svg{animation:spin 3.6s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.music.playing svg{animation:none}}
+  .proto-tag{position:fixed;right:14px;bottom:14px;z-index:70;font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--muted);background:rgba(251,250,247,.92);border:1px solid var(--hairline);padding:7px 11px}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<div class="side-label" aria-hidden="true">Pesta Perak — MMXXVII</div>
+
+<div class="cover" id="cover">
+  <div class="cover-inner">
+    <span class="no" data-reveal>№ 25 — Pesta Perak</span>
+    <div class="cover-names">
+      <div class="name" data-reveal>Hartono</div>
+      <div class="amp" data-reveal>&amp;</div>
+      <div class="name" data-reveal>Lestari</div>
+    </div>
+    <div class="redline" data-reveal></div>
+    <div class="cover-date" data-reveal>Sabtu · 30 Januari 2027 · Jakarta</div>
+    <div class="guest" data-reveal>Kepada<b id="guestName">Bapak/Ibu Tamu Undangan</b></div>
+    <div data-reveal><button class="btn-open" id="btnOpen">Buka Undangan →</button></div>
+  </div>
+</div>
+
+<main class="stage" id="stage">
+
+  <section>
+    <div class="sec-head" data-reveal><span class="num">01</span><span class="t">Kata Pembuka</span></div>
+    <div class="big-serif" data-reveal>Dua puluh lima tahun. <em>Sembilan ribu seratus tiga puluh hari</em> saling memilih, setiap hari.</div>
+    <p class="body" data-reveal>Dengan penuh syukur atas perjalanan seperempat abad, kami mengundang keluarga dan sahabat terkasih untuk merayakan pesta perak pernikahan kami dalam jamuan makan malam yang hangat dan sederhana.</p>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="sec-head" data-reveal><span class="num">02</span><span class="t">Acara</span></div>
+    <div class="when" data-reveal>
+      <div class="date">30 <em>Januari</em><br/>2027</div>
+    </div>
+    <dl class="kv" data-reveal>
+      <dt>Waktu</dt><dd>18.30 WIB — selesai</dd>
+      <dt>Tempat</dt><dd>The Dharmawangsa, Ruang Cendana<br/>Jl. Brawijaya Raya No.26, Jakarta Selatan</dd>
+      <dt>Busana</dt><dd>Formal · sentuhan perak dipersilakan</dd>
+    </dl>
+    <div data-reveal>
+      <a class="lnk" href="#" onclick="return false">Petunjuk Arah</a>
+      <a class="lnk" href="#" onclick="return false">Simpan Kalender</a>
+    </div>
+    <div class="cd-row" data-reveal>
+      <div class="cd-cell"><div class="cd-num" id="cdD">–</div><div class="cd-label">Hari</div></div>
+      <div class="cd-cell"><div class="cd-num" id="cdH">–</div><div class="cd-label">Jam</div></div>
+      <div class="cd-cell"><div class="cd-num" id="cdM">–</div><div class="cd-label">Menit</div></div>
+      <div class="cd-cell"><div class="cd-num" id="cdS">–</div><div class="cd-label">Detik</div></div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="sec-head" data-reveal><span class="num">03</span><span class="t">Galeri</span></div>
+    <figure class="fig" data-reveal><div class="ph">Fig. 01</div><figcaption><span>Pemberkatan</span><span>2002</span></figcaption></figure>
+    <figure class="fig" data-reveal><div class="ph">Fig. 02</div><figcaption><span>Keluarga</span><span>2014</span></figcaption></figure>
+    <figure class="fig" data-reveal><div class="ph">Fig. 03</div><figcaption><span>Hari ini</span><span>2026</span></figcaption></figure>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="sec-head" data-reveal><span class="num">04</span><span class="t">Konfirmasi</span></div>
+    <div data-reveal>
+      <div class="field"><label>Nama</label><input value="Bapak/Ibu Tamu Undangan" readonly/></div>
+      <div class="field"><label>Kehadiran</label>
+        <div class="choices"><div class="choice active" data-choice>Hadir</div><div class="choice" data-choice>Berhalangan</div></div>
+      </div>
+      <div class="field"><label>Pesan</label><input placeholder="Tulis pesan singkat…"/></div>
+      <button class="btn-submit" onclick="return false">Kirim Konfirmasi</button>
+    </div>
+    <div style="margin-top:44px">
+      <div class="wish" data-reveal><b>Keluarga Tanuwijaya</b><p>“Cinta yang dirawat 25 tahun adalah karya seni. Selamat, kalian berdua.”</p></div>
+      <div class="wish" data-reveal><b>Ruth &amp; Daniel</b><p>“Panutan kami sejak dulu. Sampai jumpa di pesta perak!”</p></div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="sec-head" data-reveal><span class="num">05</span><span class="t">Tanda Kasih</span></div>
+    <p class="body" data-reveal style="margin-top:0">Kehadiran Anda adalah hadiah yang paling berarti. Bila berkenan memberi tanda kasih:</p>
+    <div class="acct" data-reveal><div><b>2244 6688 1010</b><small>BCA · a.n. Hartono Wibowo</small></div><button class="copy" data-copy="224466881010">Salin</button></div>
+  </section>
+
+  <footer>
+    <div class="mono" data-reveal>H &amp; L</div>
+    <span class="dot" data-reveal></span>
+    <p data-reveal>Sabtu · 30 Januari 2027<br/>MMXXVII — Pesta Perak</p>
+    <div data-reveal><span class="watermark">Dibuat dengan Merriva</span></div>
+  </footer>
+</main>
+
+<button class="music" id="btnMusic" aria-label="Putar musik">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>
+</button>
+<div class="proto-tag">Merriva · Mono</div>
+
+<script defer>
+/* TIER CRAFT minimal: IO reveal + countdown. Tanpa library, tanpa canvas. */
+window.addEventListener('DOMContentLoaded', () => {
+  const params  = new URLSearchParams(location.search);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOn = !reduced;
+  if (!motionOn) document.documentElement.classList.remove('js');
+
+  const to = params.get('to');
+  if (to) document.getElementById('guestName').textContent = to;
+
+  if (motionOn && 'IntersectionObserver' in window){
+    const io=new IntersectionObserver(es=>es.forEach(e=>{
+      if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
+    }),{threshold:.16,rootMargin:'0px 0px -5% 0px'});
+    document.querySelectorAll('[data-reveal]').forEach(el=>{
+      const sec=el.closest('section,.cover-inner,footer');
+      const sibs=sec?[...sec.querySelectorAll('[data-reveal]')]:[el];
+      el.style.transitionDelay=(sibs.indexOf(el)*110)+'ms';
+      io.observe(el);
+    });
+    document.querySelectorAll('.cover [data-reveal]').forEach(el=>setTimeout(()=>el.classList.add('in'),140));
+  } else {
+    document.documentElement.classList.remove('js');
+  }
+
+  document.getElementById('btnOpen').addEventListener('click', function(){
+    this.disabled=true;
+    document.body.classList.add('opened');
+    setTimeout(()=>document.getElementById('cover').remove(),950);
+    document.getElementById('btnMusic').classList.add('playing');
+  });
+  document.getElementById('btnMusic').addEventListener('click',function(){this.classList.toggle('playing');});
+
+  const target=new Date('2027-01-30T18:30:00+07:00').getTime();
+  (function tick(){
+    let ms=Math.max(0,target-Date.now());
+    const d=Math.floor(ms/864e5);ms-=d*864e5;
+    const h=Math.floor(ms/36e5);ms-=h*36e5;
+    const m=Math.floor(ms/6e4),s=Math.floor((ms-m*6e4)/1e3);
+    cdD.textContent=d;cdH.textContent=String(h).padStart(2,'0');
+    cdM.textContent=String(m).padStart(2,'0');cdS.textContent=String(s).padStart(2,'0');
+    setTimeout(tick,1000);
+  })();
+
+  document.querySelectorAll('[data-choice]').forEach(c=>c.addEventListener('click',()=>{
+    document.querySelectorAll('[data-choice]').forEach(x=>x.classList.remove('active'));c.classList.add('active');
+  }));
+  document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(b.dataset.copy);}catch(e){}
+    const t=b.textContent;b.textContent='Tersalin ✓';b.classList.add('done');
+    setTimeout(()=>{b.textContent=t;b.classList.remove('done');},1600);
+  }));
+});
+</script>
+
+</body>
+</html>

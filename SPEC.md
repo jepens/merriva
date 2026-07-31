@@ -2,7 +2,7 @@
 
 **Proyek:** **Merriva** — merriva.id
 **Fase:** MVP Fase 1 — Undangan Digital Self-Service
-**Versi dokumen:** 1.3 — 24 Juli 2026 *(revisi: perbaikan kolom `orders`; penambahan peta dokumen turunan)*
+**Versi dokumen:** 1.4 — 30 Juli 2026 *(revisi: sistem desain & motion tema — lihat `docs/THEME-DESIGN.md` dan DECISIONS #10)*
 **Dokumen terkait:** `CLAUDE.md` (instruksi agen coding) · `docs/PRD.md` · `docs/ARCHITECTURE.md` · `docs/DATA-MODEL.md` · `docs/ROADMAP.md` · `docs/DECISIONS.md` · `KICKOFF-PROMPT.md`
 **Pemilik:** Sailendra Organizer
 **Referensi:** `riset-website-undangan-digital-guestbook.md` (riset pasar, 24 Juli 2026)
@@ -255,7 +255,7 @@ Halaman undangan publik dilayani dengan **ISR** (cache di server, di-revalidate 
 | Komponen | Pilihan | Catatan |
 |---|---|---|
 | Framework | Next.js (App Router, versi stabil terbaru) + TypeScript strict | Server Components default |
-| Styling | Tailwind CSS + shadcn/ui (dashboard) + Framer Motion (tema) | |
+| Styling & motion | Tailwind CSS + shadcn/ui (dashboard); tema: sistem motion 3 tingkat — Framer Motion (Craft), GSAP ScrollTrigger/SplitText + Lenis (Story/Signature), aksen WebGL via Paper Shaders (Signature) | Panduan lengkap: `docs/THEME-DESIGN.md` |
 | Database/Auth | Supabase cloud (supabase.com) | Mulai free tier; **upgrade Pro (±$25/bln) saat launch** — free tier bisa auto-pause & tanpa backup harian |
 | Storage media | Fase dev: Supabase Storage (free, 1GB) → menjelang launch: **Cloudflare R2** (free 10GB, **egress Rp0**) | Abstraksi `lib/storage/`; media selalu disajikan via URL sendiri, bukan URL vendor — detail §6.4 |
 | Validasi | Zod (skema tunggal dipakai form & server) | |
@@ -328,7 +328,7 @@ saas-undangan/
 
 ### 7.1 Sistem tema (kontrak terpenting di kode)
 
-Setiap tema = komponen React yang menerima props `InvitationData` (hasil parse Zod dari `content`) dan **tidak boleh** mengambil data sendiri. `theme.json` mendeklarasikan metadata (nama, kategori yang didukung, varian warna, section yang didukung). `registry.ts` memetakan slug tema → komponen (dynamic import). Menambah tema baru = menambah folder + baris registry + seed metadata — **tanpa menyentuh kode inti**. Target launch: 6 tema (3 pernikahan, 1 corporate, 1 keluarga, 1 universal minimalis).
+Setiap tema = komponen React yang menerima props `InvitationData` (hasil parse Zod dari `content`) dan **tidak boleh** mengambil data sendiri. `theme.json` mendeklarasikan metadata (nama, kategori yang didukung, varian warna, section yang didukung). `registry.ts` memetakan slug tema → komponen (dynamic import). Menambah tema baru = menambah folder + baris registry + seed metadata — **tanpa menyentuh kode inti**. Target launch: 6 tema (3 pernikahan, 1 corporate, 1 keluarga, 1 universal minimalis). Art direction, sistem motion 3 tingkat, dan budget performa tema diatur di `docs/THEME-DESIGN.md`; acuan visual teruji: **6 prototipe di `prototypes/`** (satu per tema launch).
 
 ---
 

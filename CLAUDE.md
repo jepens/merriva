@@ -14,6 +14,7 @@ Domain: **merriva.id** · Bahasa UI: **Indonesia** · Semua timestamp disimpan U
 | `docs/DATA-MODEL.md` | Skema DB lengkap, RLS matrix, lifecycle data | Saat membuat migrasi / query |
 | `docs/ROADMAP.md` | Milestone M0–M4 + checklist rinci + Definition of Done | Awal sesi: cek posisi pekerjaan |
 | `docs/DECISIONS.md` | Log keputusan (ADR). **Keputusan baru wajib dicatat di sini** | Sebelum mengusulkan perubahan pendekatan |
+| `docs/THEME-DESIGN.md` | Art direction & sistem motion tema (3 tingkat: Craft/Story/Signature) + budget performa | **Wajib sebelum membuat/mengubah tema** — acuan visual: 6 prototipe di `prototypes/` (satu per tema) |
 
 ## Aturan kerja
 

@@ -31,43 +31,41 @@
 - [ ] Dashboard klien: daftar undangan + status + aksi per status; onboarding klien baru → langsung buat undangan
 - [ ] Form multi-step 3 kategori (skema Zod per kategori — `SPEC.md` §4.4): info dasar & slug checker real-time, detail pihak, jadwal multi-sesi, galeri (kompresi klien 2 varian WebP + upload via `lib/storage/` driver supabase), love story/agenda, amplop digital, pengaturan (tema, toggle section)
 - [ ] Autosave per step + indikator selesai
-- [ ] Tema pertama (`eternal-rose` atau sejenis) via registry + `demo-data.ts` + halaman preview mode draft (hanya pemilik)
-- [x] Enforcement limit paket server-side (foto/tamu) — struktur siap meski paket baru dibeli di M3
+- [ ] Tema pertama `eternal-rose` **tier Signature** sesuai `docs/THEME-DESIGN.md` §4 (acuan visual: `prototypes/eternal-rose-signature.html`) via registry + `demo-data.ts` + halaman preview mode draft (hanya pemilik)
+- [ ] Enforcement limit paket server-side (foto/tamu) — struktur siap meski paket baru dibeli di M3
 
 ## M2 — Halaman publik & tamu (~2 minggu)
 
 **Hasil akhir:** alur tamu end-to-end berjalan mulus di WebView WhatsApp.
 
-- [x] Halaman `/{slug}` ISR + revalidate saat simpan; cover "Kepada Yth." + buka undangan + musik
-- [x] Section: hero, countdown, jadwal + tombol Maps + simpan kalender (.ics/Google), galeri, love story, amplop (modal salin + konfirmasi privat), footer (watermark utk Basic)
-- [x] RSVP + ucapan (form gabungan) + dinding ucapan (paginasi, moderasi, sembunyikan) — server action + Turnstile + rate limit + honeypot
-- [x] Manajemen tamu: CRUD, label, import Excel/CSV (preview + laporan baris gagal), export
-- [x] Link personal `?g=token`: prefill nama & RSVP, catat `first_viewed_at`
-- [x] Halaman "Sebar Undangan": template pesan `{nama}/{link}/{acara}`, tombol `wa.me` per tamu (catat `wa_clicked_at`), salin per tamu / semua
-- [x] OG image otomatis per undangan (`/api/og/[slug]`)
-- [ ] Uji nyata di WebView WA Android & iOS + Lighthouse mobile ≥ 90 — **QA manual pemilik di staging/production**: kode M2 lengkap & terverifikasi lokal (server + browser mobile 390px), tetapi WebView WA nyata iOS/Android + Lighthouse ≥90 wajib diukur di build produksi/perangkat asli (SPEC §10). Fokus uji M2.6: unduh `.ics` di WebView WA iOS (opsi Google jadi cadangan bila WKWebView menolak unduhan).
+- [ ] Halaman `/{slug}` ISR + revalidate saat simpan; cover "Kepada Yth." + buka undangan + musik
+- [ ] Section: hero, countdown, jadwal + tombol Maps + simpan kalender (.ics/Google), galeri, love story, amplop (modal salin + konfirmasi privat), footer (watermark utk Basic)
+- [ ] RSVP + ucapan (form gabungan) + dinding ucapan (paginasi, moderasi, sembunyikan) — server action + Turnstile + rate limit + honeypot
+- [ ] Manajemen tamu: CRUD, label, import Excel/CSV (preview + laporan baris gagal), export
+- [ ] Link personal `?g=token`: prefill nama & RSVP, catat `first_viewed_at`
+- [ ] Halaman "Sebar Undangan": template pesan `{nama}/{link}/{acara}`, tombol `wa.me` per tamu (catat `wa_clicked_at`), salin per tamu / semua
+- [ ] OG image otomatis per undangan (`/api/og/[slug]`)
+- [ ] Uji nyata di WebView WA Android & iOS + Lighthouse mobile ≥ 90
 
 ## M3 — Monetisasi (1–2 minggu)
 
 **Hasil akhir:** bayar → aktif → kuitansi, tanpa campur tangan manual.
 
-- [x] Halaman pilih paket (data dari `packages`) + checkout → order `pending` + redirect payment link Pakasir — **M3.1**
-- [x] Webhook `/api/webhooks/pakasir`: verifikasi 2 lapis (match DB + `transactiondetail`), idempotent, aktivasi + hitung `active_until` — **M3.2** (RPC atomik `activate_paid_order`, service_role-only)
-- [x] Halaman cek status pembayaran (poll `transactiondetail`) — **M3.3** (`/dashboard/undangan/[id]/bayar` + poller; jalur aktivasi OTORITATIF kedua via `verifyAndActivate` bersama dengan webhook; `pending`→`active` tanpa reload)
-- [x] Cron expiry order + undangan — **M3.4**: `/api/cron/expire-orders` (**rekonsiliasi `transactiondetail` DULU** → aktifkan bila ternyata lunas, jika belum lunas `transactioncancel` + `expired`; menutup celah "webhook hilang" M3.3) · `/api/cron/expire-invitations` (`active` lewat `active_until` → `expired` + revalidate ISR). Auth `Authorization: Bearer <CRON_SECRET>` (timing-safe, fail-closed); RPC `expire_pending_order` service_role-only (atomik + revert `pending_payment`→`draft`)
-- [x] Reminder expiry H-14 (cron) — dikerjakan di **M3.5** (`/api/cron/expiry-reminders` + `reminder_sent_at`)
-- [x] Email transaksional (Resend) — **M3.5**: **kuitansi + link aktif** (dipicu saat order→`paid` di webhook/poll/cron, `idempotencyKey`) + **pengingat H-14** (cron `/api/cron/expiry-reminders` + kolom `reminder_sent_at`, di-reset saat perpanjangan). Infra `lib/email/` dev-safe (no-op tanpa `RESEND_API_KEY`). **Verifikasi akun/reset** tetap via Supabase Auth → arahkan ke Resend lewat **Custom SMTP** di dashboard Supabase (konfigurasi, bukan kode). Rekap RSVP mingguan (opsional) ditunda pasca-MVP
-- [x] Enforcement penuh limit paket + watermark Basic — **M3.6**: foto & tamu OTORITATIF di DB (`invitation_effective_limits` + RPC atomik `insert_gallery_media`/`insert_guest`/`insert_guests_bulk`), watermark halaman publik dari `getEffectiveLimits(package_id)`. Terverifikasi: draft→Basic (8 foto/150 tamu/watermark) → aktivasi Premium → 20 foto/tanpa batas/tanpa watermark. `youtube`/`all_themes` = limit laten (belum ada fitur/tema kedua)
-- [x] E2E: checkout → `paymentsimulation` → webhook → aktif — **M3.6**: `PakasirGateway.simulatePayment` (sandbox; dilarang di production) + spec Playwright ter-gate `tests/e2e/payment-simulation.spec.ts` (checkout → simulasi → poll `/bayar` → aktif) + runbook `docs/PAYMENT-E2E.md`. Happy-path butuh kredensial sandbox (di-skip tanpa itu); rantai selain hop Pakasir terverifikasi lokal
+- [ ] Halaman pilih paket (data dari `packages`) + checkout → order `pending` + redirect payment link Pakasir
+- [ ] Webhook `/api/webhooks/pakasir`: verifikasi 2 lapis (match DB + `transactiondetail`), idempotent, aktivasi + hitung `active_until`
+- [ ] Halaman cek status pembayaran (poll `transactiondetail`)
+- [ ] Cron: expire order 24 jam (+ `transactioncancel`), expire undangan, reminder H-14
+- [ ] Email transaksional (Resend): verifikasi, kuitansi + link aktif, pengingat expiry
+- [ ] Enforcement penuh limit paket + watermark Basic
+- [ ] E2E: checkout → `paymentsimulation` → webhook → aktif
 
 ## M4 — Launch (~2 minggu)
 
 **Hasil akhir:** go-live komersial dengan 10 undangan uji lintas kategori.
 
-- [x] Panel admin: metrik, kelola user/undangan/order (aktivasi manual, perpanjang, suspend, ganti pemilik), CRUD paket & tema, `admin_logs` — **M4.1** (`requireAdmin` non-admin→404; 5 RPC lifecycle service_role-only + audit dalam-transaksi; aktivasi manual **memakai ulang `activate_paid_order`** = identik bayar; CRUD paket revalidate landing/checkout). Migrasi `20260730150000_admin_lifecycle_rpcs.sql` (+`admin_month_revenue`) — **owner `supabase db push`**. Admin di-set via SQL `role='admin'`
-- [x] Tema tambahan — **M4.2**: pemilik memilih keempat arah wedding → **7 tema baru (total 8: 5 wedding, 1 corporate, 1 family, 1 universal)**. Meridian (corporate), Barakah (wedding islami), Aria (minimalis), Verdant (botanikal), Noir (dark-luxe), Festa (family), Lumina (universal-adaptif). Modul wedding bersama (`_shared/`) + primitif bersama; self-hosted next/font (LCP/WebView); build sukses `/[slug]` tetap ISR. Corporate & family = kategori yang sebelumnya tanpa tema. Migrasi `20260730160000_seed_more_themes.sql` — **owner `supabase db push`**
-- [x] Landing page final + katalog + demo + harga + FAQ + kebijakan privasi & refund — **M4.3**: route group `(marketing)` (landing `/`, `/tema` katalog+saring, `/harga` kartu+tabel, `/faq`, `/privasi`, `/refund`) + OG image merek. **Statis (ISR)** dibaca via client anon tanpa cookie (`lib/supabase/public.ts`); harga & tema selalu dari `packages`/`themes` (admin `revalidatePath` `/`+`/harga`+`/tema`). Sistem visual "paper" editorial (plum + marigold, Bricolage Grotesque/Hanken Grotesk self-hosted); poster tema = spesimen CSS ringan (`themes/catalog-meta.ts`) + demo hidup `/preview/tema/{slug}`. Menu & FAQ `<details>` tanpa JS; satu-satunya komponen client = filter katalog. Fitur paket bersama (`lib/package-features.ts`) untuk kartu marketing + checkout. Build: semua rute marketing `○` statis, `/[slug]` tetap ISR; typecheck 0, lint 0, 209 test. Review adversarial 6-dimensi (5 CONFIRMED, semua diperbaiki). **Owner:** set email kontak nyata (placeholder `halo@merriva.id`) + **tinjau ketentuan refund & privasi sebelum go-live**; Lighthouse ≥90 diukur di staging.
-- [x] Editor multi-kategori (corporate & family) — **DECISIONS #42**: prasyarat "10 undangan lintas kategori". Editor sebelumnya hanya wedding → Meridian/Festa/Lumina tak bisa dipakai. Backend sudah generik (`draftContentSchema` union + autosave generik) → murni UI: tipe `EditorValues` union tunggal + `EditorShell` generik + `EditorStep[]` per kategori + `TimelineStep` generik (cerita/agenda/doa). Review manual menemukan & memperbaiki **2 bug**: autosave corporate gagal begitu step Detail dibuka (`z.email().optional()` menolak "" dari RHF → `optionalFormat`), dan preview draft corporate/family kosong (`parseContentForRender` hanya wedding). Terverifikasi browser (corporate/family end-to-end); typecheck 0, lint 0, 215 test. Kontrak props tema tak berubah
+- [ ] Panel admin: metrik, kelola user/undangan/order (aktivasi manual, perpanjang, suspend, ganti pemilik), CRUD paket & tema, `admin_logs`
+- [ ] 5 tema tambahan (total 6: 3 wedding, 1 corporate, 1 family, 1 universal) — port dari acuan masing-masing di `prototypes/` sesuai tier-nya
+- [ ] Landing page final + katalog + demo + harga + FAQ + kebijakan privasi & refund
 - [ ] **Aktivasi R2 + migrasi media dari Supabase** (`ARCHITECTURE.md` §6) + `cdn.merriva.id`
 - [ ] Upgrade Supabase Pro; latihan restore backup 1×
 - [ ] Uji beban ringan halaman undangan (k6, 200 concurrent) + checklist pra-launch `SPEC.md` §10
