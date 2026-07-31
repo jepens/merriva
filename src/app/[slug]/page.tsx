@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 
 import { ExpiredNotice } from "@/components/public/expired-notice";
+import { GuestPersonalizationProvider } from "@/components/public/guest-personalization";
 import {
   InvitationShell,
   type CoverInfo,
@@ -15,6 +16,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { settingsSchema } from "@/lib/validation/content";
 import { buildInvitationData, resolveMusic } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
+import { getThemeCoverMode } from "@/themes/capabilities";
 import { getThemeLoader } from "@/themes/registry";
 import type { InvitationContent } from "@/lib/validation/content";
 import type { InvitationData } from "@/types/invitation";
@@ -172,9 +174,20 @@ export default async function PublicInvitationPage({
     music,
   });
 
-  const loader = theme?.slug ? getThemeLoader(theme.slug) : null;
-  if (!loader) notFound();
+  const themeSlug = theme?.slug ?? null;
+  const loader = themeSlug ? getThemeLoader(themeSlug) : null;
+  if (!loader || !themeSlug) notFound();
   const Theme = (await loader()).default;
+
+  // Komposisi cover dipilih dari metadata tema (DECISIONS #11), bukan cek slug.
+  // 'theme' → tema memegang cover/musik sendiri; app hanya sediakan personalisasi.
+  if (getThemeCoverMode(themeSlug) === "theme") {
+    return (
+      <GuestPersonalizationProvider slug={data.slug}>
+        <Theme data={data} />
+      </GuestPersonalizationProvider>
+    );
+  }
 
   return (
     <InvitationShell slug={data.slug} cover={coverFromData(data)} music={music}>
