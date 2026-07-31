@@ -1,23 +1,24 @@
-import type { WeddingLabels } from "@/themes/_shared/wedding-sections";
-
-export const WRONG_CATEGORY = "Tema ini khusus untuk undangan pernikahan.";
-
-/** Label chrome tema Aria (wedding minimalis). */
-export const L: WeddingLabels = {
-  hero: { eyebrow: "The Wedding Of", scroll: "Scroll" },
-  countdown: {
-    eyebrow: "Menghitung Hari",
-    done: "Hari ini",
-    days: "Hari",
-    hours: "Jam",
-    minutes: "Menit",
-    seconds: "Detik",
+/** Label chrome tema Aria (wedding minimalis galeri, tier Craft) — dalam tema. */
+export const L = {
+  wrongCategory: "Tema ini khusus untuk undangan pernikahan.",
+  cover: {
+    eyebrow: "Undangan Pernikahan",
+    open: "Buka Undangan →",
+    hint: "Geser untuk membaca",
+  },
+  sec: {
+    opening: "Kata Pembuka",
+    couple: "Mempelai",
+    event: "Acara",
+    gallery: "Galeri",
+    story: "Kisah",
+    rsvp: "Konfirmasi",
+    gift: "Tanda Kasih",
   },
   couple: {
-    eyebrow: "Mempelai",
-    groom: "Pria",
-    bride: "Wanita",
-    parents: (father, mother) => {
+    groom: "Mempelai Pria",
+    bride: "Mempelai Wanita",
+    parents: (father?: string, mother?: string) => {
       const f = father?.trim();
       const m = mother?.trim();
       if (f && m) return `Putra/Putri dari Bpk. ${f} & Ibu ${m}`;
@@ -26,24 +27,27 @@ export const L: WeddingLabels = {
       return "";
     },
   },
-  schedule: {
-    eyebrow: "Acara",
-    heading: "Waktu & Tempat",
-    maps: "Lihat Lokasi",
-    calendar: "Simpan ke Kalender",
+  event: {
+    time: "Waktu",
+    place: "Tempat",
+    maps: "Petunjuk Arah",
+    calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
   },
-  gallery: { eyebrow: "Galeri", heading: "Momen" },
-  story: { eyebrow: "Cerita", heading: "Perjalanan Kami" },
+  countdown: {
+    done: "Hari ini",
+    days: "Hari",
+    hours: "Jam",
+    minutes: "Menit",
+    seconds: "Detik",
+  },
   envelope: {
-    eyebrow: "Hadiah",
-    heading: "Tanda Kasih",
-    note: "Bila berkenan memberikan tanda kasih, dapat melalui kanal berikut.",
+    note: "Kehadiran Anda adalah hadiah yang paling berarti. Bila berkenan memberi tanda kasih:",
     copy: "Salin",
     copied: "Tersalin",
     giftAddress: "Alamat pengiriman",
     holder: "a.n.",
   },
-  footer: { thanks: "Terima Kasih", by: "Dibuat dengan", brand: "Merriva" },
-};
+  footer: { by: "Dibuat dengan", brand: "Merriva" },
+} as const;

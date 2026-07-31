@@ -19,6 +19,7 @@ const THEME_CAPABILITIES: Record<string, { coverMode: CoverMode }> = {
   noir: { coverMode: "theme" },
   verdant: { coverMode: "theme" },
   festa: { coverMode: "theme" },
+  aria: { coverMode: "theme" },
 };
 
 export function getThemeCoverMode(slug: string): CoverMode {
