@@ -15,6 +15,7 @@ Domain: **merriva.id** · Bahasa UI: **Indonesia** · Semua timestamp disimpan U
 | `docs/ROADMAP.md` | Milestone M0–M4 + checklist rinci + Definition of Done | Awal sesi: cek posisi pekerjaan |
 | `docs/DECISIONS.md` | Log keputusan (ADR). **Keputusan baru wajib dicatat di sini** | Sebelum mengusulkan perubahan pendekatan |
 | `docs/THEME-DESIGN.md` | Art direction & sistem motion tema (3 tingkat: Craft/Story/Signature) + budget performa | **Wajib sebelum membuat/mengubah tema** — acuan visual: 6 prototipe di `prototypes/` (satu per tema) |
+| `docs/THEME-PORTING.md` | Kontrak pemasangan prototipe→tema: infra bersama (`cover-gate`, `gsap-motion`, `silk-canvas`, `particles-canvas`), ketentuan per-tema, anggaran bundle per tier, DoD §5 | Saat mem-port/upgrade tema dari `prototypes/` (status pemetaan & bundle: DECISIONS #12) |
 
 ## Aturan kerja
 

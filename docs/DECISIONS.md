@@ -64,6 +64,39 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #12 — 2026-07-31 · Porting 6 tema selesai (Fase B–E): pemetaan final, angka bundle terukur, sapu DoD
+
+**Keputusan:** Menyelesaikan pemasangan 6 prototipe ke sistem tema (lanjutan #11). Seluruh 6 tema kini `coverMode:'theme'` (cover-gate bersama). Pemetaan prototipe→tema yang **benar-benar dieksekusi**:
+
+| Prototipe | Tema | Tier | Kategori | Font (next/font) | Commit |
+|---|---|---|---|---|---|
+| `eternal-rose-signature` | `eternal-rose` (upgrade) | Signature | wedding | Fraunces + Instrument Sans | (Fase A) |
+| `midnight-frame-story` | `noir` (upgrade) | Story | wedding | Cormorant Garamond + Jost | `7e7608a` |
+| `flora-atelier-story` | `verdant` (upgrade) | Story | wedding | EB Garamond + Karla | `0bcb3ba` |
+| `family-warm-craft` | `festa` (upgrade) | Craft | family | Bricolage Grotesque + Figtree | `ce90b00` |
+| `mono-universal-craft` | `aria` (upgrade) | Craft | wedding | Instrument Serif + Inter | `6091e7d` |
+| `prisma-signature` | **`prisma` (BARU)** | Signature | corporate | Space Grotesk + Space Mono | `db9cd7f` |
+
+**Angka bundle terukur** (gzip, chunk `next build`, dimuat LAZY setelah "Buka Undangan"): gsap core ≈ **26,7KB** · ScrollTrigger ≈ **17,1KB** · lenis ≈ **5,2KB**.
+- **Craft** (aria, festa): **+0KB** lib (nol gsap/lenis; festa hanya `particles-canvas` 2D ±1–2KB tanpa library). ✓ anggaran §4.
+- **Story** (noir, verdant): gsap+ScrollTrigger+lenis ≈ **49KB gz** → **~4KB DI ATAS target §4 (≤45KB)**. Target §4/#10 disusun sebelum mengukur gzip nyata; gsap core (26,7) + ScrollTrigger (17,1) ≈ 44KB sudah menghabiskan anggaran sebelum lenis. **Perlu ratifikasi pemilik:** (a) revisi target Story ke ~50KB — *rekomendasi*, smooth-scroll lenis adalah inti "feel" #10; atau (b) lepas lenis (−5,2KB → 44KB, tetapi menghapus smooth-scroll seluruh tema Story/Signature).
+- **Signature** (eternal-rose, prisma): 49KB + shader WebGL (±2KB) ≈ **51KB gz** → jauh di bawah §4 (≤90KB). ✓
+
+**Sapu DoD §5 (6 tema, 2026-07-31):** lint 0-error · typecheck · test 215 · build hijau · konsol 0 error · reduced-motion konten penuh · tanpa-JS terbaca · `?to=` personalisasi · Craft nol gsap/lenis (`window.gsap`/`Lenis` undefined). **Lighthouse mobile a11y/BP/SEO** (preview, dev): eternal-rose **100**/100/100 · noir **95**/100/100 · verdant **95**/100/100 · festa **100**/100/100 · aria **95**/100/100 · prisma **100**/100/100 — semua ≥90 (tiga 95 = satu audit `color-contrast` pada teks sekunder muted yang disengaja). **Performa Lighthouse ≥90 = gate Docker/staging**: server standalone Next tak jalan di Windows (EPERM realpath symlink pnpm) → performa diukur di staging; arsitektur memenuhinya (ISR halaman publik, font self-host, JS berat lazy di balik cover, gambar dikompres di klien).
+
+**Perbaikan Fase E (dari audit statis 6 tema + uji browser):**
+- `_shared/motion.tsx` `Reveal`: saat reduced-motion, tampilkan seluruh konten SEGERA (via rAF) — sebelumnya tema Craft (aria/festa) menyembunyikan `.reveal` di balik scroll meski reduced-motion (tak setara Story/Signature).
+- `eternal-rose/sections.tsx` `PersonCard`: selalu render monogram inisial — sebelumnya `person.photo ? null : …` membuat bingkai arch KOSONG justru saat foto diisi (tema hanya menerima `storage_path` mentah, tak bisa render foto tanpa melanggar boundary URL vendor).
+- `_shared/cover-gate.tsx`: `aria-label` pada cover `role="dialog"` — memperbaiki audit `aria-dialog-name` di 6 tema (a11y naik; agentic-browsing 50→100).
+
+**Ditunda (sadar):** (a) upgrade `meridian`/`barakah`/`lumina` ke cover-gate (tetap `coverMode:'shell'`) — deprekasi blok cover `InvitationShell` (#11 "arah akhir") menunggu ketiganya; (b) uji nyata WebView WhatsApp Android+iOS (min. eternal-rose + satu Craft); (c) angka performa Lighthouse di staging/Docker.
+
+**Ditolak:** melepas lenis sepihak demi angka 45KB (mengubah art-direction smooth-scroll semua tema — keputusan pemilik, bukan tuning diam-diam).
+
+**Konsekuensi:** `InvitationShell` masih memegang cover 3 tema shell → dua sistem cover hidup berdampingan sampai (a) tuntas. `particles-canvas` diimpor statis di eternal-rose/festa (runtime digerbangi rich/motion; ±1–2KB 2D, bukan gsap) — deviasi §9 minor, diterima (tak melanggar anggaran tier).
+
+---
+
 ## Template entri baru
 
 ```
