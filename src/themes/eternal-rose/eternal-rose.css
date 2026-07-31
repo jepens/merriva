@@ -1,503 +1,791 @@
-/* Tema "eternal-rose" (M1.5) — palet mawar/krem, tipografi serif + skrip.
-   CSS ter-scope di `.er` agar tak bocor ke chrome aplikasi. Mobile-first
-   (target WebView WhatsApp). Animasi via kelas (.er-reveal) + prefers-reduced-motion. */
+/* =============================================================================
+   ETERNAL ROSE — tier Signature (acuan: prototypes/eternal-rose-signature.html)
+   Semua kelas ter-scope di bawah `.er` → tak bertabrakan lintas tema. Token &
+   koreografi mengikuti THEME-DESIGN §4. State mask reveal DIMILIKI JS (WAAPI di
+   cover, gsap di konten); CSS hanya menyembunyikan di bawah `.is-js.is-motion`.
+============================================================================= */
 
 .er {
-  --er-bg: #fbf6f3;
-  --er-bg-alt: #f5e9e6;
-  --er-panel: #fffdfc;
-  --er-ink: #4a3a39;
-  /* WCAG AA (>=4.5:1) di --er-bg & --er-bg-alt untuk teks tubuh. */
-  --er-muted: #7a625f;
-  --er-rose: #b76e79;
-  --er-rose-soft: #e8c8cb;
-  --er-rose-deep: #8c4b56;
-  /* Emas gelap agar eyebrow/label lolos AA di latar krem. */
-  --er-gold: #7e6532;
-  --er-line: rgba(140, 75, 86, 0.16);
+  --plum: #2e1a22;
+  --plum-2: #43242f;
+  --paper: #f6efe7;
+  --paper-2: #efe5d8;
+  --rose: #b76e79;
+  --rose-soft: #d9a5ad;
+  --gold: #c9a227;
+  --ink: #241a1e;
+  --hairline: rgba(36, 26, 30, 0.14);
+  --er-serif-stack: var(--er-serif), Georgia, serif;
+  --er-sans-stack: var(--er-sans), system-ui, sans-serif;
 
-  font-family: var(--er-font-serif), Georgia, "Times New Roman", serif;
-  color: var(--er-ink);
-  background-color: var(--er-bg);
-  line-height: 1.65;
-  overflow-x: hidden;
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--er-sans-stack);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: clip;
 }
-
-.er * {
+.er *,
+.er *::before,
+.er *::after {
   box-sizing: border-box;
 }
-
-.er-script {
-  font-family: var(--er-font-script), "Brush Script MT", cursive;
-  font-weight: 400;
-  line-height: 1.1;
+.er ::selection {
+  background: var(--rose);
+  color: #fff;
 }
 
-/* ---- Layout primitives ---------------------------------------------------- */
-.er-section {
-  padding: clamp(3.5rem, 9vw, 6rem) 1.4rem;
-  max-width: 46rem;
-  margin: 0 auto;
-  text-align: center;
-}
-.er-section--tint {
-  background-color: var(--er-bg-alt);
-  max-width: none;
-}
-.er-section--tint > .er-inner {
-  max-width: 46rem;
-  margin: 0 auto;
+/* Grain global */
+.er-grain {
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* Progress bab */
+.er-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  z-index: 70;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--rose), var(--gold));
+  transform: scaleX(0);
+}
+
+/* Kelopak (canvas) */
+.er-petals {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+
+/* ------------------------------------------------------------ Tipografi ---- */
 .er-eyebrow {
-  font-size: 0.72rem;
-  letter-spacing: 0.32em;
+  font-size: 11px;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--er-gold);
-  margin: 0 0 0.75rem;
+  font-weight: 600;
+  color: var(--rose);
 }
-.er-h2 {
-  font-size: clamp(1.9rem, 6vw, 2.6rem);
-  font-weight: 500;
-  color: var(--er-rose-deep);
-  margin: 0 0 1.5rem;
+.er-serif {
+  font-family: var(--er-serif-stack);
 }
 .er-lead {
-  color: var(--er-muted);
-  font-size: 1.05rem;
-  max-width: 34rem;
+  color: rgba(36, 26, 30, 0.7);
+  font-size: 14px;
+  line-height: 1.8;
+  max-width: 320px;
   margin: 0 auto;
 }
 
-/* Pembatas botani sederhana */
-.er-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.7rem;
-  margin: 1.25rem auto;
-  color: var(--er-rose);
-}
-.er-divider::before,
-.er-divider::after {
-  content: "";
-  height: 1px;
-  width: clamp(2.5rem, 12vw, 5rem);
-  background: linear-gradient(
-    to var(--er-dir, right),
-    transparent,
-    var(--er-line)
-  );
-}
-.er-divider::after {
-  --er-dir: left;
-}
-
-/* ---- Hero ----------------------------------------------------------------- */
-.er-hero {
-  position: relative;
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 3rem 1.4rem;
-  color: #fff;
+/* Baris bermask — state tersembunyi DIMILIKI JS (WAAPI/gsap). CSS hanya
+   menyembunyikan bila JS + motion aktif → tanpa JS/motion konten terbaca. */
+.er-line {
+  display: block;
   overflow: hidden;
 }
-.er-hero__bg {
+.er-line > span {
+  display: block;
+}
+.er.is-js.is-motion .er-line > span {
+  visibility: hidden;
+}
+.er.is-js.is-motion .er-reveal {
+  opacity: 0;
+}
+
+/* --------------------------------------------------------------- Cover ----- */
+/* Tanpa JS: cover disembunyikan → konten langsung terbaca (degradasi anggun). */
+.er-cover {
+  display: none;
+}
+.er.is-js .er-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--plum);
+  color: var(--paper);
+  clip-path: inset(0 0 0 0);
+  transition:
+    clip-path 1.05s cubic-bezier(0.76, 0, 0.24, 1),
+    opacity 0.5s ease;
+}
+.er.is-js.is-open .er-cover {
+  clip-path: inset(0 0 100% 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .er.is-js .er-cover {
+    transition: none;
+  }
+}
+.er-cover__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.er-cover__fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(
+      120% 90% at 15% 10%,
+      rgba(183, 110, 121, 0.5),
+      transparent 60%
+    ),
+    radial-gradient(
+      120% 90% at 85% 90%,
+      rgba(201, 162, 39, 0.16),
+      transparent 55%
+    ),
+    linear-gradient(160deg, #241019 0%, #2e1a22 45%, #4a2733 100%);
+  background-size: 200% 200%;
+  animation: er-cover-flow 16s ease-in-out infinite alternate;
+}
+@keyframes er-cover-flow {
+  from {
+    background-position: 0% 0%;
+  }
+  to {
+    background-position: 100% 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .er-cover__fallback {
+    animation: none;
+  }
+}
+.er-cover__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 120% at 50% 55%,
+    transparent 45%,
+    rgba(20, 10, 15, 0.55) 100%
+  );
+}
+.er-cover__inner {
+  position: relative;
+  text-align: center;
+  padding: 24px;
+  max-width: 420px;
+  width: 100%;
+}
+.er-cover__inner .er-eyebrow {
+  color: var(--rose-soft);
+}
+.er-cover__names {
+  margin: 26px 0 10px;
+}
+.er-cover__name {
+  font-family: var(--er-serif-stack);
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(64px, 19vw, 88px);
+  line-height: 0.98;
+  letter-spacing: -0.01em;
+}
+.er-cover__amp {
+  font-family: var(--er-serif-stack);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 26px;
+  color: var(--gold);
+  display: block;
+  margin: 6px 0;
+}
+.er-cover__date {
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(246, 239, 231, 0.8);
+}
+.er-cover__divider {
+  width: 56px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 22px auto;
+}
+.er-guest {
+  margin: 0 auto 26px;
+  max-width: 280px;
+  padding: 14px 18px;
+  border: 1px solid rgba(246, 239, 231, 0.22);
+  border-radius: 16px;
+  backdrop-filter: blur(2px);
+  background: rgba(246, 239, 231, 0.05);
+}
+.er-guest small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(246, 239, 231, 0.6);
+  margin-bottom: 6px;
+}
+.er-guest strong {
+  font-family: var(--er-serif-stack);
+  font-weight: 400;
+  font-size: 19px;
+  letter-spacing: 0.01em;
+}
+.er-open {
+  appearance: none;
+  border: 1px solid rgba(246, 239, 231, 0.85);
+  background: transparent;
+  color: var(--paper);
+  font-family: var(--er-sans-stack);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 15px 34px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background 0.35s,
+    color 0.35s,
+    transform 0.35s;
+}
+.er-open:hover {
+  background: var(--paper);
+  color: var(--plum);
+  transform: translateY(-2px);
+}
+.er-cover__hint {
+  margin-top: 14px;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(246, 239, 231, 0.45);
+}
+
+/* ------------------------------------------------------------- Section ----- */
+.er-section {
+  position: relative;
+  padding: 88px 26px;
+}
+.er-inner {
+  max-width: 480px;
+  margin: 0 auto;
+}
+.er-center {
+  text-align: center;
+}
+.er-h2 {
+  font-family: var(--er-serif-stack);
+  font-weight: 300;
+  font-size: clamp(30px, 8vw, 40px);
+  line-height: 1.1;
+  margin-top: 12px;
+}
+
+/* Marquee */
+.er-marquee {
+  border-block: 1px solid var(--hairline);
+  padding: 12px 0;
+  overflow: hidden;
+  background: var(--paper-2);
+}
+.er-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: er-marquee 24s linear infinite;
+}
+.er-marquee__track span {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-right: 0.3em;
+  color: var(--ink);
+}
+.er-marquee__track .er-dot {
+  color: var(--rose);
+}
+@keyframes er-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .er-marquee__track {
+    animation: none;
+  }
+}
+
+/* Hero */
+.er-hero {
+  padding-top: 72px;
+  text-align: center;
+  overflow: hidden;
+}
+.er-hero__mono {
+  font-family: var(--er-serif-stack);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--rose);
+  letter-spacing: 0.1em;
+}
+.er-hero__names {
+  font-family: var(--er-serif-stack);
+  font-weight: 300;
+  font-size: clamp(44px, 12vw, 60px);
+  line-height: 1.04;
+  margin: 18px 0 8px;
+}
+.er-hero__names em {
+  font-style: italic;
+  color: var(--rose);
+}
+.er-flourish {
+  position: absolute;
+  top: 22px;
+  right: 14px;
+  width: 130px;
+  height: 130px;
+  opacity: 0.9;
+  pointer-events: none;
+}
+.er-flourish path {
+  fill: none;
+  stroke: var(--rose);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+
+/* Quote */
+.er-quote {
+  background: var(--plum);
+  color: var(--paper);
+  text-align: center;
+}
+.er-quote blockquote {
+  font-family: var(--er-serif-stack);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 17px;
+  line-height: 1.85;
+  max-width: 320px;
+  margin: 0 auto;
+}
+.er-quote cite {
+  display: block;
+  margin-top: 20px;
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--rose-soft);
+}
+
+/* Mempelai */
+.er-couple {
+  max-width: 480px;
+  margin: 0 auto;
+}
+.er-person {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 64px;
+}
+.er-person:last-child {
+  margin-bottom: 0;
+}
+.er-arch {
+  width: min(66%, 240px);
+  aspect-ratio: 3 / 4;
+  border-radius: 999px 999px 26px 26px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--hairline);
+  box-shadow: 0 24px 50px -30px rgba(46, 26, 34, 0.5);
+}
+.er-arch img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
-  transform: scale(1.05);
 }
-.er-hero__scrim {
+.er-arch__ph {
   position: absolute;
   inset: 0;
-  /* Cukup gelap agar teks putih tetap terbaca di atas foto terang sekalipun. */
-  background: linear-gradient(
-    to bottom,
-    rgba(74, 45, 50, 0.55),
-    rgba(74, 45, 50, 0.7)
-  );
-}
-/* Foto-hero: bayangan teks + eyebrow terang menjamin kontras lepas dari foto. */
-.er-hero:not(.er-hero--plain) .er-hero__names,
-.er-hero:not(.er-hero--plain) .er-hero__date {
-  text-shadow: 0 1px 14px rgba(30, 15, 18, 0.55);
-}
-.er-hero:not(.er-hero--plain) .er-eyebrow {
-  color: #ecdcb6;
-  text-shadow: 0 1px 10px rgba(30, 15, 18, 0.5);
-}
-.er-hero--plain {
-  color: var(--er-ink);
-  background: radial-gradient(
-    130% 90% at 50% 0%,
-    var(--er-rose-soft),
-    var(--er-bg) 60%
-  );
-}
-.er-hero__inner {
-  position: relative;
-  z-index: 1;
-}
-.er-hero__names {
-  font-size: clamp(3rem, 15vw, 5.5rem);
-  margin: 0.5rem 0;
-}
-.er-hero--plain .er-hero__names {
-  color: var(--er-rose-deep);
-}
-.er-hero__amp {
-  display: block;
-  font-size: clamp(1.4rem, 6vw, 2rem);
-  opacity: 0.85;
-  margin: 0.1rem 0;
-}
-.er-hero__date {
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-size: 0.85rem;
-  margin-top: 1rem;
-}
-.er-hero__scroll {
-  position: absolute;
-  bottom: 1.6rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1;
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  opacity: 0.8;
-  animation: er-bounce 2s ease-in-out infinite;
-}
-
-/* ---- Countdown ------------------------------------------------------------ */
-.er-countdown {
-  display: flex;
-  gap: clamp(0.5rem, 3vw, 1.25rem);
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.er-count-box {
-  min-width: 4.2rem;
-  padding: 0.9rem 0.4rem;
-  background: var(--er-panel);
-  border: 1px solid var(--er-line);
-  border-radius: 0.9rem;
-  box-shadow: 0 10px 30px -20px rgba(140, 75, 86, 0.5);
-}
-.er-count-num {
-  font-size: 1.9rem;
-  font-weight: 600;
-  color: var(--er-rose-deep);
-  font-variant-numeric: tabular-nums;
-}
-.er-count-label {
-  font-size: 0.68rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--er-muted);
-}
-
-/* ---- Couple --------------------------------------------------------------- */
-.er-couple {
   display: grid;
-  gap: 2.25rem;
+  place-items: center;
+  background: linear-gradient(150deg, var(--rose-soft), var(--plum-2) 90%);
 }
-.er-person__mono {
-  width: 5rem;
-  height: 5rem;
-  margin: 0 auto 1rem;
-  border-radius: 50%;
-  border: 1px solid var(--er-rose-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.9rem;
-  color: var(--er-rose);
-  background: var(--er-panel);
+.er-arch__ph span {
+  font-family: var(--er-serif-stack);
+  font-style: italic;
+  font-size: 84px;
+  color: rgba(246, 239, 231, 0.85);
 }
-.er-person__photo {
-  width: 8.5rem;
-  height: 8.5rem;
-  margin: 0 auto 1rem;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--er-panel);
-  box-shadow: 0 12px 34px -18px rgba(140, 75, 86, 0.6);
+.er-person--left .er-arch {
+  transform: rotate(-2deg);
 }
-.er-person__name {
-  font-size: 1.7rem;
-  color: var(--er-rose-deep);
-  margin: 0.2rem 0;
+.er-person--right {
+  align-items: flex-end;
+  text-align: right;
+}
+.er-person--right .er-arch {
+  transform: rotate(2deg);
+}
+.er-person h3 {
+  font-family: var(--er-serif-stack);
+  font-weight: 400;
+  font-size: clamp(30px, 8.4vw, 38px);
+  line-height: 1.1;
+}
+.er-person h3 em {
+  color: var(--rose);
+  font-style: italic;
+}
+.er-person__role {
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
 }
 .er-person__meta {
-  color: var(--er-muted);
-  font-size: 0.95rem;
-  margin: 0.15rem 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: rgba(36, 26, 30, 0.62);
+  max-width: 280px;
 }
-.er-amp-lg {
-  color: var(--er-rose);
-  font-size: 2.4rem;
+.er-person--right .er-person__meta {
+  margin-left: auto;
 }
 
-/* ---- Cards (schedule / envelope) ----------------------------------------- */
-.er-card {
-  background: var(--er-panel);
-  border: 1px solid var(--er-line);
-  border-radius: 1.1rem;
-  padding: 1.5rem 1.35rem;
-  box-shadow: 0 16px 40px -28px rgba(140, 75, 86, 0.55);
+/* Countdown (memakai komponen bersama; kelas generik di-styl di sini) */
+.er-countdown-sec {
+  background: var(--paper-2);
+  border-block: 1px solid var(--hairline);
   text-align: center;
 }
-.er-stack {
+.er .countdown {
   display: grid;
-  gap: 1.1rem;
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 380px;
+  margin: 28px auto 0;
 }
-.er-card__title {
-  font-size: 1.35rem;
-  color: var(--er-rose-deep);
-  margin: 0 0 0.35rem;
+.er .count-box {
+  text-align: center;
+  padding: 6px 4px;
+  border-left: 1px solid var(--hairline);
 }
-.er-card__row {
+.er .count-box:first-child {
+  border-left: 0;
+}
+.er .count-num {
+  font-family: var(--er-serif-stack);
+  font-weight: 300;
+  font-size: clamp(34px, 9vw, 44px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  display: block;
+}
+.er .count-label {
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(36, 26, 30, 0.55);
+  margin-top: 8px;
+  display: block;
+}
+.er .countdown-done {
+  font-family: var(--er-serif-stack);
+  font-style: italic;
+  font-size: 20px;
+  margin-top: 20px;
+}
+
+/* Jadwal */
+.er-event {
+  position: relative;
+  border-top: 1px solid var(--hairline);
+  padding: 34px 0 40px;
+  overflow: hidden;
+}
+.er-event:last-of-type {
+  border-bottom: 1px solid var(--hairline);
+}
+.er-event__num {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  font-family: var(--er-serif-stack);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 96px;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(183, 110, 121, 0.35);
+  pointer-events: none;
+}
+.er-event h3 {
+  font-family: var(--er-serif-stack);
+  font-weight: 400;
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+.er-event__meta {
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(36, 26, 30, 0.72);
+}
+.er-event__meta b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.er-pills {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  color: var(--er-ink);
-  margin: 0.3rem 0;
-  font-size: 0.98rem;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
 }
-.er-card__row svg {
-  color: var(--er-rose);
-  flex-shrink: 0;
-}
-.er-btn {
+.er-pill {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  transition: 0.3s;
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  margin-top: 0.9rem;
-  padding: 0.55rem 1.1rem;
-  border-radius: 999px;
-  border: 1px solid var(--er-rose);
-  color: var(--er-rose-deep);
-  background: transparent;
-  font-size: 0.85rem;
-  cursor: pointer;
-  text-decoration: none;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
+  gap: 7px;
 }
-.er-btn:hover {
-  background: var(--er-rose);
-  color: #fff;
+.er-pill:hover {
+  background: var(--ink);
+  color: var(--paper);
 }
-.er-btn--solid {
-  background: var(--er-rose);
-  color: #fff;
+.er-pill--solid {
+  background: var(--plum);
+  border-color: var(--plum);
+  color: var(--paper);
 }
-
-/* Aksi kartu jadwal (Maps + Simpan ke Kalender) — rata & rapi berdampingan. */
-.er-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 0.9rem;
+.er-pill--solid:hover {
+  background: var(--rose);
+  border-color: var(--rose);
 }
-.er-card__actions .er-btn {
-  margin-top: 0;
-}
-
-/* Disclosure "Simpan ke Kalender" — native <details>, tanpa JS (ramah WebView). */
 .er-cal {
   position: relative;
 }
-.er-cal__trigger {
+.er-cal > summary {
   list-style: none;
-  user-select: none;
 }
-.er-cal__trigger::-webkit-details-marker {
+.er-cal > summary::-webkit-details-marker {
   display: none;
 }
 .er-cal__menu {
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  margin-top: 0.55rem;
+  gap: 6px;
 }
 .er-cal__opt {
-  padding: 0.5rem 1rem;
-  border-radius: 0.7rem;
-  border: 1px solid var(--er-line);
-  background: var(--er-panel);
-  color: var(--er-rose-deep);
-  font-size: 0.85rem;
+  font-size: 12px;
   text-decoration: none;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
-}
-.er-cal__opt:hover {
-  background: var(--er-rose);
-  color: #fff;
-  border-color: var(--er-rose);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 9px 12px;
 }
 
-/* ---- Gallery -------------------------------------------------------------- */
+/* Galeri */
 .er-gallery {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.6rem;
+  padding-left: 0;
+  padding-right: 0;
 }
-@media (min-width: 640px) {
-  .er-gallery {
-    grid-template-columns: repeat(3, 1fr);
-  }
+.er-gallery__track {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 26px;
+  scrollbar-width: none;
+}
+.er-gallery__track::-webkit-scrollbar {
+  display: none;
 }
 .er-gallery__item {
-  aspect-ratio: 1;
+  flex: 0 0 62%;
+  scroll-snap-align: center;
+  border-radius: 22px;
   overflow: hidden;
-  border-radius: 0.7rem;
-  background: var(--er-bg-alt);
+  aspect-ratio: 3 / 4;
+  position: relative;
+  border: 1px solid var(--hairline);
+}
+.er-gallery__item:nth-child(2n) {
+  aspect-ratio: 4 / 5;
+  align-self: center;
 }
 .er-gallery__item img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
-}
-.er-gallery__item:hover img {
-  transform: scale(1.06);
-}
-.er-gallery__item--wide {
-  grid-column: span 2;
-  aspect-ratio: 2;
 }
 
-/* ---- Story ---------------------------------------------------------------- */
+/* Story / timeline */
 .er-timeline {
-  text-align: left;
-  display: grid;
-  gap: 1.5rem;
-  max-width: 34rem;
+  max-width: 460px;
   margin: 0 auto;
 }
 .er-story {
-  border-left: 2px solid var(--er-rose-soft);
-  padding: 0 0 0.2rem 1.3rem;
+  border-left: 1px solid var(--hairline);
+  padding: 0 0 30px 20px;
   position: relative;
 }
 .er-story::before {
   content: "";
   position: absolute;
-  left: -6px;
-  top: 0.4rem;
-  width: 10px;
-  height: 10px;
+  left: -4px;
+  top: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--er-rose);
+  background: var(--rose);
 }
 .er-story__date {
-  font-size: 0.75rem;
-  letter-spacing: 0.14em;
+  font-size: 10px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--er-gold);
+  color: var(--gold);
 }
 .er-story__title {
-  font-size: 1.25rem;
-  color: var(--er-rose-deep);
-  margin: 0.15rem 0 0.35rem;
+  font-family: var(--er-serif-stack);
+  font-size: 22px;
+  margin: 4px 0 6px;
 }
 .er-story__body {
-  color: var(--er-muted);
-  font-size: 0.98rem;
-  white-space: pre-line;
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(36, 26, 30, 0.7);
 }
 
-/* ---- Envelope ------------------------------------------------------------- */
+/* Amplop */
+.er-account {
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 14px;
+}
 .er-account__label {
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--er-muted);
+  color: rgba(36, 26, 30, 0.55);
 }
 .er-account__num {
-  font-size: 1.35rem;
-  letter-spacing: 0.06em;
-  color: var(--er-rose-deep);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  margin: 4px 0 10px;
   font-variant-numeric: tabular-nums;
-  margin: 0.2rem 0;
+}
+.er-copy {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--ink);
+  background: transparent;
+  border-radius: 999px;
+  padding: 9px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: 0.25s;
 }
 
-/* ---- Footer --------------------------------------------------------------- */
+/* Footer */
 .er-footer {
+  padding: 70px 26px 96px;
   text-align: center;
-  padding: 3.5rem 1.4rem 2.5rem;
-  background: var(--er-bg-alt);
+  background: var(--plum);
+  color: var(--paper);
 }
-.er-footer__thanks {
-  font-size: clamp(2rem, 9vw, 3rem);
-  color: var(--er-rose-deep);
+.er-footer__mono {
+  font-family: var(--er-serif-stack);
+  font-style: italic;
+  font-size: 34px;
+  color: var(--rose-soft);
+}
+.er-footer p {
+  font-size: 12px;
+  color: rgba(246, 239, 231, 0.6);
+  margin: 14px auto 0;
+  line-height: 1.7;
+  max-width: 320px;
 }
 .er-watermark {
-  margin-top: 2rem;
-  font-family: var(--er-font-serif), Georgia, serif;
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  color: var(--er-muted);
+  display: inline-block;
+  margin-top: 26px;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(246, 239, 231, 0.55);
+  border: 1px solid rgba(246, 239, 231, 0.2);
+  padding: 8px 14px;
+  border-radius: 999px;
 }
 .er-watermark a {
-  color: var(--er-rose-deep);
-  text-decoration: none;
+  color: inherit;
 }
 
-/* ---- Reveal + keyframes --------------------------------------------------- */
-/* Sembunyikan-awal HANYA bila JS tema benar-benar berjalan: root diberi kelas
-   `er-js` oleh RevealRoot saat mount. Tanpa JS, hidrasi gagal, atau bundle gagal
-   dimuat → tak ada `er-js` → konten tampil apa adanya (TAK PERNAH blank). */
-.er-js .er-reveal {
-  opacity: 0;
-  transform: translateY(26px);
-  transition:
-    opacity 0.8s ease,
-    transform 0.8s ease;
-  will-change: opacity, transform;
+/* Tombol musik — tampil setelah dibuka */
+.er-music {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 55;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid rgba(246, 239, 231, 0.4);
+  background: rgba(36, 26, 30, 0.75);
+  backdrop-filter: blur(6px);
+  color: var(--paper);
+  display: none;
+  place-items: center;
+  cursor: pointer;
 }
-.er-js .er-reveal.is-visible {
-  opacity: 1;
-  transform: none;
+.er.is-open .er-music {
+  display: grid;
 }
-@keyframes er-bounce {
-  0%,
-  100% {
-    transform: translate(-50%, 0);
-  }
-  50% {
-    transform: translate(-50%, 6px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .er-js .er-reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-  .er-hero__scroll {
-    animation: none;
-  }
-  .er-gallery__item img {
-    transition: none;
-  }
+
+/* Kartu (rsvp/quote pembungkus) */
+.er-card {
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 30px 60px -40px rgba(46, 26, 34, 0.35);
 }

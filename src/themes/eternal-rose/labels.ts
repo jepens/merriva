@@ -1,6 +1,12 @@
 /** Label chrome tema eternal-rose (Indonesia) — terpusat di dalam tema. */
 export const L = {
-  hero: { eyebrow: "Undangan Pernikahan", scroll: "Gulir" },
+  hero: {
+    eyebrow: "Undangan Pernikahan",
+    scroll: "Gulir",
+    title: "The Wedding",
+    of: "of",
+    hint: "Geser untuk membaca",
+  },
   countdown: {
     eyebrow: "Menuju Hari Bahagia",
     done: "Hari yang dinanti telah tiba 🤍",

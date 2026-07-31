@@ -1,58 +1,67 @@
-import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
+import { Fraunces, Instrument_Sans } from "next/font/google";
 
+import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
 import {
   formatDateOnly,
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
-import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
 import { isSectionVisible } from "@/lib/validation/content";
+import { CoverGate } from "@/themes/_shared/cover-gate";
 import type { ThemeComponentProps } from "@/themes/registry";
 
 import "./eternal-rose.css";
-import { RevealRoot } from "./reveal-root";
+import { EternalRoseCover } from "./cover";
+import { EternalRoseFx } from "./fx";
 import {
-  CountdownBlock,
   Couple,
+  CountdownBlock,
   Envelope,
   Footer,
   Gallery,
   Hero,
+  Marquee,
   QuoteBlock,
   Schedule,
   Story,
 } from "./sections";
 
-// Self-hosted (next/font) → tanpa request eksternal saat runtime (aman untuk
-// WebView & LCP). Serif untuk teks, skrip untuk nama & aksen.
-const serif = Cormorant_Garamond({
+// Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
+// Fraunces = serif display kontras (italic untuk nama); Instrument Sans = UI/caps.
+const serif = Fraunces({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--er-font-serif",
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
+  variable: "--er-serif",
   display: "swap",
 });
-const script = Great_Vibes({
+const sans = Instrument_Sans({
   subsets: ["latin"],
-  weight: "400",
-  variable: "--er-font-script",
+  weight: ["400", "500", "600"],
+  variable: "--er-sans",
   display: "swap",
 });
 
+const firstInitial = (s: string) => (s.trim()[0] ?? "•").toUpperCase();
+
 /**
- * Tema "eternal-rose" (wedding, tier standard). Menerima `InvitationData` hasil
- * rakitan server — TIDAK mengambil data sendiri (SPEC §7.1). Section tampil
- * sesuai `settings.sections` (undefined = tampil).
+ * Tema "eternal-rose" (wedding, tier Signature) — acuan
+ * `prototypes/eternal-rose-signature.html`. SERVER component: section dirender
+ * di server (SSR/ISR) lalu dibungkus `CoverGate` (klien) yang memegang cover +
+ * musik (`coverMode:'theme'`). TIDAK mengambil data sendiri (SPEC §7.1); section
+ * tampil sesuai `settings.sections`.
  */
 export default function EternalRose({ data }: ThemeComponentProps) {
+  const rootClass = `er ${serif.variable} ${sans.variable}`;
   const { settings } = data;
 
   if (data.content.category !== "wedding") {
     return (
-      <RevealRoot className={`er ${serif.variable} ${script.variable}`}>
-        <section className="er-section" style={{ minHeight: "60vh" }}>
+      <div className={rootClass}>
+        <section className="er-section er-center">
           <p className="er-lead">Tema ini khusus untuk undangan pernikahan.</p>
         </section>
-      </RevealRoot>
+      </div>
     );
   }
 
@@ -81,7 +90,7 @@ export default function EternalRose({ data }: ThemeComponentProps) {
       ? localToUtc(`${data.eventDate}T00:00`, settings.timezone)
       : null);
 
-  const hasQuote = Boolean(content.greetingOpen || content.quote?.text);
+  const hasQuote = Boolean(content.quote?.text);
   const envelope = content.envelope;
   const hasEnvelope =
     envelope.enabled &&
@@ -89,21 +98,38 @@ export default function EternalRose({ data }: ThemeComponentProps) {
       envelope.ewallets.length > 0 ||
       Boolean(envelope.giftAddress));
 
+  const marqueeText = `${groomName} & ${brideName}${
+    heroDateLabel ? ` — ${heroDateLabel}` : ""
+  }`;
+
   return (
-    <RevealRoot className={`er ${serif.variable} ${script.variable}`}>
+    <CoverGate
+      rootClassName={rootClass}
+      contentClassName="er-stage"
+      coverClassName="er-cover"
+      musicClassName="er-music"
+      music={data.music}
+      cover={
+        <EternalRoseCover
+          groomName={groomName}
+          brideName={brideName}
+          dateLabel={heroDateLabel}
+        />
+      }
+      fx={<EternalRoseFx />}
+    >
+      <div className="er-grain" aria-hidden />
+      <div className="er-progress" aria-hidden />
+
+      <Marquee text={marqueeText} />
       <Hero
+        monogram={`${firstInitial(groomName)} ♥ ${firstInitial(brideName)}`}
         groomName={groomName}
         brideName={brideName}
-        dateLabel={heroDateLabel}
-        bgUrl={data.media[0]?.url}
+        greetingOpen={content.greetingOpen}
       />
 
-      {hasQuote ? (
-        <QuoteBlock
-          greetingOpen={content.greetingOpen}
-          quote={content.quote?.text ? content.quote : undefined}
-        />
-      ) : null}
+      {hasQuote ? <QuoteBlock quote={content.quote} /> : null}
 
       <Couple groom={content.groom} bride={content.bride} />
 
@@ -133,16 +159,17 @@ export default function EternalRose({ data }: ThemeComponentProps) {
 
       {isSectionVisible(settings, "rsvp") ? (
         <section className="er-section">
-          <GuestbookSection slug={data.slug} />
+          <div className="er-inner">
+            <GuestbookSection slug={data.slug} />
+          </div>
         </section>
       ) : null}
 
       <Footer
         greetingClose={content.greetingClose}
-        groomName={groomName}
-        brideName={brideName}
+        monogram={`${firstInitial(groomName)} & ${firstInitial(brideName)}`}
         watermark={data.watermark}
       />
-    </RevealRoot>
+    </CoverGate>
   );
 }

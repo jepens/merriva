@@ -15,8 +15,7 @@
 export type CoverMode = "theme" | "shell";
 
 const THEME_CAPABILITIES: Record<string, { coverMode: CoverMode }> = {
-  // eternal-rose di-flip ke 'theme' bersama commit port cover-gate-nya.
-  "eternal-rose": { coverMode: "shell" },
+  "eternal-rose": { coverMode: "theme" },
 };
 
 export function getThemeCoverMode(slug: string): CoverMode {

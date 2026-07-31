@@ -1,4 +1,5 @@
-import { Calendar, CalendarPlus, Clock, MapPin } from "lucide-react";
+import { CalendarPlus, MapPin } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { GiftConfirm } from "@/components/public/guestbook/gift-confirm";
 import { googleCalendarUrl } from "@/lib/calendar";
@@ -10,166 +11,206 @@ import type {
   StoryEntry,
   TimezoneId,
 } from "@/lib/validation/content";
+import { Countdown } from "@/themes/_shared/motion";
+import { CopyButton } from "@/themes/_shared/copy-button";
 import type {
   InvitationEventView,
   InvitationMediaView,
 } from "@/types/invitation";
 
-import { Countdown } from "./countdown";
-import { CopyButton } from "./copy-button";
 import { L } from "./labels";
-import { Reveal } from "./reveal";
 
 const PRELINE = { whiteSpace: "pre-line" as const };
 
-/* -------------------------------------------------------------- Hero ------ */
+/** Baris bermask (`.er-line`) — state tersembunyi diisi JS (§0.4). */
+function MaskLine({ children }: { children: ReactNode }) {
+  return (
+    <span className="er-line">
+      <span>{children}</span>
+    </span>
+  );
+}
+
+/* ---------------------------------------------------------- Marquee -------- */
+export function Marquee({ text }: { text: string }) {
+  // Track diulang agar loop mulus (translateX -50%).
+  return (
+    <div className="er-marquee" aria-hidden>
+      <div className="er-marquee__track">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <span key={i}>
+            {text} <span className="er-dot">✦</span>&nbsp;
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- Hero -------- */
 export function Hero({
+  monogram,
   groomName,
   brideName,
-  dateLabel,
-  bgUrl,
+  greetingOpen,
 }: {
+  monogram: string;
   groomName: string;
   brideName: string;
-  dateLabel: string | null;
-  bgUrl?: string;
+  greetingOpen?: string;
 }) {
   return (
-    <header className={bgUrl ? "er-hero" : "er-hero er-hero--plain"}>
-      {bgUrl ? (
-        <>
-          {/* Eager <img> (bukan CSS background) → LCP ter-preload saat parse HTML,
-              dan menghindari interpolasi nilai ke string CSS url("…"). */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            className="er-hero__bg"
-            src={bgUrl}
-            alt=""
-            aria-hidden
-            fetchPriority="high"
-            decoding="async"
-          />
-          <div className="er-hero__scrim" aria-hidden />
-        </>
-      ) : null}
-      <div className="er-hero__inner">
-        <p className="er-eyebrow">{L.hero.eyebrow}</p>
-        <h1 className="er-hero__names er-script">
-          {groomName}
-          <span className="er-hero__amp">&amp;</span>
-          {brideName}
-        </h1>
-        {dateLabel ? <p className="er-hero__date">{dateLabel}</p> : null}
+    <header className="er-section er-hero">
+      <svg
+        className="er-flourish"
+        viewBox="0 0 130 130"
+        aria-hidden
+        focusable="false"
+      >
+        <path d="M118 12 C 92 18, 84 42, 96 58 C 104 69, 120 66, 122 54 C 124 43, 112 38, 106 46" />
+        <path d="M96 58 C 84 74, 60 78, 44 92 C 32 102, 26 114, 28 124" />
+        <path d="M70 84 C 76 74, 90 72, 96 76 M52 98 C 58 88, 70 86, 78 90" />
+      </svg>
+      <div className="er-reveal">
+        <div className="er-hero__mono">{monogram}</div>
       </div>
-      <span className="er-hero__scroll" aria-hidden>
-        {L.hero.scroll}
-      </span>
+      <h1 className="er-hero__names">
+        <MaskLine>{L.hero.title}</MaskLine>
+        <MaskLine>
+          {L.hero.of} <em>{groomName}</em> &amp; <em>{brideName}</em>
+        </MaskLine>
+      </h1>
+      {greetingOpen ? (
+        <div className="er-reveal">
+          <p className="er-lead" style={PRELINE}>
+            {greetingOpen}
+          </p>
+        </div>
+      ) : null}
     </header>
   );
 }
 
-/* ------------------------------------------------------------- Quote ------ */
+/* ------------------------------------------------------------ Quote -------- */
 export function QuoteBlock({
-  greetingOpen,
   quote,
 }: {
-  greetingOpen?: string;
   quote?: { text: string; source?: string };
 }) {
+  // greetingOpen sudah tampil di hero → di sini fokus kutipan/ayat.
+  if (!quote) return null;
   return (
-    <section className="er-section">
-      <Reveal>
-        {greetingOpen ? (
-          <p
-            className="er-lead"
-            style={{ ...PRELINE, marginBottom: quote ? "1.75rem" : 0 }}
-          >
-            {greetingOpen}
-          </p>
-        ) : null}
-        {quote ? (
-          <>
-            <div className="er-divider" aria-hidden>
-              ❦
-            </div>
-            <p className="er-lead" style={{ fontStyle: "italic" }}>
-              “{quote.text}”
-            </p>
-            {quote.source ? (
-              <p className="er-eyebrow" style={{ marginTop: "0.75rem" }}>
-                {quote.source}
-              </p>
-            ) : null}
-          </>
-        ) : null}
-      </Reveal>
+    <section className="er-section er-quote">
+      <blockquote>
+        <MaskLine>“{quote.text}”</MaskLine>
+      </blockquote>
+      {quote.source ? (
+        <div className="er-reveal">
+          <cite>{quote.source}</cite>
+        </div>
+      ) : null}
     </section>
   );
 }
 
-/* ------------------------------------------------------------ Couple ------ */
-function PersonCard({ person, role }: { person: Person; role: string }) {
-  const initial = (person.nickname || person.name || "•")
-    .trim()
-    .charAt(0)
-    .toUpperCase();
+/* ----------------------------------------------------------- Couple -------- */
+function PersonCard({
+  person,
+  role,
+  side,
+  initial,
+}: {
+  person: Person;
+  role: string;
+  side: "left" | "right";
+  initial: string;
+}) {
   const parents = L.couple.parents(person.fatherName, person.motherName);
   return (
-    <div>
-      <div className="er-person__mono er-script" aria-hidden>
-        {initial}
+    <div className={`er-person er-person--${side}`}>
+      <div className="er-arch" data-parallax={side === "left" ? "-8" : "8"}>
+        {person.photo ? null : (
+          <div className="er-arch__ph">
+            <span>{initial}</span>
+          </div>
+        )}
       </div>
-      <p className="er-eyebrow">{role}</p>
-      <h3 className="er-person__name">{person.name || "—"}</h3>
-      {person.childOrder ? (
-        <p className="er-person__meta">{person.childOrder}</p>
-      ) : null}
-      {parents ? <p className="er-person__meta">{parents}</p> : null}
+      <div>
+        <div className="er-reveal">
+          <div className="er-person__role">{role}</div>
+        </div>
+        <h3>
+          <MaskLine>{person.name || "—"}</MaskLine>
+        </h3>
+        {person.childOrder ? (
+          <div className="er-reveal">
+            <p className="er-person__meta">{person.childOrder}</p>
+          </div>
+        ) : null}
+        {parents ? (
+          <div className="er-reveal">
+            <p className="er-person__meta">{parents}</p>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
 
 export function Couple({ groom, bride }: { groom: Person; bride: Person }) {
+  const gi = (groom.nickname || groom.name || "•")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+  const bi = (bride.nickname || bride.name || "•")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
   return (
-    <section className="er-section er-section--tint">
-      <div className="er-inner">
-        <Reveal>
-          <h2 className="er-eyebrow">{L.couple.eyebrow}</h2>
-          <div className="er-divider" aria-hidden>
-            ❦
-          </div>
-        </Reveal>
-        <div className="er-couple">
-          <Reveal>
-            <PersonCard person={groom} role={L.couple.groom} />
-          </Reveal>
-          <div className="er-amp-lg er-script" aria-hidden>
-            &amp;
-          </div>
-          <Reveal delay={120}>
-            <PersonCard person={bride} role={L.couple.bride} />
-          </Reveal>
-        </div>
+    <section className="er-section">
+      <div className="er-center er-reveal" style={{ marginBottom: "18px" }}>
+        <p className="er-eyebrow">{L.couple.eyebrow}</p>
+      </div>
+      <div className="er-couple">
+        <PersonCard
+          person={groom}
+          role={L.couple.groom}
+          side="left"
+          initial={gi}
+        />
+        <PersonCard
+          person={bride}
+          role={L.couple.bride}
+          side="right"
+          initial={bi}
+        />
       </div>
     </section>
   );
 }
 
-/* --------------------------------------------------------- Countdown ------ */
+/* --------------------------------------------------------- Countdown ------- */
 export function CountdownBlock({ targetIso }: { targetIso: string }) {
   return (
-    <section className="er-section">
-      <Reveal>
+    <section className="er-section er-countdown-sec">
+      <div className="er-reveal">
         <p className="er-eyebrow">{L.countdown.eyebrow}</p>
-      </Reveal>
-      <Reveal>
-        <Countdown targetIso={targetIso} />
-      </Reveal>
+      </div>
+      <Countdown
+        targetIso={targetIso}
+        labels={{
+          days: L.countdown.days,
+          hours: L.countdown.hours,
+          minutes: L.countdown.minutes,
+          seconds: L.countdown.seconds,
+          done: L.countdown.done,
+        }}
+      />
     </section>
   );
 }
 
-/* ---------------------------------------------------------- Schedule ------ */
+/* ---------------------------------------------------------- Schedule ------- */
 export function Schedule({
   events,
   tz,
@@ -179,28 +220,18 @@ export function Schedule({
   tz: TimezoneId;
   slug: string;
 }) {
-  // Berkas .ics hanya dilayani route untuk undangan AKTIF & slug publik. Pada
-  // showcase demo (slug "demo" = reserved) dan pratinjau draft (slug "draft-…")
-  // tautan itu 404 → sembunyikan opsi Apple/Outlook di situ (Google tetap jalan,
-  // tak butuh server). Halaman publik nyata tak pernah reserved/draft → tampil.
   const icsServable = !isReservedSlug(slug) && !isDraftSlug(slug);
   return (
     <section className="er-section">
-      <Reveal>
+      <div className="er-center er-reveal">
         <p className="er-eyebrow">{L.schedule.eyebrow}</p>
         <h2 className="er-h2">{L.schedule.heading}</h2>
-      </Reveal>
-      <div className="er-stack">
+      </div>
+      <div style={{ marginTop: "24px" }}>
         {events.map((e, i) => {
           const f = formatEventDateTime(e.startAt, tz);
-          // Hanya izinkan http(s) sebagai href (cegah `javascript:` XSS —
-          // mapsUrl draft belum tervalidasi format).
           const maps =
             e.mapsUrl && /^https?:\/\//i.test(e.mapsUrl) ? e.mapsUrl : null;
-          // Aksi kalender (SPEC §4.5). Google = tautan render langsung; .ics =
-          // route handler (jalur Apple/Outlook). Keduanya dirakit saat render
-          // statis (tanpa JS klien) → ramah WebView & ISR. Tampil hanya bila
-          // waktu mulai valid (googleUrl non-null).
           const gcal = googleCalendarUrl({
             id: e.id,
             title: e.name,
@@ -211,46 +242,47 @@ export function Schedule({
           });
           const icsUrl = `/api/ics/${slug}?e=${encodeURIComponent(e.id)}`;
           return (
-            <Reveal key={e.id} delay={i * 80}>
-              <article className="er-card">
-                <h3 className="er-card__title">{e.name}</h3>
-                {f ? (
-                  <>
-                    <p className="er-card__row">
-                      <Calendar size={16} />
-                      {f.weekday}, {f.date}
-                    </p>
-                    <p className="er-card__row">
-                      <Clock size={16} />
-                      {f.time} {f.tzLabel}
-                    </p>
-                  </>
-                ) : null}
-                {e.venueName ? (
-                  <p className="er-card__row">
-                    <MapPin size={16} />
-                    {e.venueName}
-                  </p>
-                ) : null}
-                {e.address ? (
-                  <p className="er-person__meta">{e.address}</p>
-                ) : null}
-                <div className="er-card__actions">
+            <article className="er-event" key={e.id}>
+              <div className="er-event__num" aria-hidden>
+                {String(i + 1).padStart(2, "0")}
+              </div>
+              <h3>
+                <MaskLine>{e.name}</MaskLine>
+              </h3>
+              <div className="er-reveal">
+                <div className="er-event__meta">
+                  {f ? (
+                    <>
+                      <b>
+                        {f.weekday}, {f.date} · {f.time} {f.tzLabel}
+                      </b>
+                      <br />
+                    </>
+                  ) : null}
+                  {e.venueName ? (
+                    <>
+                      {e.venueName}
+                      <br />
+                    </>
+                  ) : null}
+                  {e.address ?? null}
+                </div>
+                <div className="er-pills">
                   {maps ? (
                     <a
-                      className="er-btn"
+                      className="er-pill er-pill--solid"
                       href={maps}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <MapPin size={15} />
+                      <MapPin size={14} />
                       {L.schedule.maps}
                     </a>
                   ) : null}
                   {gcal ? (
                     <details className="er-cal">
-                      <summary className="er-btn er-cal__trigger">
-                        <CalendarPlus size={15} />
+                      <summary className="er-pill">
+                        <CalendarPlus size={14} />
                         {L.schedule.calendar}
                       </summary>
                       <div className="er-cal__menu">
@@ -263,9 +295,6 @@ export function Schedule({
                           {L.schedule.calendarGoogle}
                         </a>
                         {icsServable ? (
-                          // target=_blank memberi WebView (WKWebView iOS) jalan
-                          // menyerahkan unduhan .ics ke browser sistem; aman utk
-                          // Android (Content-Disposition tetap memicu unduhan).
                           <a
                             className="er-cal__opt"
                             href={icsUrl}
@@ -279,8 +308,8 @@ export function Schedule({
                     </details>
                   ) : null}
                 </div>
-              </article>
-            </Reveal>
+              </div>
+            </article>
           );
         })}
       </div>
@@ -288,60 +317,56 @@ export function Schedule({
   );
 }
 
-/* ----------------------------------------------------------- Gallery ------ */
+/* ----------------------------------------------------------- Gallery ------- */
 export function Gallery({ media }: { media: InvitationMediaView[] }) {
   return (
-    <section className="er-section er-section--tint">
-      <div className="er-inner">
-        <Reveal>
-          <p className="er-eyebrow">{L.gallery.eyebrow}</p>
-          <h2 className="er-h2">{L.gallery.heading}</h2>
-        </Reveal>
-        <Reveal>
-          <div className="er-gallery">
-            {media.map((m) => (
-              <div key={m.id} className="er-gallery__item">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={m.thumbUrl}
-                  alt=""
-                  loading="lazy"
-                  width={m.width ?? undefined}
-                  height={m.height ?? undefined}
-                />
-              </div>
-            ))}
-          </div>
-        </Reveal>
+    <section className="er-section er-gallery">
+      <div className="er-center er-reveal">
+        <p className="er-eyebrow">{L.gallery.eyebrow}</p>
+        <h2 className="er-h2 er-serif">{L.gallery.heading}</h2>
       </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------- Story ------ */
-export function Story({ story }: { story: StoryEntry[] }) {
-  return (
-    <section className="er-section">
-      <Reveal>
-        <p className="er-eyebrow">{L.story.eyebrow}</p>
-        <h2 className="er-h2">{L.story.heading}</h2>
-      </Reveal>
-      <div className="er-timeline">
-        {story.map((s, i) => (
-          <Reveal key={i} delay={i * 70}>
-            <div className="er-story">
-              {s.date ? <p className="er-story__date">{s.date}</p> : null}
-              <h3 className="er-story__title">{s.title}</h3>
-              <p className="er-story__body">{s.narrative}</p>
-            </div>
-          </Reveal>
+      <div className="er-gallery__track">
+        {media.map((m) => (
+          <div className="er-gallery__item" key={m.id}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={m.thumbUrl}
+              alt=""
+              loading="lazy"
+              width={m.width ?? undefined}
+              height={m.height ?? undefined}
+            />
+          </div>
         ))}
       </div>
     </section>
   );
 }
 
-/* ---------------------------------------------------------- Envelope ------ */
+/* ------------------------------------------------------------- Story ------- */
+export function Story({ story }: { story: StoryEntry[] }) {
+  return (
+    <section className="er-section">
+      <div className="er-center er-reveal">
+        <p className="er-eyebrow">{L.story.eyebrow}</p>
+        <h2 className="er-h2">{L.story.heading}</h2>
+      </div>
+      <div className="er-timeline" style={{ marginTop: "28px" }}>
+        {story.map((s, i) => (
+          <div className="er-reveal" key={i}>
+            <div className="er-story">
+              {s.date ? <p className="er-story__date">{s.date}</p> : null}
+              <h3 className="er-story__title">{s.title}</h3>
+              <p className="er-story__body">{s.narrative}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------- Envelope ------- */
 export function Envelope({
   envelope,
   slug,
@@ -350,90 +375,95 @@ export function Envelope({
   slug: string;
 }) {
   return (
-    <section className="er-section er-section--tint">
-      <div className="er-inner">
-        <Reveal>
-          <p className="er-eyebrow">{L.envelope.eyebrow}</p>
-          <h2 className="er-h2">{L.envelope.heading}</h2>
-          <p className="er-lead" style={{ marginBottom: "2rem" }}>
-            {L.envelope.note}
-          </p>
-        </Reveal>
-        <div className="er-stack">
-          {envelope.banks.map((b, i) => (
-            <Reveal key={`b${i}`}>
-              <article className="er-card">
-                <p className="er-account__label">{b.bank}</p>
-                <p className="er-account__num">{b.number}</p>
+    <section className="er-section">
+      <div className="er-center er-reveal">
+        <p className="er-eyebrow">{L.envelope.eyebrow}</p>
+        <h2 className="er-h2">{L.envelope.heading}</h2>
+        <p className="er-lead" style={{ marginTop: "14px" }}>
+          {L.envelope.note}
+        </p>
+      </div>
+      <div className="er-inner" style={{ marginTop: "8px" }}>
+        {envelope.banks.map((b, i) => (
+          <div className="er-reveal" key={`b${i}`}>
+            <article className="er-account">
+              <p className="er-account__label">{b.bank}</p>
+              <p className="er-account__num">{b.number}</p>
+              <p className="er-person__meta">
+                {L.envelope.holder} {b.holder}
+              </p>
+              <CopyButton
+                value={b.number}
+                labelCopy={L.envelope.copy}
+                labelCopied={L.envelope.copied}
+                className="er-copy"
+              />
+            </article>
+          </div>
+        ))}
+        {envelope.ewallets.map((w, i) => (
+          <div className="er-reveal" key={`w${i}`}>
+            <article className="er-account">
+              <p className="er-account__label">{w.provider}</p>
+              <p className="er-account__num">{w.number}</p>
+              {w.holder ? (
                 <p className="er-person__meta">
-                  {L.envelope.holder} {b.holder}
+                  {L.envelope.holder} {w.holder}
                 </p>
-                <CopyButton value={b.number} />
-              </article>
-            </Reveal>
-          ))}
-          {envelope.ewallets.map((w, i) => (
-            <Reveal key={`w${i}`}>
-              <article className="er-card">
-                <p className="er-account__label">{w.provider}</p>
-                <p className="er-account__num">{w.number}</p>
-                {w.holder ? (
-                  <p className="er-person__meta">
-                    {L.envelope.holder} {w.holder}
-                  </p>
-                ) : null}
-                <CopyButton value={w.number} />
-              </article>
-            </Reveal>
-          ))}
-          {envelope.giftAddress ? (
-            <Reveal>
-              <article className="er-card">
-                <p className="er-account__label">{L.envelope.giftAddress}</p>
-                <p
-                  className="er-person__meta"
-                  style={{ ...PRELINE, marginTop: "0.4rem" }}
-                >
-                  {envelope.giftAddress}
-                </p>
-              </article>
-            </Reveal>
-          ) : null}
-        </div>
-        <Reveal>
+              ) : null}
+              <CopyButton
+                value={w.number}
+                labelCopy={L.envelope.copy}
+                labelCopied={L.envelope.copied}
+                className="er-copy"
+              />
+            </article>
+          </div>
+        ))}
+        {envelope.giftAddress ? (
+          <div className="er-reveal">
+            <article className="er-account">
+              <p className="er-account__label">{L.envelope.giftAddress}</p>
+              <p
+                className="er-person__meta"
+                style={{ ...PRELINE, marginTop: 4 }}
+              >
+                {envelope.giftAddress}
+              </p>
+            </article>
+          </div>
+        ) : null}
+        <div className="er-reveal" style={{ marginTop: "18px" }}>
           <GiftConfirm slug={slug} />
-        </Reveal>
+        </div>
       </div>
     </section>
   );
 }
 
-/* ------------------------------------------------------------ Footer ------ */
+/* ------------------------------------------------------------ Footer ------- */
 export function Footer({
   greetingClose,
-  groomName,
-  brideName,
+  monogram,
   watermark,
 }: {
   greetingClose?: string;
-  groomName: string;
-  brideName: string;
+  monogram: string;
   watermark: boolean;
 }) {
   return (
     <footer className="er-footer">
-      <Reveal>
-        {greetingClose ? (
-          <p className="er-lead" style={{ ...PRELINE, marginBottom: "2rem" }}>
-            {greetingClose}
-          </p>
-        ) : null}
-        <p className="er-footer__thanks er-script">{L.footer.thanks}</p>
-        <p className="er-eyebrow" style={{ marginTop: "1rem" }}>
-          {groomName} &amp; {brideName}
+      <div className="er-reveal">
+        <div className="er-footer__mono">{monogram}</div>
+        {greetingClose ? <p style={PRELINE}>{greetingClose}</p> : null}
+        <p
+          className="er-eyebrow"
+          style={{ marginTop: "18px", color: "inherit" }}
+        >
+          {L.footer.thanks}
         </p>
         {watermark ? (
-          <p className="er-watermark">
+          <span className="er-watermark">
             {L.footer.by}{" "}
             <a
               href="https://merriva.id"
@@ -442,9 +472,9 @@ export function Footer({
             >
               {L.footer.brand}
             </a>
-          </p>
+          </span>
         ) : null}
-      </Reveal>
+      </div>
     </footer>
   );
 }
