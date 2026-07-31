@@ -4,9 +4,9 @@ import { Mail, Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { copy } from "@/lib/copy";
-import { viewGuestByTokenAction } from "@/server/actions/personalization";
 
-import { GuestContextProvider } from "./guest-context";
+import { useGuestContext } from "./guest-context";
+import { GuestPersonalizationProvider } from "./guest-personalization";
 import "./invitation-shell.css";
 
 export interface CoverInfo {
@@ -24,6 +24,11 @@ export interface CoverInfo {
  * mengubah kontrak props tema. Konten tema selalu ada di DOM (baik untuk ISR/
  * SEO/LCP & WebView WA); cover hanya lapisan visual yang muncul setelah JS jalan
  * (`.inv-js`) → tanpa JS konten langsung terlihat (degradasi anggun).
+ *
+ * Personalisasi tamu dipindah ke `GuestPersonalizationProvider` (saluran tunggal
+ * yang juga dipakai tema `coverMode:'theme'` & preview). Dipakai HANYA untuk tema
+ * `coverMode:'shell'`; setelah semua tema punya cover sendiri, cangkang ini
+ * di-deprecate (DECISIONS #11).
  */
 export function InvitationShell({
   slug,
@@ -36,45 +41,32 @@ export function InvitationShell({
   music: { url: string; title: string } | null;
   children: ReactNode;
 }) {
+  return (
+    <GuestPersonalizationProvider slug={slug}>
+      <InvitationShellInner cover={cover} music={music}>
+        {children}
+      </InvitationShellInner>
+    </GuestPersonalizationProvider>
+  );
+}
+
+function InvitationShellInner({
+  cover,
+  music,
+  children,
+}: {
+  cover: CoverInfo;
+  music: { url: string; title: string } | null;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
-  // Personalisasi tamu (SPEC §4.5) — diisi SETELAH hidrasi dari `?g=`/`?to=`
-  // (halaman tetap ISR). Render awal = generik (cocok dgn HTML statis → tanpa
-  // mismatch hidrasi), lalu di-update.
-  const [guest, setGuest] = useState<{
-    name: string | null;
-    token: string | null;
-  }>({ name: null, token: null });
+  // Nama penerima dari personalisasi (SPEC §4.5) — provider mengisinya SETELAH
+  // hidrasi; render awal = generik (cocok dgn HTML statis → tanpa mismatch).
+  const { recipientName } = useGuestContext();
   const shellRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-
-  // Resolusi personalisasi selalu lewat promise → setGuest hanya di `.then()`
-  // (bukan sinkron di badan efek) demi menghindari cascading render.
-  useEffect(() => {
-    let active = true;
-    const params = new URLSearchParams(window.location.search);
-    const g = params.get("g");
-    const to = params.get("to");
-    void (async (): Promise<{ name: string; token: string | null } | null> => {
-      if (g) {
-        // `?g=token` → resolve nama via server (service-role) + catat first_viewed_at.
-        const res = await viewGuestByTokenAction(slug, g);
-        return res?.name ? { name: res.name, token: g } : null;
-      }
-      if (to) {
-        // `?to=Nama` fallback manual (sudah ter-decode oleh URLSearchParams).
-        const name = to.replace(/[<>]/g, "").trim().slice(0, 60);
-        return name ? { name, token: null } : null;
-      }
-      return null;
-    })().then((r) => {
-      if (active && r) setGuest(r);
-    });
-    return () => {
-      active = false;
-    };
-  }, [slug]);
 
   // Tandai JS aktif lewat kelas (bukan setState → hindari set-state-in-effect).
   // Tanpa JS kelas tak pernah ditambah → cover tak tampil, konten langsung terlihat.
@@ -141,77 +133,73 @@ export function InvitationShell({
   const t = copy.public;
 
   return (
-    <GuestContextProvider
-      value={{ recipientName: guest.name, guestToken: guest.token }}
-    >
-      <div ref={shellRef} className="inv-shell">
-        <div ref={contentRef} className="inv-content" tabIndex={-1}>
-          {children}
-        </div>
+    <div ref={shellRef} className="inv-shell">
+      <div ref={contentRef} className="inv-content" tabIndex={-1}>
+        {children}
+      </div>
 
-        <div
-          className="inv-cover"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="inv-cover-title"
-          aria-hidden={open}
-        >
-          {cover.bgUrl ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                className="inv-cover__bg"
-                src={cover.bgUrl}
-                alt=""
-                aria-hidden
-                fetchPriority="high"
-                decoding="async"
-              />
-              <div className="inv-cover__scrim" aria-hidden />
-            </>
-          ) : null}
-          <p className="inv-cover__label">{t.cover.recipient}</p>
-          <p className="inv-cover__recipient">
-            {guest.name ?? cover.recipient}
-          </p>
-          <p className="inv-cover__invited">{t.cover.invited}</p>
-          <p className="inv-cover__kicker">{cover.kicker}</p>
-          <h1 id="inv-cover-title" className="inv-cover__title">
-            {cover.title}
-          </h1>
-          {cover.dateLabel ? (
-            <p className="inv-cover__date">{cover.dateLabel}</p>
-          ) : null}
-          <button
-            type="button"
-            className="inv-cover__open"
-            onClick={handleOpen}
-            tabIndex={open ? -1 : 0}
-          >
-            <Mail size={18} aria-hidden />
-            {t.cover.open}
-          </button>
-        </div>
-
-        {music ? (
+      <div
+        className="inv-cover"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="inv-cover-title"
+        aria-hidden={open}
+      >
+        {cover.bgUrl ? (
           <>
-            <audio ref={audioRef} src={music.url} loop preload="none" />
-            <button
-              type="button"
-              className="inv-music"
-              onClick={toggleMusic}
-              aria-label={playing ? t.music.pause : t.music.play}
-              aria-pressed={playing}
-            >
-              {playing ? (
-                <Pause size={18} aria-hidden />
-              ) : (
-                <Play size={18} aria-hidden />
-              )}
-            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="inv-cover__bg"
+              src={cover.bgUrl}
+              alt=""
+              aria-hidden
+              fetchPriority="high"
+              decoding="async"
+            />
+            <div className="inv-cover__scrim" aria-hidden />
           </>
         ) : null}
+        <p className="inv-cover__label">{t.cover.recipient}</p>
+        <p className="inv-cover__recipient">
+          {recipientName ?? cover.recipient}
+        </p>
+        <p className="inv-cover__invited">{t.cover.invited}</p>
+        <p className="inv-cover__kicker">{cover.kicker}</p>
+        <h1 id="inv-cover-title" className="inv-cover__title">
+          {cover.title}
+        </h1>
+        {cover.dateLabel ? (
+          <p className="inv-cover__date">{cover.dateLabel}</p>
+        ) : null}
+        <button
+          type="button"
+          className="inv-cover__open"
+          onClick={handleOpen}
+          tabIndex={open ? -1 : 0}
+        >
+          <Mail size={18} aria-hidden />
+          {t.cover.open}
+        </button>
       </div>
-    </GuestContextProvider>
+
+      {music ? (
+        <>
+          <audio ref={audioRef} src={music.url} loop preload="none" />
+          <button
+            type="button"
+            className="inv-music"
+            onClick={toggleMusic}
+            aria-label={playing ? t.music.pause : t.music.play}
+            aria-pressed={playing}
+          >
+            {playing ? (
+              <Pause size={18} aria-hidden />
+            ) : (
+              <Play size={18} aria-hidden />
+            )}
+          </button>
+        </>
+      ) : null}
+    </div>
   );
 }
