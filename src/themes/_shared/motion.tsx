@@ -53,6 +53,17 @@ export function Reveal({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Reduced-motion: tampilkan seluruh konten SEGERA (tanpa gating scroll) →
+    // "konten lengkap tanpa animasi" (DoD §5), setara tema Story/Signature yang
+    // memang tak menyembunyikan reveal saat `is-motion` absen. setState di dalam
+    // rAF (bukan sinkron di badan efek) → hindari cascading render & aman hidrasi.
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ) {
+      const raf = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
     const io = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {

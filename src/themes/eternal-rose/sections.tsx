@@ -129,11 +129,13 @@ function PersonCard({
   return (
     <div className={`er-person er-person--${side}`}>
       <div className="er-arch" data-parallax={side === "left" ? "-8" : "8"}>
-        {person.photo ? null : (
-          <div className="er-arch__ph">
-            <span>{initial}</span>
-          </div>
-        )}
+        {/* Tema hanya menerima `storage_path` mentah (bukan URL ter-resolve),
+            jadi foto person tak bisa dirender aman (boundary: tanpa URL vendor).
+            Selalu tampilkan monogram inisial di bingkai arch — mencegah kotak
+            kosong saat foto diisi (degradasi anggun). */}
+        <div className="er-arch__ph">
+          <span>{initial}</span>
+        </div>
       </div>
       <div>
         <div className="er-reveal">

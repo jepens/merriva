@@ -188,6 +188,7 @@ export function CoverGate({
             className={coverClassName}
             role="dialog"
             aria-modal="true"
+            aria-label={t.cover.defaultKicker}
             aria-hidden={opened}
           >
             {cover}
