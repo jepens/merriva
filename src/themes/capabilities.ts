@@ -17,6 +17,7 @@ export type CoverMode = "theme" | "shell";
 const THEME_CAPABILITIES: Record<string, { coverMode: CoverMode }> = {
   "eternal-rose": { coverMode: "theme" },
   noir: { coverMode: "theme" },
+  verdant: { coverMode: "theme" },
 };
 
 export function getThemeCoverMode(slug: string): CoverMode {

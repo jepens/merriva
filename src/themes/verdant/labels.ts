@@ -1,23 +1,16 @@
-import type { WeddingLabels } from "@/themes/_shared/wedding-sections";
-
-export const WRONG_CATEGORY = "Tema ini khusus untuk undangan pernikahan.";
-
-/** Label chrome tema Verdant (wedding botanikal). */
-export const L: WeddingLabels = {
-  hero: { eyebrow: "Undangan Pernikahan", scroll: "Gulir" },
-  countdown: {
-    eyebrow: "Menuju Hari Bahagia",
-    done: "Hari yang dinanti telah tiba",
-    days: "Hari",
-    hours: "Jam",
-    minutes: "Menit",
-    seconds: "Detik",
+/** Label chrome tema Verdant (wedding botanikal ilustratif, tier Story). */
+export const L = {
+  cover: {
+    eyebrow: "Undangan Pernikahan",
+    open: "Buka Undangan",
+    hint: "Geser untuk membaca",
   },
+  hero: { eyebrow: "Dengan penuh syukur" },
   couple: {
-    eyebrow: "Mempelai",
+    eyebrow: "Kedua Mempelai",
     groom: "Mempelai Pria",
     bride: "Mempelai Wanita",
-    parents: (father, mother) => {
+    parents: (father?: string, mother?: string) => {
       const f = father?.trim();
       const m = mother?.trim();
       if (f && m) return `Putra/Putri dari Bpk. ${f} & Ibu ${m}`;
@@ -26,24 +19,31 @@ export const L: WeddingLabels = {
       return "";
     },
   },
+  countdown: {
+    eyebrow: "Menanti Hari Bahagia",
+    done: "Hari yang dinanti telah tiba 🌿",
+    days: "Hari",
+    hours: "Jam",
+    minutes: "Menit",
+    seconds: "Detik",
+  },
   schedule: {
     eyebrow: "Rangkaian Acara",
-    heading: "Waktu & Tempat",
-    maps: "Lihat Lokasi",
-    calendar: "Simpan ke Kalender",
+    maps: "Petunjuk Arah",
+    calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
   },
-  gallery: { eyebrow: "Galeri", heading: "Momen Kami" },
-  story: { eyebrow: "Perjalanan Kami", heading: "Kisah Kami Bersemi" },
+  gallery: { eyebrow: "Herbarium Kami", heading: "Potongan Kenangan" },
+  story: { eyebrow: "Kisah Bersemi", heading: "Perjalanan Kami" },
   envelope: {
-    eyebrow: "Amplop Digital",
-    heading: "Tanda Kasih",
+    eyebrow: "Tanda Kasih",
+    heading: "Amplop Digital",
     note: "Doa restu Anda bagai embun pagi. Bila berkenan memberi tanda kasih, dapat melalui:",
-    copy: "Salin Nomor",
+    copy: "Salin",
     copied: "Tersalin",
     giftAddress: "Alamat pengiriman kado",
     holder: "a.n.",
   },
   footer: { thanks: "Terima Kasih", by: "Dibuat dengan", brand: "Merriva" },
-};
+} as const;

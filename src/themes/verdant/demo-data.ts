@@ -1,6 +1,10 @@
 import type { InvitationData } from "@/types/invitation";
 
-/** Data contoh pratinjau tema Verdant (wedding botanikal) — mandiri (SVG data-URI). */
+/**
+ * Data contoh pratinjau tema Verdant (wedding botanikal) — acuan
+ * `prototypes/flora-atelier-story.html` (Anjani & Bayu). Foto galeri = gradasi
+ * SVG data-URI hijau/earth agar mandiri (tanpa request eksternal).
+ */
 function swatch(from: string, to: string): string {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${from}'/><stop offset='1' stop-color='${to}'/></linearGradient></defs><rect width='800' height='800' fill='url(#g)'/></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -15,65 +19,59 @@ const photo = (from: string, to: string) => ({
 export const demoInvitationData: InvitationData = {
   slug: "demo",
   category: "wedding",
-  eventDate: "2027-04-18",
+  eventDate: "2027-01-23",
   content: {
     category: "wedding",
-    title: "Sekar & Damar",
+    title: "Anjani & Bayu",
     groom: {
-      name: "Damar Wicaksono",
-      nickname: "Damar",
-      fatherName: "Bambang Wicaksono",
-      motherName: "Retno Wulandari",
-      childOrder: "Putra pertama",
+      name: "Bayu Segara",
+      nickname: "Bayu",
+      fatherName: "Hendra Segara",
+      motherName: "Wulandari",
+      childOrder: "Putra kedua",
     },
     bride: {
-      name: "Sekar Ayu Melati",
-      nickname: "Sekar",
-      fatherName: "Joko Prasetyo",
-      motherName: "Endah Kusuma",
-      childOrder: "Putri bungsu",
+      name: "Anjani Paramita",
+      nickname: "Anjani",
+      fatherName: "Surya Paramita",
+      motherName: "Handayani",
+      childOrder: "Putri pertama",
     },
     story: [
       {
         title: "Menanam Benih",
-        date: "Musim Hujan 2020",
+        date: "Musim pertama, 2020",
         narrative:
-          "Bertemu di sebuah kelas berkebun, dua tangan yang gemar menyentuh tanah dan tumbuhan.",
+          "Bertemu di sebuah kelas berkebun — dua tangan yang gemar menyentuh tanah dan tumbuhan.",
       },
       {
-        title: "Bertumbuh",
-        date: "Musim Kemarau 2023",
+        title: "Bertunas",
+        date: "2023",
         narrative:
-          "Merawat mimpi bersama, seperti merawat taman — sabar, telaten, penuh cinta.",
+          "Merawat mimpi bersama, seperti merawat taman: sabar, telaten, dan penuh cinta.",
       },
       {
-        title: "Mekar",
-        date: "Musim Semi 2027",
+        title: "Berbunga",
+        date: "2027",
         narrative:
-          "Kini bunga itu mekar sempurna, dan kami siap berbagi harinya.",
+          "Kini bunga itu mekar sempurna, dan kami siap berbagi harinya bersama Anda.",
       },
     ],
     greetingOpen:
-      "Bagai taman yang bersemi, kami merajut kasih dan bermaksud menyatukannya dalam ikatan pernikahan.",
+      "Dengan penuh syukur, kami mengundang Bapak/Ibu/Saudara/i untuk hadir di hari bahagia kami — tumbuh bersama, berakar selamanya.",
     greetingClose:
       "Kehadiran dan doa Anda akan menjadi pupuk terindah bagi rumah tangga kami.",
     quote: {
-      text: "Tumbuh bersama adalah bentuk cinta yang paling sabar.",
-      source: "Untuk Sekar & Damar",
+      text: "Ya Tuhanku, anugerahkanlah kepada kami pasangan dan keturunan sebagai penyejuk hati.",
+      source: "Q.S. Al-Furqan · 74",
     },
     envelope: {
       enabled: true,
-      banks: [
-        {
-          bank: "Mandiri",
-          number: "1300088776655",
-          holder: "Sekar Ayu Melati",
-        },
-      ],
+      banks: [{ bank: "BNI", number: "8890112233", holder: "Anjani Paramita" }],
       ewallets: [
-        { provider: "DANA", number: "081355667788", holder: "Damar W." },
+        { provider: "DANA", number: "081399887766", holder: "Bayu Segara" },
       ],
-      giftAddress: "Jl. Kaliurang KM 12, Sleman, Yogyakarta",
+      giftAddress: "Taman Anggrek, Kebun Raya Bogor, Jawa Barat",
     },
   },
   settings: {
@@ -85,29 +83,29 @@ export const demoInvitationData: InvitationData = {
     {
       id: "demo-akad",
       name: "Akad Nikah",
-      startAt: "2027-04-18T02:00:00.000Z", // 09.00 WIB
-      endAt: "2027-04-18T03:00:00.000Z",
-      venueName: "Kebun Raya Taman Sari",
-      address: "Jl. Kaliurang KM 12, Sleman, Yogyakarta",
-      mapsUrl: "https://maps.google.com/?q=-7.68,110.41",
+      startAt: "2027-01-23T01:00:00.000Z", // 08.00 WIB
+      endAt: "2027-01-23T03:00:00.000Z",
+      venueName: "Pendopo Agung Kebun Raya",
+      address: "Jl. Ir. H. Juanda No.13, Bogor",
+      mapsUrl: "https://maps.google.com/?q=-6.60,106.79",
     },
     {
       id: "demo-resepsi",
-      name: "Resepsi Taman",
-      startAt: "2027-04-18T05:00:00.000Z", // 12.00 WIB
-      endAt: "2027-04-18T08:00:00.000Z",
-      venueName: "Greenhouse Taman Sari",
-      address: "Jl. Kaliurang KM 12, Sleman, Yogyakarta",
-      mapsUrl: "https://maps.google.com/?q=-7.68,110.41",
+      name: "Resepsi Kebun",
+      startAt: "2027-01-23T04:00:00.000Z", // 11.00 WIB
+      endAt: "2027-01-23T07:00:00.000Z",
+      venueName: "Taman Anggrek, Kebun Raya Bogor",
+      address: "Dresscode: nuansa earth tone",
+      mapsUrl: "https://maps.google.com/?q=-6.60,106.80",
     },
   ],
   media: [
-    photo("#46583a", "#5d7049"),
+    photo("#aebb95", "#556243"),
+    photo("#c9a98b", "#7a5b40"),
+    photo("#9db1a2", "#48584d"),
+    photo("#c8b183", "#6d5b35"),
     photo("#869a6a", "#46583a"),
     photo("#bd8368", "#869a6a"),
-    photo("#eae5d3", "#869a6a"),
-    photo("#5d7049", "#3b402f"),
-    photo("#f5f2e7", "#bd8368"),
   ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
   music: null,
   watermark: true,
