@@ -54,7 +54,7 @@ Dibangun SEKALI di Fase A, dipakai semua tema Story/Signature:
 
 ## 4. Dependensi & anggaran
 
-`pnpm add gsap lenis` (keduanya MIT/gratis — GSAP free sejak 2025). Larangan: three.js, framer-motion baru, CDN runtime. Anggaran (gzip, halaman tema): Craft +0KB dari baseline; Story ≤ +45KB; Signature ≤ +90KB — cek `next build` output per route dan catat angkanya di PR/commit message.
+`pnpm add gsap lenis` (keduanya MIT/gratis — GSAP free sejak 2025). Larangan: three.js, framer-motion baru, CDN runtime. Anggaran (gzip, halaman tema): Craft +0KB dari baseline; **Story ≤ +50KB** (revisi dari +45KB setelah pengukuran gzip nyata: gsap core ≈26,7KB + ScrollTrigger ≈17,1KB + lenis ≈5,2KB = ~49KB; ratifikasi pemilik 2026-08-01, lihat DECISIONS #12); Signature ≤ +90KB — cek `next build` output per route dan catat angkanya di PR/commit message.
 
 ## 5. Definition of Done per tema (dari THEME-DESIGN §5 + kenyataan repo)
 

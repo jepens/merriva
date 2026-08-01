@@ -79,7 +79,7 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 **Angka bundle terukur** (gzip, chunk `next build`, dimuat LAZY setelah "Buka Undangan"): gsap core ≈ **26,7KB** · ScrollTrigger ≈ **17,1KB** · lenis ≈ **5,2KB**.
 - **Craft** (aria, festa): **+0KB** lib (nol gsap/lenis; festa hanya `particles-canvas` 2D ±1–2KB tanpa library). ✓ anggaran §4.
-- **Story** (noir, verdant): gsap+ScrollTrigger+lenis ≈ **49KB gz** → **~4KB DI ATAS target §4 (≤45KB)**. Target §4/#10 disusun sebelum mengukur gzip nyata; gsap core (26,7) + ScrollTrigger (17,1) ≈ 44KB sudah menghabiskan anggaran sebelum lenis. **Perlu ratifikasi pemilik:** (a) revisi target Story ke ~50KB — *rekomendasi*, smooth-scroll lenis adalah inti "feel" #10; atau (b) lepas lenis (−5,2KB → 44KB, tetapi menghapus smooth-scroll seluruh tema Story/Signature).
+- **Story** (noir, verdant): gsap+ScrollTrigger+lenis ≈ **49KB gz**. Target §4/#10 (≤45KB) disusun sebelum mengukur gzip nyata — gsap core (26,7) + ScrollTrigger (17,1) ≈ 44KB sudah menghabiskan anggaran sebelum lenis. **Diratifikasi pemilik 2026-08-01: opsi (a)** — target Story §4 **direvisi ke ≤50KB** (lenis dipertahankan; smooth-scroll adalah inti "feel" #10). `docs/THEME-PORTING.md` §4 diperbarui. Status: **✅ dalam anggaran (revisi)**.
 - **Signature** (eternal-rose, prisma): 49KB + shader WebGL (±2KB) ≈ **51KB gz** → jauh di bawah §4 (≤90KB). ✓
 
 **Sapu DoD §5 (6 tema, 2026-07-31):** lint 0-error · typecheck · test 215 · build hijau · konsol 0 error · reduced-motion konten penuh · tanpa-JS terbaca · `?to=` personalisasi · Craft nol gsap/lenis (`window.gsap`/`Lenis` undefined). **Lighthouse mobile a11y/BP/SEO** (preview, dev): eternal-rose **100**/100/100 · noir **95**/100/100 · verdant **95**/100/100 · festa **100**/100/100 · aria **95**/100/100 · prisma **100**/100/100 — semua ≥90 (tiga 95 = satu audit `color-contrast` pada teks sekunder muted yang disengaja). **Performa Lighthouse ≥90 = gate Docker/staging**: server standalone Next tak jalan di Windows (EPERM realpath symlink pnpm) → performa diukur di staging; arsitektur memenuhinya (ISR halaman publik, font self-host, JS berat lazy di balik cover, gambar dikompres di klien).
@@ -91,7 +91,7 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 **Ditunda (sadar):** (a) upgrade `meridian`/`barakah`/`lumina` ke cover-gate (tetap `coverMode:'shell'`) — deprekasi blok cover `InvitationShell` (#11 "arah akhir") menunggu ketiganya; (b) uji nyata WebView WhatsApp Android+iOS (min. eternal-rose + satu Craft); (c) angka performa Lighthouse di staging/Docker.
 
-**Ditolak:** melepas lenis sepihak demi angka 45KB (mengubah art-direction smooth-scroll semua tema — keputusan pemilik, bukan tuning diam-diam).
+**Ditolak:** opsi (b) melepas lenis (−5,2KB demi angka 45KB) — pemilik memilih (a) pada 2026-08-01; smooth-scroll dipertahankan sebagai identitas Story/Signature (#10).
 
 **Konsekuensi:** `InvitationShell` masih memegang cover 3 tema shell → dua sistem cover hidup berdampingan sampai (a) tuntas. `particles-canvas` diimpor statis di eternal-rose/festa (runtime digerbangi rich/motion; ±1–2KB 2D, bukan gsap) — deviasi §9 minor, diterima (tak melanggar anggaran tier).
 
