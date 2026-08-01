@@ -1,3 +1,4 @@
+import { demoPhotosFor } from "@/themes/_shared/demo-photos";
 import type { InvitationData } from "@/types/invitation";
 
 /** Data contoh pratinjau tema Aria (wedding minimalis) — mandiri (SVG data-URI). */
@@ -92,14 +93,16 @@ export const demoInvitationData: InvitationData = {
       mapsUrl: "https://maps.google.com/?q=-6.24,106.81",
     },
   ],
-  media: [
-    photo("#e0dcd2", "#8a8478"),
-    photo("#f6f5f1", "#c9c3b6"),
-    photo("#1b1a17", "#8a8478"),
-    photo("#efece4", "#b7b1a2"),
-    photo("#c9c3b6", "#6f6a5f"),
-    photo("#e0dcd2", "#1b1a17"),
-  ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
+  media:
+    demoPhotosFor("aria") ??
+    [
+      photo("#e0dcd2", "#8a8478"),
+      photo("#f6f5f1", "#c9c3b6"),
+      photo("#1b1a17", "#8a8478"),
+      photo("#efece4", "#b7b1a2"),
+      photo("#c9c3b6", "#6f6a5f"),
+      photo("#e0dcd2", "#1b1a17"),
+    ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
   music: null,
   watermark: true,
 };

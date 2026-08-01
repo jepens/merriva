@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
+    "demo:photos": "node scripts/fetch-demo-photos.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

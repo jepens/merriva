@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { GuestPersonalizationProvider } from "@/components/public/guest-personalization";
+import { PexelsCredit } from "@/components/marketing/pexels-credit";
 import {
   PreviewEmbedStyle,
   PreviewFrame,
@@ -30,7 +31,13 @@ export default async function ThemeDemoPage({
   if (!loader || !demoLoader) notFound();
 
   if (!embed) {
-    return <PreviewFrame embedSrc={`/preview/tema/${slug}?embed=1`} demo />;
+    return (
+      <PreviewFrame
+        embedSrc={`/preview/tema/${slug}?embed=1`}
+        demo
+        footer={<PexelsCredit slug={slug} />}
+      />
+    );
   }
 
   const Theme = (await loader()).default;

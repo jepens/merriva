@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { copy } from "@/lib/copy";
 
 import { PreviewBanner } from "./preview-banner";
@@ -16,10 +18,13 @@ export function PreviewFrame({
   embedSrc,
   demo = false,
   editHref,
+  footer,
 }: {
   embedSrc: string;
   demo?: boolean;
   editHref?: string;
+  /** Baris di bawah bingkai (mis. atribusi Pexels) — disembunyikan saat layar penuh ponsel. */
+  footer?: ReactNode;
 }) {
   return (
     <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-gradient-to-b from-neutral-50 to-neutral-200 px-4 pt-14 pb-8 max-[430px]:p-0 max-[430px]:pt-9">
@@ -36,6 +41,11 @@ export function PreviewFrame({
           className="h-full w-full rounded-[2.15rem] border-0 bg-white max-[430px]:rounded-none"
         />
       </div>
+      {footer ? (
+        <div className="mt-3 w-[392px] max-w-full px-2 max-[430px]:hidden">
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { GuestPersonalizationProvider } from "@/components/public/guest-personalization";
+import { PexelsCredit } from "@/components/marketing/pexels-credit";
 import {
   PreviewEmbedStyle,
   PreviewFrame,
@@ -20,7 +21,14 @@ export default async function DemoPreviewPage({
   searchParams: Promise<{ embed?: string }>;
 }) {
   const { embed } = await searchParams;
-  if (!embed) return <PreviewFrame embedSrc="/preview/demo?embed=1" demo />;
+  if (!embed)
+    return (
+      <PreviewFrame
+        embedSrc="/preview/demo?embed=1"
+        demo
+        footer={<PexelsCredit slug="eternal-rose" />}
+      />
+    );
   return (
     <GuestPersonalizationProvider slug={demoInvitationData.slug}>
       <PreviewEmbedStyle />

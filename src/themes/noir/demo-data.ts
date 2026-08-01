@@ -1,3 +1,4 @@
+import { demoPhotosFor } from "@/themes/_shared/demo-photos";
 import type { InvitationData } from "@/types/invitation";
 
 /**
@@ -101,14 +102,16 @@ export const demoInvitationData: InvitationData = {
       mapsUrl: "https://maps.google.com/?q=-6.60,106.80",
     },
   ],
-  media: [
-    photo("#2c2138", "#12101c"),
-    photo("#37273a", "#0e0c14"),
-    photo("#22293b", "#10131c"),
-    photo("#3b2b26", "#141019"),
-    photo("#241d30", "#0f0d16"),
-    photo("#1a1622", "#2c2138"),
-  ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
+  media:
+    demoPhotosFor("noir") ??
+    [
+      photo("#2c2138", "#12101c"),
+      photo("#37273a", "#0e0c14"),
+      photo("#22293b", "#10131c"),
+      photo("#3b2b26", "#141019"),
+      photo("#241d30", "#0f0d16"),
+      photo("#1a1622", "#2c2138"),
+    ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
   music: null,
   watermark: true,
 };

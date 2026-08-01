@@ -4,6 +4,7 @@ import {
   ThemeCatalog,
   type ThemeCatalogLabels,
 } from "@/components/marketing/theme-catalog";
+import { PexelsCreditFooter } from "@/components/marketing/pexels-credit";
 import { ThemeCard } from "@/components/marketing/theme-poster";
 import { copy } from "@/lib/copy";
 import { getActiveThemes } from "@/server/marketing/catalog";
@@ -61,6 +62,9 @@ export default async function ThemesPage() {
               <ThemeCard key={t.slug} theme={t} />
             ))}
           />
+          <div style={{ marginTop: "2.5rem" }}>
+            <PexelsCreditFooter />
+          </div>
         </div>
       </section>
     </>

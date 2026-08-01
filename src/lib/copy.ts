@@ -806,6 +806,12 @@ export const copy = {
   // Halaman marketing publik (SPEC §4.1): landing, katalog tema, harga, FAQ,
   // kebijakan privasi & refund. Statis + ISR; harga/tema selalu dari DB.
   marketing: {
+    // Atribusi foto demo Pexels (lisensi: tautan Pexels + kredit fotografer).
+    pexels: {
+      by: "Foto contoh oleh",
+      via: "via",
+      label: "Pexels",
+    },
     nav: {
       themes: "Tema",
       pricing: "Harga",

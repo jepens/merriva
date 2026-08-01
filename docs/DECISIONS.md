@@ -144,6 +144,20 @@ Commit: `c46d279`.
 
 **Konsekuensi:** `InvitationShell` masih memegang cover 3 tema shell → dua sistem cover hidup berdampingan sampai (a) tuntas. `particles-canvas` diimpor statis di eternal-rose/festa (runtime digerbangi rich/motion; ±1–2KB 2D, bukan gsap) — deviasi §9 minor, diterima (tak melanggar anggaran tier).
 
+## #16 — 2026-08-02 · Foto demo tema dari Pexels → aset lokal own-domain (skrip author-time)
+
+**Konteks:** foto demo tiap tema masih placeholder SVG gradien; pemilik ingin foto asli (Pexels, punya API key) agar katalog/preview lebih menarik.
+
+**Keputusan:** kunci Pexels dipakai **author-time** (bukan runtime app) oleh skrip `scripts/fetch-demo-photos.mjs` (`pnpm demo:photos`) yang mencari + **mengunduh** foto ke `public/demo/<slug>/` (2 varian, sisi terpanjang 1600 & 400 — meniru kontrak galeri 1600px) lalu menulis manifest `src/themes/_shared/demo-photos.generated.ts`. Tiap `demo-data.ts`: `media: demoPhotosFor("<slug>") ?? [swatch…]` → otomatis memakai foto Pexels bila manifest terisi, bila belum tetap swatch (app jalan tanpa kunci). Riset endpoint/lisensi via context7 (`/websites/pexels_api`).
+
+**Alasan / opsi ditolak:** hotlink URL CDN Pexels (`images.pexels.com`) langsung di demo-data — **ditolak**: melanggar aturan own-domain (CLAUDE.md "jangan serve media dari URL vendor"), menambah request eksternal di halaman performa-kritis (LCP/Lighthouse/ISR), foto bisa hilang bila dihapus di Pexels. Unduh lokal patuh boundary, nol request eksternal saat render, tanpa dependency baru (JPEG Pexels sudah ter-compress → tak perlu sharp), kunci tak pernah ada di app runtime (menampilkan foto = URL CDN publik, tak butuh kunci).
+
+**Atribusi (wajib lisensi Pexels):** komponen `PexelsCredit` menampilkan kredit fotografer + tautan Pexels di **footer** `/preview/tema/{slug}` & `/preview/demo` (per tema) dan katalog `/tema` (gabungan). Kredit tersimpan di manifest; merender `null` sebelum foto ada.
+
+**Konsekuensi:** `PEXELS_API_KEY` ditambah ke `.env.example` (tooling author-time saja). `public/demo/**` di-commit (deploy = git push → image butuh aset). Manifest generated di-ignore Prettier + ESLint (`scripts/**` juga). Ganti/segarkan foto = sunting query di skrip lalu `pnpm demo:photos`.
+
+**Verifikasi (stub kosong, sebelum kunci diisi):** lint 0-err · typecheck · test 215 · build hijau; demo tetap tampil via fallback swatch.
+
 ---
 
 ## Template entri baru

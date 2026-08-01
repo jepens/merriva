@@ -29,6 +29,9 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "next-env.d.ts",
+    // Tooling Node (bukan kode app Next) & manifest foto demo auto-generate.
+    "scripts/**",
+    "src/themes/_shared/demo-photos.generated.ts",
   ]),
 ]);
 
