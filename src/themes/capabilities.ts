@@ -16,11 +16,15 @@ export type CoverMode = "theme" | "shell";
 
 const THEME_CAPABILITIES: Record<string, { coverMode: CoverMode }> = {
   "eternal-rose": { coverMode: "theme" },
+  meridian: { coverMode: "theme" },
+  barakah: { coverMode: "theme" },
   noir: { coverMode: "theme" },
   verdant: { coverMode: "theme" },
   festa: { coverMode: "theme" },
   aria: { coverMode: "theme" },
   prisma: { coverMode: "theme" },
+  lumina: { coverMode: "theme" },
+  kirana: { coverMode: "theme" },
 };
 
 export function getThemeCoverMode(slug: string): CoverMode {

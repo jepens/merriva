@@ -1,9 +1,10 @@
 import type { InvitationData } from "@/types/invitation";
 
 /**
- * Data contoh pratinjau tema Lumina — sengaja kategori CORPORATE (bukan wedding)
- * untuk menunjukkan tema universal menyesuaikan konten non-wedding. Mandiri
- * (foto = gradasi SVG data-URI).
+ * Data contoh pratinjau tema Lumina — wedding "Tara & Gilang" (acuan
+ * `prototypes/lumina-craft.html`). Tema universal ini tetap menyesuaikan konten
+ * non-wedding; demo memakai wedding untuk memamerkan cover film & surat kecil.
+ * Mandiri (foto galeri = gradasi taupe SVG data-URI, tanpa request eksternal).
  */
 function swatch(from: string, to: string): string {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${from}'/><stop offset='1' stop-color='${to}'/></linearGradient></defs><rect width='800' height='800' fill='url(#g)'/></svg>`;
@@ -18,46 +19,60 @@ const photo = (from: string, to: string) => ({
 
 export const demoInvitationData: InvitationData = {
   slug: "demo",
-  category: "corporate",
-  eventDate: "2026-11-28",
+  category: "wedding",
+  eventDate: "2027-04-11",
   content: {
-    category: "corporate",
-    eventName: "Malam Apresiasi & Ulang Tahun ke-25",
-    organizer: "PT Cahaya Karya Bersama",
-    description:
-      "Sebuah malam penuh syukur merayakan seperempat abad perjalanan perusahaan, sekaligus mengapresiasi dedikasi seluruh keluarga besar Cahaya Karya.",
-    pic: {
-      name: "Panitia HUT ke-25",
-      phone: "+62 21 5550 1234",
-      email: "hut25@cahayakarya.co.id",
+    category: "wedding",
+    title: "Tara & Gilang",
+    groom: {
+      name: "Gilang Saputra",
+      nickname: "Gilang",
+      fatherName: "Ardi Saputra",
+      motherName: "Yulia",
+      childOrder: "Putra pertama",
     },
-    agenda: [
+    bride: {
+      name: "Tara Widuri",
+      nickname: "Tara",
+      fatherName: "Seno Widuri",
+      motherName: "Ratih",
+      childOrder: "Putri kedua",
+    },
+    story: [
       {
-        title: "Ramah Tamah",
-        date: "18.30 WIB",
-        narrative: "Registrasi tamu dan foto bersama di area penyambutan.",
-      },
-      {
-        title: "Sambutan & Penghargaan",
-        date: "19.30 WIB",
+        title: "Taman Kota",
+        date: "2020",
         narrative:
-          "Sambutan direksi dan pemberian penghargaan karyawan teladan.",
+          "Dua orang paling kalem bertemu di sebuah taman kota — awal dari tujuh musim hujan yang kami lewati bersama.",
       },
       {
-        title: "Ramah Tamah & Hiburan",
-        date: "20.30 WIB",
-        narrative: "Santap malam, hiburan, dan undian doorprize.",
+        title: "Lamaran",
+        date: "2026",
+        narrative:
+          "Dengan restu kedua keluarga, kami sepakat untuk melangkah ke babak yang lebih serius.",
+      },
+      {
+        title: "Pulang ke Rumah yang Sama",
+        date: "2027",
+        narrative:
+          "Kini kami memutuskan untuk pulang ke rumah yang sama, dan ingin berbagi harinya bersama Anda.",
       },
     ],
     greetingOpen:
-      "Dengan penuh sukacita, kami mengundang Bapak/Ibu untuk hadir dalam malam istimewa ini.",
-    greetingClose:
-      "Terima kasih atas dedikasi dan kebersamaan yang telah terjalin selama ini.",
+      "Kepada orang-orang yang kami sayangi — setelah tujuh musim hujan bersama, kami memutuskan untuk pulang ke rumah yang sama. Dengan izin Allah dan restu keluarga, kami menikah. Datanglah, sebentar saja pun cukup; kehadiranmu adalah bagian dari cerita kami.",
+    greetingClose: "Sampai jumpa di hari baik itu.",
     quote: {
-      text: "Setiap pencapaian adalah hasil dari kerja sama yang tulus.",
-      source: "Cahaya Karya Bersama",
+      text: "Dan di antara tanda-tanda kekuasaan-Nya diciptakan-Nya untukmu pasangan hidup dari jenismu sendiri, supaya kamu merasa tenteram.",
+      source: "Q.S. Ar-Rum · 21",
     },
-    envelope: { enabled: false, banks: [], ewallets: [] },
+    envelope: {
+      enabled: true,
+      banks: [
+        { bank: "BCA", number: "009988776655", holder: "Gilang Saputra" },
+      ],
+      ewallets: [],
+      giftAddress: "Rumah Kaca, Dago Pakar, Bandung, Jawa Barat",
+    },
   },
   settings: {
     timezone: "Asia/Jakarta",
@@ -66,23 +81,32 @@ export const demoInvitationData: InvitationData = {
   },
   events: [
     {
-      id: "demo-main",
-      name: "Malam Apresiasi",
-      startAt: "2026-11-28T11:30:00.000Z", // 18.30 WIB
-      endAt: "2026-11-28T15:00:00.000Z",
-      venueName: "Grand Ballroom, Hotel Indonesia Kempinski",
-      address: "Jl. M.H. Thamrin No. 1, Jakarta Pusat",
-      mapsUrl: "https://maps.google.com/?q=-6.193,106.823",
+      id: "demo-akad",
+      name: "Akad Nikah",
+      startAt: "2027-04-11T02:00:00.000Z", // 09.00 WIB
+      endAt: "2027-04-11T03:00:00.000Z",
+      venueName: "Rumah Kaca, Dago Pakar",
+      address: "Dago Pakar, Bandung — untuk keluarga",
+      mapsUrl: "https://maps.google.com/?q=-6.85,107.63",
+    },
+    {
+      id: "demo-resepsi",
+      name: "Resepsi Kebun",
+      startAt: "2027-04-11T04:00:00.000Z", // 11.00 WIB
+      endAt: "2027-04-11T07:00:00.000Z", // 14.00 WIB
+      venueName: "Rumah Kaca, Dago Pakar",
+      address: "Busana: warna-warna lembut",
+      mapsUrl: "https://maps.google.com/?q=-6.85,107.63",
     },
   ],
   media: [
-    photo("#262019", "#9a7b58"),
-    photo("#9a7b58", "#7a5f40"),
-    photo("#f0ebe1", "#9a7b58"),
-    photo("#7c756a", "#262019"),
-    photo("#faf8f4", "#9a7b58"),
-    photo("#262019", "#7c756a"),
+    photo("#c9bba4", "#6f6250"),
+    photo("#b8aa97", "#4e463c"),
+    photo("#d2c4ac", "#857357"),
+    photo("#c4b49a", "#6b5c46"),
+    photo("#b3a58f", "#584c3b"),
+    photo("#e0d6c4", "#9a7b58"),
   ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
   music: null,
-  watermark: false,
+  watermark: true,
 };

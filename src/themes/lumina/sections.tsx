@@ -28,66 +28,6 @@ import { L } from "./labels";
 
 const PRELINE = { whiteSpace: "pre-line" as const };
 
-/* -------------------------------------------------------------- Hero ------ */
-export function Hero({
-  kicker,
-  titleLines,
-  subtitle,
-  dateLabel,
-  bgUrl,
-}: {
-  kicker: string;
-  titleLines: string[];
-  subtitle?: string;
-  dateLabel: string | null;
-  bgUrl?: string;
-}) {
-  const twoLine = titleLines.length > 1;
-  return (
-    <header className={bgUrl ? "lm-hero" : "lm-hero lm-hero--plain"}>
-      {bgUrl ? (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            className="lm-hero__bg"
-            src={bgUrl}
-            alt=""
-            aria-hidden
-            fetchPriority="high"
-            decoding="async"
-          />
-          <div className="lm-hero__scrim" aria-hidden />
-        </>
-      ) : null}
-      <div className="lm-hero__inner">
-        <p className="lm-eyebrow lm-eyebrow--hero">{kicker}</p>
-        <h1
-          className={
-            twoLine ? "lm-hero__title lm-hero__title--pair" : "lm-hero__title"
-          }
-        >
-          {twoLine ? (
-            <>
-              <span className="lm-hero__line">{titleLines[0]}</span>
-              <span className="lm-hero__amp" aria-hidden>
-                &amp;
-              </span>
-              <span className="lm-hero__line">{titleLines[1]}</span>
-            </>
-          ) : (
-            titleLines[0]
-          )}
-        </h1>
-        {subtitle ? <p className="lm-hero__sub">{subtitle}</p> : null}
-        {dateLabel ? <p className="lm-hero__date">{dateLabel}</p> : null}
-      </div>
-      <span className="lm-hero__scroll" aria-hidden>
-        {L.hero.scroll}
-      </span>
-    </header>
-  );
-}
-
 /* ------------------------------------------------------------- Intro ------ */
 export function Intro({
   greetingOpen,

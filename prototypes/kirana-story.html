@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Larasati &amp; Panji — Dhaup Ageng · Prototipe Merriva</title>
+<meta name="description" content="Prototipe tema kirana (Jawa modern, tier Story) — Merriva. Motif truntum, gunungan, palet sogan." />
+<!-- ============================================================
+  MERRIVA · PROTOTIPE TEMA "KIRANA" — TIER STORY (TEMA BARU)
+  Arah: pernikahan adat Jawa modern. Berbasis riset budaya:
+  motif TRUNTUM (cinta yang bersemi kembali — motif restu orang
+  tua) — BUKAN parang (dilarang di pernikahan Jawa). Gunungan
+  line-art menggambar diri, palet sogan (coklat batik + krem
+  lawas + emas), rangkaian acara termasuk upacara Panggih.
+============================================================ -->
+<script>document.documentElement.classList.add('js')</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Upright:wght@400;500;600&family=Figtree:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --krem:#F5EDDC; --krem2:#EDE2C8; --sogan:#6B4A2B; --sogan-d:#452D15;
+    --gold:#C09A4A; --gold-d:#9a7a35; --ink:#3B2F22; --muted:rgba(59,47,34,.62);
+    --hairline:rgba(107,74,43,.22);
+    --disp:"Cormorant Upright",Georgia,serif; --body:"Figtree",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#E2D5B4;color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;overflow:hidden}
+  body.opened{overflow:auto}
+  ::selection{background:var(--gold);color:#fff}
+  .stage{max-width:480px;margin:0 auto;background:var(--krem);position:relative;box-shadow:0 0 110px rgba(69,45,21,.4)}
+
+  .eyebrow{font-size:11px;letter-spacing:.26em;text-transform:uppercase;font-weight:600;color:var(--gold-d)}
+  .line{display:block;overflow:hidden}
+  .line>span{display:block}
+  .js .line>span{visibility:hidden}
+  .grain{position:fixed;inset:-50%;width:200%;height:200%;pointer-events:none;z-index:60;opacity:.055;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .progress{position:fixed;top:0;left:0;height:2px;width:100%;z-index:70;transform-origin:0 50%;
+    background:linear-gradient(90deg,var(--sogan),var(--gold));transform:scaleX(0)}
+
+  /* Pola truntum (bintang-bunga kecil) sebagai latar lembut */
+  .truntum-bg{position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%236B4A2B' stroke-opacity='0.16'%3E%3Ccircle cx='36' cy='36' r='2.2'/%3E%3Cpath d='M36 26v6M36 40v6M26 36h6M40 36h6M29 29l4 4M39 39l4 4M43 29l-4 4M33 39l-4 4'/%3E%3C/g%3E%3C/svg%3E")}
+
+  /* ================= COVER ================= */
+  .cover{position:fixed;inset:0;z-index:50;display:grid;place-items:center;overflow:hidden;background:var(--krem);clip-path:inset(0 0 0 0)}
+  .cover .truntum-bg{opacity:.7}
+  .cover-inner{position:relative;text-align:center;padding:24px;max-width:430px;width:100%}
+  .gunungan-wrap{position:relative;width:min(64vw,250px);margin:10px auto 2px}
+  .gunungan{width:100%;height:auto;display:block}
+  .gunungan path{fill:none;stroke:var(--gold);stroke-width:1.4;stroke-linecap:round}
+  .gunungan .sg{stroke:var(--sogan);stroke-width:1.1}
+  .gn-center{position:absolute;inset:30% 8% 16%;display:grid;place-content:center;text-align:center}
+  .gn-center .name{font-family:var(--disp);font-weight:500;font-size:clamp(32px,9vw,42px);line-height:1.14;color:var(--sogan-d)}
+  .gn-center .amp{font-family:var(--disp);color:var(--gold-d);font-size:20px;margin:2px 0}
+  .cover-eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold-d);font-weight:600}
+  .cover-date{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+  .guest-card{margin:20px auto 22px;max-width:290px;padding:14px 18px;border:1px solid var(--sogan);
+    border-radius:4px;background:rgba(107,74,43,.05);position:relative}
+  .guest-card::before{content:"";position:absolute;inset:4px;border:1px solid var(--hairline);border-radius:2px;pointer-events:none}
+  .guest-card small{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .guest-card strong{font-family:var(--disp);font-weight:500;font-size:20px;color:var(--sogan-d)}
+  .btn-open{appearance:none;border:0;background:var(--sogan);color:var(--krem);font-family:var(--body);font-weight:600;
+    font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;padding:16px 36px;border-radius:999px;cursor:pointer;
+    box-shadow:0 14px 30px -16px rgba(69,45,21,.8);transition:.3s}
+  .btn-open:hover{background:var(--sogan-d);transform:translateY(-2px)}
+
+  /* ================= SECTIONS ================= */
+  section{position:relative;padding:86px 26px}
+  .center{text-align:center}
+  h2.title{font-family:var(--disp);font-weight:500;font-size:clamp(32px,9vw,42px);line-height:1.18;margin-top:16px;color:var(--sogan-d)}
+  h2.title em{font-style:italic;color:var(--gold-d)}
+  p.lead{color:var(--muted);font-size:14px;line-height:1.9;max-width:320px;margin:14px auto 0}
+
+  /* Ukel divider */
+  .ukel{display:block;width:min(64vw,240px);height:auto;margin:28px auto 0}
+  .ukel path{fill:none;stroke:var(--gold);stroke-width:1.2;stroke-linecap:round}
+
+  /* Sekar pambuka — panel sogan */
+  .sekar{background:var(--sogan-d);color:var(--krem)}
+  .sekar .truntum-bg{opacity:.25;filter:invert(1)}
+  .sekar blockquote{position:relative;font-family:var(--disp);font-weight:500;font-style:italic;font-size:21px;line-height:1.75;max-width:330px;margin:0 auto;text-align:center}
+  .sekar .arti{position:relative;margin-top:16px;font-size:13px;line-height:1.85;color:rgba(245,237,220,.75);text-align:center;max-width:300px;margin-inline:auto}
+  .sekar cite{position:relative;display:block;margin-top:18px;font-style:normal;font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);text-align:center}
+
+  /* Mempelai — kartu keraton */
+  .keraton{background:#FBF5E6;border:1px solid var(--sogan);border-radius:6px;padding:12px;margin-bottom:52px;position:relative}
+  .keraton:last-child{margin-bottom:0}
+  .keraton::before{content:"";position:absolute;inset:5px;border:1px solid var(--hairline);border-radius:3px;pointer-events:none}
+  .keraton .inner{border-radius:3px;padding:24px 20px 28px;text-align:center;position:relative}
+  .keraton .tr-corner{position:absolute;width:40px;height:40px;pointer-events:none}
+  .keraton .tr-corner path{fill:none;stroke:var(--gold);stroke-width:1.1}
+  .keraton .tr-corner.a{top:10px;left:10px}
+  .keraton .tr-corner.b{bottom:10px;right:10px;transform:rotate(180deg)}
+  .foto-oval{width:150px;height:186px;margin:4px auto 16px;border-radius:70px 70px 10px 10px;overflow:hidden;position:relative;border:1px solid var(--sogan)}
+  .foto-oval .ph{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(160deg,#C9A878,#6B4A2B 88%)}
+  .foto-oval .ph span{font-family:var(--disp);font-size:64px;color:rgba(245,237,220,.92)}
+  .keraton .role{font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-d);font-weight:600}
+  .keraton h3{font-family:var(--disp);font-weight:600;font-size:29px;color:var(--sogan-d);margin-top:6px}
+  .keraton p{font-size:12.5px;line-height:1.75;color:var(--muted);margin-top:8px}
+
+  /* Countdown medali */
+  .cd-frame{max-width:390px;margin:26px auto 0;border:1px solid var(--sogan);border-radius:14px;padding:22px 10px;background:#FBF5E6;position:relative}
+  .cd-frame::before{content:"";position:absolute;inset:5px;border:1px solid var(--hairline);border-radius:9px;pointer-events:none}
+  .cd-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+  .cd-cell{text-align:center}
+  .cd-num{font-family:var(--disp);font-weight:600;font-size:clamp(30px,8.4vw,40px);font-variant-numeric:tabular-nums;color:var(--sogan-d)}
+  .cd-label{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:5px}
+
+  /* Jadwal — tangga upacara */
+  .tangga{position:relative;margin-top:40px;padding-left:30px}
+  .tangga::before{content:"";position:absolute;left:7px;top:8px;bottom:8px;width:1px;background:var(--sogan);opacity:.4}
+  .step{position:relative;padding-bottom:44px}
+  .step:last-child{padding-bottom:0}
+  .step::before{content:"";position:absolute;left:-30px;top:5px;width:15px;height:15px;border:1.4px solid var(--gold);
+    background:var(--krem);transform:rotate(45deg)}
+  .step .tagg{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-d);font-weight:600}
+  .step h3{font-family:var(--disp);font-weight:600;font-size:27px;color:var(--sogan-d);margin:6px 0 8px}
+  .step .meta{font-size:13px;line-height:1.85;color:var(--muted)}
+  .step .meta b{color:var(--ink);font-weight:600}
+  .step .note{margin-top:10px;font-size:12px;line-height:1.75;color:var(--muted);background:rgba(192,154,74,.12);
+    border-left:2px solid var(--gold);padding:10px 12px;border-radius:0 8px 8px 0}
+  .pills{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .pill{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;
+    padding:11px 18px;border-radius:999px;border:1px solid var(--sogan);color:var(--sogan);transition:.3s}
+  .pill:hover{background:var(--sogan);color:var(--krem)}
+  .pill.gold{background:var(--gold);border-color:var(--gold);color:#fff}
+  .pill.gold:hover{background:var(--gold-d);border-color:var(--gold-d)}
+
+  /* Galeri */
+  .g-track{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:28px 26px;scrollbar-width:none}
+  .g-track::-webkit-scrollbar{display:none}
+  .g-item{flex:0 0 58%;scroll-snap-align:center;aspect-ratio:3/4;position:relative;overflow:hidden;
+    border-radius:60px 60px 10px 10px;border:1px solid var(--sogan)}
+  .g-item .ph{position:absolute;inset:0;display:grid;place-items:center;font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:rgba(245,237,220,.9)}
+  .g-item:nth-child(1) .ph{background:linear-gradient(160deg,#C9A878,#7a5730)}
+  .g-item:nth-child(2) .ph{background:linear-gradient(200deg,#9C7E52,#452D15)}
+  .g-item:nth-child(3) .ph{background:linear-gradient(150deg,#D8BC8A,#8a6a3a)}
+  .g-item:nth-child(4) .ph{background:linear-gradient(210deg,#B08D57,#5d3f1e)}
+
+  /* RSVP & amplop */
+  .rsvp .card{background:#FBF5E6;border:1px solid var(--sogan);border-radius:14px;padding:26px;margin-top:22px;position:relative}
+  .rsvp .card::before{content:"";position:absolute;inset:5px;border:1px solid var(--hairline);border-radius:9px;pointer-events:none}
+  .field{margin-bottom:16px;position:relative;z-index:1}
+  .field label{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px}
+  .field input,.field textarea{width:100%;border:1px solid var(--hairline);border-radius:10px;background:var(--krem);
+    padding:13px 14px;font-family:var(--body);font-size:14px;color:var(--ink)}
+  .field input:focus,.field textarea:focus{outline:2px solid var(--gold)}
+  .choices{display:flex;gap:10px}
+  .choice{flex:1;text-align:center;border:1px solid var(--hairline);border-radius:10px;padding:12px;font-size:13px;cursor:pointer;transition:.25s}
+  .choice.active{background:var(--sogan);color:var(--krem);border-color:var(--sogan)}
+  .btn-submit{position:relative;z-index:1;width:100%;border:0;background:var(--gold);color:#fff;padding:15px;
+    font-family:var(--body);font-weight:600;font-size:12px;letter-spacing:.16em;text-transform:uppercase;border-radius:999px;cursor:pointer}
+  .wish{border-top:1px dashed var(--hairline);padding:18px 2px;display:flex;gap:12px}
+  .wish .ava{flex:0 0 38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--sogan);color:var(--krem);
+    font-family:var(--disp);font-size:16px}
+  .wish b{font-size:13.5px}
+  .wish p{font-size:13px;line-height:1.65;color:var(--muted);margin-top:3px}
+  .gift .acct{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#FBF5E6;
+    border:1px solid var(--hairline);border-radius:12px;padding:16px;margin-top:14px}
+  .gift .acct b{font-size:15px}
+  .gift .acct small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+  .copy{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--sogan);
+    color:var(--sogan);background:transparent;border-radius:999px;padding:9px 14px;cursor:pointer;transition:.25s}
+  .copy.done{background:var(--gold);border-color:var(--gold);color:#fff}
+
+  footer{padding:70px 26px 92px;text-align:center;background:var(--sogan-d);color:var(--krem);position:relative;overflow:hidden}
+  footer .gn-mini{width:56px;height:auto;margin:0 auto 14px;display:block}
+  footer .gn-mini path{fill:none;stroke:var(--gold);stroke-width:1.4}
+  footer .mono{font-family:var(--disp);font-weight:500;font-size:26px;color:#E5CE9E}
+  footer p{font-size:12.5px;color:rgba(245,237,220,.7);margin-top:12px;line-height:1.9}
+  .watermark{display:inline-block;margin-top:26px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+    color:rgba(245,237,220,.6);border:1px solid rgba(245,237,220,.28);padding:8px 14px;border-radius:999px}
+
+  .music{position:fixed;left:16px;bottom:16px;z-index:55;width:46px;height:46px;border-radius:50%;
+    border:1px solid var(--hairline);background:rgba(245,237,220,.95);color:var(--sogan-d);display:none;place-items:center;cursor:pointer;
+    box-shadow:0 10px 24px -12px rgba(69,45,21,.5)}
+  body.opened .music{display:grid}
+  .music svg{width:18px;height:18px}
+  .music.playing svg{animation:spin 3.4s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .proto-tag{position:fixed;right:14px;bottom:14px;z-index:70;font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--sogan-d);background:rgba(245,237,220,.95);border:1px solid var(--hairline);padding:7px 11px;border-radius:999px}
+  @media (prefers-reduced-motion:reduce){.music.playing svg{animation:none}}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<div class="progress" aria-hidden="true"></div>
+
+<div class="cover" id="cover">
+  <div class="truntum-bg" aria-hidden="true"></div>
+  <div class="cover-inner">
+    <span class="cover-eyebrow line"><span>Dhaup Ageng · Undangan Pernikahan</span></span>
+    <div class="gunungan-wrap">
+      <svg class="gunungan" id="gunungan" viewBox="0 0 250 300" aria-hidden="true">
+        <!-- Gunungan (kayon) garis luar, disederhanakan & simetris -->
+        <path class="draw" d="M125 8 C 112 30 96 42 84 62 C 70 84 76 104 66 126 C 56 150 64 172 58 196 C 52 222 66 250 92 268 C 106 278 116 284 125 292 C 134 284 144 278 158 268 C 184 250 198 222 192 196 C 186 172 194 150 184 126 C 174 104 180 84 166 62 C 154 42 138 30 125 8 Z"/>
+        <path class="draw sg" d="M125 34 C 117 50 106 60 98 76 C 88 94 93 110 85 128 C 77 148 84 166 79 186 C 74 208 86 232 106 248 C 114 254 120 260 125 266 C 130 260 136 254 144 248 C 164 232 176 208 171 186 C 166 166 173 148 165 128 C 157 110 162 94 152 76 C 144 60 133 50 125 34 Z"/>
+        <path class="draw sg" d="M125 292 V 240 M105 250 C 112 238 118 236 125 226 C 132 236 138 238 145 250"/>
+      </svg>
+      <div class="gn-center">
+        <span class="line"><span class="name">Larasati</span></span>
+        <span class="line"><span class="amp">&amp;</span></span>
+        <span class="line"><span class="name">Panji</span></span>
+      </div>
+    </div>
+    <span class="cover-date line"><span>Sabtu Kliwon · 08 Mei 2027 · Surakarta</span></span>
+    <div class="guest-card">
+      <small>Katur dhumateng</small>
+      <strong id="guestName">Bapak/Ibu Tamu Undangan</strong>
+    </div>
+    <div class="line"><span><button class="btn-open" id="btnOpen">Buka Undangan</button></span></div>
+  </div>
+</div>
+
+<main class="stage" id="stage">
+
+  <section class="center" style="padding-top:74px">
+    <span class="eyebrow reveal">Assalamu'alaikum Wr. Wb.</span>
+    <h2 class="title"><span class="line"><span>Cinta yang tumbuh,</span></span><span class="line"><span>restu yang <em>bersemi.</em></span></span></h2>
+    <p class="lead reveal">Kados dene sekar truntum ingkang tansah semi — seperti bunga truntum yang selalu bersemi kembali, kami memohon doa restu untuk melangkah ke jenjang pernikahan.</p>
+    <svg class="ukel draw" viewBox="0 0 240 36" aria-hidden="true">
+      <path d="M8 18 H86 M154 18 H232 M120 4 C 106 4 100 16 108 24 C 114 30 124 28 124 20 C 124 14 118 12 114 16 M120 4 C 134 4 140 16 132 24 C 126 30 116 28 116 20"/>
+    </svg>
+  </section>
+
+  <section class="sekar">
+    <div class="truntum-bg" aria-hidden="true"></div>
+    <blockquote>
+      <span class="line"><span>“Witing tresna</span></span>
+      <span class="line"><span>jalaran saka kulina.”</span></span>
+    </blockquote>
+    <div class="arti reveal">Cinta bersemi karena terbiasa bersama — dan kami memilih untuk terbiasa, seumur hidup.</div>
+    <cite class="reveal">Paribasan Jawa</cite>
+  </section>
+
+  <section>
+    <div class="center"><span class="eyebrow reveal">Temanten Kekalih · Kedua Mempelai</span></div>
+    <div style="margin-top:34px">
+      <div class="keraton reveal">
+        <div class="inner">
+          <svg class="tr-corner a" viewBox="0 0 40 40"><path d="M2 38 V10 C2 5 5 2 10 2 H38 M8 30 C 8 20 14 12 26 10"/></svg>
+          <svg class="tr-corner b" viewBox="0 0 40 40"><path d="M2 38 V10 C2 5 5 2 10 2 H38 M8 30 C 8 20 14 12 26 10"/></svg>
+          <div class="foto-oval"><div class="ph"><span>L</span></div></div>
+          <div class="role">Mempelai Putri</div>
+          <h3><span class="line"><span>Larasati Kusumawardhani</span></span></h3>
+          <p>Putri pertama dari<br/>Bapak R. Harjono Kusumo &amp; Ibu Sri Rahayu</p>
+        </div>
+      </div>
+      <div class="keraton reveal">
+        <div class="inner">
+          <svg class="tr-corner a" viewBox="0 0 40 40"><path d="M2 38 V10 C2 5 5 2 10 2 H38 M8 30 C 8 20 14 12 26 10"/></svg>
+          <svg class="tr-corner b" viewBox="0 0 40 40"><path d="M2 38 V10 C2 5 5 2 10 2 H38 M8 30 C 8 20 14 12 26 10"/></svg>
+          <div class="foto-oval"><div class="ph"><span>P</span></div></div>
+          <div class="role">Mempelai Kakung</div>
+          <h3><span class="line"><span>Panji Wicaksono</span></span></h3>
+          <p>Putra kedua dari<br/>Bapak Bambang Wicaksono &amp; Ibu Endang Palupi</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="center" style="padding-top:0">
+    <span class="eyebrow reveal">Ngetang Dinten · Menghitung Hari</span>
+    <div class="cd-frame reveal">
+      <div class="cd-grid">
+        <div class="cd-cell"><div class="cd-num" id="cdD">–</div><div class="cd-label">Hari</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cdH">–</div><div class="cd-label">Jam</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cdM">–</div><div class="cd-label">Menit</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cdS">–</div><div class="cd-label">Detik</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="center"><span class="eyebrow reveal">Rangkaian Upacara</span></div>
+    <div class="tangga">
+      <div class="step reveal">
+        <div class="tagg">08.00 WIB</div>
+        <h3><span class="line"><span>Akad Nikah</span></span></h3>
+        <div class="meta"><b>Sabtu, 08 Mei 2027</b><br/>Pendopo Ndalem Joyokusuman, Surakarta</div>
+        <div class="pills"><a class="pill gold" href="#" onclick="return false">Petunjuk Arah</a><a class="pill" href="#" onclick="return false">Simpan Kalender</a></div>
+      </div>
+      <div class="step reveal">
+        <div class="tagg">10.00 WIB</div>
+        <h3><span class="line"><span>Upacara Panggih</span></span></h3>
+        <div class="meta"><b>Pendopo utama</b></div>
+        <div class="note">Panggih adalah pertemuan pertama mempelai sebagai suami-istri — lempar sirih, wijikan, dan sinduran; simbol dua insan yang berjalan menuju satu rumah.</div>
+      </div>
+      <div class="step reveal">
+        <div class="tagg">11.00 – 14.00 WIB</div>
+        <h3><span class="line"><span>Resepsi</span></span></h3>
+        <div class="meta"><b>Pendopo &amp; taman</b><br/>Busana: batik / nuansa sogan dipersilakan<br/><b>Tanpa motif parang</b> — nyuwun sewu, mengikuti paugeran adat</div>
+        <div class="pills"><a class="pill gold" href="#" onclick="return false">Petunjuk Arah</a><a class="pill" href="#" onclick="return false">Simpan Kalender</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-left:0;padding-right:0;padding-top:0">
+    <div class="center"><span class="eyebrow reveal">Lampah Katresnan · Galeri</span></div>
+    <div class="g-track">
+      <div class="g-item"><div class="ph">Foto 01</div></div>
+      <div class="g-item"><div class="ph">Foto 02</div></div>
+      <div class="g-item"><div class="ph">Foto 03</div></div>
+      <div class="g-item"><div class="ph">Foto 04</div></div>
+    </div>
+  </section>
+
+  <section class="rsvp" style="padding-top:20px">
+    <div class="center"><span class="eyebrow reveal">Konfirmasi Rawuh</span></div>
+    <div class="card reveal">
+      <div class="field"><label>Nama</label><input value="Bapak/Ibu Tamu Undangan" readonly/></div>
+      <div class="field"><label>Kehadiran</label>
+        <div class="choices"><div class="choice active" data-choice>Rawuh / Hadir</div><div class="choice" data-choice>Berhalangan</div></div>
+      </div>
+      <div class="field"><label>Ucapan &amp; Doa</label><textarea rows="3" placeholder="Sampaikan doa pangestu…"></textarea></div>
+      <button class="btn-submit" onclick="return false">Kirim Konfirmasi</button>
+    </div>
+    <div style="margin-top:30px">
+      <div class="wish reveal"><div class="ava">S</div><div><b>Keluarga Sastro</b><p>Mugi lancar sedayanipun. Sugeng dhaup, Laras &amp; Panji — sampai jumpa di Solo!</p></div></div>
+      <div class="wish reveal"><div class="ava">W</div><div><b>Warga RT 04</b><p>Selamat menempuh hidup baru. Kami serombongan hadir insyaAllah.</p></div></div>
+    </div>
+  </section>
+
+  <section class="gift" style="padding-top:0">
+    <div class="center"><span class="eyebrow reveal">Tanda Asih</span></div>
+    <div class="reveal"><p class="lead center" style="margin:14px auto 0">Pangestu Bapak/Ibu adalah hadiah termulia. Bila berkenan paring tanda asih:</p></div>
+    <div class="acct reveal"><div><b>1122 3344 5566</b><small>Bank Jateng · a.n. Panji Wicaksono</small></div><button class="copy" data-copy="112233445566">Salin</button></div>
+  </section>
+
+  <footer>
+    <svg class="gn-mini" viewBox="0 0 250 300" aria-hidden="true"><path d="M125 8 C 112 30 96 42 84 62 C 70 84 76 104 66 126 C 56 150 64 172 58 196 C 52 222 66 250 92 268 C 106 278 116 284 125 292 C 134 284 144 278 158 268 C 184 250 198 222 192 196 C 186 172 194 150 184 126 C 174 104 180 84 166 62 C 154 42 138 30 125 8 Z"/></svg>
+    <div class="mono reveal">L ✽ P</div>
+    <p class="reveal">Atur nuwun — merupakan kebahagiaan bagi kami<br/>apabila Bapak/Ibu berkenan rawuh paring pangestu.</p>
+    <span class="watermark reveal">Dibuat dengan Merriva</span>
+  </footer>
+</main>
+
+<button class="music" id="btnMusic" aria-label="Putar musik">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>
+</button>
+<div class="proto-tag">Merriva · Kirana</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js" defer></script>
+<script defer>
+window.addEventListener('DOMContentLoaded', () => {
+  const params  = new URLSearchParams(location.search);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionOn = !reduced;
+  const hasGSAP = typeof gsap !== 'undefined';
+  if (hasGSAP) gsap.registerPlugin(ScrollTrigger);
+
+  const to = params.get('to');
+  if (to) document.getElementById('guestName').textContent = to;
+
+  /* Entrance: gunungan menggambar diri + baris nama */
+  if (hasGSAP && motionOn){
+    document.querySelectorAll('#gunungan .draw').forEach((p,i)=>{
+      const L=p.getTotalLength(); p.style.strokeDasharray=L; p.style.strokeDashoffset=L;
+      gsap.to(p,{strokeDashoffset:0,duration:2.2,ease:'power2.inOut',delay:.2+i*.25});
+    });
+    gsap.set('#cover .line > span',{visibility:'visible',yPercent:115});
+    gsap.to('#cover .line > span',{yPercent:0,duration:1.05,ease:'power4.out',stagger:.09,delay:1});
+  } else { document.documentElement.classList.remove('js'); }
+
+  let lenis=null;
+  document.getElementById('btnOpen').addEventListener('click', function(){
+    this.disabled=true;
+    document.body.classList.add('opened');
+    const done=()=>document.getElementById('cover').remove();
+    if (hasGSAP && motionOn){
+      gsap.timeline({onComplete:done})
+        .to('#cover .cover-inner',{y:-12,opacity:0,duration:.5,ease:'power2.in'})
+        .to('#cover',{clipPath:'inset(0 0 100% 0)',duration:1,ease:'power4.inOut'},'-=.1');
+    } else done();
+    document.getElementById('btnMusic').classList.add('playing');
+    if (motionOn && typeof Lenis!=='undefined'){
+      lenis=new Lenis({lerp:.11}); const r=t=>{lenis.raf(t);requestAnimationFrame(r);}; requestAnimationFrame(r);
+      if (hasGSAP) lenis.on('scroll',ScrollTrigger.update);
+    }
+    if (hasGSAP && motionOn) setTimeout(()=>ScrollTrigger.refresh(),1200);
+  });
+  document.getElementById('btnMusic').addEventListener('click',function(){this.classList.toggle('playing');});
+
+  if (hasGSAP && motionOn){
+    document.querySelectorAll('.stage .line > span').forEach(el=>{
+      gsap.set(el,{visibility:'visible',yPercent:115});
+      gsap.to(el,{yPercent:0,duration:1.05,ease:'power4.out',
+        scrollTrigger:{trigger:el.closest('section')||el,start:'top 78%'}});
+    });
+    document.querySelectorAll('.reveal').forEach(el=>{
+      gsap.fromTo(el,{y:24,opacity:0},{y:0,opacity:1,duration:.95,ease:'power3.out',
+        scrollTrigger:{trigger:el,start:'top 86%'}});
+    });
+    document.querySelectorAll('svg.ukel.draw path, .tr-corner path').forEach(p=>{
+      const L=p.getTotalLength(); p.style.strokeDasharray=L; p.style.strokeDashoffset=L;
+      gsap.to(p,{strokeDashoffset:0,ease:'none',
+        scrollTrigger:{trigger:p.closest('svg'),start:'top 92%',end:'top 55%',scrub:.6}});
+    });
+    gsap.to('.progress',{scaleX:1,ease:'none',
+      scrollTrigger:{trigger:'#stage',start:'top top',end:'bottom bottom',scrub:.3}});
+  } else { document.documentElement.classList.remove('js'); }
+
+  const target=new Date('2027-05-08T08:00:00+07:00').getTime();
+  (function tick(){
+    let ms=Math.max(0,target-Date.now());
+    const d=Math.floor(ms/864e5);ms-=d*864e5;
+    const h=Math.floor(ms/36e5);ms-=h*36e5;
+    const m=Math.floor(ms/6e4),s=Math.floor((ms-m*6e4)/1e3);
+    cdD.textContent=d;cdH.textContent=String(h).padStart(2,'0');
+    cdM.textContent=String(m).padStart(2,'0');cdS.textContent=String(s).padStart(2,'0');
+    setTimeout(tick,1000);
+  })();
+
+  document.querySelectorAll('[data-choice]').forEach(c=>c.addEventListener('click',()=>{
+    document.querySelectorAll('[data-choice]').forEach(x=>x.classList.remove('active'));c.classList.add('active');
+  }));
+  document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(b.dataset.copy);}catch(e){}
+    const t=b.textContent;b.textContent='Tersalin ✓';b.classList.add('done');
+    setTimeout(()=>{b.textContent=t;b.classList.remove('done');},1600);
+  }));
+});
+</script>
+
+</body>
+</html>

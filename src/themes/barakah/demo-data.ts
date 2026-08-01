@@ -1,6 +1,10 @@
 import type { InvitationData } from "@/types/invitation";
 
-/** Data contoh pratinjau tema Barakah (wedding islami) — mandiri (SVG data-URI). */
+/**
+ * Data contoh pratinjau tema Barakah (wedding islami elegan) — acuan
+ * `prototypes/barakah-story.html` (Fatimah & Yusuf). Foto galeri = gradasi
+ * SVG data-URI zamrud/emas/krem agar mandiri (tanpa request eksternal).
+ */
 function swatch(from: string, to: string): string {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${from}'/><stop offset='1' stop-color='${to}'/></linearGradient></defs><rect width='800' height='800' fill='url(#g)'/></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -15,65 +19,65 @@ const photo = (from: string, to: string) => ({
 export const demoInvitationData: InvitationData = {
   slug: "demo",
   category: "wedding",
-  eventDate: "2026-11-08",
+  eventDate: "2027-03-06",
   content: {
     category: "wedding",
-    title: "Walimatul 'Urs Fatimah & Yusuf",
+    title: "Walimatul 'Ursy Fatimah & Yusuf",
     groom: {
-      name: "Yusuf Abdurrahman",
+      name: "Yusuf Rahman",
       nickname: "Yusuf",
-      fatherName: "H. Abdul Karim",
-      motherName: "Hj. Aminah",
-      childOrder: "Putra pertama",
+      fatherName: "H. Abdul Rahman",
+      motherName: "Hj. Nurhayati",
+      childOrder: "Putra kedua",
     },
     bride: {
-      name: "Fatimah Az-Zahra",
+      name: "Fatimah Azzahra",
       nickname: "Fatimah",
-      fatherName: "H. Ridwan Saleh",
-      motherName: "Hj. Khadijah",
-      childOrder: "Putri kedua",
+      fatherName: "H. Ahmad Fauzi",
+      motherName: "Hj. Siti Aminah",
+      childOrder: "Putri pertama",
     },
     story: [
       {
         title: "Ta'aruf",
-        date: "Rajab 1447 H",
+        date: "Syawal 1447 H",
         narrative:
           "Dipertemukan melalui proses ta'aruf yang dijaga, dengan niat menyempurnakan separuh agama.",
       },
       {
         title: "Khitbah",
-        date: "Sya'ban 1447 H",
+        date: "Dzulqa'dah 1447 H",
         narrative:
-          "Lamaran disampaikan di hadapan kedua keluarga, memohon keberkahan dari Allah SWT.",
+          "Lamaran disampaikan di hadapan kedua keluarga, memohon keberkahan dan petunjuk dari Allah SWT.",
       },
       {
-        title: "Akad",
-        date: "Ramadan 1447 H",
+        title: "Akad Nikah",
+        date: "Sya'ban 1448 H",
         narrative:
-          "Insya Allah janji suci diikrarkan, menjadi keluarga sakinah.",
+          "Insya Allah janji suci diikrarkan, menjadi keluarga yang sakinah, mawaddah, warahmah.",
       },
     ],
     greetingOpen:
-      "Dengan memohon rahmat dan ridho Allah SWT, kami bermaksud menyelenggarakan pernikahan putra-putri kami.",
+      "Dengan memohon rahmat dan ridha Allah SWT, kami bermaksud menyelenggarakan pernikahan putra-putri kami.",
     greetingClose:
-      "Merupakan kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.",
+      "Merupakan suatu kehormatan bagi kami apabila Bapak/Ibu berkenan hadir dan memberikan doa restu.",
     quote: {
-      text: "Dan di antara tanda-tanda kekuasaan-Nya ialah Dia menciptakan untukmu pasangan hidup dari jenismu sendiri, supaya kamu cenderung dan merasa tenteram kepadanya.",
-      source: "QS. Ar-Rum: 21",
+      text: "Barakallahu laka wa baraka 'alaika wa jama'a bainakuma fi khair.",
+      source: "Doa untuk kedua mempelai · HR. Abu Dawud",
     },
     envelope: {
       enabled: true,
       banks: [
         {
           bank: "Bank Syariah Indonesia",
-          number: "7001234567",
-          holder: "Fatimah Az-Zahra",
+          number: "778899001122",
+          holder: "Yusuf Rahman",
         },
       ],
       ewallets: [
-        { provider: "GoPay", number: "081298765432", holder: "Yusuf A." },
+        { provider: "GoPay", number: "081298765432", holder: "Fatimah A." },
       ],
-      giftAddress: "Jl. Anggrek No. 8, Depok, Jawa Barat 16412",
+      giftAddress: "Jl. Diponegoro No. 63, Bandung, Jawa Barat 40115",
     },
   },
   settings: {
@@ -85,20 +89,20 @@ export const demoInvitationData: InvitationData = {
     {
       id: "demo-akad",
       name: "Akad Nikah",
-      startAt: "2026-11-08T01:00:00.000Z", // 08.00 WIB
-      endAt: "2026-11-08T02:30:00.000Z",
-      venueName: "Masjid Raya Al-Barakah",
-      address: "Jl. Margonda Raya, Depok, Jawa Barat",
-      mapsUrl: "https://maps.google.com/?q=-6.4,106.82",
+      startAt: "2027-03-06T01:00:00.000Z", // 08.00 WIB
+      endAt: "2027-03-06T03:00:00.000Z", // 10.00 WIB
+      venueName: "Masjid Raya Al-Falah",
+      address: "Jl. Diponegoro No. 63, Bandung",
+      mapsUrl: "https://maps.google.com/?q=-6.9,107.61",
     },
     {
-      id: "demo-resepsi",
-      name: "Resepsi",
-      startAt: "2026-11-08T04:00:00.000Z", // 11.00 WIB
-      endAt: "2026-11-08T07:00:00.000Z",
-      venueName: "Gedung Serbaguna Al-Barakah",
-      address: "Jl. Margonda Raya No. 20, Depok, Jawa Barat",
-      mapsUrl: "https://maps.google.com/?q=-6.41,106.83",
+      id: "demo-walimah",
+      name: "Walimatul 'Ursy",
+      startAt: "2027-03-06T04:00:00.000Z", // 11.00 WIB
+      endAt: "2027-03-06T07:00:00.000Z", // 14.00 WIB
+      venueName: "Balai Sartika Convention Hall",
+      address: "Tamu dimohon menjaga adab & kesopanan busana",
+      mapsUrl: "https://maps.google.com/?q=-6.91,107.62",
     },
   ],
   media: [

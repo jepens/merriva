@@ -103,6 +103,13 @@ export const themeCatalogMeta: Record<string, ThemeCatalogMeta> = {
     ornament: "✦",
     dark: true,
   },
+  kirana: {
+    bg: "#f5eddc",
+    ink: "#3b2f22",
+    accent: "#c09a4a",
+    line: "rgba(59,47,34,0.16)",
+    ornament: "✽",
+  },
 };
 
 export function getThemeCatalogMeta(slug: string): ThemeCatalogMeta {

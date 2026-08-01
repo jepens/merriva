@@ -1,0 +1,814 @@
+/* =============================================================================
+   KIRANA — tier Story (acuan: prototypes/kirana-story.html)
+   Arah "Jawa modern": pernikahan adat Jawa — motif TRUNTUM (cinta bersemi
+   kembali; BUKAN parang, dilarang di pernikahan Jawa), gunungan (kayon)
+   line-art menggambar diri, palet sogan (coklat batik + krem lawas + emas).
+   TANPA WebGL. Semua kelas ter-scope `.kr`. State mask reveal DIMILIKI JS
+   (WAAPI di cover, gsap di konten); CSS hanya menyembunyikan di bawah
+   `.is-js.is-motion` → tanpa JS/motion konten tetap terbaca.
+============================================================================= */
+
+.kr {
+  --kr-krem: #f5eddc;
+  --kr-krem2: #ede2c8;
+  --kr-panel: #fbf5e6;
+  --kr-sogan: #6b4a2b;
+  --kr-sogan-d: #452d15;
+  --kr-gold: #c09a4a;
+  --kr-gold-d: #9a7a35;
+  --kr-ink: #3b2f22;
+  --kr-muted: rgba(59, 47, 34, 0.62);
+  --kr-hairline: rgba(107, 74, 43, 0.22);
+  --kr-disp-stack: var(--kr-display), "Cormorant Upright", Georgia, serif;
+  --kr-body-stack: var(--kr-body), "Figtree", system-ui, sans-serif;
+
+  position: relative;
+  background: #e2d5b4;
+  color: var(--kr-ink);
+  font-family: var(--kr-body-stack);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+.kr *,
+.kr *::before,
+.kr *::after {
+  box-sizing: border-box;
+}
+.kr ::selection {
+  background: var(--kr-gold);
+  color: #fff;
+}
+
+/* Stage (bingkai undangan terpusat) --------------------------------------- */
+.kr-stage {
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--kr-krem);
+  position: relative;
+  box-shadow: 0 0 110px rgba(69, 45, 21, 0.4);
+}
+
+/* Grain + progress -------------------------------------------------------- */
+.kr-grain {
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.kr-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  z-index: 70;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--kr-sogan), var(--kr-gold));
+  transform: scaleX(0);
+}
+
+/* Pola truntum (bintang-bunga kecil) sebagai latar lembut ----------------- */
+.kr-truntum {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%236B4A2B' stroke-opacity='0.16'%3E%3Ccircle cx='36' cy='36' r='2.2'/%3E%3Cpath d='M36 26v6M36 40v6M26 36h6M40 36h6M29 29l4 4M39 39l4 4M43 29l-4 4M33 39l-4 4'/%3E%3C/g%3E%3C/svg%3E");
+}
+.kr-truntum--dark {
+  opacity: 0.22;
+  filter: invert(1);
+}
+
+/* Tipografi bersama ------------------------------------------------------- */
+.kr-eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--kr-gold-d);
+}
+.kr-title {
+  font-family: var(--kr-disp-stack);
+  font-weight: 500;
+  font-size: clamp(32px, 9vw, 42px);
+  line-height: 1.18;
+  margin-top: 16px;
+  color: var(--kr-sogan-d);
+}
+.kr-title--sm {
+  font-size: clamp(28px, 7.5vw, 36px);
+}
+.kr-title em {
+  font-style: italic;
+  color: var(--kr-gold-d);
+}
+.kr-lead {
+  color: var(--kr-muted);
+  font-size: 14px;
+  line-height: 1.9;
+  max-width: 320px;
+  margin: 14px auto 0;
+}
+
+/* Baris bermask — disembunyikan hanya bila JS + motion aktif. */
+.kr-line {
+  display: block;
+  overflow: hidden;
+}
+.kr-line > span {
+  display: block;
+}
+.kr.is-js.is-motion .kr-line > span {
+  visibility: hidden;
+}
+.kr.is-js.is-motion .kr-reveal {
+  opacity: 0;
+}
+
+/* Ornamen line-art (menggambar diri via gsap) ----------------------------- */
+.kr-ukel {
+  display: block;
+  width: min(64vw, 240px);
+  height: auto;
+  margin: 28px auto 0;
+}
+.kr-ukel path {
+  fill: none;
+  stroke: var(--kr-gold);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+/* ---------------------------------------------------------------- Cover --- */
+/* Tanpa JS: cover disembunyikan → konten langsung terbaca (degradasi anggun). */
+.kr-cover {
+  display: none;
+}
+.kr.is-js .kr-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--kr-krem);
+  clip-path: inset(0 0 0 0);
+  /* Wipe naik dari bawah. Transisi ada pada ELEMEN cover sendiri → penanda
+     "wipe selesai" bagi cover-gate (transitionend). */
+  transition: clip-path 1s cubic-bezier(0.76, 0, 0.24, 1);
+}
+.kr.is-js.is-open .kr-cover {
+  clip-path: inset(0 0 100% 0);
+}
+.kr-cover .kr-truntum {
+  opacity: 0.7;
+}
+.kr-cover__inner {
+  position: relative;
+  z-index: 4;
+  text-align: center;
+  padding: 24px;
+  max-width: 430px;
+  width: 100%;
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+.kr.is-js.is-open .kr-cover__inner {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .kr.is-js .kr-cover,
+  .kr-cover__inner {
+    transition: none;
+  }
+}
+.kr-cover__eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--kr-gold-d);
+  font-weight: 600;
+}
+.kr-gunungan-wrap {
+  position: relative;
+  width: min(64vw, 250px);
+  margin: 10px auto 2px;
+}
+.kr-gunungan {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.kr-gunungan path {
+  fill: none;
+  stroke: var(--kr-gold);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.kr-gunungan .kr-gn-sg {
+  stroke: var(--kr-sogan);
+  stroke-width: 1.1;
+}
+.kr-gn-center {
+  position: absolute;
+  inset: 30% 8% 16%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.kr-gn-name {
+  font-family: var(--kr-disp-stack);
+  font-weight: 500;
+  font-size: clamp(30px, 8.5vw, 40px);
+  line-height: 1.14;
+  color: var(--kr-sogan-d);
+}
+.kr-gn-amp {
+  font-family: var(--kr-disp-stack);
+  color: var(--kr-gold-d);
+  font-size: 20px;
+  margin: 2px 0;
+}
+.kr-cover__date {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--kr-muted);
+  margin-top: 6px;
+}
+.kr-guest {
+  margin: 20px auto 22px;
+  max-width: 290px;
+  padding: 14px 18px;
+  border: 1px solid var(--kr-sogan);
+  border-radius: 4px;
+  background: rgba(107, 74, 43, 0.05);
+  position: relative;
+}
+.kr-guest::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid var(--kr-hairline);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.kr-guest small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--kr-muted);
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.kr-guest strong {
+  font-family: var(--kr-disp-stack);
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--kr-sogan-d);
+}
+.kr-open {
+  appearance: none;
+  border: 0;
+  background: var(--kr-sogan);
+  color: var(--kr-krem);
+  font-family: var(--kr-body-stack);
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 16px 36px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 14px 30px -16px rgba(69, 45, 21, 0.8);
+  transition:
+    background 0.3s,
+    transform 0.3s;
+}
+.kr-open:hover {
+  background: var(--kr-sogan-d);
+  transform: translateY(-2px);
+}
+.kr-cover__hint {
+  margin-top: 16px;
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--kr-muted);
+}
+
+/* -------------------------------------------------------------- Section --- */
+.kr-section {
+  position: relative;
+  padding: 86px 26px;
+}
+.kr-center {
+  text-align: center;
+}
+.kr-inner {
+  max-width: 480px;
+  margin: 0 auto;
+}
+.kr-hero {
+  padding-top: 74px;
+}
+
+/* Sekar pambuka — panel sogan --------------------------------------------- */
+.kr-sekar {
+  background: var(--kr-sogan-d);
+  color: var(--kr-krem);
+  overflow: hidden;
+}
+.kr-sekar__text {
+  position: relative;
+  font-family: var(--kr-disp-stack);
+  font-weight: 500;
+  font-style: italic;
+  font-size: 21px;
+  line-height: 1.75;
+  max-width: 330px;
+  margin: 0 auto;
+  color: var(--kr-krem);
+}
+.kr-sekar__cite {
+  position: relative;
+  display: block;
+  margin-top: 18px;
+  font-style: normal;
+  font-size: 10.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--kr-gold);
+}
+
+/* Mempelai — kartu keraton ------------------------------------------------ */
+.kr-couple {
+  margin-top: 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 52px;
+  max-width: 420px;
+  margin-inline: auto;
+}
+.kr-keraton {
+  background: var(--kr-panel);
+  border: 1px solid var(--kr-sogan);
+  border-radius: 6px;
+  padding: 12px;
+  position: relative;
+}
+.kr-keraton::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--kr-hairline);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.kr-keraton__inner {
+  border-radius: 3px;
+  padding: 24px 20px 28px;
+  text-align: center;
+  position: relative;
+}
+.kr-tr-corner {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+}
+.kr-tr-corner path {
+  fill: none;
+  stroke: var(--kr-gold);
+  stroke-width: 1.1;
+}
+.kr-tr-corner--a {
+  top: 10px;
+  left: 10px;
+}
+.kr-tr-corner--b {
+  bottom: 10px;
+  right: 10px;
+  transform: rotate(180deg);
+}
+.kr-foto-oval {
+  width: 150px;
+  height: 186px;
+  margin: 4px auto 16px;
+  border-radius: 70px 70px 10px 10px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--kr-sogan);
+}
+.kr-foto-oval__ph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #c9a878, #6b4a2b 88%);
+}
+.kr-foto-oval__ph span {
+  font-family: var(--kr-disp-stack);
+  font-size: 64px;
+  color: rgba(245, 237, 220, 0.92);
+}
+.kr-keraton__role {
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--kr-gold-d);
+  font-weight: 600;
+}
+.kr-keraton__name {
+  font-family: var(--kr-disp-stack);
+  font-weight: 600;
+  font-size: 29px;
+  color: var(--kr-sogan-d);
+  margin-top: 6px;
+}
+.kr-keraton__meta {
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--kr-muted);
+  margin-top: 8px;
+}
+
+/* Countdown medali -------------------------------------------------------- */
+.kr-cd-frame {
+  max-width: 390px;
+  margin: 26px auto 0;
+  border: 1px solid var(--kr-sogan);
+  border-radius: 14px;
+  padding: 22px 10px;
+  background: var(--kr-panel);
+  position: relative;
+}
+.kr-cd-frame::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--kr-hairline);
+  border-radius: 9px;
+  pointer-events: none;
+}
+.kr .countdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.kr .count-box {
+  text-align: center;
+}
+.kr .count-num {
+  font-family: var(--kr-disp-stack);
+  font-weight: 600;
+  font-size: clamp(30px, 8.4vw, 40px);
+  font-variant-numeric: tabular-nums;
+  color: var(--kr-sogan-d);
+  line-height: 1;
+  display: block;
+}
+.kr .count-label {
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--kr-muted);
+  font-weight: 600;
+  margin-top: 5px;
+  display: block;
+}
+.kr .countdown-done {
+  font-family: var(--kr-disp-stack);
+  font-style: italic;
+  font-size: 20px;
+  color: var(--kr-gold-d);
+  margin-top: 8px;
+}
+
+/* Jadwal — tangga upacara ------------------------------------------------- */
+.kr-tangga {
+  position: relative;
+  margin-top: 40px;
+  padding-left: 30px;
+  max-width: 440px;
+  margin-inline: auto;
+}
+.kr-tangga::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--kr-sogan);
+  opacity: 0.4;
+}
+.kr-step {
+  position: relative;
+  padding-bottom: 44px;
+}
+.kr-step:last-child {
+  padding-bottom: 0;
+}
+.kr-step::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 5px;
+  width: 15px;
+  height: 15px;
+  border: 1.4px solid var(--kr-gold);
+  background: var(--kr-krem);
+  transform: rotate(45deg);
+}
+.kr-step__tag {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--kr-gold-d);
+  font-weight: 600;
+}
+.kr-step__title {
+  font-family: var(--kr-disp-stack);
+  font-weight: 600;
+  font-size: 27px;
+  color: var(--kr-sogan-d);
+  margin: 6px 0 8px;
+}
+.kr-step__meta {
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--kr-muted);
+}
+.kr-step__meta b {
+  color: var(--kr-ink);
+  font-weight: 600;
+}
+.kr-step__note {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--kr-muted);
+  background: rgba(192, 154, 74, 0.12);
+  border-left: 2px solid var(--kr-gold);
+  padding: 10px 12px;
+  border-radius: 0 8px 8px 0;
+}
+.kr-pills {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.kr-pill {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--kr-sogan);
+  color: var(--kr-sogan);
+  background: transparent;
+  cursor: pointer;
+  transition: 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.kr-pill:hover {
+  background: var(--kr-sogan);
+  color: var(--kr-krem);
+}
+.kr-pill--gold {
+  background: var(--kr-gold);
+  border-color: var(--kr-gold);
+  color: #fff;
+}
+.kr-pill--gold:hover {
+  background: var(--kr-gold-d);
+  border-color: var(--kr-gold-d);
+}
+.kr-cal {
+  position: relative;
+}
+.kr-cal > summary {
+  list-style: none;
+}
+.kr-cal > summary::-webkit-details-marker {
+  display: none;
+}
+.kr-cal__menu {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kr-cal__opt {
+  font-size: 12px;
+  text-decoration: none;
+  color: var(--kr-sogan);
+  border: 1px solid var(--kr-hairline);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: var(--kr-panel);
+}
+.kr-cal__opt:hover {
+  background: rgba(192, 154, 74, 0.12);
+}
+
+/* Galeri ------------------------------------------------------------------ */
+.kr-gallery-sec {
+  padding-left: 0;
+  padding-right: 0;
+}
+.kr-g-track {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 28px 26px;
+  scrollbar-width: none;
+}
+.kr-g-track::-webkit-scrollbar {
+  display: none;
+}
+.kr-g-item {
+  flex: 0 0 58%;
+  scroll-snap-align: center;
+  aspect-ratio: 3 / 4;
+  position: relative;
+  overflow: hidden;
+  border-radius: 60px 60px 10px 10px;
+  border: 1px solid var(--kr-sogan);
+}
+.kr-g-item img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.kr-g-item figcaption {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(245, 237, 220, 0.9);
+}
+
+/* RSVP (GuestbookSection dibungkus .kr-inner) + Amplop -------------------- */
+.kr-envelope {
+  max-width: 440px;
+  margin: 22px auto 0;
+  text-align: left;
+}
+.kr-acct {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--kr-panel);
+  border: 1px solid var(--kr-hairline);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 14px;
+}
+.kr-acct b {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--kr-ink);
+}
+.kr-acct small {
+  display: block;
+  font-size: 11px;
+  color: var(--kr-muted);
+  margin-top: 2px;
+}
+.kr-acct--addr {
+  display: block;
+}
+.kr-acct--addr small {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--kr-gold-d);
+}
+.kr-acct--addr p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--kr-muted);
+  margin-top: 6px;
+}
+.kr-copy {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--kr-sogan);
+  color: var(--kr-sogan);
+  background: transparent;
+  border-radius: 999px;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: 0.25s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.kr-copy:hover {
+  background: var(--kr-gold);
+  border-color: var(--kr-gold);
+  color: #fff;
+}
+
+/* Footer ------------------------------------------------------------------ */
+.kr-footer {
+  padding: 70px 26px 92px;
+  background: var(--kr-sogan-d);
+  color: var(--kr-krem);
+  position: relative;
+  overflow: hidden;
+}
+.kr-gn-mini {
+  width: 56px;
+  height: auto;
+  margin: 0 auto 14px;
+  display: block;
+}
+.kr-gn-mini path {
+  fill: none;
+  stroke: var(--kr-gold);
+  stroke-width: 1.4;
+}
+.kr-footer__role {
+  font-size: 9px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(245, 237, 220, 0.65);
+}
+.kr-footer__mono {
+  font-family: var(--kr-disp-stack);
+  font-weight: 500;
+  font-size: 26px;
+  color: #e5ce9e;
+  margin-top: 8px;
+}
+.kr-footer__msg {
+  font-size: 12.5px;
+  color: rgba(245, 237, 220, 0.7);
+  margin-top: 12px;
+  line-height: 1.9;
+  max-width: 320px;
+  margin-inline: auto;
+}
+.kr-watermark {
+  display: inline-block;
+  margin-top: 26px;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(245, 237, 220, 0.6);
+  border: 1px solid rgba(245, 237, 220, 0.28);
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+.kr-watermark a {
+  color: #e5ce9e;
+  text-decoration: none;
+}
+
+/* Tombol musik — tampil setelah dibuka ------------------------------------ */
+.kr-music {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 55;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--kr-hairline);
+  background: rgba(245, 237, 220, 0.95);
+  color: var(--kr-sogan-d);
+  display: none;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 10px 24px -12px rgba(69, 45, 21, 0.5);
+}
+.kr.is-open .kr-music {
+  display: grid;
+}

@@ -1,6 +1,14 @@
-/** Label chrome tema Lumina (universal, Indonesia). */
+/** Label chrome tema Lumina (universal, tier Craft, Indonesia). */
 export const L = {
-  hero: { scroll: "Gulir" },
+  cover: {
+    open: "Buka Undangan",
+    /** Baris puitis di cover, dipakai bila tak ada subtitle kategori. */
+    invite: {
+      wedding: "mengundang Anda pada hari\npernikahan kami yang sederhana",
+      corporate: "mengundang Anda untuk hadir\ndi acara istimewa ini",
+      family: "mengundang Anda untuk\nberbagi kebahagiaan ini",
+    },
+  },
   kicker: {
     wedding: "The Wedding Of",
     corporate: "Undangan Acara",
@@ -14,7 +22,7 @@ export const L = {
     minutes: "Menit",
     seconds: "Detik",
   },
-  intro: { eyebrow: "Sambutan" },
+  intro: { eyebrow: "Sebuah surat kecil" },
   principals: {
     wedding: "Kedua Mempelai",
     corporate: "Penyelenggara",
@@ -38,14 +46,14 @@ export const L = {
     family: { eyebrow: "Doa & Harapan", heading: "Untaian Doa" },
   },
   schedule: {
-    eyebrow: "Acara",
-    heading: "Waktu & Tempat",
-    maps: "Lihat Lokasi",
-    calendar: "Simpan ke Kalender",
+    eyebrow: "Waktu & Tempat",
+    heading: "Rangkaian Acara",
+    maps: "Petunjuk Arah",
+    calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
   },
-  gallery: { eyebrow: "Galeri", heading: "Momen" },
+  gallery: { eyebrow: "Album", heading: "Momen" },
   envelope: {
     eyebrow: "Tanda Kasih",
     heading: "Amplop Digital",

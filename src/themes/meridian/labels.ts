@@ -1,42 +1,61 @@
-/** Label chrome tema Meridian (corporate, Indonesia) — terpusat dalam tema. */
+/** Label chrome tema Meridian (wedding Art Deco gala, tier Story) — terpusat. */
 export const L = {
-  wrongCategory: "Tema ini khusus untuk undangan acara korporat.",
-  hero: { eyebrow: "Undangan Acara", scroll: "Gulir" },
+  wrongCategory: "Tema ini khusus untuk undangan pernikahan.",
+  cover: {
+    eyebrow: "The Wedding Gala of",
+    open: "Buka Undangan",
+    hint: "Ketuk untuk membuka",
+  },
+  intro: {
+    eyebrow: "Sebuah Perayaan",
+    titleA: "Malam emas,",
+    titleB: "janji abadi.",
+    lead: "Dengan hormat, kami mengundang Anda menghadiri malam pernikahan kami — sebuah gala kecil untuk orang-orang yang paling kami sayangi.",
+  },
+  couple: {
+    eyebrow: "Kedua Mempelai",
+    bride: "The Bride",
+    groom: "The Groom",
+    parents: (father?: string, mother?: string) => {
+      const f = father?.trim();
+      const m = mother?.trim();
+      if (f && m) return `Putra/Putri dari Bapak ${f} & Ibu ${m}`;
+      if (f) return `Putra/Putri dari Bapak ${f}`;
+      if (m) return `Putra/Putri dari Ibu ${m}`;
+      return "";
+    },
+  },
   countdown: {
-    eyebrow: "Hitung Mundur",
-    done: "Acara telah dimulai.",
+    eyebrow: "Counting Down",
+    done: "Hari bahagia telah tiba 🥂",
     days: "Hari",
     hours: "Jam",
     minutes: "Menit",
     seconds: "Detik",
   },
-  intro: { eyebrow: "Tentang Acara" },
-  agenda: { eyebrow: "Rundown", heading: "Agenda Acara" },
-  schedule: {
-    eyebrow: "Jadwal",
-    heading: "Waktu & Tempat",
-    maps: "Lihat Lokasi",
-    calendar: "Simpan ke Kalender",
+  programme: {
+    eyebrow: "Programme",
+    maps: "Petunjuk Arah",
+    calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
+    /** Angka romawi untuk indeks acara (I., II., III. …). */
+    roman: (n: number) =>
+      ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"][n] ??
+      String(n + 1),
   },
-  gallery: { eyebrow: "Dokumentasi", heading: "Galeri" },
-  contact: {
-    eyebrow: "Narahubung",
-    heading: "Informasi & Konfirmasi",
-    phone: "Telepon",
-    email: "Email",
+  gallery: { eyebrow: "Moments", caption: "Foto" },
+  rsvp: { eyebrow: "RSVP" },
+  gift: {
+    eyebrow: "Wedding Gift",
+    note: "Kehadiran Anda adalah kehormatan tertinggi. Bila berkenan memberi tanda kasih:",
+    holder: "a.n.",
+    address: "Alamat pengiriman kado",
     copy: "Salin",
     copied: "Tersalin",
   },
-  envelope: {
-    eyebrow: "Tanda Kasih",
-    heading: "Amplop Digital",
-    note: "Bila berkenan memberikan tanda kasih, dapat melalui kanal berikut:",
-    copy: "Salin Nomor",
-    copied: "Tersalin",
-    giftAddress: "Alamat pengiriman",
-    holder: "a.n.",
+  footer: {
+    by: "Crafted with",
+    brand: "Merriva",
   },
-  footer: { thanks: "Terima Kasih", by: "Dibuat dengan", brand: "Merriva" },
 } as const;

@@ -1,0 +1,679 @@
+/* =============================================================================
+   LUMINA — tier Craft (acuan: prototypes/lumina-craft.html)
+   Arah "soft film / Korean-minimal": album foto tipis — putih hangat, serif buku
+   (Gowun Batang), bingkai film tipis, surat pendek, banyak ruang napas. Universal
+   & adaptif (wedding/corporate/family). BUKTI TIER CRAFT: TANPA canvas/gsap/lenis
+   — hanya CSS + `Reveal` (IO). Semua kelas ter-scope `.lm`. Reveal state hanya
+   aktif di bawah `.is-js` → tanpa JS konten terbaca; reduced-motion dinetralkan.
+============================================================================= */
+
+.lm {
+  --lm-paper: #faf8f4;
+  --lm-paper2: #f2eee6;
+  --lm-ink: #2a2723;
+  --lm-taupe: #9a7b58;
+  --lm-taupe-ink: #7a5f40;
+  --lm-muted: rgba(42, 39, 35, 0.58);
+  --lm-line: rgba(42, 39, 35, 0.14);
+  --lm-text: rgba(42, 39, 35, 0.85);
+  --lm-serif: var(--lm-display), Georgia, serif;
+  --lm-sans: var(--lm-body), system-ui, sans-serif;
+
+  position: relative;
+  background: #e9e5dc;
+  color: var(--lm-ink);
+  font-family: var(--lm-sans);
+  font-size: 16px;
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+.lm *,
+.lm *::before,
+.lm *::after {
+  box-sizing: border-box;
+}
+.lm ::selection {
+  background: var(--lm-taupe);
+  color: #fff;
+}
+
+/* Stage — album tipis di tengah -------------------------------------------- */
+.lm-stage {
+  position: relative;
+  max-width: 480px;
+  min-height: 100svh;
+  margin: 0 auto;
+  background: var(--lm-paper);
+  box-shadow: 0 0 90px rgba(42, 39, 35, 0.16);
+}
+
+/* Grain film --------------------------------------------------------------- */
+.lm-grain {
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Reveal (Craft: CSS + IO) ------------------------------------------------- */
+.lm .reveal {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 1s ease,
+    transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lm.is-js .reveal {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.lm.is-js .reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lm.is-js .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none;
+  }
+}
+
+/* =============================================================== COVER ===== */
+.lm-cover {
+  display: none;
+}
+.lm.is-js .lm-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--lm-paper);
+  opacity: 1;
+  transition: opacity 1s ease;
+}
+.lm.is-js.is-open .lm-cover {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lm.is-js .lm-cover {
+    transition: none;
+  }
+}
+
+.lm-cover__frame {
+  position: absolute;
+  inset: 16px;
+  border: 1px solid var(--lm-line);
+  pointer-events: none;
+}
+.lm-cover__frame::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(42, 39, 35, 0.08);
+}
+
+.lm-cover__inner {
+  position: relative;
+  text-align: center;
+  padding: 28px;
+  max-width: 400px;
+  width: 100%;
+}
+/* Entrance ringan (Craft, CSS) — hanya di bawah is-js, dinetralkan reduced-motion. */
+.lm.is-js .lm-cover__inner > * {
+  animation: lm-rise 0.95s both cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lm.is-js .lm-cover__inner > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.lm.is-js .lm-cover__inner > *:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.lm.is-js .lm-cover__inner > *:nth-child(4) {
+  animation-delay: 0.3s;
+}
+.lm.is-js .lm-cover__inner > *:nth-child(5) {
+  animation-delay: 0.4s;
+}
+.lm.is-js .lm-cover__inner > *:nth-child(6) {
+  animation-delay: 0.5s;
+}
+@keyframes lm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lm.is-js .lm-cover__inner > * {
+    animation: none;
+  }
+}
+
+.lm-cover__date {
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--lm-muted);
+}
+.lm-sprig {
+  width: 54px;
+  height: auto;
+  margin: 26px auto 22px;
+  display: block;
+}
+.lm-sprig path {
+  fill: none;
+  stroke: var(--lm-taupe);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+.lm-cover__names {
+  font-family: var(--lm-serif);
+  font-weight: 400;
+  font-size: clamp(34px, 9.6vw, 44px);
+  line-height: 1.5;
+  color: var(--lm-ink);
+}
+.lm-cover__names--pair {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.lm-cover__name {
+  display: block;
+}
+.lm-cover__amp {
+  color: var(--lm-taupe);
+  font-size: 22px;
+  display: block;
+  line-height: 1.2;
+}
+.lm-cover__sub {
+  margin-top: 20px;
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: var(--lm-muted);
+  white-space: pre-line;
+}
+.lm-cover__guest {
+  margin: 30px 0 32px;
+  font-size: 12.5px;
+  color: var(--lm-muted);
+}
+.lm-cover__guest b {
+  display: block;
+  font-family: var(--lm-serif);
+  font-weight: 400;
+  font-size: 19px;
+  color: var(--lm-ink);
+  margin-top: 8px;
+}
+.lm-open {
+  appearance: none;
+  border: 1px solid var(--lm-ink);
+  background: transparent;
+  color: var(--lm-ink);
+  font-family: var(--lm-sans);
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  padding: 15px 32px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+.lm-open:hover {
+  background: var(--lm-ink);
+  color: var(--lm-paper);
+}
+
+/* Tombol musik mengambang -------------------------------------------------- */
+.lm-music {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 55;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--lm-line);
+  background: rgba(250, 248, 244, 0.94);
+  color: var(--lm-ink);
+  display: none;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(42, 39, 35, 0.12);
+}
+.lm.is-open .lm-music {
+  display: grid;
+}
+
+/* =============================================================== LAYOUT ==== */
+.lm-section {
+  position: relative;
+  padding: clamp(64px, 15vw, 92px) 30px;
+  text-align: center;
+}
+.lm-section--tint {
+  background: var(--lm-paper2);
+  border-block: 1px solid var(--lm-line);
+}
+.lm-inner {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.lm-eyebrow {
+  font-family: var(--lm-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--lm-taupe);
+  margin: 0 0 1rem;
+}
+.lm-eyebrow--center {
+  text-align: center;
+}
+.lm-h2 {
+  font-family: var(--lm-serif);
+  font-weight: 700;
+  font-size: clamp(1.7rem, 7vw, 2.3rem);
+  line-height: 1.3;
+  color: var(--lm-ink);
+  margin: 0 0 1.4rem;
+}
+.lm-lead {
+  font-family: var(--lm-serif);
+  font-size: 1.03rem;
+  line-height: 2.1;
+  color: var(--lm-text);
+  margin: 1.4rem auto 0;
+  max-width: 21rem;
+}
+.lm-lead--light {
+  color: rgba(250, 248, 244, 0.85);
+}
+.lm-body-text {
+  margin: 1rem auto 0;
+  max-width: 22rem;
+  color: var(--lm-muted);
+}
+.lm-muted {
+  font-size: 0.86rem;
+  line-height: 1.8;
+  color: var(--lm-muted);
+  margin: 0.3rem 0;
+}
+.lm-quote {
+  margin: 1.8rem auto 0;
+  max-width: 22rem;
+  border-top: 1px solid var(--lm-line);
+  border-bottom: 1px solid var(--lm-line);
+  padding: 1.4rem 0;
+  font-family: var(--lm-serif);
+  font-size: 1.15rem;
+  line-height: 1.7;
+  color: var(--lm-ink);
+}
+.lm-quote p {
+  margin: 0;
+}
+.lm-quote__src {
+  display: block;
+  margin-top: 0.7rem;
+  font-family: var(--lm-sans);
+  font-size: 0.72rem;
+  font-style: normal;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lm-taupe);
+}
+
+/* Divider ------------------------------------------------------------------ */
+.lm-divider {
+  display: block;
+  width: 2.4rem;
+  height: 1px;
+  background: var(--lm-taupe);
+  margin: 1.4rem auto;
+}
+
+/* Principals --------------------------------------------------------------- */
+.lm-principals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 1.1rem;
+  margin-top: 2rem;
+}
+.lm-principal {
+  text-align: center;
+}
+.lm-principal__name {
+  font-family: var(--lm-serif);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--lm-ink);
+  margin: 0.5rem 0 0.5rem;
+}
+.lm-principals__amp {
+  display: none;
+}
+.lm-contact {
+  margin: 1.5rem auto 0;
+  padding: 1.4rem;
+  background: var(--lm-paper);
+  border: 1px solid var(--lm-line);
+  max-width: 22rem;
+  text-align: left;
+}
+.lm-contact__name {
+  font-family: var(--lm-serif);
+  font-size: 1.2rem;
+  color: var(--lm-ink);
+  margin: 0 0 0.6rem;
+}
+.lm-contact__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+}
+.lm-contact__row svg {
+  color: var(--lm-taupe-ink);
+  flex-shrink: 0;
+}
+
+/* Countdown — sebaris tenang ----------------------------------------------- */
+.lm .countdown {
+  display: flex;
+  justify-content: center;
+  gap: 1.6rem;
+  margin: 1.8rem auto 0;
+  flex-wrap: wrap;
+}
+.lm .count-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.lm .count-num {
+  font-family: var(--lm-serif);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 7vw, 2rem);
+  color: var(--lm-ink);
+  font-variant-numeric: tabular-nums;
+}
+.lm .count-label {
+  font-size: 0.53rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--lm-muted);
+  margin-top: 0.35rem;
+}
+.lm .countdown-done {
+  font-family: var(--lm-serif);
+  font-size: 1.3rem;
+  color: var(--lm-ink);
+}
+
+/* Cards -------------------------------------------------------------------- */
+.lm-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  max-width: 24rem;
+  margin: 1.6rem auto 0;
+}
+.lm-card {
+  background: var(--lm-paper);
+  border: 1px solid var(--lm-line);
+  border-radius: 6px;
+  padding: 1.5rem;
+  text-align: center;
+}
+.lm-section--tint .lm-card {
+  background: #fdfcf9;
+}
+.lm-card__title {
+  font-family: var(--lm-serif);
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--lm-ink);
+  margin: 0 0 0.8rem;
+}
+.lm-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin: 0.35rem 0;
+}
+.lm-card__row svg {
+  color: var(--lm-taupe-ink);
+  flex-shrink: 0;
+}
+.lm-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+.lm-account__label {
+  font-size: 0.64rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lm-taupe);
+  margin: 0 0 0.5rem;
+}
+.lm-account__num {
+  font-family: var(--lm-serif);
+  font-size: 1.4rem;
+  letter-spacing: 0.04em;
+  color: var(--lm-ink);
+  margin: 0;
+}
+
+/* Buttons & links ---------------------------------------------------------- */
+.lm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.2rem;
+  border: 0;
+  border-bottom: 1.5px solid var(--lm-taupe);
+  background: transparent;
+  color: var(--lm-ink);
+  font-family: var(--lm-sans);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+.lm-btn:hover {
+  color: var(--lm-taupe);
+}
+.lm-btn--sm {
+  padding: 0.35rem 0.4rem;
+  font-size: 0.6rem;
+}
+.lm-btn--solid {
+  border: 0;
+  background: var(--lm-ink);
+  color: var(--lm-paper);
+  border-radius: 999px;
+  padding: 0.8rem 1.8rem;
+  margin-top: 1.1rem;
+  letter-spacing: 0.2em;
+}
+.lm-btn--solid:hover {
+  background: var(--lm-taupe);
+  color: var(--lm-paper);
+}
+
+/* Calendar dropdown -------------------------------------------------------- */
+.lm-cal {
+  position: relative;
+}
+.lm-cal__trigger {
+  list-style: none;
+}
+.lm-cal__trigger::-webkit-details-marker {
+  display: none;
+}
+.lm-cal__menu {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.5rem;
+  min-width: 12rem;
+  background: var(--lm-paper);
+  border: 1px solid var(--lm-line);
+  box-shadow: 0 12px 30px rgba(42, 39, 35, 0.14);
+}
+.lm-cal__opt {
+  display: block;
+  padding: 0.7rem 1rem;
+  font-size: 0.82rem;
+  color: var(--lm-text);
+  text-decoration: none;
+}
+.lm-cal__opt:hover {
+  background: var(--lm-paper2);
+}
+
+/* Gallery — film strip ----------------------------------------------------- */
+.lm-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-top: 1.6rem;
+}
+.lm-gallery__item {
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 6px;
+}
+.lm-gallery__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: saturate(0.94);
+  transition: transform 0.6s ease;
+}
+.lm-gallery__item:hover img {
+  transform: scale(1.04);
+}
+
+/* Timeline ----------------------------------------------------------------- */
+.lm-timeline {
+  max-width: 24rem;
+  margin: 1.4rem auto 0;
+  text-align: left;
+}
+.lm-story {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--lm-line);
+}
+.lm-story:last-child {
+  border-bottom: none;
+}
+.lm-story__date {
+  font-size: 0.64rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lm-taupe);
+  margin: 0 0 0.35rem;
+}
+.lm-story__title {
+  font-family: var(--lm-serif);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--lm-ink);
+  margin: 0 0 0.4rem;
+}
+.lm-story__body {
+  font-size: 0.9rem;
+  line-height: 1.85;
+  color: var(--lm-muted);
+  margin: 0;
+}
+
+/* Footer ------------------------------------------------------------------- */
+.lm-footer {
+  padding: clamp(72px, 16vw, 96px) 30px 106px;
+  text-align: center;
+  background: var(--lm-paper2);
+  border-top: 1px solid var(--lm-line);
+}
+.lm-footer .lm-divider {
+  background: var(--lm-taupe);
+}
+.lm-footer .lm-lead--light {
+  color: var(--lm-text);
+}
+.lm-footer__thanks {
+  font-family: var(--lm-serif);
+  font-weight: 400;
+  font-size: 0.66rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--lm-muted);
+  margin: 0 0 0.8rem;
+}
+.lm-footer__title {
+  font-family: var(--lm-serif);
+  font-size: 1.5rem;
+  line-height: 1.9;
+  color: var(--lm-ink);
+  margin: 0;
+}
+.lm-watermark {
+  display: inline-block;
+  margin: 1.8rem 0 0;
+  font-size: 0.6rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--lm-muted);
+  border-bottom: 1px solid var(--lm-line);
+  padding-bottom: 6px;
+}
+.lm-watermark a {
+  color: var(--lm-taupe);
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-gallery__item img {
+    transition: none;
+  }
+}

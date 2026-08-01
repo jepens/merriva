@@ -1,72 +1,72 @@
-import { IBM_Plex_Mono, IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
+import { Italiana, Jost } from "next/font/google";
 
-import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
 import {
   formatDateOnly,
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
 import { isSectionVisible } from "@/lib/validation/content";
-import { ThemeRoot } from "@/themes/_shared/motion";
+import { CoverGate } from "@/themes/_shared/cover-gate";
 import type { ThemeComponentProps } from "@/themes/registry";
 
-import "./meridian.css";
+import "./mrd.css";
+import { MeridianCover } from "./cover";
+import { MeridianFx } from "./fx";
 import { L } from "./labels";
 import {
-  Agenda,
-  Contact,
   CountdownBlock,
-  Envelope,
+  Couple,
   Footer,
-  Gallery,
-  Hero,
   Intro,
-  Schedule,
+  Moments,
+  Programme,
+  Rsvp,
+  WeddingGift,
 } from "./sections";
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (aman WebView &
-// LCP). Grotesk geometris (display) + humanist (teks) + mono (waktu/indeks agenda).
-const display = Space_Grotesk({
+// LCP). Italiana = display seni-deco renggang (nama & judul); Jost = geometric
+// sans (teks & label). Nuansa gala Art Deco tanpa aset eksternal.
+const display = Italiana({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400"],
   variable: "--mrd-display",
   display: "swap",
 });
-const body = IBM_Plex_Sans({
+const body = Jost({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["300", "400", "500"],
   variable: "--mrd-body",
-  display: "swap",
-});
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--mrd-mono",
   display: "swap",
 });
 
 /**
- * Tema "Meridian" (corporate, tier standard). Menerima `InvitationData` hasil
- * rakitan server — TIDAK mengambil data sendiri (SPEC §7.1). Section tampil
- * sesuai `settings.sections` (undefined = tampil). Agenda memakai toggle "story".
+ * Tema "Meridian" (wedding Art Deco gala, tier Story) — acuan
+ * `prototypes/meridian-story.html`. SERVER component: section dirender di server
+ * (SSR/ISR) lalu dibungkus `CoverGate` (klien) yang memegang cover + musik
+ * (`coverMode:'theme'`). TIDAK mengambil data sendiri (SPEC §7.1); section tampil
+ * sesuai `settings.sections`.
  */
 export default function Meridian({ data }: ThemeComponentProps) {
-  const rootClass = `mrd ${display.variable} ${body.variable} ${mono.variable}`;
+  const rootClass = `mrd ${display.variable} ${body.variable}`;
   const { settings } = data;
 
-  if (data.content.category !== "corporate") {
+  if (data.content.category !== "wedding") {
     return (
-      <ThemeRoot className={rootClass}>
-        <section className="mrd-section">
-          <div className="mrd-inner">
-            <p className="mrd-lead">{L.wrongCategory}</p>
-          </div>
+      <div className={rootClass}>
+        <section className="mrd-section mrd-center">
+          <p className="mrd-lead">{L.wrongCategory}</p>
         </section>
-      </ThemeRoot>
+      </div>
     );
   }
 
-  const c = data.content;
+  const content = data.content;
+  const brideName =
+    content.bride.nickname || content.bride.name || "Mempelai Wanita";
+  const groomName =
+    content.groom.nickname || content.groom.name || "Mempelai Pria";
+
   const firstEvent = data.events[0];
   const dateLabel = firstEvent
     ? (() => {
@@ -86,45 +86,43 @@ export default function Meridian({ data }: ThemeComponentProps) {
       ? localToUtc(`${data.eventDate}T00:00`, settings.timezone)
       : null);
 
-  const hasIntro = Boolean(c.description || c.greetingOpen || c.quote?.text);
-  const env = c.envelope;
+  const env = content.envelope;
   const hasEnvelope =
     env.enabled &&
     (env.banks.length > 0 ||
       env.ewallets.length > 0 ||
       Boolean(env.giftAddress));
-  const contact = c.pic;
-  const hasContact = Boolean(
-    contact && (contact.name || contact.phone || contact.email),
-  );
 
   return (
-    <ThemeRoot className={rootClass}>
-      <Hero
-        eventName={c.eventName}
-        organizer={c.organizer}
-        dateLabel={dateLabel}
-        bgUrl={data.media[0]?.url}
-      />
-
-      {hasIntro ? (
-        <Intro
-          description={c.description}
-          greetingOpen={c.greetingOpen}
-          quote={c.quote?.text ? c.quote : undefined}
+    <CoverGate
+      rootClassName={rootClass}
+      contentClassName="mrd-stage"
+      coverClassName="mrd-cover"
+      musicClassName="mrd-music"
+      wipeMs={1100}
+      music={data.music}
+      cover={
+        <MeridianCover
+          brideName={brideName}
+          groomName={groomName}
+          dateLabel={dateLabel}
         />
-      ) : null}
+      }
+      fx={<MeridianFx />}
+    >
+      <div className="mrd-grain" aria-hidden />
+      <div className="mrd-progress" aria-hidden />
+
+      <Intro greetingOpen={content.greetingOpen} />
+
+      <Couple bride={content.bride} groom={content.groom} />
 
       {isSectionVisible(settings, "countdown") && countdownTarget ? (
         <CountdownBlock targetIso={countdownTarget} />
       ) : null}
 
-      {isSectionVisible(settings, "story") && c.agenda.length > 0 ? (
-        <Agenda agenda={c.agenda} />
-      ) : null}
-
       {isSectionVisible(settings, "schedule") && data.events.length > 0 ? (
-        <Schedule
+        <Programme
           events={data.events}
           tz={settings.timezone}
           slug={data.slug}
@@ -132,29 +130,21 @@ export default function Meridian({ data }: ThemeComponentProps) {
       ) : null}
 
       {isSectionVisible(settings, "gallery") && data.media.length > 0 ? (
-        <Gallery media={data.media} />
+        <Moments media={data.media} />
       ) : null}
 
-      {hasContact && contact ? <Contact pic={contact} /> : null}
+      {isSectionVisible(settings, "rsvp") ? <Rsvp slug={data.slug} /> : null}
 
       {isSectionVisible(settings, "envelope") && hasEnvelope ? (
-        <Envelope envelope={env} slug={data.slug} />
-      ) : null}
-
-      {isSectionVisible(settings, "rsvp") ? (
-        <section className="mrd-section">
-          <div className="mrd-inner">
-            <GuestbookSection slug={data.slug} />
-          </div>
-        </section>
+        <WeddingGift envelope={env} />
       ) : null}
 
       <Footer
-        greetingClose={c.greetingClose}
-        eventName={c.eventName}
-        organizer={c.organizer}
+        brideName={brideName}
+        groomName={groomName}
+        greetingClose={content.greetingClose}
         watermark={data.watermark}
       />
-    </ThemeRoot>
+    </CoverGate>
   );
 }

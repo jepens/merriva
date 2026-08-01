@@ -1,8 +1,10 @@
 import type { InvitationData } from "@/types/invitation";
 
 /**
- * Data contoh pratinjau tema Meridian (corporate) — mandiri (foto = gradasi
- * SVG data-URI, tanpa request eksternal).
+ * Data contoh pratinjau tema Meridian (wedding Art Deco gala, tier Story) —
+ * acuan `prototypes/meridian-story.html` (Alina Prameswari & Devan Mahendra).
+ * Mandiri: foto galeri = gradasi SVG data-URI navy/emas (tanpa request eksternal).
+ * Waktu WIB disimpan sebagai UTC ISO (Sabtu 20 Feb 2027 16.00 WIB → 09.00 UTC).
  */
 function swatch(from: string, to: string): string {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${from}'/><stop offset='1' stop-color='${to}'/></linearGradient></defs><rect width='800' height='800' fill='url(#g)'/></svg>`;
@@ -17,53 +19,42 @@ const photo = (from: string, to: string) => ({
 
 export const demoInvitationData: InvitationData = {
   slug: "demo",
-  category: "corporate",
-  eventDate: "2026-10-15",
+  category: "wedding",
+  eventDate: "2027-02-20",
   content: {
-    category: "corporate",
-    eventName: "Nusantara Tech Summit 2026",
-    organizer: "PT Meridian Digital Nusantara",
-    description:
-      "Konferensi teknologi tahunan yang mempertemukan pemimpin industri, praktisi, dan inovator untuk membahas masa depan transformasi digital di Indonesia. Bergabunglah dalam sesi keynote, panel diskusi, dan peluang jejaring.",
-    pic: {
-      name: "Sekretariat Panitia",
-      phone: "+62 812 3456 7890",
-      email: "rsvp@nusantarasummit.id",
+    category: "wedding",
+    title: "Alina Prameswari & Devan Mahendra",
+    bride: {
+      name: "Alina Prameswari",
+      nickname: "Alina",
+      fatherName: "Adrian Prameswari",
+      motherName: "Karina Dewanti",
+      childOrder: "Putri pertama",
     },
-    agenda: [
-      {
-        title: "Registrasi & Coffee Morning",
-        date: "08.00 – 09.00 WIB",
-        narrative:
-          "Registrasi peserta, pengambilan lanyard, dan ramah tamah pagi.",
-      },
-      {
-        title: "Keynote: Masa Depan AI di Indonesia",
-        date: "09.00 – 10.30 WIB",
-        narrative:
-          "Pemaparan arah strategis adopsi kecerdasan buatan oleh pembicara utama.",
-      },
-      {
-        title: "Panel: Transformasi Digital UMKM",
-        date: "11.00 – 12.30 WIB",
-        narrative:
-          "Diskusi lintas sektor tentang digitalisasi usaha kecil dan menengah.",
-      },
-      {
-        title: "Networking Lunch & Penutupan",
-        date: "12.30 – 14.00 WIB",
-        narrative: "Santap siang, jejaring antar peserta, dan sesi penutup.",
-      },
-    ],
+    groom: {
+      name: "Devan Mahendra",
+      nickname: "Devan",
+      fatherName: "Yudha Mahendra",
+      motherName: "Sofia Larasati",
+      childOrder: "Putra kedua",
+    },
+    story: [],
     greetingOpen:
-      "Dengan hormat, kami mengundang Bapak/Ibu untuk hadir dalam acara berikut.",
+      "Dengan hormat, kami mengundang Anda menghadiri malam pernikahan kami — sebuah gala kecil untuk orang-orang yang paling kami sayangi.",
     greetingClose:
-      "Kehadiran dan partisipasi Bapak/Ibu merupakan kehormatan bagi kami.",
+      "Kehadiran Anda adalah kehormatan tertinggi bagi kami. Sampai jumpa di malam bahagia.",
     quote: {
-      text: "Inovasi bukan tentang teknologi semata, melainkan tentang orang yang berani mengubah cara kerja.",
-      source: "Tema Summit 2026",
+      text: "Dan di antara tanda-tanda kekuasaan-Nya, Dia menciptakan pasangan-pasangan untukmu agar kamu merasa tenteram.",
+      source: "Q.S. Ar-Rum · 21",
     },
-    envelope: { enabled: false, banks: [], ewallets: [] },
+    envelope: {
+      enabled: true,
+      banks: [{ bank: "BCA", number: "3344556677", holder: "Devan Mahendra" }],
+      ewallets: [
+        { provider: "OVO", number: "081288997766", holder: "Alina Prameswari" },
+      ],
+      giftAddress: "The Langham Residence, SCBD Lot 8, Jakarta Selatan",
+    },
   },
   settings: {
     timezone: "Asia/Jakarta",
@@ -72,23 +63,32 @@ export const demoInvitationData: InvitationData = {
   },
   events: [
     {
-      id: "demo-main",
-      name: "Nusantara Tech Summit 2026",
-      startAt: "2026-10-15T01:00:00.000Z", // 08.00 WIB
-      endAt: "2026-10-15T07:00:00.000Z",
-      venueName: "Ballroom, The Ritz-Carlton Jakarta",
-      address: "Jl. DR. Ide Anak Agung Gde Agung, Kuningan, Jakarta Selatan",
+      id: "demo-akad",
+      name: "Akad Nikah",
+      startAt: "2027-02-20T09:00:00.000Z", // 16.00 WIB
+      endAt: "2027-02-20T10:00:00.000Z",
+      venueName: "The Langham Ballroom, SCBD",
+      address: "Keluarga & kerabat dekat",
+      mapsUrl: "https://maps.google.com/?q=-6.224,106.809",
+    },
+    {
+      id: "demo-gala",
+      name: "Gala Reception",
+      startAt: "2027-02-20T12:00:00.000Z", // 19.00 WIB
+      endAt: "2027-02-20T15:00:00.000Z", // 22.00 WIB
+      venueName: "The Langham Grand Ballroom",
+      address: "Dresscode: Black tie · aksen emas",
       mapsUrl: "https://maps.google.com/?q=-6.224,106.809",
     },
   ],
   media: [
-    photo("#17223a", "#0f1826"),
-    photo("#2b3550", "#17223a"),
-    photo("#bf9350", "#8f6a2e"),
-    photo("#566072", "#17223a"),
-    photo("#eee8da", "#bf9350"),
-    photo("#0f1826", "#566072"),
+    photo("#2b3c5c", "#0d1626"),
+    photo("#4a3d22", "#141018"),
+    photo("#20365c", "#0a1120"),
+    photo("#a97e35", "#0f1826"),
+    photo("#d4b36a", "#4a3d22"),
+    photo("#17223a", "#a97e35"),
   ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
   music: null,
-  watermark: false,
+  watermark: true,
 };

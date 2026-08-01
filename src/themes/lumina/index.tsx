@@ -1,4 +1,4 @@
-import { Karla, Spectral } from "next/font/google";
+import { Gowun_Batang, Karla } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -8,11 +8,12 @@ import {
   localToUtc,
 } from "@/lib/datetime";
 import { isSectionVisible } from "@/lib/validation/content";
-import { ThemeRoot } from "@/themes/_shared/motion";
+import { CoverGate } from "@/themes/_shared/cover-gate";
 import type { StoryEntry } from "@/lib/validation/content";
 import type { ThemeComponentProps } from "@/themes/registry";
 
-import "./lumina.css";
+import "./lm.css";
+import { LuminaCover } from "./cover";
 import { L } from "./labels";
 import {
   CelebrantBlock,
@@ -21,34 +22,36 @@ import {
   Envelope,
   Footer,
   Gallery,
-  Hero,
   Intro,
   OrganizerBlock,
   Schedule,
   Timeline,
 } from "./sections";
 
-// Self-hosted (next/font). Spectral = serif elegan serbaguna (display), Karla =
-// humanist sans (teks). Netral & adaptif untuk SEMUA kategori. Tanpa eksternal.
-const display = Spectral({
+// Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). Gowun Batang =
+// serif buku lembut (display + nama), Karla = humanist sans (teks/label). Estetika
+// "soft film / Korean-minimal": tenang, hangat, banyak ruang napas. Netral &
+// adaptif untuk SEMUA kategori.
+const display = Gowun_Batang({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+  weight: ["400", "700"],
   variable: "--lm-display",
   display: "swap",
 });
 const body = Karla({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "600"],
   variable: "--lm-body",
   display: "swap",
 });
 
 /**
- * Tema "Lumina" (universal, tier premium). Sistem netral tunggal yang MENYESUAIKAN
- * ke kategori apa pun (wedding/corporate/family) — menormalkan konten menjadi
- * judul, principals, dan linimasa (story/agenda/wishes). Menerima `InvitationData`
- * (SPEC §7.1); identitas di `lumina.css`.
+ * Tema "Lumina" (universal, tier Craft) — acuan `prototypes/lumina-craft.html`.
+ * Sistem netral tunggal yang MENYESUAIKAN ke kategori apa pun
+ * (wedding/corporate/family): menormalkan konten menjadi judul, principals, dan
+ * linimasa (story/agenda/wishes). SERVER component dibungkus `CoverGate` (klien)
+ * yang memegang cover film + musik (`coverMode:'theme'`). TANPA canvas/gsap/lenis
+ * — reveal via `Reveal` (IO). TIDAK mengambil data sendiri (SPEC §7.1).
  */
 export default function Lumina({ data }: ThemeComponentProps) {
   const rootClass = `lm ${display.variable} ${body.variable}`;
@@ -111,6 +114,8 @@ export default function Lumina({ data }: ThemeComponentProps) {
     timelineLabel = L.timeline.family;
   }
 
+  const coverSub = subtitle ?? L.cover.invite[content.category];
+
   const hasIntro = Boolean(
     content.greetingOpen || description || content.quote?.text,
   );
@@ -122,14 +127,22 @@ export default function Lumina({ data }: ThemeComponentProps) {
       Boolean(env.giftAddress));
 
   return (
-    <ThemeRoot className={rootClass}>
-      <Hero
-        kicker={L.kicker[content.category]}
-        titleLines={titleLines}
-        subtitle={subtitle}
-        dateLabel={dateLabel}
-        bgUrl={data.media[0]?.url}
-      />
+    <CoverGate
+      rootClassName={rootClass}
+      contentClassName="lm-stage"
+      coverClassName="lm-cover"
+      musicClassName="lm-music"
+      wipeMs={1000}
+      music={data.music}
+      cover={
+        <LuminaCover
+          titleLines={titleLines}
+          sub={coverSub}
+          dateLabel={dateLabel}
+        />
+      }
+    >
+      <div className="lm-grain" aria-hidden />
 
       {hasIntro ? (
         <Intro
@@ -178,6 +191,6 @@ export default function Lumina({ data }: ThemeComponentProps) {
         title={titleLines.join(" & ")}
         watermark={data.watermark}
       />
-    </ThemeRoot>
+    </CoverGate>
   );
 }

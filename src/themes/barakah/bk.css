@@ -1,0 +1,753 @@
+/* =============================================================================
+   BARAKAH — tier Story (acuan: prototypes/barakah-story.html)
+   Arah "Islami elegan": lengkung mihrab (ogee arch), bintang segi-8 (khatam)
+   yang menggambar diri, strip geometris; palet zamrud + emas + pasir. TANPA
+   WebGL. Semua kelas ter-scope `.bk`. State mask reveal DIMILIKI JS (WAAPI di
+   cover, gsap di konten); CSS hanya menyembunyikan di bawah `.is-js.is-motion`
+   → tanpa JS/motion konten terbaca.
+============================================================================= */
+
+.bk {
+  --bk-sand: #f4efe2;
+  --bk-sand-2: #ece4d0;
+  --bk-emerald: #0e3b30;
+  --bk-emerald-d: #092a22;
+  --bk-gold: #b78d3f;
+  --bk-gold-l: #d3b36e;
+  --bk-ink: #22312a;
+  --bk-muted: rgba(34, 49, 42, 0.62);
+  --bk-hairline: rgba(14, 59, 48, 0.18);
+  --bk-disp-stack: var(--bk-display), "Marcellus", Georgia, serif;
+  --bk-body-stack: var(--bk-body), "Figtree", system-ui, sans-serif;
+
+  position: relative;
+  background: var(--bk-sand);
+  color: var(--bk-ink);
+  font-family: var(--bk-body-stack);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+.bk *,
+.bk *::before,
+.bk *::after {
+  box-sizing: border-box;
+}
+.bk ::selection {
+  background: var(--bk-gold);
+  color: #fff;
+}
+
+/* Grain + progress --------------------------------------------------------- */
+.bk-grain {
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.bk-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  z-index: 70;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--bk-emerald), var(--bk-gold));
+  transform: scaleX(0);
+}
+
+/* Tipografi ---------------------------------------------------------------- */
+.bk-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--bk-gold);
+  margin: 0;
+}
+.bk-eyebrow--gold {
+  color: var(--bk-gold-l);
+}
+.bk-lead {
+  color: var(--bk-muted);
+  font-size: 14px;
+  line-height: 1.9;
+  max-width: 320px;
+  margin: 14px auto 0;
+}
+.bk-h2 {
+  font-family: var(--bk-disp-stack);
+  font-weight: 400;
+  font-size: clamp(30px, 8.6vw, 40px);
+  line-height: 1.2;
+  margin-top: 12px;
+  color: var(--bk-emerald);
+}
+.bk-title {
+  font-family: var(--bk-disp-stack);
+  font-weight: 400;
+  font-size: clamp(30px, 8.6vw, 40px);
+  line-height: 1.2;
+  margin-top: 16px;
+  color: var(--bk-emerald);
+}
+.bk-title em {
+  font-style: normal;
+  color: var(--bk-gold);
+}
+
+/* Baris bermask — disembunyikan hanya bila JS + motion aktif. */
+.bk-line {
+  display: block;
+  overflow: hidden;
+}
+.bk-line > span {
+  display: block;
+}
+.bk.is-js.is-motion .bk-line > span {
+  visibility: hidden;
+}
+.bk.is-js.is-motion .bk-reveal {
+  opacity: 0;
+}
+
+/* Strip geometris islami --------------------------------------------------- */
+.bk-geo {
+  display: block;
+  width: min(72vw, 280px);
+  height: auto;
+  margin: 26px auto 0;
+}
+.bk-geo path {
+  fill: none;
+  stroke: var(--bk-gold);
+  stroke-width: 1.1;
+}
+
+/* --------------------------------------------------------------- Cover ----- */
+/* Tanpa JS: cover disembunyikan → konten langsung terbaca (degradasi anggun). */
+.bk-cover {
+  display: none;
+}
+.bk.is-js .bk-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--bk-sand);
+  clip-path: inset(0 0 0 0);
+  /* Wipe pada ELEMEN cover sendiri → penanda "wipe selesai" bagi cover-gate. */
+  transition: clip-path 1s cubic-bezier(0.76, 0, 0.24, 1) 0.1s;
+}
+.bk.is-js.is-open .bk-cover {
+  clip-path: inset(0 0 100% 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bk.is-js .bk-cover,
+  .bk-cover__inner {
+    transition: none;
+  }
+}
+.bk-cover__inner {
+  position: relative;
+  text-align: center;
+  padding: 24px;
+  max-width: 430px;
+  width: 100%;
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+.bk.is-js.is-open .bk-cover__inner {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+.bk-bismillah {
+  display: block;
+  font-family: var(--bk-disp-stack);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: var(--bk-emerald);
+}
+
+.bk-arch {
+  position: relative;
+  width: min(72vw, 280px);
+  margin: 16px auto 4px;
+}
+.bk-arch__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.bk-arch__svg path,
+.bk-arch__svg rect,
+.bk-arch__svg circle {
+  fill: none;
+  stroke: var(--bk-gold);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.bk-arch__svg .bk-arch__em {
+  stroke: var(--bk-emerald);
+  stroke-width: 1.1;
+}
+.bk-arch__center {
+  position: absolute;
+  inset: 14% 12% 10%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.bk-cover__name {
+  display: block;
+  font-family: var(--bk-disp-stack);
+  font-weight: 400;
+  font-size: clamp(34px, 9.4vw, 44px);
+  line-height: 1.12;
+  color: var(--bk-emerald);
+}
+.bk-cover__amp {
+  display: block;
+  font-family: var(--bk-disp-stack);
+  color: var(--bk-gold);
+  font-size: 19px;
+  margin: 2px 0;
+}
+.bk-cover__date {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--bk-muted);
+}
+.bk-star {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  margin: 18px 0;
+}
+.bk-star::before,
+.bk-star::after {
+  content: "";
+  width: 52px;
+  height: 1px;
+  background: var(--bk-hairline);
+}
+.bk-star svg {
+  width: 14px;
+  height: 14px;
+}
+.bk-star path {
+  fill: var(--bk-gold);
+}
+.bk-guest {
+  margin: 0 auto 22px;
+  max-width: 290px;
+  padding: 16px 18px 13px;
+  border: 1px solid var(--bk-hairline);
+  border-radius: 120px 120px 14px 14px;
+  background: rgba(14, 59, 48, 0.05);
+}
+.bk-guest small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bk-muted);
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.bk-guest strong {
+  font-family: var(--bk-disp-stack);
+  font-size: 19px;
+  color: var(--bk-emerald);
+}
+.bk-open {
+  appearance: none;
+  border: 0;
+  background: var(--bk-emerald);
+  color: var(--bk-sand);
+  font-family: var(--bk-body-stack);
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 16px 36px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 14px 30px -16px rgba(9, 42, 34, 0.75);
+  transition: 0.3s;
+}
+.bk-open:hover {
+  background: var(--bk-emerald-d);
+  transform: translateY(-2px);
+}
+.bk-cover__hint {
+  margin-top: 16px;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--bk-muted);
+}
+
+/* ------------------------------------------------------------- Section ----- */
+.bk-section {
+  position: relative;
+  padding: 86px 26px;
+}
+.bk-center {
+  text-align: center;
+}
+.bk-inner {
+  max-width: 480px;
+  margin: 0 auto;
+}
+.bk-hero {
+  padding-top: 74px;
+}
+
+/* Quote — panel zamrud ----------------------------------------------------- */
+.bk-quote {
+  background: var(--bk-emerald);
+  color: var(--bk-sand);
+}
+.bk-quote__frame {
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(211, 179, 110, 0.35);
+  border-radius: 16px;
+  pointer-events: none;
+}
+.bk-quote__text {
+  font-family: var(--bk-disp-stack);
+  font-size: clamp(18px, 5vw, 22px);
+  line-height: 1.9;
+  max-width: 330px;
+  margin: 18px auto 0;
+  color: var(--bk-sand);
+}
+.bk-quote__src {
+  display: block;
+  margin-top: 18px;
+  font-style: normal;
+  font-size: 10.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--bk-gold-l);
+}
+
+/* Couple — bingkai mihrab -------------------------------------------------- */
+.bk-couple {
+  margin-top: 36px;
+  max-width: 420px;
+  margin-inline: auto;
+}
+.bk-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 60px;
+}
+.bk-person:last-child {
+  margin-bottom: 0;
+}
+.bk-mihrab {
+  width: min(62%, 230px);
+  aspect-ratio: 4 / 5.4;
+  position: relative;
+  overflow: hidden;
+  border-radius: 50% 50% 18px 18px / 38% 38% 18px 18px;
+  border: 1.4px solid var(--bk-gold);
+  padding: 8px;
+  background: var(--bk-sand-2);
+}
+.bk-mihrab__ph {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50% 50% 12px 12px / 38% 38% 12px 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #8fa894, #0e3b30 88%);
+}
+.bk-mihrab__ph span {
+  font-family: var(--bk-disp-stack);
+  font-size: 72px;
+  color: rgba(244, 239, 226, 0.9);
+}
+.bk-person__role {
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--bk-gold);
+  font-weight: 600;
+  margin: 18px 0 6px;
+}
+.bk-person__name {
+  font-family: var(--bk-disp-stack);
+  font-weight: 400;
+  font-size: clamp(26px, 7.6vw, 34px);
+  line-height: 1.18;
+  color: var(--bk-emerald);
+}
+.bk-person__meta {
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--bk-muted);
+  max-width: 300px;
+  margin-top: 8px;
+}
+
+/* Countdown ---------------------------------------------------------------- */
+.bk-countdown-sec {
+  background: var(--bk-sand-2);
+  border-block: 1px solid var(--bk-hairline);
+}
+.bk .countdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  max-width: 390px;
+  margin: 26px auto 0;
+}
+.bk .count-box {
+  background: var(--bk-sand);
+  border: 1px solid var(--bk-hairline);
+  border-radius: 60px 60px 12px 12px;
+  padding: 16px 4px 12px;
+  text-align: center;
+}
+.bk .count-num {
+  display: block;
+  font-family: var(--bk-disp-stack);
+  font-size: clamp(26px, 7.6vw, 34px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--bk-emerald);
+}
+.bk .count-label {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bk-muted);
+  font-weight: 600;
+  margin-top: 5px;
+}
+.bk .countdown-done {
+  font-family: var(--bk-disp-stack);
+  font-size: 20px;
+  color: var(--bk-emerald);
+  margin-top: 22px;
+}
+
+/* Jadwal ------------------------------------------------------------------- */
+.bk-events {
+  max-width: 440px;
+  margin-inline: auto;
+}
+.bk-event {
+  border: 1px solid var(--bk-hairline);
+  border-radius: 18px;
+  padding: 26px;
+  margin-top: 24px;
+  background: #fbf8f0;
+  position: relative;
+  overflow: hidden;
+}
+.bk-event::after {
+  content: "۞";
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  color: var(--bk-gold);
+  opacity: 0.5;
+  font-size: 20px;
+}
+.bk-event__tag {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--bk-gold);
+  font-weight: 600;
+}
+.bk-event__title {
+  font-family: var(--bk-disp-stack);
+  font-weight: 400;
+  font-size: 27px;
+  color: var(--bk-emerald);
+  margin: 8px 0 10px;
+}
+.bk-event__meta {
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--bk-muted);
+}
+.bk-event__meta b {
+  color: var(--bk-ink);
+  font-weight: 600;
+}
+.bk-pills {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.bk-pill {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--bk-emerald);
+  color: var(--bk-emerald);
+  background: transparent;
+  cursor: pointer;
+  transition: 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.bk-pill:hover {
+  background: var(--bk-emerald);
+  color: var(--bk-sand);
+}
+.bk-pill--gold {
+  background: var(--bk-gold);
+  border-color: var(--bk-gold);
+  color: #fff;
+}
+.bk-pill--gold:hover {
+  background: #9a7433;
+  border-color: #9a7433;
+}
+.bk-cal {
+  position: relative;
+}
+.bk-cal > summary {
+  list-style: none;
+}
+.bk-cal > summary::-webkit-details-marker {
+  display: none;
+}
+.bk-cal__menu {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bk-cal__opt {
+  font-size: 12px;
+  text-decoration: none;
+  color: var(--bk-emerald);
+  border: 1px solid var(--bk-hairline);
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+.bk-cal__opt:hover {
+  background: rgba(14, 59, 48, 0.06);
+}
+
+/* Galeri lengkung ---------------------------------------------------------- */
+.bk-gallery-sec {
+  padding-left: 0;
+  padding-right: 0;
+}
+.bk-gallery {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 28px 26px;
+  scrollbar-width: none;
+}
+.bk-gallery::-webkit-scrollbar {
+  display: none;
+}
+.bk-gallery__item {
+  flex: 0 0 58%;
+  scroll-snap-align: center;
+  aspect-ratio: 3 / 4.2;
+  position: relative;
+  overflow: hidden;
+  border-radius: 50% 50% 16px 16px / 32% 32% 16px 16px;
+  border: 1px solid var(--bk-hairline);
+}
+.bk-gallery__item img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Story (timeline) --------------------------------------------------------- */
+.bk-timeline {
+  max-width: 440px;
+  margin: 28px auto 0;
+  text-align: left;
+}
+.bk-story {
+  border-left: 1px solid var(--bk-hairline);
+  padding: 0 0 30px 20px;
+  position: relative;
+}
+.bk-story::before {
+  content: "۞";
+  position: absolute;
+  left: -0.6rem;
+  top: -0.15rem;
+  font-size: 0.9rem;
+  color: var(--bk-gold);
+  background: var(--bk-sand);
+  line-height: 1;
+}
+.bk-story:last-child {
+  border-left-color: transparent;
+}
+.bk-story__date {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bk-gold);
+  margin: 0 0 0.3rem;
+}
+.bk-story__title {
+  font-family: var(--bk-disp-stack);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--bk-emerald);
+  margin: 0 0 6px;
+}
+.bk-story__body {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--bk-muted);
+  margin: 0;
+}
+
+/* Envelope ----------------------------------------------------------------- */
+.bk-account {
+  display: block;
+  border: 1px solid var(--bk-hairline);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 14px;
+  background: #fff;
+  text-align: left;
+}
+.bk-account__label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bk-gold);
+  font-weight: 600;
+  margin: 0;
+}
+.bk-account__num {
+  font-family: var(--bk-disp-stack);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  color: var(--bk-emerald);
+  margin: 6px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+.bk-copy {
+  margin-top: 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--bk-emerald);
+  color: var(--bk-emerald);
+  background: transparent;
+  border-radius: 999px;
+  padding: 9px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: 0.25s;
+}
+.bk-copy:hover {
+  background: var(--bk-gold);
+  border-color: var(--bk-gold);
+  color: #fff;
+}
+
+/* Footer ------------------------------------------------------------------- */
+.bk-footer {
+  padding: 70px 26px 92px;
+  background: var(--bk-emerald-d);
+  color: var(--bk-sand);
+}
+.bk-fin {
+  font-family: var(--bk-disp-stack);
+  font-size: 30px;
+  color: var(--bk-gold-l);
+  letter-spacing: 0.1em;
+}
+.bk-fin__mark {
+  color: var(--bk-gold);
+}
+.bk-footer__salam {
+  font-family: var(--bk-disp-stack);
+  font-size: 15px;
+  color: rgba(244, 239, 226, 0.85);
+  margin-top: 20px;
+}
+.bk-footer .bk-lead {
+  color: rgba(244, 239, 226, 0.7);
+}
+.bk-credit__name {
+  font-family: var(--bk-disp-stack);
+  font-size: 20px;
+  color: var(--bk-sand);
+  margin-top: 18px;
+}
+.bk-watermark {
+  display: inline-block;
+  margin-top: 26px;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(244, 239, 226, 0.6);
+  border: 1px solid rgba(244, 239, 226, 0.25);
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+.bk-watermark a {
+  color: var(--bk-gold-l);
+  text-decoration: none;
+}
+
+/* Tombol musik — tampil setelah dibuka ------------------------------------- */
+.bk-music {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 55;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--bk-hairline);
+  background: rgba(244, 239, 226, 0.94);
+  color: var(--bk-emerald);
+  display: none;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 10px 24px -12px rgba(9, 42, 34, 0.5);
+}
+.bk.is-open .bk-music {
+  display: grid;
+}
