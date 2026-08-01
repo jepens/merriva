@@ -83,6 +83,19 @@ Commit: `c46d279`.
 
 **Ditunda (sadar):** cleanup `WeddingLayout`/`wedding-sections` (tanpa konsumen) + deprekasi cover `InvitationShell` · uji nyata WebView WA Android+iOS · angka performa Lighthouse di staging.
 
+## #13 — 2026-08-02 · Cleanup pasca-Gelombang 2: hapus `WeddingLayout` + deprekasi cover `InvitationShell`
+
+**Konteks:** dua item "ditunda (sadar)" di #12 dieksekusi setelah seluruh 10 tema memegang cover-gate sendiri (registry ≡ `THEME_CAPABILITIES`, semua `coverMode:'theme'`).
+
+**Keputusan:**
+
+- **Hapus `WeddingLayout` + `wedding-sections`** (`src/themes/_shared/`): tanpa konsumen sejak barakah pindah ke section sendiri (#12); tak ada tema/preview/test yang meng-import. Tipe `WeddingLabels` ikut terhapus (hanya dipakai dua file itu).
+- **Deprekasi cover `InvitationShell`**: karena setiap slug tak dikenal sudah `notFound()` sebelum cabang komposisi, cabang `coverMode:'shell'` di `app/[slug]/page.tsx` menjadi kode mati. Halaman publik kini selalu `<GuestPersonalizationProvider><Theme/></…>`. Dihapus: `components/public/invitation-shell.{tsx,css}`, helper `coverFromData` + tipe `CoverInfo` di page, dan `themes/capabilities.ts` (satu-satunya guna `coverMode` adalah gate shell yang kini usang). Konteks tamu tetap disediakan `GuestPersonalizationProvider` (bukan `InvitationShell`) → tanpa regresi personalisasi `?g=`/`?to=`.
+
+**Konsekuensi:** −5 file; halaman publik lebih sederhana; **tak ada lagi cover generik fallback** — tema baru WAJIB membawa cover-gate sendiri (pola `eternal-rose`/`kirana`). Komentar usang di `guest-context`, `guest-personalization`, `barakah/labels` diselaraskan.
+
+**Verifikasi:** lint 0-err · typecheck · test 215 · build hijau. Semua perubahan lokal (belum push).
+
 ---
 
 ## Template entri baru

@@ -1,6 +1,6 @@
 /**
- * Label chrome tema Barakah (wedding islami elegan, tier Story). Standalone
- * (tak lagi bergantung ke WeddingLayout). Teks Bahasa Indonesia terpusat di sini.
+ * Label chrome tema Barakah (wedding islami elegan, tier Story). Standalone —
+ * section sendiri, bukan modul bersama. Teks Bahasa Indonesia terpusat di sini.
  */
 export const WRONG_CATEGORY = "Tema ini khusus untuk undangan pernikahan.";
 

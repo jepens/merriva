@@ -5,8 +5,9 @@ import { createContext, useContext } from "react";
 /**
  * Konteks personalisasi tamu (SPEC §4.5). Diisi klien dari `?g={token}` /
  * `?to={Nama}` SETELAH hidrasi (halaman `/{slug}` tetap ISR — tak membaca
- * searchParams di server). Disediakan oleh `InvitationShell`, dikonsumsi oleh
- * cover (nama penerima) & form RSVP (prefill nama + token untuk penautan tamu).
+ * searchParams di server). Disediakan oleh `GuestPersonalizationProvider`,
+ * dikonsumsi oleh cover-gate tema (nama penerima) & form RSVP (prefill nama +
+ * token untuk penautan tamu).
  */
 export interface GuestContextValue {
   /** Nama penerima terpersonalisasi, atau null (generik). */

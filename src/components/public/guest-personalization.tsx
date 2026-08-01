@@ -7,15 +7,13 @@ import { viewGuestByTokenAction } from "@/server/actions/personalization";
 import { GuestContextProvider } from "./guest-context";
 
 /**
- * Penyedia personalisasi tamu (SPEC §4.5) — SATU saluran untuk seluruh cara
- * tema dirender: `InvitationShell` (jalur cover shell), tema yang memegang cover
- * sendiri (`coverMode: 'theme'`), dan `/preview/tema/{slug}`.
+ * Penyedia personalisasi tamu (SPEC §4.5) — SATU saluran untuk seluruh cara tema
+ * dirender: cover-gate tiap tema (semua tema memegang cover sendiri) dan
+ * `/preview/tema/{slug}`.
  *
  * Resolusi dilakukan SETELAH hidrasi dari `?g={token}` / `?to={Nama}` (halaman
  * `/{slug}` tetap ISR — server tak membaca searchParams). Render awal = generik
- * (cocok dgn HTML statis → tanpa mismatch hidrasi), lalu di-update. Logika ini
- * sebelumnya menempel di `InvitationShell`; diekstrak tanpa perubahan perilaku
- * agar cover-gate tema memakai ulang mekanisme yang sama (bukan saluran kedua).
+ * (cocok dgn HTML statis → tanpa mismatch hidrasi), lalu di-update.
  */
 export function GuestPersonalizationProvider({
   slug,
