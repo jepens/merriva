@@ -121,22 +121,32 @@ function PersonCard({
   role,
   side,
   initial,
+  photo,
 }: {
   person: Person;
   role: string;
   side: "left" | "right";
   initial: string;
+  photo?: string | null;
 }) {
   const parents = L.couple.parents(person.fatherName, person.motherName);
   return (
     <div className={`er-person er-person--${side}`}>
       <div className="er-arch" data-parallax={side === "left" ? "-8" : "8"}>
-        {/* Tema hanya menerima `storage_path` mentah (bukan URL ter-resolve),
-            jadi foto person tak bisa dirender aman (boundary: tanpa URL vendor).
-            Selalu tampilkan monogram inisial di bingkai arch — mencegah kotak
-            kosong saat foto diisi (degradasi anggun). */}
+        {/* Foto mempelai sudah di-resolve ke URL domain sendiri di server
+            (`data.groomPhotoUrl`/`bridePhotoUrl`); fallback monogram inisial bila
+            tak ada — tetap anggun, tak ada kotak kosong. */}
         <div className="er-arch__ph">
-          <span>{initial}</span>
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photo}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <span>{initial}</span>
+          )}
         </div>
       </div>
       <div>
@@ -161,7 +171,17 @@ function PersonCard({
   );
 }
 
-export function Couple({ groom, bride }: { groom: Person; bride: Person }) {
+export function Couple({
+  groom,
+  bride,
+  groomPhoto,
+  bridePhoto,
+}: {
+  groom: Person;
+  bride: Person;
+  groomPhoto?: string | null;
+  bridePhoto?: string | null;
+}) {
   const gi = (groom.nickname || groom.name || "•")
     .trim()
     .charAt(0)
@@ -181,12 +201,14 @@ export function Couple({ groom, bride }: { groom: Person; bride: Person }) {
           role={L.couple.groom}
           side="left"
           initial={gi}
+          photo={groomPhoto}
         />
         <PersonCard
           person={bride}
           role={L.couple.bride}
           side="right"
           initial={bi}
+          photo={bridePhoto}
         />
       </div>
     </section>

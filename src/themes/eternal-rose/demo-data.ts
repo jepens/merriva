@@ -114,6 +114,9 @@ export const demoInvitationData: InvitationData = {
       photo("#f0dcd8", "#927b78"),
       photo("#e8c8cb", "#8c4b56"),
     ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
+  groomPhotoUrl: demoPhotosFor("eternal-rose")?.[0]?.url ?? null,
+  bridePhotoUrl: demoPhotosFor("eternal-rose")?.[1]?.url ?? null,
+  coverPhotoUrl: demoPhotosFor("eternal-rose")?.[2]?.url ?? null,
   music: null,
   watermark: true,
 };

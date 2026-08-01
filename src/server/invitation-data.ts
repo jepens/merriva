@@ -94,6 +94,16 @@ export function buildInvitationData(args: {
     toMediaView(r, (p) => storage.getPublicUrl(p)),
   );
 
+  // Foto bernama (sampul/mempelai) → URL domain sendiri (SPEC §6.4: tema tak
+  // pernah menerima storage_path mentah untuk foto ini). Mempelai hanya untuk
+  // kategori wedding; coverPhoto berlaku semua kategori.
+  const resolve = (p?: string) => (p ? storage.getPublicUrl(p) : null);
+  const coverPhotoUrl = resolve(content.coverPhoto);
+  const groomPhotoUrl =
+    content.category === "wedding" ? resolve(content.groom.photo) : null;
+  const bridePhotoUrl =
+    content.category === "wedding" ? resolve(content.bride.photo) : null;
+
   return {
     slug: args.slug,
     category: args.category,
@@ -102,6 +112,9 @@ export function buildInvitationData(args: {
     settings,
     events,
     media,
+    coverPhotoUrl,
+    groomPhotoUrl,
+    bridePhotoUrl,
     music: args.music,
     watermark: args.watermark,
   };

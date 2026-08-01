@@ -40,6 +40,15 @@ export interface InvitationData {
   settings: InvitationSettings;
   events: InvitationEventView[];
   media: InvitationMediaView[];
+  /**
+   * Foto bernama sudah di-resolve ke URL domain sendiri di server (dari
+   * `content.coverPhoto` / `groom.photo` / `bride.photo`), atau `null` bila tak
+   * ada. Tema TIDAK menerima `storage_path` mentah untuk foto ini (boundary:
+   * tanpa URL vendor) — render foto bila ada, jika tidak pakai fallback monogram.
+   */
+  coverPhotoUrl?: string | null;
+  groomPhotoUrl?: string | null;
+  bridePhotoUrl?: string | null;
   /** Musik latar terpilih, sudah di-resolve dari `songs` (URL domain sendiri). */
   music: { url: string; title: string } | null;
   /** Watermark footer untuk paket Basic (SPEC §2). */
