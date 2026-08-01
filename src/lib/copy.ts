@@ -499,12 +499,22 @@ export const copy = {
     note: "Hanya Anda yang melihat ini.",
     demoBadge: "Contoh Tema",
     backToEditor: "Edit",
+    allThemes: "Semua tema",
+    home: "Beranda",
     themeUnavailable: "Tema undangan ini belum tersedia untuk pratinjau.",
     backToDashboard: "Kembali ke dashboard",
     frameTitle: "Pratinjau undangan di layar ponsel",
   },
 
   public: {
+    // Label lightbox galeri (dipakai komponen bersama `_shared/lightbox`).
+    gallery: {
+      enlarge: "Perbesar foto",
+      close: "Tutup",
+      prev: "Foto sebelumnya",
+      next: "Foto berikutnya",
+      dialog: "Galeri foto",
+    },
     cover: {
       recipient: "Kepada Yth.",
       recipientFallback: "Bapak / Ibu / Saudara/i",

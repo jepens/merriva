@@ -24,6 +24,8 @@ import type {
   InvitationMediaView,
 } from "@/types/invitation";
 
+import { LightboxThumb } from "@/themes/_shared/lightbox";
+
 import { L } from "./labels";
 
 const PRELINE = { whiteSpace: "pre-line" as const };
@@ -374,17 +376,10 @@ export function Gallery({ media }: { media: InvitationMediaView[] }) {
           <h2 className="lm-h2">{L.gallery.heading}</h2>
         </Reveal>
         <Reveal>
-          <div className="lm-gallery">
-            {media.map((m) => (
+          <div className="lm-gallery" data-lb-scroll>
+            {media.map((m, i) => (
               <div key={m.id} className="lm-gallery__item">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={m.thumbUrl}
-                  alt=""
-                  loading="lazy"
-                  width={m.width ?? undefined}
-                  height={m.height ?? undefined}
-                />
+                <LightboxThumb m={m} index={i} />
               </div>
             ))}
           </div>

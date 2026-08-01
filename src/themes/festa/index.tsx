@@ -8,6 +8,7 @@ import {
 } from "@/lib/datetime";
 import { isSectionVisible } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
 import "./festa.css";
@@ -143,7 +144,9 @@ export default function Festa({ data }: ThemeComponentProps) {
       {isSectionVisible(settings, "gallery") && data.media.length > 0 ? (
         <>
           <Scallop teal />
-          <Gallery media={data.media} />
+          <Lightbox media={data.media}>
+            <Gallery media={data.media} />
+          </Lightbox>
         </>
       ) : null}
 

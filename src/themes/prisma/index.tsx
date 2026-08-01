@@ -7,6 +7,7 @@ import {
 } from "@/lib/datetime";
 import { isSectionVisible } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
 import "./prisma.css";
@@ -203,7 +204,11 @@ export default function Prisma({ data }: ThemeComponentProps) {
         />
       ) : null}
 
-      {showGallery ? <Gallery no={no()} media={data.media} /> : null}
+      {showGallery ? (
+        <Lightbox media={data.media}>
+          <Gallery no={no()} media={data.media} />
+        </Lightbox>
+      ) : null}
 
       {showRsvp ? (
         <Rsvp

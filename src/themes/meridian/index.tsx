@@ -7,6 +7,7 @@ import {
 } from "@/lib/datetime";
 import { isSectionVisible } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
 import "./mrd.css";
@@ -130,7 +131,9 @@ export default function Meridian({ data }: ThemeComponentProps) {
       ) : null}
 
       {isSectionVisible(settings, "gallery") && data.media.length > 0 ? (
-        <Moments media={data.media} />
+        <Lightbox media={data.media}>
+          <Moments media={data.media} />
+        </Lightbox>
       ) : null}
 
       {isSectionVisible(settings, "rsvp") ? <Rsvp slug={data.slug} /> : null}

@@ -8,6 +8,7 @@ import {
 } from "@/lib/datetime";
 import { isSectionVisible } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
 import "./kr.css";
@@ -137,7 +138,9 @@ export default function Kirana({ data }: ThemeComponentProps) {
       ) : null}
 
       {isSectionVisible(settings, "gallery") && data.media.length > 0 ? (
-        <Gallery media={data.media} />
+        <Lightbox media={data.media}>
+          <Gallery media={data.media} />
+        </Lightbox>
       ) : null}
 
       {isSectionVisible(settings, "story") && content.story.length > 0 ? (

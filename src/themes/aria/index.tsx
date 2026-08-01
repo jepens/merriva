@@ -7,6 +7,7 @@ import {
 } from "@/lib/datetime";
 import { isSectionVisible } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
 import "./aria.css";
@@ -150,7 +151,11 @@ export default function Aria({ data }: ThemeComponentProps) {
         <CountdownSection no={no()} targetIso={countdownTarget} />
       ) : null}
 
-      {showGallery ? <Gallery no={no()} media={data.media} /> : null}
+      {showGallery ? (
+        <Lightbox media={data.media}>
+          <Gallery no={no()} media={data.media} />
+        </Lightbox>
+      ) : null}
 
       {showStory ? <StoryBlock no={no()} story={content.story} /> : null}
 

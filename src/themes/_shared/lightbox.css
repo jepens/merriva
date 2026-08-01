@@ -1,0 +1,121 @@
+/* Lightbox galeri bersama (semua tema). Overlay ter-portal ke document.body →
+   di preview mengisi iframe (bingkai ponsel), di halaman publik mengisi viewport.
+   Netral secara visual agar cocok di atas tema apa pun. */
+
+.lb-thumb {
+  cursor: zoom-in;
+}
+.lb-thumb:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+/* Track galeri yang bisa di-drag (mouse) — sentuh/pena tetap native. */
+[data-lb-scroll] {
+  cursor: grab;
+}
+[data-lb-scroll]:active {
+  cursor: grabbing;
+}
+
+.lb-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 8, 12, 0.92);
+  animation: lb-fade 180ms ease;
+}
+
+.lb-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-out;
+}
+
+.lb-figure {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.lb-full {
+  max-width: min(92vw, 900px);
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+
+.lb-count {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.lb-btn {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.lb-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+.lb-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.lb-close {
+  top: 16px;
+  right: 16px;
+}
+.lb-prev {
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.lb-next {
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@keyframes lb-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-overlay {
+    animation: none;
+  }
+}

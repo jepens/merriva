@@ -16,6 +16,8 @@ import type {
   InvitationMediaView,
 } from "@/types/invitation";
 
+import { LightboxThumb } from "@/themes/_shared/lightbox";
+
 import { L } from "./labels";
 
 export interface PrismaStat {
@@ -272,17 +274,10 @@ export function Gallery({
   return (
     <section className="pr-section pr-section--tight">
       <SecLabel no={no} title={L.sec.gallery} />
-      <div className="pr-gallery__track">
+      <div className="pr-gallery__track" data-lb-scroll>
         {media.map((m, i) => (
           <figure className="pr-figure" key={m.id}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={m.thumbUrl}
-              alt=""
-              loading="lazy"
-              width={m.width ?? undefined}
-              height={m.height ?? undefined}
-            />
+            <LightboxThumb m={m} index={i} />
             <figcaption>Fig. {String(i + 1).padStart(2, "0")}</figcaption>
           </figure>
         ))}
