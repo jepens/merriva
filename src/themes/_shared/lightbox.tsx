@@ -41,10 +41,15 @@ export function Lightbox({
   const rootRef = useRef<HTMLDivElement>(null);
   const open = useCallback((i: number) => setIndex(i), []);
 
-  // Drag-to-scroll (mouse) pada track galeri horizontal ber-`data-lb-scroll`.
+  // Track galeri horizontal (`data-lb-scroll`): auto-scroll kanan→kiri ala
+  // marquee (loop mulus via klon) + bisa di-drag mouse (sentuh/pena native).
+  // Jeda saat hover/drag; nonaktif saat reduced-motion; track grid (multi-baris)
+  // dilewati otomatis.
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
+    const reduce =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const cleanups: Array<() => void> = [];
     root.querySelectorAll<HTMLElement>("[data-lb-scroll]").forEach((el) => {
       let down = false;
@@ -86,9 +91,73 @@ export function Lightbox({
         window.removeEventListener("pointerup", onUp);
         el.removeEventListener("click", onClickCapture, true);
       });
+
+      // Marquee auto-scroll — hanya track satu-baris yang meluber horizontal.
+      const singleRow = el.scrollHeight <= el.clientHeight + 8;
+      if (reduce || !singleRow || el.scrollWidth <= el.clientWidth) return;
+      const half = el.scrollWidth; // lebar item asli (sebelum klon)
+      const originalCount = el.children.length;
+      Array.from(el.children).forEach((node) => {
+        const clone = node.cloneNode(true) as HTMLElement;
+        clone.setAttribute("aria-hidden", "true");
+        clone.querySelectorAll<HTMLElement>(".lb-thumb").forEach((img) => {
+          img.setAttribute("data-lb-clone", "1");
+          img.setAttribute("tabindex", "-1");
+          img.removeAttribute("role");
+        });
+        el.appendChild(clone);
+      });
+      const prevSnap = el.style.scrollSnapType;
+      el.style.scrollSnapType = "none";
+      // Klik pada klon (tanpa handler React) → buka lightbox indeks terkait.
+      const onCloneClick = (e: MouseEvent) => {
+        const img = (e.target as HTMLElement).closest("[data-lb-clone]");
+        if (!img) return;
+        const idx = Number(img.getAttribute("data-lb-index"));
+        if (Number.isInteger(idx)) open(idx);
+      };
+      el.addEventListener("click", onCloneClick);
+      let paused = false;
+      const pause = () => {
+        paused = true;
+      };
+      const resume = () => {
+        paused = false;
+      };
+      el.addEventListener("pointerenter", pause);
+      el.addEventListener("pointerleave", resume);
+      el.addEventListener("focusin", pause);
+      el.addEventListener("focusout", resume);
+      let raf = 0;
+      // Akumulasi posisi di JS (bukan `scrollLeft += 0.4` yang dibulatkan
+      // browser ke 0 tiap frame → tak pernah bergerak).
+      let pos = el.scrollLeft;
+      const step = () => {
+        if (paused || down) {
+          pos = el.scrollLeft; // ikuti posisi manual saat jeda/drag
+        } else {
+          pos += 0.4;
+          if (pos >= half) pos -= half;
+          el.scrollLeft = pos;
+        }
+        raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+      cleanups.push(() => {
+        cancelAnimationFrame(raf);
+        el.removeEventListener("click", onCloneClick);
+        el.removeEventListener("pointerenter", pause);
+        el.removeEventListener("pointerleave", resume);
+        el.removeEventListener("focusin", pause);
+        el.removeEventListener("focusout", resume);
+        el.style.scrollSnapType = prevSnap;
+        while (el.children.length > originalCount) {
+          el.removeChild(el.lastChild as ChildNode);
+        }
+      });
     });
     return () => cleanups.forEach((c) => c());
-  }, []);
+  }, [open]);
 
   return (
     <div ref={rootRef} style={{ display: "contents" }}>
@@ -128,6 +197,7 @@ export function LightboxThumb({
       role="button"
       tabIndex={0}
       aria-label={copy.public.gallery.enlarge}
+      data-lb-index={index}
       onClick={() => open(index)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
