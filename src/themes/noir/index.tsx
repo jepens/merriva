@@ -127,7 +127,12 @@ export default function Noir({ data }: ThemeComponentProps) {
 
       {hasQuote ? <QuoteBlock quote={content.quote} /> : null}
 
-      <Cast groom={content.groom} bride={content.bride} />
+      <Cast
+        groom={content.groom}
+        bride={content.bride}
+        groomPhoto={data.groomPhotoUrl}
+        bridePhoto={data.bridePhotoUrl}
+      />
 
       {isSectionVisible(settings, "countdown") && countdownTarget ? (
         <CountdownBlock targetIso={countdownTarget} />

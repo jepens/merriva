@@ -124,7 +124,12 @@ export default function Verdant({ data }: ThemeComponentProps) {
 
       {hasQuote ? <QuoteBlock quote={content.quote} /> : null}
 
-      <Couple groom={content.groom} bride={content.bride} />
+      <Couple
+        groom={content.groom}
+        bride={content.bride}
+        groomPhoto={data.groomPhotoUrl}
+        bridePhoto={data.bridePhotoUrl}
+      />
 
       {isSectionVisible(settings, "countdown") && countdownTarget ? (
         <CountdownBlock targetIso={countdownTarget} />

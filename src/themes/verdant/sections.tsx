@@ -118,11 +118,13 @@ function PressedCard({
   role,
   variant,
   initial,
+  photo,
 }: {
   person: Person;
   role: string;
   variant: "a" | "b";
   initial: string;
+  photo?: string | null;
 }) {
   const parents = L.couple.parents(person.fatherName, person.motherName);
   return (
@@ -132,7 +134,16 @@ function PressedCard({
       </span>
       <div className="vd-oval">
         <div className="vd-oval__ph" aria-hidden>
-          <span>{initial}</span>
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photo}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <span>{initial}</span>
+          )}
         </div>
       </div>
       <div className="vd-pressed__role">{role}</div>
@@ -149,7 +160,17 @@ function PressedCard({
   );
 }
 
-export function Couple({ groom, bride }: { groom: Person; bride: Person }) {
+export function Couple({
+  groom,
+  bride,
+  groomPhoto,
+  bridePhoto,
+}: {
+  groom: Person;
+  bride: Person;
+  groomPhoto?: string | null;
+  bridePhoto?: string | null;
+}) {
   return (
     <section className="vd-section">
       <div className="vd-center vd-reveal">
@@ -161,12 +182,14 @@ export function Couple({ groom, bride }: { groom: Person; bride: Person }) {
           role={L.couple.bride}
           variant="a"
           initial={initialOf(bride.nickname || bride.name || "•")}
+          photo={bridePhoto}
         />
         <PressedCard
           person={groom}
           role={L.couple.groom}
           variant="b"
           initial={initialOf(groom.nickname || groom.name || "•")}
+          photo={groomPhoto}
         />
       </div>
     </section>

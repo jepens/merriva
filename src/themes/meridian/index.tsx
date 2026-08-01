@@ -116,7 +116,12 @@ export default function Meridian({ data }: ThemeComponentProps) {
 
       <Intro greetingOpen={content.greetingOpen} />
 
-      <Couple bride={content.bride} groom={content.groom} />
+      <Couple
+        bride={content.bride}
+        groom={content.groom}
+        bridePhoto={data.bridePhotoUrl}
+        groomPhoto={data.groomPhotoUrl}
+      />
 
       {isSectionVisible(settings, "countdown") && countdownTarget ? (
         <CountdownBlock targetIso={countdownTarget} />

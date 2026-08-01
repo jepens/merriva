@@ -109,17 +109,28 @@ function Mempelai({
   person,
   role,
   initial,
+  photo,
 }: {
   person: Person;
   role: string;
   initial: string;
+  photo?: string | null;
 }) {
   const parents = L.couple.parents(person.fatherName, person.motherName);
   return (
     <div className="bk-person bk-reveal">
       <div className="bk-mihrab">
         <div className="bk-mihrab__ph" aria-hidden>
-          <span>{initial}</span>
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photo}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <span>{initial}</span>
+          )}
         </div>
       </div>
       <div className="bk-person__role">{role}</div>
@@ -134,7 +145,17 @@ function Mempelai({
   );
 }
 
-export function Couple({ groom, bride }: { groom: Person; bride: Person }) {
+export function Couple({
+  groom,
+  bride,
+  groomPhoto,
+  bridePhoto,
+}: {
+  groom: Person;
+  bride: Person;
+  groomPhoto?: string | null;
+  bridePhoto?: string | null;
+}) {
   return (
     <section className="bk-section">
       <div className="bk-center bk-reveal">
@@ -145,11 +166,13 @@ export function Couple({ groom, bride }: { groom: Person; bride: Person }) {
           person={bride}
           role={L.couple.bride}
           initial={initialOf(bride.nickname || bride.name || "•")}
+          photo={bridePhoto}
         />
         <Mempelai
           person={groom}
           role={L.couple.groom}
           initial={initialOf(groom.nickname || groom.name || "•")}
+          photo={groomPhoto}
         />
       </div>
     </section>

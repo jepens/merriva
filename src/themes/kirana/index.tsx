@@ -123,7 +123,12 @@ export default function Kirana({ data }: ThemeComponentProps) {
 
       {hasQuote && content.quote ? <SekarBlock quote={content.quote} /> : null}
 
-      <Couple groom={content.groom} bride={content.bride} />
+      <Couple
+        groom={content.groom}
+        bride={content.bride}
+        groomPhoto={data.groomPhotoUrl}
+        bridePhoto={data.bridePhotoUrl}
+      />
 
       {isSectionVisible(settings, "countdown") && countdownTarget ? (
         <CountdownBlock targetIso={countdownTarget} />

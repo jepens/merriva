@@ -115,18 +115,29 @@ function Actor({
   role,
   side,
   initial,
+  photo,
 }: {
   person: Person;
   role: string;
   side: "left" | "right";
   initial: string;
+  photo?: string | null;
 }) {
   const parents = L.couple.parents(person.fatherName, person.motherName);
   return (
     <div className={`nr-actor nr-actor--${side}`}>
       <div className="nr-portrait" data-pan>
         <div className="nr-frame__media nr-portrait__ph" aria-hidden>
-          <span>{initial}</span>
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photo}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <span>{initial}</span>
+          )}
         </div>
       </div>
       <div className="nr-actor__body">
@@ -153,7 +164,17 @@ function Actor({
   );
 }
 
-export function Cast({ groom, bride }: { groom: Person; bride: Person }) {
+export function Cast({
+  groom,
+  bride,
+  groomPhoto,
+  bridePhoto,
+}: {
+  groom: Person;
+  bride: Person;
+  groomPhoto?: string | null;
+  bridePhoto?: string | null;
+}) {
   return (
     <section className="nr-section">
       <div className="nr-center nr-reveal">
@@ -165,12 +186,14 @@ export function Cast({ groom, bride }: { groom: Person; bride: Person }) {
           role={L.couple.groom}
           side="left"
           initial={initialOf(groom.nickname || groom.name || "•")}
+          photo={groomPhoto}
         />
         <Actor
           person={bride}
           role={L.couple.bride}
           side="right"
           initial={initialOf(bride.nickname || bride.name || "•")}
+          photo={bridePhoto}
         />
       </div>
     </section>

@@ -71,17 +71,28 @@ function Figure({
   person,
   role,
   initial,
+  photo,
 }: {
   person: Person;
   role: string;
   initial: string;
+  photo?: string | null;
 }) {
   const meta = parentsLine(person);
   return (
     <div className="mrd-fig">
       <div className="mrd-stepped">
         <div className="mrd-stepped__ph" aria-hidden>
-          <span>{initial}</span>
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photo}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <span>{initial}</span>
+          )}
         </div>
       </div>
       <div className="mrd-fig__role mrd-reveal">{role}</div>
@@ -93,7 +104,17 @@ function Figure({
   );
 }
 
-export function Couple({ bride, groom }: { bride: Person; groom: Person }) {
+export function Couple({
+  bride,
+  groom,
+  bridePhoto,
+  groomPhoto,
+}: {
+  bride: Person;
+  groom: Person;
+  bridePhoto?: string | null;
+  groomPhoto?: string | null;
+}) {
   return (
     <section className="mrd-section mrd-couple">
       <div className="mrd-center">
@@ -104,11 +125,13 @@ export function Couple({ bride, groom }: { bride: Person; groom: Person }) {
           person={bride}
           role={L.couple.bride}
           initial={initialOf(bride.nickname || bride.name || "•")}
+          photo={bridePhoto}
         />
         <Figure
           person={groom}
           role={L.couple.groom}
           initial={initialOf(groom.nickname || groom.name || "•")}
+          photo={groomPhoto}
         />
       </div>
     </section>
