@@ -40,6 +40,32 @@ export const TIMEZONES = {
 
 export type TimezoneId = keyof typeof TIMEZONES;
 
+/**
+ * Bentuk STRUKTURAL `settings.custom` (Fase G / CUSTOMIZER-SPEC §2) — dipakai
+ * saat MEMBACA settings agar field lolos parse & tersimpan. Ini HANYA menjaga
+ * bentuk JSON aman (hex ketat → cegah injeksi CSS, batas panjang → cegah JSONB
+ * liar). Whitelist ketat terhadap options tema + gating paket ditegakkan
+ * TERPISAH di server action `updateInvitationAppearance` (satu sumber kebenaran).
+ * Bentuknya sengaja identik dgn `CustomSettings` (`@/lib/customizer/theme-options`).
+ */
+export const customSettingsBaseSchema = z.object({
+  v: z.literal(1),
+  variant: z.string().trim().max(40),
+  accent: z
+    .string()
+    .regex(/^#[0-9a-f]{6}$/i)
+    .nullable(),
+  fontPair: z.string().trim().max(40),
+  sections: z
+    .array(z.object({ id: z.string().trim().max(40), visible: z.boolean() }))
+    .max(60),
+  styles: z.record(z.string().trim().max(40), z.string().trim().max(40)),
+  motion: z.enum(["full", "calm"]),
+  grain: z.boolean(),
+});
+
+export type CustomSettingsBase = z.infer<typeof customSettingsBaseSchema>;
+
 export const settingsSchema = z.object({
   /** Varian warna tema (kode divalidasi terhadap `theme.json` di server). */
   themeVariant: z.string().trim().max(40).optional(),
@@ -52,6 +78,13 @@ export const settingsSchema = z.object({
   moderateGuestbook: z.boolean().default(false),
   /** Musik latar dari library royalty-free (`songs.id`). */
   songId: z.uuid().optional(),
+  /**
+   * Kustomisasi tampilan oleh pembeli (Fase G). Absen = bawaan tema (undangan
+   * lama render identik). Ditulis EKSKLUSIF oleh `updateInvitationAppearance`;
+   * jalur simpan lain WAJIB mengabaikan `custom` dari klien & mempertahankan
+   * nilai milik server (cegah bypass gating).
+   */
+  custom: customSettingsBaseSchema.optional(),
 });
 
 export type SectionToggles = z.infer<typeof sectionTogglesSchema>;

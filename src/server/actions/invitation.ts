@@ -10,7 +10,11 @@ import { toDbJson } from "@/lib/json";
 import { slugSchema } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { DEFAULT_SETTINGS, emptyContent } from "@/lib/validation/content";
+import {
+  DEFAULT_SETTINGS,
+  emptyContent,
+  settingsSchema,
+} from "@/lib/validation/content";
 import {
   createInvitationSchema,
   saveDraftSchema,
@@ -93,11 +97,29 @@ export async function saveInvitationDraftAction(
   }
   const { content, settings, eventDate, events } = parsed.data;
 
+  // `settings.custom` (kustomisasi tampilan, Fase G) DIMILIKI EKSKLUSIF oleh
+  // `updateInvitationAppearance`. Jalur autosave ini MENGABAIKAN `custom` dari
+  // klien (cegah bypass gating Premium lewat skema base yang permisif) dan
+  // MEMPERTAHANKAN nilai milik server (cegah kehilangan kustomisasi saat pemilik
+  // mengedit konten).
+  const settingsSansCustom = { ...settings };
+  delete settingsSansCustom.custom;
+  const { data: current } = await supabase
+    .from("invitations")
+    .select("settings")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const serverCustom = settingsSchema.safeParse(current?.settings).data?.custom;
+  const settingsToWrite = serverCustom
+    ? { ...settingsSansCustom, custom: serverCustom }
+    : settingsSansCustom;
+
   const { data: saved, error } = await supabase
     .from("invitations")
     .update({
       content: toDbJson(content),
-      settings: toDbJson(settings),
+      settings: toDbJson(settingsToWrite),
       event_date: eventDate ? eventDate : null,
     })
     .eq("id", id)

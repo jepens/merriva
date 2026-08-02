@@ -7,6 +7,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -57,6 +58,7 @@ export function CoverGate({
   cover,
   fx,
   wipeMs = 1100,
+  appearance,
   children,
 }: {
   /** Kelas akar tema (prefix + font variables). */
@@ -73,11 +75,27 @@ export function CoverGate({
   fx?: ReactNode;
   /** Durasi wipe cover (ms) untuk fallback pembuangan cover. */
   wipeMs?: number;
+  /**
+   * Kustomisasi tampilan (Fase G) — diterapkan ke ELEMEN AKAR tema (`.er` dst.)
+   * agar CSS var override menang atas deklarasi internal tema (var milik-sendiri
+   * mengalahkan warisan). `motion:'calm'` meng-AND-kan preferensi user dengan
+   * tier device (mematikan koreografi & efek berat). Opsional → tema yang tak
+   * memakainya berperilaku sama persis seperti sebelumnya.
+   */
+  appearance?: {
+    style?: CSSProperties;
+    data?: Record<string, string | undefined>;
+    motion?: "full" | "calm";
+  };
   /** SECTION SERVER — dirender di server, di-pass apa adanya. */
   children: ReactNode;
 }) {
   const { recipientName } = useGuestContext();
-  const { motionOn, richOn } = useMotionTier();
+  const { motionOn: deviceMotion, richOn: deviceRich } = useMotionTier();
+  // Preferensi user `calm` mematikan motion tanpa menunggu reduced-motion device.
+  const calm = appearance?.motion === "calm";
+  const motionOn = deviceMotion && !calm;
+  const richOn = deviceRich && !calm;
   const [opened, setOpened] = useState(false);
   const [coverGone, setCoverGone] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -171,11 +189,26 @@ export function CoverGate({
 
   const t = copy.public;
 
+  // data-* untuk kustomisasi (mis. `data-gallery`, `data-motion`) → CSS tema
+  // membaca `.er[data-gallery="grid"]` dst.
+  const dataAttrs: Record<string, string> = {};
+  if (appearance?.motion) dataAttrs["data-motion"] = appearance.motion;
+  if (appearance?.data) {
+    for (const [k, v] of Object.entries(appearance.data)) {
+      if (v != null) dataAttrs[`data-${k}`] = v;
+    }
+  }
+
   return (
     <CoverGateContext.Provider
       value={{ opened, open, recipientName, motionOn, richOn, rootRef }}
     >
-      <div ref={rootRef} className={rootClassName}>
+      <div
+        ref={rootRef}
+        className={rootClassName}
+        style={appearance?.style}
+        {...dataAttrs}
+      >
         <div ref={contentRef} className={contentClassName} tabIndex={-1}>
           {children}
         </div>

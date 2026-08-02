@@ -93,8 +93,16 @@ export function Lightbox({
       });
 
       // Marquee auto-scroll — hanya track satu-baris yang meluber horizontal.
+      // Lewati bila reduced-motion, grid (multi-baris), tak meluber, atau tema
+      // di-set motion "calm" (kustomisasi Fase G).
       const singleRow = el.scrollHeight <= el.clientHeight + 8;
-      if (reduce || !singleRow || el.scrollWidth <= el.clientWidth) return;
+      if (
+        reduce ||
+        !singleRow ||
+        el.scrollWidth <= el.clientWidth ||
+        el.closest('[data-motion="calm"]')
+      )
+        return;
       const half = el.scrollWidth; // lebar item asli (sebelum klon)
       const originalCount = el.children.length;
       Array.from(el.children).forEach((node) => {

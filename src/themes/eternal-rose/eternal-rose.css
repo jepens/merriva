@@ -15,6 +15,10 @@
   --gold: #c9a227;
   --ink: #241a1e;
   --hairline: rgba(36, 26, 30, 0.14);
+  /* Pasangan font bawaan = "a". Kustomisasi (Fase G) menimpa lewat inline style
+     di elemen `.er` (inline menang atas rule kelas → var milik-sendiri). */
+  --er-serif: var(--er-disp-a);
+  --er-sans: var(--er-body-a);
   --er-serif-stack: var(--er-serif), Georgia, serif;
   --er-sans-stack: var(--er-sans), system-ui, sans-serif;
 
@@ -75,7 +79,9 @@
   letter-spacing: 0.24em;
   text-transform: uppercase;
   font-weight: 600;
-  color: var(--rose);
+  /* Aksen sebagai TEKS → versi aman-kontras bila custom (penjaga kontras);
+     tanpa custom `--er-acc-ink` tak diset → jatuh ke `--rose` (identik). */
+  color: var(--er-acc-ink, var(--rose));
 }
 .er-serif {
   font-family: var(--er-serif-stack);
@@ -339,7 +345,7 @@
   font-family: var(--er-serif-stack);
   font-style: italic;
   font-size: 15px;
-  color: var(--rose);
+  color: var(--er-acc-ink, var(--rose));
   letter-spacing: 0.1em;
 }
 .er-hero__names {
@@ -351,7 +357,7 @@
 }
 .er-hero__names em {
   font-style: italic;
-  color: var(--rose);
+  color: var(--er-acc-ink, var(--rose));
 }
 .er-flourish {
   position: absolute;
@@ -454,7 +460,7 @@
   line-height: 1.1;
 }
 .er-person h3 em {
-  color: var(--rose);
+  color: var(--er-acc-ink, var(--rose));
   font-style: italic;
 }
 .er-person__role {
@@ -788,4 +794,52 @@
   border-radius: 24px;
   padding: 24px;
   box-shadow: 0 30px 60px -40px rgba(46, 26, 34, 0.35);
+}
+
+/* ====================================================== KUSTOMISASI (Fase G) ==
+   Diaktifkan lewat data-atribut/inline var di elemen `.er` (CoverGate). Tanpa
+   custom, atribut ini tak ada → tampilan bawaan utuh. Urutan section diatur di
+   JSX (DOM order), BUKAN CSS order (aksesibilitas/SEO/urutan fokus).
+============================================================================= */
+
+/* Gaya galeri — "strip" (bawaan) tak butuh rule tambahan. */
+.er[data-gallery="grid"] .er-gallery__track {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+.er[data-gallery="grid"] .er-gallery__item {
+  flex: initial;
+  width: auto;
+}
+.er[data-gallery="grid"] .er-gallery__item:nth-child(2n) {
+  aspect-ratio: 3 / 4;
+  align-self: auto;
+}
+.er[data-gallery="polaroid"] .er-gallery__item {
+  border: none;
+  border-radius: 3px;
+  background: #fff;
+  margin: 8px 14px 26px;
+  box-shadow:
+    0 0 0 10px #fff,
+    0 0 0 11px var(--hairline),
+    0 16px 30px -18px rgba(46, 26, 34, 0.5);
+}
+.er[data-gallery="polaroid"] .er-gallery__item:nth-child(odd) {
+  transform: rotate(-2deg);
+}
+.er[data-gallery="polaroid"] .er-gallery__item:nth-child(even) {
+  transform: rotate(2deg);
+}
+
+/* Motion "calm" — hentikan animasi berbasis-CSS (koreografi gsap sudah dimatikan
+   oleh CoverGate karena `is-motion` tak dipasang saat calm). */
+.er[data-motion="calm"] .er-marquee__track {
+  animation: none;
+}
+.er[data-motion="calm"] .er-cover__fallback {
+  animation: none;
 }
