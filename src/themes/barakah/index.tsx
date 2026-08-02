@@ -1,4 +1,4 @@
-import { Figtree, Marcellus } from "next/font/google";
+import { Cormorant_Garamond, Figtree, Jost, Marcellus } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -43,21 +43,45 @@ const isLegacyToggle = (id: string): id is SectionKey =>
   LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
-// Marcellus = serif display bertakik lembut (nama & judul, bernuansa klasik);
-// Figtree = sans humanis bersih (teks & label). Nuansa islami elegan tanpa aset
-// eksternal.
-const display = Marcellus({
+// DUA PASANGAN font kurasi (kustomisasi Fase G — anggaran font). Pasangan "a" =
+// bawaan → di-preload; "b" `preload:false` (hanya diunduh saat dipilih).
+// a: Marcellus = serif display bertakik lembut (nama & judul); Figtree = sans
+// humanis bersih (teks). b: Cormorant Garamond = serif kontras-tinggi bergaya
+// Garamond (nama & ayat); Jost = sans geometris bersih (keterbacaan body).
+const dispA = Marcellus({
   subsets: ["latin"],
   weight: ["400"],
-  variable: "--bk-display",
+  variable: "--bk-disp-a",
   display: "swap",
 });
-const body = Figtree({
+const bodyA = Figtree({
   subsets: ["latin"],
   weight: ["400", "600"],
-  variable: "--bk-body",
+  variable: "--bk-body-a",
   display: "swap",
 });
+const dispB = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--bk-disp-b",
+  display: "swap",
+  preload: false,
+});
+const bodyB = Jost({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--bk-body-b",
+  display: "swap",
+  preload: false,
+});
+
+const FONT_VARS = [
+  dispA.variable,
+  bodyA.variable,
+  dispB.variable,
+  bodyB.variable,
+].join(" ");
 
 /**
  * Tema "Barakah" (wedding islami elegan, tier Story) — acuan
@@ -68,7 +92,7 @@ const body = Figtree({
  * (khatam) yang menggambar diri, strip geometris; palet zamrud + emas + pasir.
  */
 export default function Barakah({ data }: ThemeComponentProps) {
-  const rootClass = `bk ${display.variable} ${body.variable}`;
+  const rootClass = `bk ${FONT_VARS}`;
   const { settings } = data;
 
   if (data.content.category !== "wedding") {
@@ -180,7 +204,10 @@ export default function Barakah({ data }: ThemeComponentProps) {
           "--bk-ink": resolved.ink,
           "--bk-emerald": resolved.accent,
           "--bk-emerald-d": resolved.accent,
+          "--bk-display": resolved.dispVar,
+          "--bk-body": resolved.bodyVar,
         } as CSSProperties,
+        data: { gallery: resolved.styles.gallery },
         motion: resolved.motion,
       }
     : undefined;

@@ -17,6 +17,10 @@
   --bk-ink: #22312a;
   --bk-muted: rgba(34, 49, 42, 0.62);
   --bk-hairline: rgba(14, 59, 48, 0.18);
+  /* Pasangan font bawaan = "a". Kustomisasi (Fase G) menimpa lewat inline style
+     di elemen `.bk` (inline menang atas rule kelas → var milik-sendiri). */
+  --bk-display: var(--bk-disp-a);
+  --bk-body: var(--bk-body-a);
   --bk-disp-stack: var(--bk-display), "Marcellus", Georgia, serif;
   --bk-body-stack: var(--bk-body), "Figtree", system-ui, sans-serif;
 
@@ -750,4 +754,42 @@
 }
 .bk.is-open .bk-music {
   display: grid;
+}
+
+/* ====================================================== KUSTOMISASI (Fase G) ==
+   Diaktifkan lewat data-atribut/inline var di elemen `.bk` (CoverGate). Tanpa
+   custom, atribut ini tak ada → tampilan bawaan utuh. Urutan section diatur di
+   JSX (DOM order), BUKAN CSS order (aksesibilitas/SEO/urutan fokus).
+============================================================================= */
+
+/* Gaya galeri — "strip" (bawaan, lengkung mihrab) tak butuh rule tambahan. */
+.bk[data-gallery="grid"] .bk-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+.bk[data-gallery="grid"] .bk-gallery__item {
+  flex: initial;
+  width: auto;
+  aspect-ratio: 3 / 4;
+  border-radius: 16px;
+  scroll-snap-align: none;
+}
+.bk[data-gallery="polaroid"] .bk-gallery__item {
+  border: none;
+  border-radius: 3px;
+  background: #fff;
+  margin: 8px 14px 26px;
+  box-shadow:
+    0 0 0 10px #fff,
+    0 0 0 11px var(--bk-hairline),
+    0 16px 30px -18px rgba(9, 42, 34, 0.5);
+}
+.bk[data-gallery="polaroid"] .bk-gallery__item:nth-child(odd) {
+  transform: rotate(-2deg);
+}
+.bk[data-gallery="polaroid"] .bk-gallery__item:nth-child(even) {
+  transform: rotate(2deg);
 }

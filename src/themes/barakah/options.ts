@@ -2,8 +2,8 @@
  * Options kustomisasi tema `barakah` (wedding islami elegan, tier Story). Fase G.
  * Palet terkurasi memvariasikan permata primer (emerald→maroon→biru tua) sambil
  * mempertahankan emas + pasir + teks agar identitas islami koheren.
- * `customAccent:false` (kurasi menjamin kontras). Font tunggal. Motion = gsap →
- * `calm` via CoverGate (tanpa CSS tambahan).
+ * `customAccent:false` (kurasi menjamin kontras). Dua pasangan font (a bawaan,
+ * b Cormorant Garamond + Jost). Motion = gsap → `calm` via CoverGate.
  */
 import type { ThemeOptions } from "@/lib/customizer/theme-options";
 
@@ -20,8 +20,14 @@ export const barakahOptions: ThemeOptions = {
     {
       id: "a",
       name: "Marcellus + Figtree",
-      dispVar: "var(--bk-display)",
-      bodyVar: "var(--bk-body)",
+      dispVar: "var(--bk-disp-a)",
+      bodyVar: "var(--bk-body-a)",
+    },
+    {
+      id: "b",
+      name: "Cormorant Garamond + Jost",
+      dispVar: "var(--bk-disp-b)",
+      bodyVar: "var(--bk-body-b)",
     },
   ],
   sections: [
@@ -35,7 +41,9 @@ export const barakahOptions: ThemeOptions = {
     { id: "envelope", reorder: true, toggle: true },
     { id: "rsvp", reorder: true, toggle: false },
   ],
-  styles: {},
+  styles: {
+    gallery: ["strip", "grid", "polaroid"],
+  },
   supports: {
     customAccent: false,
     motion: true,

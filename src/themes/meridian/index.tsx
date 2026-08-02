@@ -1,4 +1,4 @@
-import { Italiana, Jost } from "next/font/google";
+import { Bodoni_Moda, Italiana, Jost } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 
 import { resolveAppearance } from "@/lib/customizer/resolve";
@@ -40,20 +40,46 @@ const isLegacyToggle = (id: string): id is SectionKey =>
   LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (aman WebView &
-// LCP). Italiana = display seni-deco renggang (nama & judul); Jost = geometric
-// sans (teks & label). Nuansa gala Art Deco tanpa aset eksternal.
-const display = Italiana({
+// LCP). Dua PASANGAN font kurasi (kustomisasi Fase G). Pasangan "a" = bawaan →
+// di-preload; "b" `preload:false` (hanya diunduh saat dipilih; @font-face tak
+// dipakai = tak di-fetch → halaman default utuh & render identik).
+// a: Italiana (display seni-deco renggang) + Jost (geometric sans).
+const dispA = Italiana({
   subsets: ["latin"],
   weight: ["400"],
-  variable: "--mrd-display",
+  variable: "--mrd-disp-a",
   display: "swap",
 });
-const body = Jost({
+const bodyA = Jost({
   subsets: ["latin"],
   weight: ["300", "400", "500"],
-  variable: "--mrd-body",
+  variable: "--mrd-body-a",
   display: "swap",
 });
+// b: Bodoni Moda (display serif Didone kontras-tinggi, set italic lengkap) +
+// Jost (sans geometris) — pasangan editorial/high-fashion, DNA premium Meridian.
+const dispB = Bodoni_Moda({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--mrd-disp-b",
+  display: "swap",
+  preload: false,
+});
+const bodyB = Jost({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--mrd-body-b",
+  display: "swap",
+  preload: false,
+});
+
+const FONT_VARS = [
+  dispA.variable,
+  bodyA.variable,
+  dispB.variable,
+  bodyB.variable,
+].join(" ");
 
 /**
  * Tema "Meridian" (wedding Art Deco gala, tier Story) — acuan
@@ -63,7 +89,7 @@ const body = Jost({
  * sesuai `settings.sections`.
  */
 export default function Meridian({ data }: ThemeComponentProps) {
-  const rootClass = `mrd ${display.variable} ${body.variable}`;
+  const rootClass = `mrd ${FONT_VARS}`;
   const { settings } = data;
 
   if (data.content.category !== "wedding") {
@@ -156,7 +182,10 @@ export default function Meridian({ data }: ThemeComponentProps) {
         style: {
           "--mrd-gold": resolved.accent,
           "--mrd-gold-l": resolved.accent,
+          "--mrd-display": resolved.dispVar,
+          "--mrd-body": resolved.bodyVar,
         } as CSSProperties,
+        data: { gallery: resolved.styles.gallery },
         motion: resolved.motion,
       }
     : undefined;

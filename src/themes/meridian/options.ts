@@ -25,8 +25,14 @@ export const meridianOptions: ThemeOptions = {
     {
       id: "a",
       name: "Italiana + Jost",
-      dispVar: "var(--mrd-display)",
-      bodyVar: "var(--mrd-body)",
+      dispVar: "var(--mrd-disp-a)",
+      bodyVar: "var(--mrd-body-a)",
+    },
+    {
+      id: "b",
+      name: "Bodoni Moda + Jost",
+      dispVar: "var(--mrd-disp-b)",
+      bodyVar: "var(--mrd-body-b)",
     },
   ],
   sections: [
@@ -38,7 +44,9 @@ export const meridianOptions: ThemeOptions = {
     { id: "rsvp", reorder: true, toggle: false },
     { id: "envelope", reorder: true, toggle: true },
   ],
-  styles: {},
+  styles: {
+    gallery: ["strip", "grid", "polaroid"],
+  },
   supports: {
     customAccent: false,
     motion: true,

@@ -14,6 +14,10 @@
   --nr-champ-2: #e0c48c;
   --nr-muted: rgba(236, 231, 221, 0.55);
   --nr-hairline: rgba(236, 231, 221, 0.14);
+  /* Pasangan font bawaan = "a". Kustomisasi (Fase G) menimpa lewat inline style
+     di elemen `.nr` (inline menang atas rule kelas → var milik-sendiri). */
+  --nr-serif: var(--nr-disp-a);
+  --nr-sans: var(--nr-body-a);
   --nr-serif-stack: var(--nr-serif), "Cormorant Garamond", Georgia, serif;
   --nr-sans-stack: var(--nr-sans), "Jost", system-ui, sans-serif;
 
@@ -774,4 +778,40 @@
 }
 .nr.is-open .nr-music {
   display: grid;
+}
+
+/* ====================================================== KUSTOMISASI (Fase G) ==
+   Diaktifkan lewat data-atribut/inline var di elemen `.nr` (CoverGate). Tanpa
+   custom, atribut ini tak ada → tampilan bawaan utuh. Urutan section diatur di
+   JSX (DOM order), BUKAN CSS order (aksesibilitas/SEO/urutan fokus).
+============================================================================= */
+
+/* Gaya galeri — "strip" (bawaan, strip horizontal) tak butuh rule tambahan. */
+.nr[data-gallery="grid"] .nr-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+.nr[data-gallery="grid"] .nr-gallery__item {
+  flex: initial;
+  width: auto;
+  scroll-snap-align: none;
+}
+.nr[data-gallery="polaroid"] .nr-gallery__item {
+  border: none;
+  border-radius: 3px;
+  background: #fff;
+  margin: 8px 14px 26px;
+  box-shadow:
+    0 0 0 10px #fff,
+    0 0 0 11px var(--nr-hairline),
+    0 16px 30px -18px rgba(0, 0, 0, 0.7);
+}
+.nr[data-gallery="polaroid"] .nr-gallery__item:nth-child(odd) {
+  transform: rotate(-2deg);
+}
+.nr[data-gallery="polaroid"] .nr-gallery__item:nth-child(even) {
+  transform: rotate(2deg);
 }

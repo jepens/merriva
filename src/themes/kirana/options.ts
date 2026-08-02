@@ -26,8 +26,14 @@ export const kiranaOptions: ThemeOptions = {
     {
       id: "a",
       name: "Cormorant Upright + Figtree",
-      dispVar: "var(--kr-display)",
-      bodyVar: "var(--kr-body)",
+      dispVar: "var(--kr-disp-a)",
+      bodyVar: "var(--kr-body-a)",
+    },
+    {
+      id: "b",
+      name: "Playfair Display + Karla",
+      dispVar: "var(--kr-disp-b)",
+      bodyVar: "var(--kr-body-b)",
     },
   ],
   sections: [
@@ -41,7 +47,9 @@ export const kiranaOptions: ThemeOptions = {
     { id: "rsvp", reorder: true, toggle: false },
     { id: "envelope", reorder: true, toggle: true },
   ],
-  styles: {},
+  styles: {
+    gallery: ["strip", "grid", "polaroid"],
+  },
   supports: {
     customAccent: false,
     motion: true,

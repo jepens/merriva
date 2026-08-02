@@ -1,4 +1,9 @@
-import { Cormorant_Garamond, Jost } from "next/font/google";
+import {
+  Cormorant_Garamond,
+  Jost,
+  Montserrat,
+  Playfair_Display,
+} from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -30,21 +35,46 @@ import {
 } from "./sections";
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
-// Cormorant Garamond = serif Garalde sinematik (nama + judul); Jost = geometric
-// sans (teks/label). Nuansa malam glamor tanpa aset eksternal.
-const serif = Cormorant_Garamond({
+// Dua PASANGAN font kurasi (kustomisasi Fase G). Pasangan "a" = bawaan →
+// di-preload; "b" `preload:false` (hanya diunduh saat dipilih → halaman default
+// utuh). Pasangan a: Cormorant Garamond (serif Garalde sinematik) + Jost
+// (geometric sans). Pasangan b: Playfair Display (serif high-contrast) +
+// Montserrat (grotesk geometris) — kontras tinggi & monokrom, cocok DNA noir.
+const dispA = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["300", "400", "500"],
   style: ["normal", "italic"],
-  variable: "--nr-serif",
+  variable: "--nr-disp-a",
   display: "swap",
 });
-const sans = Jost({
+const bodyA = Jost({
   subsets: ["latin"],
   weight: ["300", "400", "500"],
-  variable: "--nr-sans",
+  variable: "--nr-body-a",
   display: "swap",
 });
+const dispB = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--nr-disp-b",
+  display: "swap",
+  preload: false,
+});
+const bodyB = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--nr-body-b",
+  display: "swap",
+  preload: false,
+});
+
+const FONT_VARS = [
+  dispA.variable,
+  bodyA.variable,
+  dispB.variable,
+  bodyB.variable,
+].join(" ");
 
 /** Section yang bisa disembunyikan lewat toggle lama (`settings.sections`). */
 const LEGACY_TOGGLE = new Set<SectionKey>([
@@ -69,7 +99,7 @@ const isLegacyToggle = (id: string): id is SectionKey =>
  * `custom`, render IDENTIK seperti sebelumnya (toggle lama dipakai).
  */
 export default function Noir({ data }: ThemeComponentProps) {
-  const rootClass = `nr ${serif.variable} ${sans.variable}`;
+  const rootClass = `nr ${FONT_VARS}`;
   const { settings } = data;
 
   if (data.content.category !== "wedding") {
@@ -182,7 +212,10 @@ export default function Noir({ data }: ThemeComponentProps) {
           "--nr-bone": resolved.ink,
           "--nr-champ": resolved.accent,
           "--nr-champ-2": resolved.accent,
+          "--nr-serif": resolved.dispVar,
+          "--nr-sans": resolved.bodyVar,
         } as CSSProperties,
+        data: { gallery: resolved.styles.gallery },
         motion: resolved.motion,
       }
     : undefined;

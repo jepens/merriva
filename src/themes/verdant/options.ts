@@ -2,7 +2,8 @@
  * Options kustomisasi tema `verdant` (wedding botanikal, tier Story). Fase G.
  * Palet terkurasi memvariasikan aksen primer (kertas ivory & teks dijaga tetap
  * agar token turunan koheren). `customAccent:false` (kurasi menjamin kontras).
- * Font tunggal. Motion = gsap → `calm` via CoverGate (tanpa CSS tambahan).
+ * Dua pasangan font (a bawaan, b `preload:false`). Motion = gsap → `calm` via
+ * CoverGate (tanpa CSS tambahan).
  */
 import type { ThemeOptions } from "@/lib/customizer/theme-options";
 
@@ -26,8 +27,14 @@ export const verdantOptions: ThemeOptions = {
     {
       id: "a",
       name: "EB Garamond + Karla",
-      dispVar: "var(--vd-serif)",
-      bodyVar: "var(--vd-sans)",
+      dispVar: "var(--vd-disp-a)",
+      bodyVar: "var(--vd-body-a)",
+    },
+    {
+      id: "b",
+      name: "Cormorant Garamond + Nunito Sans",
+      dispVar: "var(--vd-disp-b)",
+      bodyVar: "var(--vd-body-b)",
     },
   ],
   sections: [

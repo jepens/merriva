@@ -1,4 +1,9 @@
-import { Cormorant_Upright, Figtree } from "next/font/google";
+import {
+  Cormorant_Upright,
+  Figtree,
+  Karla,
+  Playfair_Display,
+} from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -43,20 +48,45 @@ const isLegacyToggle = (id: string): id is SectionKey =>
   LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
-// Cormorant Upright = display serif tegak elegan (nama & judul); Figtree =
-// humanist sans (teks/label). Nuansa Jawa modern (palet sogan) tanpa aset luar.
-const display = Cormorant_Upright({
+// Dua PASANGAN font kurasi (kustomisasi Fase G, anggaran font). Pasangan "a" =
+// bawaan → di-preload; "b" `preload:false` (hanya diunduh saat dipilih; tanpa
+// @font-face tak dipakai = tak di-fetch → halaman default utuh).
+// a: Cormorant Upright (display serif tegak) + Figtree (humanist sans).
+const dispA = Cormorant_Upright({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--kr-display",
+  variable: "--kr-disp-a",
   display: "swap",
 });
-const body = Figtree({
+const bodyA = Figtree({
   subsets: ["latin"],
   weight: ["400", "600"],
-  variable: "--kr-body",
+  variable: "--kr-body-a",
   display: "swap",
 });
+// b: Playfair Display (serif editorial elegan, italic) + Karla (grotesque bersih).
+const dispB = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--kr-disp-b",
+  display: "swap",
+  preload: false,
+});
+const bodyB = Karla({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--kr-body-b",
+  display: "swap",
+  preload: false,
+});
+
+const FONT_VARS = [
+  dispA.variable,
+  bodyA.variable,
+  dispB.variable,
+  bodyB.variable,
+].join(" ");
 
 /**
  * Tema "Kirana" (wedding adat Jawa modern, tier Story) — acuan
@@ -67,7 +97,7 @@ const body = Figtree({
  * tampil sesuai `settings.sections`. Khusus kategori pernikahan.
  */
 export default function Kirana({ data }: ThemeComponentProps) {
-  const rootClass = `kr ${display.variable} ${body.variable}`;
+  const rootClass = `kr ${FONT_VARS}`;
   const { settings } = data;
 
   if (data.content.category !== "wedding") {
@@ -173,7 +203,10 @@ export default function Kirana({ data }: ThemeComponentProps) {
           "--kr-sogan": resolved.accent,
           "--kr-sogan-d": resolved.accent,
           "--kr-ink": resolved.ink,
+          "--kr-display": resolved.dispVar,
+          "--kr-body": resolved.bodyVar,
         } as CSSProperties,
+        data: { gallery: resolved.styles.gallery },
         motion: resolved.motion,
       }
     : undefined;

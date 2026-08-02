@@ -2,8 +2,9 @@
  * Options kustomisasi tema `noir` (wedding sinematik, tier Story). Fase G.
  * Tema GELAP → palet terkurasi memvariasikan AKSEN (bg/teks dijaga tetap agar
  * token turunan koheren). `customAccent:false` (penjaga kontras hanya menggelapkan
- * = salah arah di kertas gelap; kurasi menjamin kontras). Font tunggal (tab Font
- * tak muncul). Motion = gsap → `calm` ditangani CoverGate (tanpa CSS tambahan).
+ * = salah arah di kertas gelap; kurasi menjamin kontras). Dua pasangan font
+ * (a bawaan, b Playfair Display + Montserrat). Motion = gsap → `calm` ditangani
+ * CoverGate (tanpa CSS tambahan).
  */
 import type { ThemeOptions } from "@/lib/customizer/theme-options";
 
@@ -33,8 +34,14 @@ export const noirOptions: ThemeOptions = {
     {
       id: "a",
       name: "Cormorant Garamond + Jost",
-      dispVar: "var(--nr-serif)",
-      bodyVar: "var(--nr-sans)",
+      dispVar: "var(--nr-disp-a)",
+      bodyVar: "var(--nr-body-a)",
+    },
+    {
+      id: "b",
+      name: "Playfair Display + Montserrat",
+      dispVar: "var(--nr-disp-b)",
+      bodyVar: "var(--nr-body-b)",
     },
   ],
   sections: [
@@ -48,7 +55,9 @@ export const noirOptions: ThemeOptions = {
     { id: "envelope", reorder: true, toggle: true },
     { id: "rsvp", reorder: true, toggle: false },
   ],
-  styles: {},
+  styles: {
+    gallery: ["strip", "grid", "polaroid"],
+  },
   supports: {
     customAccent: false,
     motion: true,

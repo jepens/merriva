@@ -16,6 +16,10 @@
   --mrd-bone: rgba(247, 244, 236, 0.92);
   --mrd-muted: rgba(247, 244, 236, 0.55);
   --mrd-hairline: rgba(212, 179, 106, 0.28);
+  /* Pasangan font bawaan = "a". Kustomisasi (Fase G) menimpa lewat inline style
+     di elemen `.mrd` (inline menang atas rule kelas → var milik-sendiri). */
+  --mrd-display: var(--mrd-disp-a);
+  --mrd-body: var(--mrd-body-a);
   --mrd-disp: var(--mrd-display), Georgia, "Times New Roman", serif;
   --mrd-sans: var(--mrd-body), system-ui, sans-serif;
 
@@ -635,6 +639,38 @@
   text-transform: uppercase;
   color: rgba(247, 244, 236, 0.7);
   z-index: 1;
+}
+
+/* Gaya galeri (Fase G) — diaktifkan lewat data-atribut di elemen `.mrd`
+   (CoverGate). "strip" (bawaan) tak butuh rule tambahan. Tanpa custom, atribut
+   ini tak ada → tampilan strip horizontal utuh. */
+.mrd[data-gallery="grid"] .mrd-gtrack {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+.mrd[data-gallery="grid"] .mrd-gitem {
+  flex: initial;
+  width: auto;
+  aspect-ratio: 3 / 4;
+}
+.mrd[data-gallery="polaroid"] .mrd-gitem {
+  border: none;
+  border-radius: 3px;
+  background: #fff;
+  margin: 8px 14px 26px;
+  box-shadow:
+    0 0 0 10px #fff,
+    0 0 0 11px var(--mrd-hairline),
+    0 16px 30px -18px rgba(8, 13, 22, 0.6);
+}
+.mrd[data-gallery="polaroid"] .mrd-gitem:nth-child(odd) {
+  transform: rotate(-2deg);
+}
+.mrd[data-gallery="polaroid"] .mrd-gitem:nth-child(even) {
+  transform: rotate(2deg);
 }
 
 /* RSVP — bungkus GuestbookSection dalam card champagne ---------------------- */

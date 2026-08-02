@@ -19,6 +19,10 @@
   --kr-ink: #3b2f22;
   --kr-muted: rgba(59, 47, 34, 0.62);
   --kr-hairline: rgba(107, 74, 43, 0.22);
+  /* Pasangan font bawaan = "a". Kustomisasi (Fase G) menimpa lewat inline style
+     di elemen `.kr` (inline menang atas rule kelas → var milik-sendiri). */
+  --kr-display: var(--kr-disp-a);
+  --kr-body: var(--kr-body-a);
   --kr-disp-stack: var(--kr-display), "Cormorant Upright", Georgia, serif;
   --kr-body-stack: var(--kr-body), "Figtree", system-ui, sans-serif;
 
@@ -811,4 +815,38 @@
 }
 .kr.is-open .kr-music {
   display: grid;
+}
+
+/* ====================================================== KUSTOMISASI (Fase G) ==
+   Diaktifkan lewat data-atribut/inline var di elemen `.kr` (CoverGate). Tanpa
+   custom, atribut ini tak ada → tampilan bawaan utuh. Urutan section diatur di
+   JSX (DOM order), BUKAN CSS order (aksesibilitas/SEO/urutan fokus).
+============================================================================= */
+
+/* Gaya galeri — "strip" (bawaan) tak butuh rule tambahan. */
+.kr[data-gallery="grid"] .kr-g-track {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+.kr[data-gallery="grid"] .kr-g-item {
+  flex: initial;
+  width: auto;
+}
+.kr[data-gallery="polaroid"] .kr-g-item {
+  border: none;
+  border-radius: 3px;
+  margin: 8px 14px 26px;
+  box-shadow:
+    0 0 0 10px #fbf5e6,
+    0 0 0 11px var(--kr-hairline),
+    0 16px 30px -18px rgba(69, 45, 21, 0.5);
+}
+.kr[data-gallery="polaroid"] .kr-g-item:nth-child(odd) {
+  transform: rotate(-2deg);
+}
+.kr[data-gallery="polaroid"] .kr-g-item:nth-child(even) {
+  transform: rotate(2deg);
 }

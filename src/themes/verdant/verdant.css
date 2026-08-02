@@ -16,6 +16,8 @@
   --vd-ink: #3a3126;
   --vd-muted: rgba(58, 49, 38, 0.62);
   --vd-hairline: rgba(58, 49, 38, 0.18);
+  --vd-serif: var(--vd-disp-a);
+  --vd-sans: var(--vd-body-a);
   --vd-serif-stack: var(--vd-serif), "EB Garamond", Georgia, serif;
   --vd-sans-stack: var(--vd-sans), "Karla", system-ui, sans-serif;
 

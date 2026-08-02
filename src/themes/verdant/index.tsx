@@ -1,4 +1,9 @@
-import { EB_Garamond, Karla } from "next/font/google";
+import {
+  Cormorant_Garamond,
+  EB_Garamond,
+  Karla,
+  Nunito_Sans,
+} from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -42,20 +47,40 @@ const isLegacyToggle = (id: string): id is SectionKey =>
   LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
-// EB Garamond = serif Garalde lembut (nama + judul, italic botanikal); Karla =
-// grotesque humanis (teks/label). Nuansa buku sketsa botani tanpa aset eksternal.
-const serif = EB_Garamond({
+// Dua PASANGAN font kurasi (kustomisasi Fase G). Pasangan "a" = bawaan → di-
+// preload; "b" `preload:false` (hanya diunduh saat dipilih; @font-face tak
+// dipakai = tak di-fetch → halaman default utuh & render IDENTIK).
+// a) EB Garamond = serif Garalde lembut (nama + judul, italic botanikal); Karla
+// = grotesque humanis (teks/label). Nuansa buku sketsa botani.
+// b) Cormorant Garamond = serif display high-contrast anggun; Nunito Sans = sans
+// humanis hangat, mudah dibaca di WebView WhatsApp.
+const dispA = EB_Garamond({
   subsets: ["latin"],
   weight: ["400", "500"],
   style: ["normal", "italic"],
-  variable: "--vd-serif",
+  variable: "--vd-disp-a",
   display: "swap",
 });
-const sans = Karla({
+const bodyA = Karla({
   subsets: ["latin"],
   weight: ["400", "600"],
-  variable: "--vd-sans",
+  variable: "--vd-body-a",
   display: "swap",
+});
+const dispB = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--vd-disp-b",
+  display: "swap",
+  preload: false,
+});
+const bodyB = Nunito_Sans({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--vd-body-b",
+  display: "swap",
+  preload: false,
 });
 
 /**
@@ -66,7 +91,7 @@ const sans = Karla({
  * tampil sesuai `settings.sections`.
  */
 export default function Verdant({ data }: ThemeComponentProps) {
-  const rootClass = `vd ${serif.variable} ${sans.variable}`;
+  const rootClass = `vd ${dispA.variable} ${bodyA.variable} ${dispB.variable} ${bodyB.variable}`;
   const { settings } = data;
 
   if (data.content.category !== "wedding") {
@@ -177,6 +202,8 @@ export default function Verdant({ data }: ThemeComponentProps) {
           "--vd-ivory": resolved.paper,
           "--vd-ink": resolved.ink,
           "--vd-sage": resolved.accent,
+          "--vd-serif": resolved.dispVar,
+          "--vd-sans": resolved.bodyVar,
         } as CSSProperties,
         motion: resolved.motion,
       }
