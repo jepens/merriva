@@ -5,6 +5,7 @@ import { barakahOptions } from "./barakah/options";
 import { eternalRoseOptions } from "./eternal-rose/options";
 import { festaOptions } from "./festa/options";
 import { kiranaOptions } from "./kirana/options";
+import { luminaOptions } from "./lumina/options";
 import { meridianOptions } from "./meridian/options";
 import { noirOptions } from "./noir/options";
 import { prismaOptions } from "./prisma/options";
@@ -27,6 +28,7 @@ export const themeOptionsRegistry: Record<string, ThemeOptions> = {
   meridian: meridianOptions,
   prisma: prismaOptions,
   festa: festaOptions,
+  lumina: luminaOptions,
 };
 
 export function getThemeOptions(slug: string): ThemeOptions | null {

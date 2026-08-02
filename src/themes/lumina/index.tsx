@@ -1,13 +1,14 @@
 import { Gowun_Batang, Karla } from "next/font/google";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
-import { isSectionVisible } from "@/lib/validation/content";
+import { isSectionVisible, type SectionKey } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { StoryEntry } from "@/lib/validation/content";
@@ -16,6 +17,7 @@ import type { ThemeComponentProps } from "@/themes/registry";
 import "./lm.css";
 import { LuminaCover } from "./cover";
 import { L } from "./labels";
+import { luminaOptions } from "./options";
 import {
   CelebrantBlock,
   CountdownBlock,
@@ -28,6 +30,18 @@ import {
   Schedule,
   Timeline,
 } from "./sections";
+
+/** Section yang bisa disembunyikan lewat toggle lama (`settings.sections`). */
+const LEGACY_TOGGLE = new Set<SectionKey>([
+  "countdown",
+  "story",
+  "schedule",
+  "gallery",
+  "envelope",
+  "rsvp",
+]);
+const isLegacyToggle = (id: string): id is SectionKey =>
+  LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). Gowun Batang =
 // serif buku lembut (display + nama), Karla = humanist sans (teks/label). Estetika
@@ -127,6 +141,68 @@ export default function Lumina({ data }: ThemeComponentProps) {
       env.ewallets.length > 0 ||
       Boolean(env.giftAddress));
 
+  const custom = settings.custom ?? null;
+  const resolved = custom ? resolveAppearance(luminaOptions, custom) : null;
+
+  const sectionNodes: Record<string, ReactNode> = {
+    intro: hasIntro ? (
+      <Intro
+        greetingOpen={content.greetingOpen}
+        description={description}
+        quote={content.quote?.text ? content.quote : undefined}
+      />
+    ) : null,
+    principals,
+    countdown: countdownTarget ? (
+      <CountdownBlock targetIso={countdownTarget} />
+    ) : null,
+    story:
+      timelineItems.length > 0 ? (
+        <Timeline label={timelineLabel} items={timelineItems} />
+      ) : null,
+    schedule:
+      data.events.length > 0 ? (
+        <Schedule
+          events={data.events}
+          tz={settings.timezone}
+          slug={data.slug}
+        />
+      ) : null,
+    gallery:
+      data.media.length > 0 ? (
+        <Lightbox media={data.media}>
+          <Gallery media={data.media} />
+        </Lightbox>
+      ) : null,
+    envelope: hasEnvelope ? <Envelope envelope={env} slug={data.slug} /> : null,
+    rsvp: (
+      <section className="lm-section">
+        <div className="lm-inner">
+          <GuestbookSection slug={data.slug} />
+        </div>
+      </section>
+    ),
+  };
+
+  const order = resolved
+    ? resolved.sections
+    : luminaOptions.sections.map((s) => ({
+        id: s.id,
+        visible: isLegacyToggle(s.id) ? isSectionVisible(settings, s.id) : true,
+      }));
+
+  const grainOn = resolved ? resolved.grain : true;
+
+  const appearance = resolved
+    ? {
+        style: {
+          "--lm-taupe": resolved.accent,
+          "--lm-taupe-ink": resolved.accent,
+        } as CSSProperties,
+        motion: resolved.motion,
+      }
+    : undefined;
+
   return (
     <CoverGate
       rootClassName={rootClass}
@@ -135,6 +211,7 @@ export default function Lumina({ data }: ThemeComponentProps) {
       musicClassName="lm-music"
       wipeMs={1000}
       music={data.music}
+      appearance={appearance}
       cover={
         <LuminaCover
           titleLines={titleLines}
@@ -143,51 +220,23 @@ export default function Lumina({ data }: ThemeComponentProps) {
         />
       }
     >
-      <div className="lm-grain" aria-hidden />
+      {grainOn ? <div className="lm-grain" aria-hidden /> : null}
 
-      {hasIntro ? (
-        <Intro
-          greetingOpen={content.greetingOpen}
-          description={description}
-          quote={content.quote?.text ? content.quote : undefined}
-        />
-      ) : null}
-
-      {principals}
-
-      {isSectionVisible(settings, "countdown") && countdownTarget ? (
-        <CountdownBlock targetIso={countdownTarget} />
-      ) : null}
-
-      {isSectionVisible(settings, "story") && timelineItems.length > 0 ? (
-        <Timeline label={timelineLabel} items={timelineItems} />
-      ) : null}
-
-      {isSectionVisible(settings, "schedule") && data.events.length > 0 ? (
-        <Schedule
-          events={data.events}
-          tz={settings.timezone}
-          slug={data.slug}
-        />
-      ) : null}
-
-      {isSectionVisible(settings, "gallery") && data.media.length > 0 ? (
-        <Lightbox media={data.media}>
-          <Gallery media={data.media} />
-        </Lightbox>
-      ) : null}
-
-      {isSectionVisible(settings, "envelope") && hasEnvelope ? (
-        <Envelope envelope={env} slug={data.slug} />
-      ) : null}
-
-      {isSectionVisible(settings, "rsvp") ? (
-        <section className="lm-section">
-          <div className="lm-inner">
-            <GuestbookSection slug={data.slug} />
-          </div>
-        </section>
-      ) : null}
+      {order
+        .filter((o) => o.visible)
+        .map((o) => {
+          const node = sectionNodes[o.id];
+          if (!node) return null;
+          return (
+            <div
+              key={o.id}
+              data-section-id={o.id}
+              style={{ display: "contents" }}
+            >
+              {node}
+            </div>
+          );
+        })}
 
       <Footer
         greetingClose={content.greetingClose}
