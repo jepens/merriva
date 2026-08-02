@@ -344,6 +344,11 @@
     animation: none;
   }
 }
+/* Kustomisasi (Fase G): motion "tenang" mematikan blob mengambang + marquee. */
+.ft[data-motion="calm"] .ft-blob,
+.ft[data-motion="calm"] .ft-marquee__track {
+  animation: none;
+}
 .ft-scallop {
   height: 16px;
   background: radial-gradient(
