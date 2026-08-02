@@ -187,6 +187,12 @@
     -webkit-text-fill-color: var(--mrd-gold-l);
   }
 }
+/* Kustomisasi (Fase G): motion "tenang" mematikan shimmer emas. */
+.mrd[data-motion="calm"] .mrd-shimmer {
+  animation: none;
+  color: var(--mrd-gold-l);
+  -webkit-text-fill-color: var(--mrd-gold-l);
+}
 
 /* Sunburst rays */
 .mrd-rays {

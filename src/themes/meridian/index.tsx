@@ -1,11 +1,13 @@
 import { Italiana, Jost } from "next/font/google";
+import type { CSSProperties, ReactNode } from "react";
 
+import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
-import { isSectionVisible } from "@/lib/validation/content";
+import { isSectionVisible, type SectionKey } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
@@ -14,6 +16,7 @@ import "./mrd.css";
 import { MeridianCover } from "./cover";
 import { MeridianFx } from "./fx";
 import { L } from "./labels";
+import { meridianOptions } from "./options";
 import {
   CountdownBlock,
   Couple,
@@ -24,6 +27,17 @@ import {
   Rsvp,
   WeddingGift,
 } from "./sections";
+
+/** Section yang bisa disembunyikan lewat toggle lama (`settings.sections`). */
+const LEGACY_TOGGLE = new Set<SectionKey>([
+  "countdown",
+  "schedule",
+  "gallery",
+  "rsvp",
+  "envelope",
+]);
+const isLegacyToggle = (id: string): id is SectionKey =>
+  LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (aman WebView &
 // LCP). Italiana = display seni-deco renggang (nama & judul); Jost = geometric
@@ -94,6 +108,59 @@ export default function Meridian({ data }: ThemeComponentProps) {
       env.ewallets.length > 0 ||
       Boolean(env.giftAddress));
 
+  const custom = settings.custom ?? null;
+  const resolved = custom ? resolveAppearance(meridianOptions, custom) : null;
+
+  const sectionNodes: Record<string, ReactNode> = {
+    intro: <Intro greetingOpen={content.greetingOpen} />,
+    couple: (
+      <Couple
+        bride={content.bride}
+        groom={content.groom}
+        bridePhoto={data.bridePhotoUrl}
+        groomPhoto={data.groomPhotoUrl}
+      />
+    ),
+    countdown: countdownTarget ? (
+      <CountdownBlock targetIso={countdownTarget} />
+    ) : null,
+    schedule:
+      data.events.length > 0 ? (
+        <Programme
+          events={data.events}
+          tz={settings.timezone}
+          slug={data.slug}
+        />
+      ) : null,
+    gallery:
+      data.media.length > 0 ? (
+        <Lightbox media={data.media}>
+          <Moments media={data.media} />
+        </Lightbox>
+      ) : null,
+    rsvp: <Rsvp slug={data.slug} />,
+    envelope: hasEnvelope ? <WeddingGift envelope={env} /> : null,
+  };
+
+  const order = resolved
+    ? resolved.sections
+    : meridianOptions.sections.map((s) => ({
+        id: s.id,
+        visible: isLegacyToggle(s.id) ? isSectionVisible(settings, s.id) : true,
+      }));
+
+  const grainOn = resolved ? resolved.grain : true;
+
+  const appearance = resolved
+    ? {
+        style: {
+          "--mrd-gold": resolved.accent,
+          "--mrd-gold-l": resolved.accent,
+        } as CSSProperties,
+        motion: resolved.motion,
+      }
+    : undefined;
+
   return (
     <CoverGate
       rootClassName={rootClass}
@@ -102,6 +169,7 @@ export default function Meridian({ data }: ThemeComponentProps) {
       musicClassName="mrd-music"
       wipeMs={1100}
       music={data.music}
+      appearance={appearance}
       cover={
         <MeridianCover
           brideName={brideName}
@@ -111,41 +179,24 @@ export default function Meridian({ data }: ThemeComponentProps) {
       }
       fx={<MeridianFx />}
     >
-      <div className="mrd-grain" aria-hidden />
+      {grainOn ? <div className="mrd-grain" aria-hidden /> : null}
       <div className="mrd-progress" aria-hidden />
 
-      <Intro greetingOpen={content.greetingOpen} />
-
-      <Couple
-        bride={content.bride}
-        groom={content.groom}
-        bridePhoto={data.bridePhotoUrl}
-        groomPhoto={data.groomPhotoUrl}
-      />
-
-      {isSectionVisible(settings, "countdown") && countdownTarget ? (
-        <CountdownBlock targetIso={countdownTarget} />
-      ) : null}
-
-      {isSectionVisible(settings, "schedule") && data.events.length > 0 ? (
-        <Programme
-          events={data.events}
-          tz={settings.timezone}
-          slug={data.slug}
-        />
-      ) : null}
-
-      {isSectionVisible(settings, "gallery") && data.media.length > 0 ? (
-        <Lightbox media={data.media}>
-          <Moments media={data.media} />
-        </Lightbox>
-      ) : null}
-
-      {isSectionVisible(settings, "rsvp") ? <Rsvp slug={data.slug} /> : null}
-
-      {isSectionVisible(settings, "envelope") && hasEnvelope ? (
-        <WeddingGift envelope={env} />
-      ) : null}
+      {order
+        .filter((o) => o.visible)
+        .map((o) => {
+          const node = sectionNodes[o.id];
+          if (!node) return null;
+          return (
+            <div
+              key={o.id}
+              data-section-id={o.id}
+              style={{ display: "contents" }}
+            >
+              {node}
+            </div>
+          );
+        })}
 
       <Footer
         brideName={brideName}
