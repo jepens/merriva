@@ -52,4 +52,10 @@ export const meridianOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  preview: {
+    root: "mrd",
+    vars: [
+      { name: "--mrd-gold", token: "accent" },
+    ],
+  },
 };

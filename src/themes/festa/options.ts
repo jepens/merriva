@@ -39,4 +39,10 @@ export const festaOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  preview: {
+    root: "ft",
+    vars: [
+      { name: "--ft-sun", token: "accent" },
+    ],
+  },
 };

@@ -4,9 +4,10 @@ import {
   Karla,
   Playfair_Display,
 } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
@@ -199,13 +200,7 @@ export default function Kirana({ data }: ThemeComponentProps) {
 
   const appearance = resolved
     ? {
-        style: {
-          "--kr-sogan": resolved.accent,
-          "--kr-sogan-d": resolved.accent,
-          "--kr-ink": resolved.ink,
-          "--kr-display": resolved.dispVar,
-          "--kr-body": resolved.bodyVar,
-        } as CSSProperties,
+        style: appearanceStyle(kiranaOptions.preview.vars, resolved),
         data: { gallery: resolved.styles.gallery },
         motion: resolved.motion,
       }

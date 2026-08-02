@@ -55,4 +55,14 @@ export const kiranaOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  preview: {
+    root: "kr",
+    vars: [
+      { name: "--kr-sogan", token: "accent" },
+      { name: "--kr-sogan-d", token: "accent" },
+      { name: "--kr-ink", token: "ink" },
+      { name: "--kr-display", token: "disp" },
+      { name: "--kr-body", token: "body" },
+    ],
+  },
 };

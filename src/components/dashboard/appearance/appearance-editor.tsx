@@ -12,6 +12,7 @@ import {
 
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   defaultCustomSettings,
@@ -78,25 +79,30 @@ export function AppearanceEditor({
   if (hasStyleTab) tabs.push(["style", L.tabs.style]);
 
   // Terapkan token ke dokumen iframe (same-origin) — tanpa reload. Memakai
-  // resolver yang sama dgn server → identik dgn hasil simpan.
+  // resolver + peta `preview.vars` yang SAMA dgn render server → identik dgn
+  // hasil simpan, untuk SEMUA tema (bukan hanya eternal-rose). Selektor DOM
+  // diturunkan dari `preview.root` mengikuti konvensi `<root>-stage/-grain/-open`.
+  const p = options.preview;
+  const stageSel = p.stage ?? `${p.root}-stage`;
+  const grainSel = p.grain === false ? null : (p.grain ?? `${p.root}-grain`);
+  const openSel = p.open ?? `${p.root}-open`;
+
   const applyToFrame = (c: CustomSettings) => {
     const doc = frameRef.current?.contentDocument;
-    const root = doc?.querySelector<HTMLElement>(".er");
+    const root = doc?.querySelector<HTMLElement>(`.${p.root}`);
     if (!root) return;
     const r = resolveAppearance(options, c);
-    root.style.setProperty("--paper", r.paper);
-    root.style.setProperty("--ink", r.ink);
-    root.style.setProperty("--rose", r.accent);
-    root.style.setProperty("--er-acc-ink", r.accentText);
-    root.style.setProperty("--er-on-acc", r.onAccent);
-    root.style.setProperty("--er-serif", r.dispVar);
-    root.style.setProperty("--er-sans", r.bodyVar);
+    for (const [name, value] of Object.entries(appearanceStyle(p.vars, r))) {
+      if (value != null) root.style.setProperty(name, String(value));
+    }
     if (r.styles.gallery) root.setAttribute("data-gallery", r.styles.gallery);
     root.setAttribute("data-motion", r.motion);
-    const grain = root.querySelector<HTMLElement>(".er-grain");
-    if (grain) grain.style.display = r.grain ? "" : "none";
+    if (grainSel) {
+      const grain = root.querySelector<HTMLElement>(`.${grainSel}`);
+      if (grain) grain.style.display = r.grain ? "" : "none";
+    }
 
-    const stage = root.querySelector(".er-stage");
+    const stage = root.querySelector(`.${stageSel}`);
     if (stage) {
       const wrappers = new Map<string, HTMLElement>();
       stage
@@ -105,15 +111,19 @@ export function AppearanceEditor({
           const id = n.getAttribute("data-section-id");
           if (id) wrappers.set(id, n);
         });
-      let anchor: Element | null = stage.querySelector(".er-marquee");
+      // Jangkar = elemen tepat sebelum section pertama (grain/marquee/progress),
+      // agnostik-tema. Footer (tanpa data-section-id) tetap di akhir.
+      const first = stage.querySelector<HTMLElement>(
+        ":scope > [data-section-id]",
+      );
+      let anchor: Element | null = first?.previousElementSibling ?? null;
       for (const s of r.sections) {
         const w = wrappers.get(s.id);
         if (!w) continue;
         w.style.display = s.visible ? "contents" : "none";
-        if (anchor) {
-          anchor.after(w);
-          anchor = w;
-        }
+        if (anchor) anchor.after(w);
+        else stage.prepend(w);
+        anchor = w;
       }
     }
   };
@@ -122,7 +132,7 @@ export function AppearanceEditor({
     loadedRef.current = true;
     // Buka sampul agar konten terlihat saat mengedit.
     frameRef.current?.contentDocument
-      ?.querySelector<HTMLElement>(".er-open")
+      ?.querySelector<HTMLElement>(`.${openSel}`)
       ?.click();
     // Tunggu satu frame agar DOM konten siap, lalu terapkan.
     window.requestAnimationFrame(() => applyToFrame(custom));

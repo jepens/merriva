@@ -63,4 +63,15 @@ export const noirOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  preview: {
+    root: "nr",
+    vars: [
+      { name: "--nr-bg", token: "paper" },
+      { name: "--nr-bone", token: "ink" },
+      { name: "--nr-champ", token: "accent" },
+      { name: "--nr-champ-2", token: "accent" },
+      { name: "--nr-serif", token: "disp" },
+      { name: "--nr-sans", token: "body" },
+    ],
+  },
 };

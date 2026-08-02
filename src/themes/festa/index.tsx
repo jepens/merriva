@@ -1,7 +1,8 @@
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
@@ -172,7 +173,7 @@ export default function Festa({ data }: ThemeComponentProps) {
 
   const appearance = resolved
     ? {
-        style: { "--ft-sun": resolved.accent } as CSSProperties,
+        style: appearanceStyle(festaOptions.preview.vars, resolved),
         motion: resolved.motion,
       }
     : undefined;

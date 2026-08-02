@@ -46,4 +46,12 @@ export const ariaOptions: ThemeOptions = {
     motion: false,
     grain: true,
   },
+  preview: {
+    root: "ar",
+    vars: [
+      { name: "--ar-paper", token: "paper" },
+      { name: "--ar-ink", token: "ink" },
+      { name: "--ar-red", token: "accent" },
+    ],
+  },
 };

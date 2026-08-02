@@ -40,4 +40,11 @@ export const luminaOptions: ThemeOptions = {
     motion: false,
     grain: true,
   },
+  preview: {
+    root: "lm",
+    vars: [
+      { name: "--lm-taupe", token: "accent" },
+      { name: "--lm-taupe-ink", token: "accent" },
+    ],
+  },
 };

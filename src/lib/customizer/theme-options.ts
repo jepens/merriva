@@ -34,6 +34,44 @@ export interface SectionOption {
   toggle: boolean;
 }
 
+/** Token render yang bisa dipetakan ke CSS var tema. */
+export type PreviewVarToken =
+  | "accent"
+  | "accentText"
+  | "onAccent"
+  | "paper"
+  | "ink"
+  | "disp"
+  | "body";
+
+/** Pemetaan: nama CSS var milik tema ← nilai token hasil resolve. */
+export interface PreviewVar {
+  /** contoh: "--rose", "--er-serif". */
+  name: string;
+  token: PreviewVarToken;
+}
+
+/**
+ * Kontrak DOM tema untuk pratinjau langsung editor (Fase G). SATU SUMBER yang
+ * dipakai BERSAMA oleh render server (index.tsx menyusun `appearance.style` dari
+ * `vars` lewat `appearanceStyle`) DAN editor (menerapkan var yang sama ke iframe
+ * same-origin) → editor ≡ halaman publik, tanpa duplikasi yang bisa drift.
+ * Selektor turunan mengikuti konvensi kelas tema `<root>` / `<root>-stage` /
+ * `<root>-grain` / `<root>-open`; override hanya bila tema menyimpang.
+ */
+export interface PreviewContract {
+  /** Kelas akar tema (token pertama rootClassName), mis. "er", "nr", "mrd". */
+  root: string;
+  /** Pemetaan CSS var tema ← token resolve (dipakai server & editor). */
+  vars: readonly PreviewVar[];
+  /** Override kelas stage (default `${root}-stage`). */
+  stage?: string;
+  /** Override kelas grain; `false` bila tema tanpa grain (default `${root}-grain`). */
+  grain?: string | false;
+  /** Override kelas tombol buka sampul (default `${root}-open`). */
+  open?: string;
+}
+
 export interface ThemeOptions {
   /** Minimal 1; index 0 = bawaan tema. */
   variants: readonly ThemeVariant[];
@@ -48,6 +86,8 @@ export interface ThemeOptions {
     motion: boolean;
     grain: boolean;
   };
+  /** Kontrak DOM untuk pratinjau langsung editor + penyusunan `appearance.style`. */
+  preview: PreviewContract;
 }
 
 /** Bentuk `settings.custom` v1 (disimpan di invitations.settings.custom). */

@@ -6,9 +6,10 @@ import {
   Jost,
   Marcellus,
 } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
@@ -238,15 +239,7 @@ export default function EternalRose({ data }: ThemeComponentProps) {
 
   const appearance = resolved
     ? {
-        style: {
-          "--paper": resolved.paper,
-          "--ink": resolved.ink,
-          "--rose": resolved.accent,
-          "--er-acc-ink": resolved.accentText,
-          "--er-on-acc": resolved.onAccent,
-          "--er-serif": resolved.dispVar,
-          "--er-sans": resolved.bodyVar,
-        } as CSSProperties,
+        style: appearanceStyle(eternalRoseOptions.preview.vars, resolved),
         data: { gallery: resolved.styles.gallery },
         motion: resolved.motion,
       }

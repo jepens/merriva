@@ -1,6 +1,7 @@
 import { Space_Grotesk, Space_Mono } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
@@ -174,7 +175,7 @@ export default function Prisma({ data }: ThemeComponentProps) {
   if (resolved) {
     const grainOn = resolved.grain;
     const appearance = {
-      style: { "--pr-lime": resolved.accent } as CSSProperties,
+      style: appearanceStyle(prismaOptions.preview.vars, resolved),
       motion: resolved.motion,
     };
     const defs: Record<

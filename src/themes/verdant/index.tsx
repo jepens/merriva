@@ -4,9 +4,10 @@ import {
   Karla,
   Nunito_Sans,
 } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
@@ -198,13 +199,7 @@ export default function Verdant({ data }: ThemeComponentProps) {
 
   const appearance = resolved
     ? {
-        style: {
-          "--vd-ivory": resolved.paper,
-          "--vd-ink": resolved.ink,
-          "--vd-sage": resolved.accent,
-          "--vd-serif": resolved.dispVar,
-          "--vd-sans": resolved.bodyVar,
-        } as CSSProperties,
+        style: appearanceStyle(verdantOptions.preview.vars, resolved),
         motion: resolved.motion,
       }
     : undefined;

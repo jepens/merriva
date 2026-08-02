@@ -1,6 +1,7 @@
 import { Bodoni_Moda, Italiana, Jost } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
@@ -179,12 +180,7 @@ export default function Meridian({ data }: ThemeComponentProps) {
 
   const appearance = resolved
     ? {
-        style: {
-          "--mrd-gold": resolved.accent,
-          "--mrd-gold-l": resolved.accent,
-          "--mrd-display": resolved.dispVar,
-          "--mrd-body": resolved.bodyVar,
-        } as CSSProperties,
+        style: appearanceStyle(meridianOptions.preview.vars, resolved),
         data: { gallery: resolved.styles.gallery },
         motion: resolved.motion,
       }

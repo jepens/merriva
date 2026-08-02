@@ -1,6 +1,7 @@
 import { Instrument_Serif, Inter } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
@@ -119,11 +120,7 @@ export default function Aria({ data }: ThemeComponentProps) {
   if (resolved) {
     const grainOn = resolved.grain;
     const appearance = {
-      style: {
-        "--ar-paper": resolved.paper,
-        "--ar-ink": resolved.ink,
-        "--ar-red": resolved.accent,
-      } as CSSProperties,
+      style: appearanceStyle(ariaOptions.preview.vars, resolved),
       motion: resolved.motion,
     };
     const defs: Record<

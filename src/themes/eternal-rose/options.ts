@@ -79,4 +79,16 @@ export const eternalRoseOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  preview: {
+    root: "er",
+    vars: [
+      { name: "--paper", token: "paper" },
+      { name: "--ink", token: "ink" },
+      { name: "--rose", token: "accent" },
+      { name: "--er-acc-ink", token: "accentText" },
+      { name: "--er-on-acc", token: "onAccent" },
+      { name: "--er-serif", token: "disp" },
+      { name: "--er-sans", token: "body" },
+    ],
+  },
 };

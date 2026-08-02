@@ -54,4 +54,14 @@ export const verdantOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  preview: {
+    root: "vd",
+    vars: [
+      { name: "--vd-ivory", token: "paper" },
+      { name: "--vd-ink", token: "ink" },
+      { name: "--vd-sage", token: "accent" },
+      { name: "--vd-serif", token: "disp" },
+      { name: "--vd-sans", token: "body" },
+    ],
+  },
 };

@@ -4,9 +4,10 @@ import {
   Montserrat,
   Playfair_Display,
 } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
@@ -207,14 +208,7 @@ export default function Noir({ data }: ThemeComponentProps) {
 
   const appearance = resolved
     ? {
-        style: {
-          "--nr-bg": resolved.paper,
-          "--nr-bone": resolved.ink,
-          "--nr-champ": resolved.accent,
-          "--nr-champ-2": resolved.accent,
-          "--nr-serif": resolved.dispVar,
-          "--nr-sans": resolved.bodyVar,
-        } as CSSProperties,
+        style: appearanceStyle(noirOptions.preview.vars, resolved),
         data: { gallery: resolved.styles.gallery },
         motion: resolved.motion,
       }

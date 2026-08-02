@@ -1,7 +1,8 @@
 import { Gowun_Batang, Karla } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
@@ -195,10 +196,7 @@ export default function Lumina({ data }: ThemeComponentProps) {
 
   const appearance = resolved
     ? {
-        style: {
-          "--lm-taupe": resolved.accent,
-          "--lm-taupe-ink": resolved.accent,
-        } as CSSProperties,
+        style: appearanceStyle(luminaOptions.preview.vars, resolved),
         motion: resolved.motion,
       }
     : undefined;

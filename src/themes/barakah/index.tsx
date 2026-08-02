@@ -1,7 +1,8 @@
 import { Cormorant_Garamond, Figtree, Jost, Marcellus } from "next/font/google";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { appearanceStyle } from "@/lib/customizer/appearance-style";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
@@ -199,14 +200,7 @@ export default function Barakah({ data }: ThemeComponentProps) {
 
   const appearance = resolved
     ? {
-        style: {
-          "--bk-sand": resolved.paper,
-          "--bk-ink": resolved.ink,
-          "--bk-emerald": resolved.accent,
-          "--bk-emerald-d": resolved.accent,
-          "--bk-display": resolved.dispVar,
-          "--bk-body": resolved.bodyVar,
-        } as CSSProperties,
+        style: appearanceStyle(barakahOptions.preview.vars, resolved),
         data: { gallery: resolved.styles.gallery },
         motion: resolved.motion,
       }

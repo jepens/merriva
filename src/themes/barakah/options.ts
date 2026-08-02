@@ -49,4 +49,15 @@ export const barakahOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  preview: {
+    root: "bk",
+    vars: [
+      { name: "--bk-sand", token: "paper" },
+      { name: "--bk-ink", token: "ink" },
+      { name: "--bk-emerald", token: "accent" },
+      { name: "--bk-emerald-d", token: "accent" },
+      { name: "--bk-display", token: "disp" },
+      { name: "--bk-body", token: "body" },
+    ],
+  },
 };
