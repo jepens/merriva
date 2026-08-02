@@ -1,5 +1,6 @@
 import type { ThemeOptions } from "@/lib/customizer/theme-options";
 
+import { ariaOptions } from "./aria/options";
 import { barakahOptions } from "./barakah/options";
 import { eternalRoseOptions } from "./eternal-rose/options";
 import { noirOptions } from "./noir/options";
@@ -17,6 +18,7 @@ export const themeOptionsRegistry: Record<string, ThemeOptions> = {
   noir: noirOptions,
   verdant: verdantOptions,
   barakah: barakahOptions,
+  aria: ariaOptions,
 };
 
 export function getThemeOptions(slug: string): ThemeOptions | null {

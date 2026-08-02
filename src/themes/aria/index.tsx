@@ -1,5 +1,7 @@
 import { Instrument_Serif, Inter } from "next/font/google";
+import type { CSSProperties, ReactNode } from "react";
 
+import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
   formatEventDateTime,
@@ -13,6 +15,7 @@ import type { ThemeComponentProps } from "@/themes/registry";
 import "./aria.css";
 import { AriaCover } from "./cover";
 import { L } from "./labels";
+import { ariaOptions } from "./options";
 import {
   Couple,
   CountdownSection,
@@ -106,6 +109,117 @@ export default function Aria({ data }: ThemeComponentProps) {
     isSectionVisible(settings, "story") && content.story.length > 0;
   const showEnvelope = isSectionVisible(settings, "envelope") && hasEnvelope;
   const showRsvp = isSectionVisible(settings, "rsvp");
+
+  // Kustomisasi (Fase G). Tanpa `custom` → render legacy PERSIS (di bawah).
+  // Dengan `custom` → section-map bernomor sesuai urutan resolver (countdown
+  // menyatu di blok Acara). Aria = tema bernomor/gabungan → dua jalur (aman).
+  const custom = settings.custom ?? null;
+  const resolved = custom ? resolveAppearance(ariaOptions, custom) : null;
+
+  if (resolved) {
+    const grainOn = resolved.grain;
+    const appearance = {
+      style: {
+        "--ar-paper": resolved.paper,
+        "--ar-ink": resolved.ink,
+        "--ar-red": resolved.accent,
+      } as CSSProperties,
+      motion: resolved.motion,
+    };
+    const defs: Record<
+      string,
+      { has: boolean; render: (no: string) => ReactNode }
+    > = {
+      opening: {
+        has: showOpening,
+        render: (no) => (
+          <Opening
+            no={no}
+            greetingOpen={content.greetingOpen}
+            quote={content.quote?.text ? content.quote : undefined}
+          />
+        ),
+      },
+      couple: {
+        has: true,
+        render: (no) => (
+          <Couple no={no} groom={content.groom} bride={content.bride} />
+        ),
+      },
+      schedule: {
+        has: data.events.length > 0,
+        render: (no) => (
+          <EventBlock
+            no={no}
+            events={data.events}
+            tz={settings.timezone}
+            slug={data.slug}
+            countdownTarget={countdownTarget}
+          />
+        ),
+      },
+      gallery: {
+        has: data.media.length > 0,
+        render: (no) => (
+          <Lightbox media={data.media}>
+            <Gallery no={no} media={data.media} />
+          </Lightbox>
+        ),
+      },
+      story: {
+        has: content.story.length > 0,
+        render: (no) => <StoryBlock no={no} story={content.story} />,
+      },
+      rsvp: { has: true, render: (no) => <Rsvp no={no} slug={data.slug} /> },
+      envelope: {
+        has: hasEnvelope,
+        render: (no) => <Gift no={no} envelope={env} slug={data.slug} />,
+      },
+    };
+    let cn = 0;
+    return (
+      <CoverGate
+        rootClassName={rootClass}
+        contentClassName="ar-stage"
+        coverClassName="ar-cover"
+        musicClassName="ar-music"
+        wipeMs={950}
+        music={data.music}
+        appearance={appearance}
+        cover={
+          <AriaCover
+            groomName={groomName}
+            brideName={brideName}
+            dateLabel={dateLabel}
+          />
+        }
+      >
+        {grainOn ? <div className="ar-grain" aria-hidden /> : null}
+        {resolved.sections
+          .filter((s) => s.visible)
+          .map((s) => {
+            const def = defs[s.id];
+            if (!def || !def.has) return null;
+            const no = String(++cn).padStart(2, "0");
+            return (
+              <div
+                key={s.id}
+                data-section-id={s.id}
+                style={{ display: "contents" }}
+              >
+                {def.render(no)}
+              </div>
+            );
+          })}
+        <Footer
+          groomName={groomName}
+          brideName={brideName}
+          dateLabel={dateLabel}
+          watermark={data.watermark}
+        />
+      </CoverGate>
+    );
+  }
 
   // Penomoran section berurutan — hanya section yang tampil yang diberi nomor.
   let n = 0;
