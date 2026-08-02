@@ -1,6 +1,9 @@
+import { Palette } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { buttonVariants } from "@/components/ui/button";
 import { CorporateEditor } from "@/components/dashboard/editor/corporate-editor";
 import { FamilyEditor } from "@/components/dashboard/editor/family-editor";
 import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
@@ -91,9 +94,18 @@ export default async function EditInvitationPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-xl font-semibold tracking-tight">
-        {copy.editor.title}
-      </h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold tracking-tight">
+          {copy.editor.title}
+        </h1>
+        <Link
+          href={`/dashboard/undangan/${inv.id}/tampilan`}
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          <Palette className="size-4" />
+          {copy.appearance.title}
+        </Link>
+      </div>
 
       {content.category === "wedding" ? (
         <WeddingEditor

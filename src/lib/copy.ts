@@ -530,6 +530,7 @@ export const copy = {
     },
     colorVariant: "Palet warna",
     customAccent: "Warna aksen kustom",
+    followPalette: "Ikuti palet",
     customAccentHint: "Warna aksen bebas — teks otomatis dijaga tetap terbaca.",
     contrastNote:
       "Warna teks disesuaikan otomatis agar tetap terbaca (WCAG AA).",
