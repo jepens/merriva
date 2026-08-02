@@ -3,6 +3,7 @@ import type { ThemeOptions } from "@/lib/customizer/theme-options";
 import { ariaOptions } from "./aria/options";
 import { barakahOptions } from "./barakah/options";
 import { eternalRoseOptions } from "./eternal-rose/options";
+import { kiranaOptions } from "./kirana/options";
 import { noirOptions } from "./noir/options";
 import { verdantOptions } from "./verdant/options";
 
@@ -19,6 +20,7 @@ export const themeOptionsRegistry: Record<string, ThemeOptions> = {
   verdant: verdantOptions,
   barakah: barakahOptions,
   aria: ariaOptions,
+  kirana: kiranaOptions,
 };
 
 export function getThemeOptions(slug: string): ThemeOptions | null {

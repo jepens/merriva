@@ -1,12 +1,14 @@
 import { Cormorant_Upright, Figtree } from "next/font/google";
+import type { CSSProperties, ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
-import { isSectionVisible } from "@/lib/validation/content";
+import { isSectionVisible, type SectionKey } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
@@ -14,6 +16,7 @@ import type { ThemeComponentProps } from "@/themes/registry";
 import "./kr.css";
 import { KiranaCover } from "./cover";
 import { KiranaFx } from "./fx";
+import { kiranaOptions } from "./options";
 import {
   CountdownBlock,
   Couple,
@@ -25,6 +28,19 @@ import {
   SekarBlock,
   Story,
 } from "./sections";
+
+/** Section yang bisa disembunyikan lewat toggle lama (`settings.sections`). */
+const LEGACY_TOGGLE = new Set<SectionKey>([
+  "hero",
+  "countdown",
+  "schedule",
+  "gallery",
+  "story",
+  "envelope",
+  "rsvp",
+]);
+const isLegacyToggle = (id: string): id is SectionKey =>
+  LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
 // Cormorant Upright = display serif tegak elegan (nama & judul); Figtree =
@@ -97,6 +113,71 @@ export default function Kirana({ data }: ThemeComponentProps) {
       envelope.ewallets.length > 0 ||
       Boolean(envelope.giftAddress));
 
+  const custom = settings.custom ?? null;
+  const resolved = custom ? resolveAppearance(kiranaOptions, custom) : null;
+
+  const sectionNodes: Record<string, ReactNode> = {
+    hero: <Hero greetingOpen={content.greetingOpen} />,
+    quote:
+      hasQuote && content.quote ? <SekarBlock quote={content.quote} /> : null,
+    couple: (
+      <Couple
+        groom={content.groom}
+        bride={content.bride}
+        groomPhoto={data.groomPhotoUrl}
+        bridePhoto={data.bridePhotoUrl}
+      />
+    ),
+    countdown: countdownTarget ? (
+      <CountdownBlock targetIso={countdownTarget} />
+    ) : null,
+    schedule:
+      data.events.length > 0 ? (
+        <Schedule
+          events={data.events}
+          tz={settings.timezone}
+          slug={data.slug}
+        />
+      ) : null,
+    gallery:
+      data.media.length > 0 ? (
+        <Lightbox media={data.media}>
+          <Gallery media={data.media} />
+        </Lightbox>
+      ) : null,
+    story: content.story.length > 0 ? <Story story={content.story} /> : null,
+    rsvp: (
+      <section className="kr-section">
+        <div className="kr-inner">
+          <GuestbookSection slug={data.slug} />
+        </div>
+      </section>
+    ),
+    envelope: hasEnvelope ? (
+      <Envelope envelope={envelope} slug={data.slug} />
+    ) : null,
+  };
+
+  const order = resolved
+    ? resolved.sections
+    : kiranaOptions.sections.map((s) => ({
+        id: s.id,
+        visible: isLegacyToggle(s.id) ? isSectionVisible(settings, s.id) : true,
+      }));
+
+  const grainOn = resolved ? resolved.grain : true;
+
+  const appearance = resolved
+    ? {
+        style: {
+          "--kr-sogan": resolved.accent,
+          "--kr-sogan-d": resolved.accent,
+          "--kr-ink": resolved.ink,
+        } as CSSProperties,
+        motion: resolved.motion,
+      }
+    : undefined;
+
   return (
     <CoverGate
       rootClassName={rootClass}
@@ -105,6 +186,7 @@ export default function Kirana({ data }: ThemeComponentProps) {
       musicClassName="kr-music"
       wipeMs={1100}
       music={data.music}
+      appearance={appearance}
       cover={
         <KiranaCover
           brideName={brideName}
@@ -114,55 +196,24 @@ export default function Kirana({ data }: ThemeComponentProps) {
       }
       fx={<KiranaFx />}
     >
-      <div className="kr-grain" aria-hidden />
+      {grainOn ? <div className="kr-grain" aria-hidden /> : null}
       <div className="kr-progress" aria-hidden />
 
-      {isSectionVisible(settings, "hero") ? (
-        <Hero greetingOpen={content.greetingOpen} />
-      ) : null}
-
-      {hasQuote && content.quote ? <SekarBlock quote={content.quote} /> : null}
-
-      <Couple
-        groom={content.groom}
-        bride={content.bride}
-        groomPhoto={data.groomPhotoUrl}
-        bridePhoto={data.bridePhotoUrl}
-      />
-
-      {isSectionVisible(settings, "countdown") && countdownTarget ? (
-        <CountdownBlock targetIso={countdownTarget} />
-      ) : null}
-
-      {isSectionVisible(settings, "schedule") && data.events.length > 0 ? (
-        <Schedule
-          events={data.events}
-          tz={settings.timezone}
-          slug={data.slug}
-        />
-      ) : null}
-
-      {isSectionVisible(settings, "gallery") && data.media.length > 0 ? (
-        <Lightbox media={data.media}>
-          <Gallery media={data.media} />
-        </Lightbox>
-      ) : null}
-
-      {isSectionVisible(settings, "story") && content.story.length > 0 ? (
-        <Story story={content.story} />
-      ) : null}
-
-      {isSectionVisible(settings, "rsvp") ? (
-        <section className="kr-section">
-          <div className="kr-inner">
-            <GuestbookSection slug={data.slug} />
-          </div>
-        </section>
-      ) : null}
-
-      {isSectionVisible(settings, "envelope") && hasEnvelope ? (
-        <Envelope envelope={envelope} slug={data.slug} />
-      ) : null}
+      {order
+        .filter((o) => o.visible)
+        .map((o) => {
+          const node = sectionNodes[o.id];
+          if (!node) return null;
+          return (
+            <div
+              key={o.id}
+              data-section-id={o.id}
+              style={{ display: "contents" }}
+            >
+              {node}
+            </div>
+          );
+        })}
 
       <Footer
         greetingClose={content.greetingClose}
