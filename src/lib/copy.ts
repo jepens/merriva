@@ -506,6 +506,67 @@ export const copy = {
     frameTitle: "Pratinjau undangan di layar ponsel",
   },
 
+  // Kustomisasi tampilan oleh pembeli (Fase G / CUSTOMIZER-SPEC).
+  appearance: {
+    title: "Kustomisasi Tampilan",
+    subtitle: "Sesuaikan warna, font, dan bagian undangan Anda.",
+    back: "Kembali",
+    save: "Simpan",
+    saving: "Menyimpan…",
+    saved: "Tampilan tersimpan.",
+    reset: "Reset ke bawaan",
+    resetConfirm: "Kembalikan tampilan ke bawaan tema?",
+    dirty: "Ada perubahan belum disimpan.",
+    error: "Gagal menyimpan tampilan. Coba lagi.",
+    invalid: "Ada pilihan yang tidak valid.",
+    unsupported: "Tema ini belum mendukung kustomisasi.",
+    premiumBadge: "Premium",
+    premiumHint: "Opsi ini tersedia di paket Premium.",
+    tabs: {
+      color: "Warna",
+      font: "Font",
+      sections: "Bagian",
+      style: "Gaya",
+    },
+    colorVariant: "Palet warna",
+    customAccent: "Warna aksen kustom",
+    customAccentHint: "Warna aksen bebas — teks otomatis dijaga tetap terbaca.",
+    contrastNote:
+      "Warna teks disesuaikan otomatis agar tetap terbaca (WCAG AA).",
+    fontPair: "Pasangan font",
+    galleryStyle: "Gaya galeri",
+    styleLabels: {
+      strip: "Deret geser",
+      grid: "Kisi",
+      polaroid: "Polaroid",
+    },
+    motion: "Gerak",
+    motionFull: "Penuh",
+    motionCalm: "Tenang",
+    grain: "Tekstur kertas",
+    on: "Aktif",
+    off: "Nonaktif",
+    sectionsHint:
+      "Atur urutan & tampil/sembunyi bagian. Seret atau pakai panah.",
+    show: "Tampilkan",
+    hide: "Sembunyikan",
+    moveUp: "Naikkan",
+    moveDown: "Turunkan",
+    locked: "Wajib tampil",
+    dragHandle: "Seret untuk mengurutkan",
+    sectionLabels: {
+      hero: "Pembuka",
+      quote: "Kutipan",
+      couple: "Mempelai",
+      countdown: "Hitung mundur",
+      schedule: "Acara",
+      gallery: "Galeri",
+      story: "Kisah",
+      envelope: "Amplop hadiah",
+      rsvp: "Ucapan & RSVP",
+    },
+  },
+
   public: {
     // Label lightbox galeri (dipakai komponen bersama `_shared/lightbox`).
     gallery: {
