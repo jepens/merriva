@@ -1,5 +1,7 @@
 import { Space_Grotesk, Space_Mono } from "next/font/google";
+import type { CSSProperties, ReactNode } from "react";
 
+import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
   formatEventDateTime,
@@ -14,6 +16,7 @@ import "./prisma.css";
 import { PrismaCover } from "./cover";
 import { PrismaFx } from "./fx";
 import { L } from "./labels";
+import { prismaOptions } from "./options";
 import {
   Envelope,
   EventBlock,
@@ -161,6 +164,124 @@ export default function Prisma({ data }: ThemeComponentProps) {
     dateShort,
     firstEvent?.venueName,
   ].filter((x): x is string => Boolean(x));
+
+  // Kustomisasi (Fase G). Tanpa `custom` → render legacy PERSIS (di bawah).
+  // Dengan `custom` → section-map bernomor sesuai urutan resolver (countdown &
+  // jadwal menyatu di blok Acara). Prisma bernomor/gabungan → dua jalur (aman).
+  const custom = settings.custom ?? null;
+  const resolved = custom ? resolveAppearance(prismaOptions, custom) : null;
+
+  if (resolved) {
+    const grainOn = resolved.grain;
+    const appearance = {
+      style: { "--pr-lime": resolved.accent } as CSSProperties,
+      motion: resolved.motion,
+    };
+    const defs: Record<
+      string,
+      { has: boolean; render: (no: string) => ReactNode }
+    > = {
+      intro: {
+        has: true,
+        render: (no) => (
+          <Intro no={no} headText={headText} lead={lead} stats={stats} />
+        ),
+      },
+      rundown: {
+        has: content.agenda.length > 0,
+        render: (no) => <Rundown no={no} agenda={content.agenda} />,
+      },
+      event: {
+        has: Boolean(countdownTarget) || data.events.length > 0,
+        render: (no) => (
+          <EventBlock
+            no={no}
+            showCountdown={Boolean(countdownTarget)}
+            countdownTarget={countdownTarget}
+            showSchedule={data.events.length > 0}
+            events={data.events}
+            tz={settings.timezone}
+            slug={data.slug}
+          />
+        ),
+      },
+      gallery: {
+        has: data.media.length > 0,
+        render: (no) => (
+          <Lightbox media={data.media}>
+            <Gallery no={no} media={data.media} />
+          </Lightbox>
+        ),
+      },
+      rsvp: {
+        has: true,
+        render: (no) => (
+          <Rsvp
+            no={no}
+            slug={data.slug}
+            eventName={eventName}
+            code={ticketCode}
+            ticketNo={ticketNo}
+          />
+        ),
+      },
+      envelope: {
+        has: hasEnvelope,
+        render: (no) => <Envelope no={no} envelope={env} slug={data.slug} />,
+      },
+    };
+    let cn = 0;
+    return (
+      <CoverGate
+        rootClassName={rootClass}
+        contentClassName="pr-stage"
+        coverClassName="pr-cover"
+        musicClassName="pr-music"
+        wipeMs={1100}
+        music={data.music}
+        appearance={appearance}
+        cover={
+          <PrismaCover
+            eventName={eventName}
+            organizer={organizer}
+            dateLabel={dateLabel}
+          />
+        }
+        fx={<PrismaFx />}
+      >
+        {grainOn ? <div className="pr-grain" aria-hidden /> : null}
+        <div className="pr-progress" aria-hidden />
+
+        <Marquee items={marqueeItems} />
+
+        {resolved.sections
+          .filter((s) => s.visible)
+          .map((s) => {
+            const def = defs[s.id];
+            if (!def || !def.has) return null;
+            const no = String(++cn).padStart(2, "0");
+            return (
+              <div
+                key={s.id}
+                data-section-id={s.id}
+                style={{ display: "contents" }}
+              >
+                {def.render(no)}
+              </div>
+            );
+          })}
+
+        <Footer
+          logo={footerLogo}
+          organizer={organizer}
+          picName={content.pic?.name}
+          closing={content.greetingClose}
+          contact={contact}
+          watermark={data.watermark}
+        />
+      </CoverGate>
+    );
+  }
 
   // Penomoran section berurutan — hanya section yang tampil yang diberi nomor.
   let n = 0;

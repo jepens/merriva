@@ -297,6 +297,11 @@
     animation: none;
   }
 }
+/* Kustomisasi (Fase G): motion "tenang" mematikan aurora + marquee. */
+.pr[data-motion="calm"] .pr-cover__fallback,
+.pr[data-motion="calm"] .pr-marquee__track {
+  animation: none;
+}
 
 /* ------------------------------------------------------------- Section ----- */
 .pr-section {
