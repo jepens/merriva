@@ -1,12 +1,14 @@
 import { EB_Garamond, Karla } from "next/font/google";
+import type { CSSProperties, ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
-import { isSectionVisible } from "@/lib/validation/content";
+import { isSectionVisible, type SectionKey } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
@@ -14,6 +16,7 @@ import type { ThemeComponentProps } from "@/themes/registry";
 import "./verdant.css";
 import { VerdantCover } from "./cover";
 import { VerdantFx } from "./fx";
+import { verdantOptions } from "./options";
 import {
   CountdownBlock,
   Couple,
@@ -25,6 +28,18 @@ import {
   Schedule,
   Story,
 } from "./sections";
+
+/** Section yang bisa disembunyikan lewat toggle lama (`settings.sections`). */
+const LEGACY_TOGGLE = new Set<SectionKey>([
+  "countdown",
+  "schedule",
+  "gallery",
+  "story",
+  "envelope",
+  "rsvp",
+]);
+const isLegacyToggle = (id: string): id is SectionKey =>
+  LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
 // EB Garamond = serif Garalde lembut (nama + judul, italic botanikal); Karla =
@@ -97,6 +112,76 @@ export default function Verdant({ data }: ThemeComponentProps) {
       envelope.ewallets.length > 0 ||
       Boolean(envelope.giftAddress));
 
+  const custom = settings.custom ?? null;
+  const resolved = custom ? resolveAppearance(verdantOptions, custom) : null;
+
+  const sectionNodes: Record<string, ReactNode> = {
+    hero: (
+      <Hero
+        groomName={groomName}
+        brideName={brideName}
+        greetingOpen={content.greetingOpen}
+      />
+    ),
+    quote: hasQuote ? <QuoteBlock quote={content.quote} /> : null,
+    couple: (
+      <Couple
+        groom={content.groom}
+        bride={content.bride}
+        groomPhoto={data.groomPhotoUrl}
+        bridePhoto={data.bridePhotoUrl}
+      />
+    ),
+    countdown: countdownTarget ? (
+      <CountdownBlock targetIso={countdownTarget} />
+    ) : null,
+    schedule:
+      data.events.length > 0 ? (
+        <Schedule
+          events={data.events}
+          tz={settings.timezone}
+          slug={data.slug}
+        />
+      ) : null,
+    gallery:
+      data.media.length > 0 ? (
+        <Lightbox media={data.media}>
+          <Gallery media={data.media} />
+        </Lightbox>
+      ) : null,
+    story: content.story.length > 0 ? <Story story={content.story} /> : null,
+    envelope: hasEnvelope ? (
+      <Envelope envelope={envelope} slug={data.slug} />
+    ) : null,
+    rsvp: (
+      <section className="vd-section">
+        <div className="vd-inner">
+          <GuestbookSection slug={data.slug} />
+        </div>
+      </section>
+    ),
+  };
+
+  const order = resolved
+    ? resolved.sections
+    : verdantOptions.sections.map((s) => ({
+        id: s.id,
+        visible: isLegacyToggle(s.id) ? isSectionVisible(settings, s.id) : true,
+      }));
+
+  const grainOn = resolved ? resolved.grain : true;
+
+  const appearance = resolved
+    ? {
+        style: {
+          "--vd-ivory": resolved.paper,
+          "--vd-ink": resolved.ink,
+          "--vd-sage": resolved.accent,
+        } as CSSProperties,
+        motion: resolved.motion,
+      }
+    : undefined;
+
   return (
     <CoverGate
       rootClassName={rootClass}
@@ -104,6 +189,7 @@ export default function Verdant({ data }: ThemeComponentProps) {
       coverClassName="vd-cover"
       musicClassName="vd-music"
       music={data.music}
+      appearance={appearance}
       cover={
         <VerdantCover
           groomName={groomName}
@@ -113,57 +199,24 @@ export default function Verdant({ data }: ThemeComponentProps) {
       }
       fx={<VerdantFx />}
     >
-      <div className="vd-grain" aria-hidden />
+      {grainOn ? <div className="vd-grain" aria-hidden /> : null}
       <div className="vd-progress" aria-hidden />
 
-      <Hero
-        groomName={groomName}
-        brideName={brideName}
-        greetingOpen={content.greetingOpen}
-      />
-
-      {hasQuote ? <QuoteBlock quote={content.quote} /> : null}
-
-      <Couple
-        groom={content.groom}
-        bride={content.bride}
-        groomPhoto={data.groomPhotoUrl}
-        bridePhoto={data.bridePhotoUrl}
-      />
-
-      {isSectionVisible(settings, "countdown") && countdownTarget ? (
-        <CountdownBlock targetIso={countdownTarget} />
-      ) : null}
-
-      {isSectionVisible(settings, "schedule") && data.events.length > 0 ? (
-        <Schedule
-          events={data.events}
-          tz={settings.timezone}
-          slug={data.slug}
-        />
-      ) : null}
-
-      {isSectionVisible(settings, "gallery") && data.media.length > 0 ? (
-        <Lightbox media={data.media}>
-          <Gallery media={data.media} />
-        </Lightbox>
-      ) : null}
-
-      {isSectionVisible(settings, "story") && content.story.length > 0 ? (
-        <Story story={content.story} />
-      ) : null}
-
-      {isSectionVisible(settings, "envelope") && hasEnvelope ? (
-        <Envelope envelope={envelope} slug={data.slug} />
-      ) : null}
-
-      {isSectionVisible(settings, "rsvp") ? (
-        <section className="vd-section">
-          <div className="vd-inner">
-            <GuestbookSection slug={data.slug} />
-          </div>
-        </section>
-      ) : null}
+      {order
+        .filter((o) => o.visible)
+        .map((o) => {
+          const node = sectionNodes[o.id];
+          if (!node) return null;
+          return (
+            <div
+              key={o.id}
+              data-section-id={o.id}
+              style={{ display: "contents" }}
+            >
+              {node}
+            </div>
+          );
+        })}
 
       <Footer
         groomName={groomName}
