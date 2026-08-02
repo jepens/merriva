@@ -1,12 +1,14 @@
 import { Cormorant_Garamond, Jost } from "next/font/google";
+import type { CSSProperties, ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
+import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
-import { isSectionVisible } from "@/lib/validation/content";
+import { isSectionVisible, type SectionKey } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
@@ -14,6 +16,7 @@ import type { ThemeComponentProps } from "@/themes/registry";
 import "./noir.css";
 import { NoirCover } from "./cover";
 import { NoirFx } from "./fx";
+import { noirOptions } from "./options";
 import {
   Cast,
   CountdownBlock,
@@ -43,12 +46,27 @@ const sans = Jost({
   display: "swap",
 });
 
+/** Section yang bisa disembunyikan lewat toggle lama (`settings.sections`). */
+const LEGACY_TOGGLE = new Set<SectionKey>([
+  "countdown",
+  "schedule",
+  "gallery",
+  "story",
+  "envelope",
+  "rsvp",
+]);
+const isLegacyToggle = (id: string): id is SectionKey =>
+  LEGACY_TOGGLE.has(id as SectionKey);
+
 /**
  * Tema "Noir" (wedding sinematik, tier Story) — acuan
  * `prototypes/midnight-frame-story.html`. SERVER component: section dirender di
  * server (SSR/ISR) lalu dibungkus `CoverGate` (klien) yang memegang cover +
- * musik (`coverMode:'theme'`). TIDAK mengambil data sendiri (SPEC §7.1); section
- * tampil sesuai `settings.sections`.
+ * musik (`coverMode:'theme'`). TIDAK mengambil data sendiri (SPEC §7.1).
+ *
+ * Kustomisasi (Fase G): bila `settings.custom` ada, `resolveAppearance` memetakan
+ * varian → CSS var (aksen/kertas/teks) + urutan section (DOM order). Tanpa
+ * `custom`, render IDENTIK seperti sebelumnya (toggle lama dipakai).
  */
 export default function Noir({ data }: ThemeComponentProps) {
   const rootClass = `nr ${serif.variable} ${sans.variable}`;
@@ -97,6 +115,78 @@ export default function Noir({ data }: ThemeComponentProps) {
       envelope.ewallets.length > 0 ||
       Boolean(envelope.giftAddress));
 
+  const custom = settings.custom ?? null;
+  const resolved = custom ? resolveAppearance(noirOptions, custom) : null;
+
+  const sectionNodes: Record<string, ReactNode> = {
+    hero: (
+      <Hero
+        groomName={groomName}
+        brideName={brideName}
+        greetingOpen={content.greetingOpen}
+        featured={data.media[0] ?? null}
+      />
+    ),
+    quote: hasQuote ? <QuoteBlock quote={content.quote} /> : null,
+    couple: (
+      <Cast
+        groom={content.groom}
+        bride={content.bride}
+        groomPhoto={data.groomPhotoUrl}
+        bridePhoto={data.bridePhotoUrl}
+      />
+    ),
+    countdown: countdownTarget ? (
+      <CountdownBlock targetIso={countdownTarget} />
+    ) : null,
+    schedule:
+      data.events.length > 0 ? (
+        <Schedule
+          events={data.events}
+          tz={settings.timezone}
+          slug={data.slug}
+        />
+      ) : null,
+    gallery:
+      data.media.length > 0 ? (
+        <Lightbox media={data.media}>
+          <Gallery media={data.media} />
+        </Lightbox>
+      ) : null,
+    story: content.story.length > 0 ? <Story story={content.story} /> : null,
+    envelope: hasEnvelope ? (
+      <Envelope envelope={envelope} slug={data.slug} />
+    ) : null,
+    rsvp: (
+      <section className="nr-section">
+        <div className="nr-inner">
+          <GuestbookSection slug={data.slug} />
+        </div>
+      </section>
+    ),
+  };
+
+  const order = resolved
+    ? resolved.sections
+    : noirOptions.sections.map((s) => ({
+        id: s.id,
+        visible: isLegacyToggle(s.id) ? isSectionVisible(settings, s.id) : true,
+      }));
+
+  const grainOn = resolved ? resolved.grain : true;
+
+  const appearance = resolved
+    ? {
+        style: {
+          "--nr-bg": resolved.paper,
+          "--nr-bone": resolved.ink,
+          "--nr-champ": resolved.accent,
+          "--nr-champ-2": resolved.accent,
+        } as CSSProperties,
+        motion: resolved.motion,
+      }
+    : undefined;
+
   return (
     <CoverGate
       rootClassName={rootClass}
@@ -105,6 +195,7 @@ export default function Noir({ data }: ThemeComponentProps) {
       musicClassName="nr-music"
       wipeMs={1500}
       music={data.music}
+      appearance={appearance}
       cover={
         <NoirCover
           groomName={groomName}
@@ -114,59 +205,25 @@ export default function Noir({ data }: ThemeComponentProps) {
       }
       fx={<NoirFx />}
     >
-      <div className="nr-grain" aria-hidden />
+      {grainOn ? <div className="nr-grain" aria-hidden /> : null}
       <div className="nr-vignette" aria-hidden />
       <div className="nr-progress" aria-hidden />
 
-      <Hero
-        groomName={groomName}
-        brideName={brideName}
-        greetingOpen={content.greetingOpen}
-        featured={data.media[0] ?? null}
-      />
-
-      {hasQuote ? <QuoteBlock quote={content.quote} /> : null}
-
-      <Cast
-        groom={content.groom}
-        bride={content.bride}
-        groomPhoto={data.groomPhotoUrl}
-        bridePhoto={data.bridePhotoUrl}
-      />
-
-      {isSectionVisible(settings, "countdown") && countdownTarget ? (
-        <CountdownBlock targetIso={countdownTarget} />
-      ) : null}
-
-      {isSectionVisible(settings, "schedule") && data.events.length > 0 ? (
-        <Schedule
-          events={data.events}
-          tz={settings.timezone}
-          slug={data.slug}
-        />
-      ) : null}
-
-      {isSectionVisible(settings, "gallery") && data.media.length > 0 ? (
-        <Lightbox media={data.media}>
-          <Gallery media={data.media} />
-        </Lightbox>
-      ) : null}
-
-      {isSectionVisible(settings, "story") && content.story.length > 0 ? (
-        <Story story={content.story} />
-      ) : null}
-
-      {isSectionVisible(settings, "envelope") && hasEnvelope ? (
-        <Envelope envelope={envelope} slug={data.slug} />
-      ) : null}
-
-      {isSectionVisible(settings, "rsvp") ? (
-        <section className="nr-section">
-          <div className="nr-inner">
-            <GuestbookSection slug={data.slug} />
-          </div>
-        </section>
-      ) : null}
+      {order
+        .filter((o) => o.visible)
+        .map((o) => {
+          const node = sectionNodes[o.id];
+          if (!node) return null;
+          return (
+            <div
+              key={o.id}
+              data-section-id={o.id}
+              style={{ display: "contents" }}
+            >
+              {node}
+            </div>
+          );
+        })}
 
       <Footer
         groomName={groomName}

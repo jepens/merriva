@@ -65,6 +65,18 @@ export function AppearanceEditor({
 
   const dirty = JSON.stringify(custom) !== JSON.stringify(saved);
 
+  // Tab kontekstual: Font hanya bila ada >1 pasangan; Gaya bila ada gaya/motion/
+  // grain. Warna & Bagian selalu ada. Tema yang belum mendeklarasikan aksis
+  // tertentu tak menampilkan tab-nya (tak ada kontrol kosong).
+  const hasStyleTab =
+    Object.keys(options.styles).length > 0 ||
+    options.supports.motion ||
+    options.supports.grain;
+  const tabs: [Tab, string][] = [["color", L.tabs.color]];
+  if (options.fontPairs.length > 1) tabs.push(["font", L.tabs.font]);
+  tabs.push(["sections", L.tabs.sections]);
+  if (hasStyleTab) tabs.push(["style", L.tabs.style]);
+
   // Terapkan token ke dokumen iframe (same-origin) — tanpa reload. Memakai
   // resolver yang sama dgn server → identik dgn hasil simpan.
   const applyToFrame = (c: CustomSettings) => {
@@ -235,16 +247,9 @@ export function AppearanceEditor({
           <span className="bg-muted-foreground/30 h-1 w-10 rounded-full" />
         </button>
 
-        {/* Tab */}
+        {/* Tab (Font/Gaya hanya muncul bila tema menyediakannya) */}
         <div className="flex gap-1 px-3 pb-2">
-          {(
-            [
-              ["color", L.tabs.color],
-              ["font", L.tabs.font],
-              ["sections", L.tabs.sections],
-              ["style", L.tabs.style],
-            ] as [Tab, string][]
-          ).map(([key, label]) => (
+          {tabs.map(([key, label]) => (
             <button
               key={key}
               type="button"

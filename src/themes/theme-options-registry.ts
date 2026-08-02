@@ -1,6 +1,7 @@
 import type { ThemeOptions } from "@/lib/customizer/theme-options";
 
 import { eternalRoseOptions } from "./eternal-rose/options";
+import { noirOptions } from "./noir/options";
 
 /**
  * Registry `options.ts` per tema (CUSTOMIZER-SPEC §3/§10). Satu sumber kebenaran
@@ -11,6 +12,7 @@ import { eternalRoseOptions } from "./eternal-rose/options";
  */
 export const themeOptionsRegistry: Record<string, ThemeOptions> = {
   "eternal-rose": eternalRoseOptions,
+  noir: noirOptions,
 };
 
 export function getThemeOptions(slug: string): ThemeOptions | null {
