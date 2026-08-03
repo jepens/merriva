@@ -54,8 +54,6 @@ export const meridianOptions: ThemeOptions = {
   },
   preview: {
     root: "mrd",
-    vars: [
-      { name: "--mrd-gold", token: "accent" },
-    ],
+    vars: [{ name: "--mrd-gold", token: "accent" }],
   },
 };

@@ -46,10 +46,16 @@ describe.each(themes)("kontrak tema '%s'", (_slug, opt) => {
   });
 
   it("appearanceStyle menghasilkan TEPAT var yang dideklarasikan (non-kosong)", () => {
-    const style = appearanceStyle(opt.preview.vars, resolveAppearance(opt, null));
+    const style = appearanceStyle(
+      opt.preview.vars,
+      resolveAppearance(opt, null),
+    );
     const keys = Object.keys(style);
     expect(keys.slice().sort()).toEqual(
-      opt.preview.vars.map((v) => v.name).slice().sort(),
+      opt.preview.vars
+        .map((v) => v.name)
+        .slice()
+        .sort(),
     );
     for (const [, value] of Object.entries(style)) {
       expect(String(value).length).toBeGreaterThan(0);
@@ -58,7 +64,10 @@ describe.each(themes)("kontrak tema '%s'", (_slug, opt) => {
 
   it("setiap id section punya label Indonesia (tab Bagian)", () => {
     for (const s of opt.sections) {
-      expect(sectionLabels[s.id], `label section '${s.id}' hilang`).toBeTruthy();
+      expect(
+        sectionLabels[s.id],
+        `label section '${s.id}' hilang`,
+      ).toBeTruthy();
     }
   });
 

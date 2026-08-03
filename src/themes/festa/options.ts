@@ -41,8 +41,6 @@ export const festaOptions: ThemeOptions = {
   },
   preview: {
     root: "ft",
-    vars: [
-      { name: "--ft-sun", token: "accent" },
-    ],
+    vars: [{ name: "--ft-sun", token: "accent" }],
   },
 };

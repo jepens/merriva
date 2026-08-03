@@ -848,6 +848,186 @@ a.mrv-theme-card:hover .mrv-theme-card__demo {
   padding-block: clamp(2.75rem, 7vw, 4.5rem) clamp(1.5rem, 4vw, 2.5rem);
 }
 
+/* ---- Showcase pratinjau tema (/preview/tema/{slug}) ---------------------- */
+/* Plakat "galeri" + spesimen ponsel hidup. Ponsel = spesimen (mayoritas tamu
+   membuka undangan di WebView WA), placard = konteks produk tema. */
+.mrv-show {
+  padding-block: clamp(1.75rem, 4vw, 3rem) clamp(2.5rem, 6vw, 4.5rem);
+}
+.mrv-show__grid {
+  display: grid;
+  gap: clamp(2rem, 5vw, 3.75rem);
+  align-items: center;
+}
+@media (min-width: 60rem) {
+  .mrv-show__grid {
+    grid-template-columns: minmax(17rem, 22rem) 1fr;
+  }
+}
+
+.mrv-show__placard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.mrv-show__name {
+  font-size: clamp(2.15rem, 5.5vw, 3.2rem);
+  margin-top: 0.7rem;
+}
+.mrv-show__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.95rem;
+}
+.mrv-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.32rem 0.78rem;
+  border-radius: 999px;
+  border: 1px solid var(--mrv-line);
+  background-color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--mrv-ink-soft);
+}
+.mrv-chip--tier {
+  border-color: color-mix(in srgb, var(--mrv-accent) 65%, transparent);
+  color: var(--mrv-accent-deep);
+}
+.mrv-show__note {
+  margin-top: 1.15rem;
+  max-width: 30rem;
+  font-size: 0.98rem;
+}
+.mrv-show__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.65rem;
+}
+
+.mrv-show__steppers {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  width: 100%;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--mrv-line);
+}
+.mrv-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  color: var(--mrv-ink);
+}
+.mrv-stepper--next {
+  margin-left: auto;
+  text-align: right;
+  flex-direction: row;
+}
+.mrv-stepper svg {
+  flex: none;
+  color: var(--mrv-accent-deep);
+}
+.mrv-stepper__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.mrv-stepper--next .mrv-stepper__text {
+  align-items: flex-end;
+}
+.mrv-stepper__dir {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mrv-ink-soft);
+}
+.mrv-stepper__name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+.mrv-stepper:hover .mrv-stepper__name {
+  color: var(--mrv-accent-deep);
+}
+
+/* Spesimen: ponsel di atas plinth kertas hangat. */
+.mrv-show__stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.mrv-show__stage::before {
+  content: "";
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(30rem, 92%);
+  height: 82%;
+  background: radial-gradient(
+    62% 52% at 50% 45%,
+    var(--mrv-cream),
+    transparent 72%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+.mrv-show__phone {
+  position: relative;
+  z-index: 1;
+  width: 360px;
+  max-width: 100%;
+  height: clamp(560px, 76vh, 780px);
+  padding: 11px;
+  border-radius: 2.75rem;
+  background-color: #17141a;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 42px 80px -32px rgba(33, 26, 39, 0.55);
+}
+.mrv-show__speaker {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  z-index: 2;
+  width: 4rem;
+  height: 4px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.22);
+}
+.mrv-show__screen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 2.15rem;
+  background-color: #fff;
+}
+.mrv-show__credit {
+  position: relative;
+  z-index: 1;
+  max-width: 24rem;
+}
+@media (max-width: 30rem) {
+  .mrv-show__phone {
+    width: 100%;
+    height: clamp(540px, 72vh, 720px);
+    border-radius: 2.35rem;
+  }
+}
+
 /* ---- A11y / motion ------------------------------------------------------- */
 .mrv :where(a, button, summary):focus-visible {
   outline: 2px solid var(--mrv-accent-deep);

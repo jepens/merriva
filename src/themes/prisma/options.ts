@@ -40,8 +40,6 @@ export const prismaOptions: ThemeOptions = {
   },
   preview: {
     root: "pr",
-    vars: [
-      { name: "--pr-lime", token: "accent" },
-    ],
+    vars: [{ name: "--pr-lime", token: "accent" }],
   },
 };

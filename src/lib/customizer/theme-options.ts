@@ -36,13 +36,7 @@ export interface SectionOption {
 
 /** Token render yang bisa dipetakan ke CSS var tema. */
 export type PreviewVarToken =
-  | "accent"
-  | "accentText"
-  | "onAccent"
-  | "paper"
-  | "ink"
-  | "disp"
-  | "body";
+  "accent" | "accentText" | "onAccent" | "paper" | "ink" | "disp" | "body";
 
 /** Pemetaan: nama CSS var milik tema ← nilai token hasil resolve. */
 export interface PreviewVar {

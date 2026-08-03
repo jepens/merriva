@@ -77,7 +77,9 @@ export class R2StorageDriver implements StorageDriver {
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      throw new Error(`Gagal unggah R2 (${res.status}): ${detail.slice(0, 200)}`);
+      throw new Error(
+        `Gagal unggah R2 (${res.status}): ${detail.slice(0, 200)}`,
+      );
     }
     return input.path;
   }
@@ -92,7 +94,9 @@ export class R2StorageDriver implements StorageDriver {
     // S3/R2: sukses = 204; 404 (objek sudah tiada) diperlakukan idempoten.
     if (!res.ok && res.status !== 404) {
       const detail = await res.text().catch(() => "");
-      throw new Error(`Gagal hapus R2 (${res.status}): ${detail.slice(0, 200)}`);
+      throw new Error(
+        `Gagal hapus R2 (${res.status}): ${detail.slice(0, 200)}`,
+      );
     }
   }
 }

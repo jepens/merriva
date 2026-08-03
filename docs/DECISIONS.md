@@ -96,6 +96,16 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Ditolak:** `@aws-sdk/client-s3` (dependency besar; berlebihan untuk sekadar PUT/DELETE server-only) · menyimpan URL R2 di DB (langgar kontrak vendor-agnostik #6) · load-test jalur `?g=token` (menulis `first_viewed_at` — ranah uji tulis terpisah).
 **Konsekuensi:** +1 dependency `aws4fetch` (mungil, zero-dep). Aktivasi R2 tetap perlu akun R2 + DNS `cdn.merriva.id` (tugas owner). k6 = binary eksternal (bukan dependency npm). E2E webhook tetap **gated** pada kredensial sandbox + undangan uji. `.env.example` diperbarui (`E2E_INVITATION_ID_WEBHOOK`).
 
+## #16 — 2026-08-03 · Chrome marketing dipakai ulang lintas route group via `MarketingShell`; showcase pratinjau tema
+**Konteks:** halaman showcase tema publik `/preview/tema/{slug}` (di luar grup `(marketing)`) tampil sebagai bar gelap utilitarian tanpa navbar/brand/CTA — tak selaras dengan situs marketing dan buntu (tanpa konversi maupun navigasi antar-tema).
+**Keputusan:**
+1. **`MarketingShell`** (`components/marketing/marketing-shell.tsx`) mengangkat chrome marketing (token `.mrv` + font `next/font` + `SiteHeader`/`SiteFooter` + import `marketing.css`) menjadi **satu komponen** yang dipakai layout grup `(marketing)` DAN halaman di luar grup. Font dideklarasikan sekali di shell (hindari instansi ganda). → "navbar seperti halaman utama" = komponen yang sama persis, bukan tiruan.
+2. **Showcase** `/preview/tema/{slug}` dibungkus `MarketingShell` + komponen `ThemeShowcase`: plakat (nama tema, chip kategori/tier, CTA "Gunakan tema ini" → /daftar, stepper prev/next dari katalog aktif) di samping **spesimen** ponsel (iframe `?embed=1`, viewport bersarang dipertahankan). Konteks tema/tetangga dari `getActiveThemes()` — **toleran** bila DB tak terjangkau (spesimen tetap tampil dari data file; nama di-humanize dari slug).
+3. Pratinjau pemilik `/preview/[id]` & `/preview/demo` **tetap** memakai `PreviewFrame` lama (konteks privat/utilitas, bukan showcase publik) — tak diubah.
+**Alasan:** sumber tunggal navbar/footer anti-drift; showcase publik jadi permukaan konversi (CTA + navigasi) alih-alih buntu; spesimen ponsel dipertahankan karena tamu mayoritas buka via WebView WA.
+**Ditolak:** memindah `/preview/tema` ke dalam grup `(marketing)` (mengubah struktur URL + memaksa semua preview ikut chrome) · mengubah `PreviewFrame` bersama (berisiko ke preview pemilik yang kebutuhannya beda).
+**Konsekuensi:** `marketing.css` bertambah blok `.mrv-show*`; showcase kini menyentuh DB (1 query anon katalog, di-guard `try/catch`); 5 teks baru di `copy.preview`.
+
 ---
 
 ## Template entri baru

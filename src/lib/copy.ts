@@ -504,6 +504,13 @@ export const copy = {
     themeUnavailable: "Tema undangan ini belum tersedia untuk pratinjau.",
     backToDashboard: "Kembali ke dashboard",
     frameTitle: "Pratinjau undangan di layar ponsel",
+    // Showcase tema publik (/preview/tema/{slug}).
+    useThisTheme: "Gunakan tema ini",
+    showcaseNote:
+      "Pratinjau langsung dengan data contoh. Gulir di dalam layar untuk melihat seluruh undangan.",
+    otherThemes: "Tema lainnya",
+    prevTheme: "Sebelumnya",
+    nextTheme: "Berikutnya",
   },
 
   // Kustomisasi tampilan oleh pembeli (Fase G / CUSTOMIZER-SPEC).

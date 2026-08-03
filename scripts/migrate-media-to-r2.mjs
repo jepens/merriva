@@ -112,12 +112,15 @@ async function migrateObject(key) {
 /** Jalankan `fn` atas `items` dengan paralelisme maksimum `n`. */
 async function mapPool(items, n, fn) {
   let i = 0;
-  const workers = Array.from({ length: Math.min(n, items.length) }, async () => {
-    while (i < items.length) {
-      const idx = i++;
-      await fn(items[idx], idx);
-    }
-  });
+  const workers = Array.from(
+    { length: Math.min(n, items.length) },
+    async () => {
+      while (i < items.length) {
+        const idx = i++;
+        await fn(items[idx], idx);
+      }
+    },
+  );
   await Promise.all(workers);
 }
 
@@ -165,7 +168,9 @@ async function main() {
     console.error(`✖ ${fails.length} gagal:\n${fails.slice(0, 50).join("\n")}`);
     process.exit(1);
   }
-  console.log(DRY ? "✓ dry-run selesai (tak ada tulis)." : "✓ migrasi selesai.");
+  console.log(
+    DRY ? "✓ dry-run selesai (tak ada tulis)." : "✓ migrasi selesai.",
+  );
 }
 
 main().catch((e) => {
