@@ -40,3 +40,17 @@ export const appUrl =
 
 export const storageDriver = (process.env.STORAGE_DRIVER ?? "supabase") as
   "supabase" | "r2";
+
+/** Kredensial R2 (RAHASIA — hanya server; wajib saat STORAGE_DRIVER=r2). */
+export function getR2AccountId(): string {
+  return required("R2_ACCOUNT_ID", process.env.R2_ACCOUNT_ID);
+}
+export function getR2AccessKeyId(): string {
+  return required("R2_ACCESS_KEY_ID", process.env.R2_ACCESS_KEY_ID);
+}
+export function getR2SecretAccessKey(): string {
+  return required("R2_SECRET_ACCESS_KEY", process.env.R2_SECRET_ACCESS_KEY);
+}
+export function getR2Bucket(): string {
+  return required("R2_BUCKET", process.env.R2_BUCKET);
+}

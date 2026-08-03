@@ -85,6 +85,17 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Ditolak:** (a) **peta adapter yang menduplikasi** pemetaan var di editor — persis kelas bug yang diperbaiki (drift); dipilih helper satu-sumber. (b) **postMessage bridge** (ditolak lagi seperti #13) — lebih besar, menyentuh route `/preview` + jalur klien tema, tanpa manfaat sepadan.
 **Konsekuensi / diketahui-minor (tak memblok):** 3 temuan **low** kosmetik dibiarkan — separator marquee eternal-rose pakai aksen mentah (semua `aria-hidden`), var `--er-on-acc` tak dikonsumsi CSS, eyebrow champagne meridian sub-AA untuk varian aksen terang (tema gelap, teks dekoratif). Pratinjau **aria/prisma** (bernomor): reorder di editor tak menghitung ulang nomor section secara live — nomor benar setelah Simpan (render server); aproksimasi pratinjau yang diterima. Rollout tema baru kini WAJIB menambah blok `preview` di `options.ts` (di-enforce tsc + test).
 
+## #15 — 2026-08-03 · Aktivasi jalur launch: R2 driver (aws4fetch), migrasi media, uji beban k6, E2E webhook
+**Konteks:** survei status M0–M4 (workflow) menemukan software pada dasarnya matang; sisa **koding** sempit → R2 storage (driver skeleton), skrip uji beban, dan cakupan E2E jalur webhook. Arah dipilih pemilik: **soft-launch** (R2 sebagai fast-follow yang disiapkan sekarang).
+**Keputusan:**
+1. **R2 driver via `aws4fetch`** (bukan `@aws-sdk/client-s3`). aws4fetch ~6,4 KB, memakai `fetch`+`SubtleCrypto` global (tersedia di Node 22 runtime), dipakai/direkomendasikan Cloudflare untuk R2. Karena hostname R2 tak mengikuti pola AWS, `service:"s3"`+`region:"auto"` DISET eksplisit agar SigV4 benar. Kontrak `StorageDriver` TIDAK berubah (DB tetap path relatif; penyajian via `NEXT_PUBLIC_MEDIA_URL`). Aktivasi = set `STORAGE_DRIVER=r2` + isi `R2_*` + `NEXT_PUBLIC_MEDIA_URL=cdn`.
+2. **Migrasi media** = skrip ops `scripts/migrate-media-to-r2.mjs` (idempoten + resume via HEAD, `--dry-run`/`--force`/`--limit`, pool 8). DB TIDAK disentuh (path vendor-agnostik). Cutover: migrasi (0 gagal) → set env → verifikasi URL → hapus objek Supabase (opsional). `pnpm migrate:media`.
+3. **Uji beban k6** `scripts/k6/invitation-load.js`: ramping ke 200 VU pada `/{slug}` (jalur ISR kritis WA-blast), ambang error < 1% & p95 < 800 ms. Jalankan pada build PRODUCTION di staging/Docker (bukan `next dev`). `pnpm loadtest`.
+4. **E2E hardening** `tests/e2e/payment-webhook.spec.ts`: menambah cakupan jalur **WEBHOOK** publik (POST `/api/webhooks/pakasir`) + **idempotensi**, melengkapi jalur poll. Memakai `E2E_INVITATION_ID_WEBHOOK` terpisah agar tak bentrok (tiap test mengaktifkan undangannya).
+**Alasan:** menuntaskan potongan koding tersisa agar R2 = fast-follow siap-pakai, kapasitas launch dapat divalidasi (SPEC §10), dan jalur pembayaran webhook (bukan hanya poll) tercakup uji.
+**Ditolak:** `@aws-sdk/client-s3` (dependency besar; berlebihan untuk sekadar PUT/DELETE server-only) · menyimpan URL R2 di DB (langgar kontrak vendor-agnostik #6) · load-test jalur `?g=token` (menulis `first_viewed_at` — ranah uji tulis terpisah).
+**Konsekuensi:** +1 dependency `aws4fetch` (mungil, zero-dep). Aktivasi R2 tetap perlu akun R2 + DNS `cdn.merriva.id` (tugas owner). k6 = binary eksternal (bukan dependency npm). E2E webhook tetap **gated** pada kredensial sandbox + undangan uji. `.env.example` diperbarui (`E2E_INVITATION_ID_WEBHOOK`).
+
 ---
 
 ## Template entri baru
