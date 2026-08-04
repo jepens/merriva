@@ -1125,7 +1125,7 @@ a.mrv-theme-card:hover .mrv-theme-card__demo {
 }
 @media (min-width: 64rem) {
   .mrv-auth {
-    grid-template-columns: 1.05fr 1fr;
+    grid-template-columns: 1.1fr 0.9fr;
   }
 }
 .mrv-auth__panel {
@@ -1142,19 +1142,45 @@ a.mrv-theme-card:hover .mrv-theme-card__demo {
     display: flex;
   }
 }
+/* Ambient warm glow → kedalaman & mengisi ruang, tetap tenang. */
+.mrv-auth__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(
+      38rem 26rem at 12% 8%,
+      rgba(198, 138, 60, 0.16),
+      transparent 60%
+    ),
+    radial-gradient(
+      34rem 30rem at 96% 92%,
+      rgba(198, 138, 60, 0.1),
+      transparent 58%
+    );
+  pointer-events: none;
+}
+.mrv-auth__panel > * {
+  position: relative;
+  z-index: 1;
+}
 .mrv-auth__panel .mrv-brand {
   color: var(--mrv-dark-ink);
   font-size: 1.5rem;
 }
 .mrv-auth__lead {
-  max-width: 27rem;
+  max-width: 30rem;
 }
 .mrv-auth__title {
   font-size: clamp(2rem, 3.2vw, 2.9rem);
   margin-top: 1rem;
 }
+.mrv-auth__panel .mrv-lead {
+  margin-top: 1.1rem;
+}
 .mrv-auth__panel .mrv-trust {
-  margin-top: 1.75rem;
+  margin-top: 1.6rem;
 }
 .mrv-auth__showcase {
   display: flex;
@@ -1182,15 +1208,53 @@ a.mrv-theme-card:hover .mrv-theme-card__demo {
 .mrv-auth__form {
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  background-color: var(--mrv-paper);
+}
+.mrv-auth__form-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.mrv-auth__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--mrv-ink-soft);
+  transition: color 0.15s ease;
+}
+.mrv-auth__back:hover {
+  color: var(--mrv-ink);
+}
+.mrv-auth__body {
+  display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
-  padding: clamp(1.75rem, 5vw, 2.75rem);
-  background-color: var(--mrv-paper);
 }
 .mrv-auth__form-inner {
   width: 100%;
   max-width: 24rem;
+}
+.mrv-auth__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: var(--mrv-ink-soft);
+}
+.mrv-auth__foot-links {
+  display: flex;
+  gap: 1rem;
+}
+.mrv-auth__foot a:hover {
+  color: var(--mrv-accent-deep);
 }
 @media (min-width: 64rem) {
   .mrv-auth__brand-mobile {

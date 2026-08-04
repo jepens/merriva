@@ -45,6 +45,11 @@ export const copy = {
     toRegister: "Belum punya akun? Daftar",
     toLogin: "Sudah punya akun? Masuk",
     forgotPassword: "Lupa kata sandi?",
+    // Chrome layout auth (split-screen)
+    backHome: "Kembali ke beranda",
+    footerRights: (year: number) => `© ${year} Merriva`,
+    footerPrivacy: "Privasi",
+    footerHelp: "Bantuan",
     // Messages
     signupSuccess:
       "Akun dibuat. Kami mengirim tautan verifikasi ke email Anda — klik untuk mengaktifkan akun.",
