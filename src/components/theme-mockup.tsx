@@ -47,11 +47,14 @@ function Phone({
  */
 export function ThemeMockup({ slug, name }: { slug: string; name: string }) {
   const meta = getThemeCatalogMeta(slug);
+  // Panel = `panel` bila diset (tema gelap → panel terang agar ponsel kontras),
+  // selainnya `bg` tema.
+  const panel = meta.panel ?? meta.bg;
   return (
     <div
       className="relative aspect-4/3 w-full overflow-hidden"
       style={{
-        background: `linear-gradient(157deg, ${meta.bg}, color-mix(in srgb, ${meta.bg} 76%, #000))`,
+        background: `linear-gradient(157deg, ${panel}, color-mix(in srgb, ${panel} 76%, #000))`,
       }}
     >
       {/* Ponsel belakang — bagian isi (mempelai/galeri). */}

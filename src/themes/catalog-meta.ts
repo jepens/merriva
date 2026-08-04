@@ -26,6 +26,13 @@ export interface ThemeCatalogMeta {
   ornament: string;
   /** true bila latar gelap (poster dark, mis. Noir dark-luxe). */
   dark?: boolean;
+  /**
+   * Latar PANEL mockup kartu tema (`ThemeMockup`) bila harus beda dari `bg` —
+   * tema gelap butuh panel terang agar bezel/ponsel gelap tetap kontras (tak
+   * melebur ke latar). Tak memengaruhi poster spesimen (tetap pakai `bg`).
+   * Default: `bg`.
+   */
+  panel?: string;
 }
 
 /** Poster netral (paper + marigold brand) untuk slug tanpa meta khusus. */
@@ -80,6 +87,8 @@ export const themeCatalogMeta: Record<string, ThemeCatalogMeta> = {
     line: "rgba(201,168,106,0.30)",
     ornament: "✦",
     dark: true,
+    // Champagne hangat → ponsel gelap + tinta emas Noir "pop" mewah.
+    panel: "#e9e1d3",
   },
   festa: {
     bg: "#fff6ec",
@@ -102,6 +111,8 @@ export const themeCatalogMeta: Record<string, ThemeCatalogMeta> = {
     line: "rgba(242,242,247,0.14)",
     ornament: "✦",
     dark: true,
+    // Lavender-abu sejuk → ponsel gelap + aksen hijau-elektrik Prisma kontras.
+    panel: "#e7e7f0",
   },
   kirana: {
     bg: "#f5eddc",
