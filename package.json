@@ -13,6 +13,7 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "demo:photos": "node scripts/fetch-demo-photos.mjs",
+    "thumbs": "node scripts/capture-theme-thumbs.mjs",
     "migrate:media": "node scripts/migrate-media-to-r2.mjs",
     "loadtest": "k6 run scripts/k6/invitation-load.js",
     "typecheck": "tsc --noEmit",

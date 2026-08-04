@@ -106,6 +106,17 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Ditolak:** memindah `/preview/tema` ke dalam grup `(marketing)` (mengubah struktur URL + memaksa semua preview ikut chrome) · mengubah `PreviewFrame` bersama (berisiko ke preview pemilik yang kebutuhannya beda).
 **Konsekuensi:** `marketing.css` bertambah blok `.mrv-show*`; showcase kini menyentuh DB (1 query anon katalog, di-guard `try/catch`); 5 teks baru di `copy.preview`.
 
+## #17 — 2026-08-04 · Kartu tema pakai MOCKUP screenshot asli (bukan spesimen tipografi); pipeline `pnpm thumbs`
+**Konteks:** kartu pemilih tema (form buat undangan) & katalog /tema semula teks/spesimen tipografi — kurang meyakinkan untuk keputusan visual pembeli (bandingan: indoinvite.com menampilkan render tema di mockup HP). Pemilik minta "perlihatkan rupa asli tema".
+**Keputusan:**
+1. **Kartu = mockup 2 ponsel** (`components/theme-mockup.tsx`) berisi screenshot COVER + ISI tema di atas panel warna khas tema (`catalog-meta`). Diterapkan di **form buat undangan** DAN **katalog /tema** (pemilik menerima tradeoff berat gambar di halaman publik).
+2. **Sumber gambar = screenshot asli** via skrip ops `scripts/capture-theme-thumbs.mjs` (`pnpm thumbs`): Playwright (channel Edge/Chrome sistem — hindari unduh browser bundel), `reducedMotion` (deterministik), auto-discover tema dari /tema, buka cover-gate (klik tombol pertama di dialog — label beda per tema: "Buka Undangan"/"PUTAR UNDANGAN") lalu scroll untuk "isi". Output JPEG mutu 82 di `public/theme-thumbs/{slug}-{cover,inner}.jpg` (~34 KB/gambar); **Next `<Image>` mengoptimasi ke WebP/AVIF + lazy** saat disajikan (mitigasi LCP /tema).
+3. **Anti-drift**: thumbnail = aset yang di-REGEN (`pnpm thumbs`) saat tema berubah — BUKAN dibuat manual. `hasThemeThumb()` (server fs-check) → tema tanpa foto fallback ke poster spesimen (`ThemePoster`/`ThemeThumb`) sehingga tak pernah gambar rusak.
+4. **Jujur vs referensi**: TANPA rating bintang palsu (tak ada sistem rating) & TANPA harga per-tema (harga per-paket). Aksi kartu = "Preview" (pratinjau HP live) + "Gunakan Tema".
+**Alasan:** rupa asli tema jauh lebih persuasif; pipeline regen menjaga akurasi; Next Image + lazy menahan dampak LCP; fallback spesimen menjaga ketahanan tema baru.
+**Ditolak:** spesimen tipografi sebagai tampilan utama (kurang meyakinkan → jadi fallback saja) · iframe live per kartu (10+ iframe = berat) · rating/harga ala referensi (menyesatkan) · pra-konversi WebP via `sharp` di skrip (tak perlu — Next Image sudah mengoptimasi sumber JPEG).
+**Konsekuensi:** +20 aset JPEG (~0,7 MB) di repo, wajib `pnpm thumbs` ulang saat visual tema berubah. /tema kini memuat gambar (di-lazy) — pantau Lighthouse mobile saat audit performa. Regen butuh Edge/Chrome sistem (Win11 ada).
+
 ---
 
 ## Template entri baru

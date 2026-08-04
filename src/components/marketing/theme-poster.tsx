@@ -1,8 +1,11 @@
+import { Eye, Send } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
+import { ThemeMockup } from "@/components/theme-mockup";
 import { copy } from "@/lib/copy";
 import type { MarketingTheme } from "@/server/marketing/catalog";
+import { hasThemeThumb } from "@/server/theme-thumbs";
 import type { InvitationCategory } from "@/types";
 
 const CATEGORY_LABEL: Record<InvitationCategory, string> = {
@@ -53,14 +56,23 @@ export function ThemePoster({ theme }: { theme: MarketingTheme }) {
 }
 
 /**
- * Kartu tema = poster + baris meta. Bila punya demo, SELURUH kartu jadi satu tautan
- * (bersih untuk pembaca layar) ke `/preview/tema/{slug}` di tab baru. Tanpa demo →
- * kartu statis + label "segera hadir".
+ * Kartu tema katalog = MOCKUP dua ponsel (rupa asli tema, dari `pnpm thumbs`) +
+ * nama/kategori + aksi. "Preview" membuka pratinjau HP live di tab baru; "Gunakan
+ * Tema" mengarah ke pendaftaran. Tema tanpa demo/foto memakai poster spesimen +
+ * label "segera hadir". Kartu = `<div>` (bukan satu tautan) karena kini memuat
+ * dua kontrol interaktif terpisah.
  */
 export function ThemeCard({ theme }: { theme: MarketingTheme }) {
-  const inner = (
-    <>
-      <ThemePoster theme={theme} />
+  const showMockup = theme.hasDemo && hasThemeThumb(theme.slug);
+  return (
+    <div className="mrv-theme-card">
+      <div className="mrv-theme-card__media">
+        {showMockup ? (
+          <ThemeMockup slug={theme.slug} name={theme.name} />
+        ) : (
+          <ThemePoster theme={theme} />
+        )}
+      </div>
       <div className="mrv-theme-card__meta">
         <div>
           <div className="mrv-theme-card__name">{theme.name}</div>
@@ -68,32 +80,29 @@ export function ThemeCard({ theme }: { theme: MarketingTheme }) {
             {categoryText(theme.categories)}
           </div>
         </div>
-        {theme.hasDemo ? (
-          <span className="mrv-theme-card__demo" aria-hidden="true">
-            {copy.marketing.themes.demo} →
-          </span>
-        ) : (
-          <span className="mrv-theme-card__soon">
-            {copy.marketing.themes.soon}
-          </span>
-        )}
       </div>
-    </>
-  );
-
-  if (!theme.hasDemo) {
-    return <div className="mrv-theme-card">{inner}</div>;
-  }
-
-  return (
-    <Link
-      className="mrv-theme-card"
-      href={`/preview/tema/${theme.slug}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={copy.marketing.themes.demoOf(theme.name)}
-    >
-      {inner}
-    </Link>
+      {theme.hasDemo ? (
+        <div className="mrv-theme-card__actions">
+          <a
+            className="mrv-btn mrv-btn--ghost mrv-btn--sm"
+            href={`/preview/tema/${theme.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={copy.marketing.themes.demoOf(theme.name)}
+          >
+            <Eye size={16} aria-hidden="true" />
+            {copy.marketing.themes.preview}
+          </a>
+          <Link className="mrv-btn mrv-btn--primary mrv-btn--sm" href="/daftar">
+            <Send size={16} aria-hidden="true" />
+            {copy.marketing.themes.useTheme}
+          </Link>
+        </div>
+      ) : (
+        <span className="mrv-theme-card__soon">
+          {copy.marketing.themes.soon}
+        </span>
+      )}
+    </div>
   );
 }
