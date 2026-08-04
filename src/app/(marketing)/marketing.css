@@ -353,17 +353,28 @@
 }
 @media (min-width: 62rem) {
   .mrv-fan {
-    gap: 1rem;
+    gap: 0.85rem;
   }
+  /* Kolase 3×2 (6 kartu) — rotasi + offset berselang agar terkesan "sebaran". */
   .mrv-fan > :nth-child(1) {
-    transform: rotate(-4deg) translateY(0.6rem);
+    transform: rotate(-5deg) translateY(0.4rem);
   }
   .mrv-fan > :nth-child(2) {
-    transform: translateY(-0.7rem) scale(1.04);
+    transform: rotate(2deg) translateY(-0.6rem) scale(1.03);
     z-index: 2;
   }
   .mrv-fan > :nth-child(3) {
-    transform: rotate(4deg) translateY(0.6rem);
+    transform: rotate(5deg) translateY(0.3rem);
+  }
+  .mrv-fan > :nth-child(4) {
+    transform: rotate(4deg) translateY(-0.3rem);
+  }
+  .mrv-fan > :nth-child(5) {
+    transform: rotate(-3deg) translateY(0.5rem) scale(1.03);
+    z-index: 2;
+  }
+  .mrv-fan > :nth-child(6) {
+    transform: rotate(-5deg) translateY(-0.2rem);
   }
 }
 

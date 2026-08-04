@@ -22,13 +22,22 @@ export const metadata: Metadata = {
 // `revalidate` = jaring pengaman berkala.
 export const revalidate = 3600;
 
-/** Pilih 3 tema beragam untuk kipas hero (prioritas palet kontras, fallback aman). */
+/** Pilih 6 tema beragam untuk kolase hero (prioritas variasi palet/kategori). */
 function selectHeroThemes(themes: MarketingTheme[]): MarketingTheme[] {
-  const preferred = ["barakah", "noir", "festa", "verdant", "eternal-rose"];
+  const preferred = [
+    "barakah",
+    "noir",
+    "festa",
+    "meridian",
+    "eternal-rose",
+    "lumina",
+    "verdant",
+    "aria",
+  ];
   const picked = preferred
     .map((slug) => themes.find((t) => t.slug === slug))
     .filter((t): t is MarketingTheme => Boolean(t));
-  return (picked.length >= 3 ? picked : themes).slice(0, 3);
+  return (picked.length >= 6 ? picked : themes).slice(0, 6);
 }
 
 export default async function LandingPage() {
