@@ -1116,6 +1116,92 @@ a.mrv-theme-card:hover .mrv-theme-card__demo {
   }
 }
 
+/* ---- Halaman auth (split-screen) ---------------------------------------- */
+/* Panel kiri "showcase" gelap + form di kanan pada kertas hangat. Dipakai layout
+   grup (auth): masuk, daftar, reset-password. */
+.mrv-auth {
+  display: grid;
+  min-height: 100dvh;
+}
+@media (min-width: 64rem) {
+  .mrv-auth {
+    grid-template-columns: 1.05fr 1fr;
+  }
+}
+.mrv-auth__panel {
+  position: relative;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2.5rem;
+  padding: clamp(2.5rem, 4vw, 3.75rem);
+  overflow: hidden;
+}
+@media (min-width: 64rem) {
+  .mrv-auth__panel {
+    display: flex;
+  }
+}
+.mrv-auth__panel .mrv-brand {
+  color: var(--mrv-dark-ink);
+  font-size: 1.5rem;
+}
+.mrv-auth__lead {
+  max-width: 27rem;
+}
+.mrv-auth__title {
+  font-size: clamp(2rem, 3.2vw, 2.9rem);
+  margin-top: 1rem;
+}
+.mrv-auth__panel .mrv-trust {
+  margin-top: 1.75rem;
+}
+.mrv-auth__showcase {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.9rem;
+}
+.mrv-auth__mock {
+  width: min(15rem, 45%);
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 32px 60px -30px rgba(0, 0, 0, 0.65);
+}
+.mrv-auth__mock:first-child {
+  transform: rotate(-4deg) translateY(0.6rem);
+}
+.mrv-auth__mock:last-child {
+  transform: rotate(4deg);
+}
+.mrv-auth__form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: clamp(1.75rem, 5vw, 2.75rem);
+  background-color: var(--mrv-paper);
+}
+.mrv-auth__form-inner {
+  width: 100%;
+  max-width: 24rem;
+}
+@media (min-width: 64rem) {
+  .mrv-auth__brand-mobile {
+    display: none;
+  }
+}
+
+/* Varian gelap daftar-kepercayaan (dipakai panel auth & band dark). */
+.mrv-band-dark .mrv-trust li {
+  color: var(--mrv-dark-muted);
+}
+.mrv-band-dark .mrv-trust li::before {
+  color: var(--mrv-accent);
+}
+
 /* ---- A11y / motion ------------------------------------------------------- */
 .mrv :where(a, button, summary):focus-visible {
   outline: 2px solid var(--mrv-accent-deep);

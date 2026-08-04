@@ -1,25 +1,11 @@
-import { Bricolage_Grotesque, Hanken_Grotesk } from "next/font/google";
 import type { ReactNode } from "react";
+
+import { mrvFontVars } from "@/lib/mrv-fonts";
 
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 
 import "../../app/(marketing)/marketing.css";
-
-// Self-hosted (next/font) → tanpa request eksternal, aman untuk LCP & WebView WA.
-// Bricolage Grotesque = display berkarakter; Hanken Grotesk = teks humanis.
-const display = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  variable: "--mrv-display",
-  display: "swap",
-});
-const body = Hanken_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--mrv-body",
-  display: "swap",
-});
 
 /**
  * Kerangka (chrome) marketing bersama: token `.mrv` + font + header/footer.
@@ -28,7 +14,7 @@ const body = Hanken_Grotesk({
  */
 export function MarketingShell({ children }: { children: ReactNode }) {
   return (
-    <div className={`mrv ${display.variable} ${body.variable}`}>
+    <div className={`mrv ${mrvFontVars}`}>
       <SiteHeader />
       <main>{children}</main>
       <SiteFooter />
