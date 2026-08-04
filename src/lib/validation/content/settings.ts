@@ -76,8 +76,15 @@ export const settingsSchema = z.object({
   sections: sectionTogglesSchema.default({}),
   /** Moderasi ucapan: bila true, ucapan baru perlu disetujui pemilik. */
   moderateGuestbook: z.boolean().default(false),
-  /** Musik latar dari library royalty-free (`songs.id`). */
-  songId: z.uuid().optional(),
+  /**
+   * Musik latar dari library royalty-free (`songs.id`). String kosong dari
+   * `<select>` "Tanpa musik" dinormalkan → undefined agar autosave tak gagal
+   * parse UUID (server = pertahanan terakhir; picker juga membersihkan di klien).
+   */
+  songId: z.preprocess(
+    (v) => (v === "" || v === null ? undefined : v),
+    z.uuid().optional(),
+  ),
   /**
    * Kustomisasi tampilan oleh pembeli (Fase G). Absen = bawaan tema (undangan
    * lama render identik). Ditulis EKSKLUSIF oleh `updateInvitationAppearance`;

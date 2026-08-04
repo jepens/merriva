@@ -24,6 +24,19 @@ describe("settingsSchema", () => {
       false,
     );
   });
+
+  it("menormalkan songId kosong ('' dari picker 'Tanpa musik') → undefined", () => {
+    // Autosave mengirim settings apa adanya dari form; "" tak boleh menggagalkan
+    // parse UUID (kalau tidak, seluruh draft gagal tersimpan saat tanpa musik).
+    const r = settingsSchema.safeParse({ songId: "" });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.songId).toBeUndefined();
+
+    const valid = "11111111-1111-4111-8111-111111111111";
+    const ok = settingsSchema.safeParse({ songId: valid });
+    expect(ok.success).toBe(true);
+    if (ok.success) expect(ok.data.songId).toBe(valid);
+  });
 });
 
 describe("isSectionVisible", () => {

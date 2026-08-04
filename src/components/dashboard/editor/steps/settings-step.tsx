@@ -1,6 +1,6 @@
 "use client";
 
-import type { UseFormReturn } from "react-hook-form";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -9,20 +9,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { copy } from "@/lib/copy";
 
 import { Field } from "../field";
-import type { EditorValues } from "../types";
+import type { EditorValues, SongOption } from "../types";
 
 /**
  * Label toggle section. Section KEY "story" menggerbangi LINIMASA (cerita/agenda/
  * doa); labelnya berbeda per kategori → `timelineLabel` (default wedding).
+ * `songs` = pustaka lagu aktif (dirakit di server) untuk picker musik latar.
  */
 export function SettingsStep({
   form,
+  songs,
   timelineLabel = copy.editor.sections.story,
 }: {
   form: UseFormReturn<EditorValues>;
+  songs: SongOption[];
   timelineLabel?: string;
 }) {
-  const { register } = form;
+  const { register, control } = form;
+  const m = copy.editor.music;
+  // Pratinjau: lacak pilihan aktif agar `<audio>` menunjuk lagu terpilih.
+  const songId = useWatch({ control, name: "settings.songId" });
+  const selectedSong = songId
+    ? (songs.find((s) => s.id === songId) ?? null)
+    : null;
   const sectionToggles = [
     { key: "countdown", label: copy.editor.sections.countdown },
     { key: "gallery", label: copy.editor.sections.gallery },
@@ -43,6 +52,39 @@ export function SettingsStep({
         <Checkbox {...register("settings.moderateGuestbook")} />
         {copy.editor.fields.moderateGuestbook}
       </label>
+
+      <div className="space-y-2">
+        <Field label={m.label} htmlFor="song">
+          <Select
+            id="song"
+            disabled={songs.length === 0}
+            {...register("settings.songId", {
+              setValueAs: (v) => (v ? v : undefined),
+            })}
+          >
+            <option value="">{m.none}</option>
+            {songs.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.artist ? `${s.title} — ${s.artist}` : s.title}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        {songs.length === 0 ? (
+          <p className="text-muted-foreground text-xs">{m.empty}</p>
+        ) : (
+          <p className="text-muted-foreground text-xs">{m.hint}</p>
+        )}
+        {selectedSong ? (
+          <audio
+            key={selectedSong.id}
+            controls
+            preload="none"
+            src={selectedSong.url}
+            className="w-full"
+          />
+        ) : null}
+      </div>
 
       <fieldset className="space-y-2">
         <legend className="mb-1 text-sm font-medium">

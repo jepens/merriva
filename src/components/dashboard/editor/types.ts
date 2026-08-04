@@ -17,3 +17,15 @@ export type EditorValues = {
   settings: InvitationSettings;
   events: EventDraft[];
 };
+
+/**
+ * Opsi lagu untuk picker musik (langkah Pengaturan). Dirakit di server dari
+ * `songs` aktif; `url` sudah domain sendiri (via `getStorage().getPublicUrl`)
+ * agar `<audio>` pratinjau & halaman publik tak pernah menyentuh URL vendor.
+ */
+export type SongOption = {
+  id: string;
+  title: string;
+  artist: string | null;
+  url: string;
+};

@@ -366,6 +366,13 @@ export const copy = {
       agenda: "Agenda",
       wishes: "Doa & Harapan",
     },
+    music: {
+      label: "Musik latar",
+      none: "Tanpa musik",
+      hint: "Diputar otomatis saat tamu membuka undangan (bisa dimatikan tamu).",
+      empty:
+        "Pustaka lagu belum tersedia. Admin dapat menambah lagu di panel admin.",
+    },
     fields: {
       title: "Judul undangan",
       titlePlaceholder: "The Wedding of …",
@@ -718,6 +725,7 @@ export const copy = {
       users: "Pengguna",
       packages: "Paket",
       themes: "Tema",
+      songs: "Lagu",
       toDashboard: "Ke dashboard",
     },
     overview: {
@@ -867,6 +875,28 @@ export const copy = {
       active: "Aktif (tampil di katalog)",
       save: "Simpan tema",
     },
+    songs: {
+      title: "Pustaka lagu",
+      subtitle:
+        "Musik latar yang bisa dipilih pemilik undangan. Klien memilih di langkah Pengaturan.",
+      licenseNote:
+        "Hanya unggah audio bebas-royalti / berlisensi. Anda bertanggung jawab atas hak pakai tiap trek — sistem tidak memverifikasi lisensi.",
+      addTitle: "Tambah lagu",
+      fieldTitle: "Judul lagu",
+      fieldArtist: "Artis / kredit (opsional)",
+      fieldFile: "Berkas audio (mp3/m4a/ogg, maks 8 MB)",
+      add: "Unggah lagu",
+      listTitle: "Lagu tersedia",
+      colTitle: "Judul",
+      colArtist: "Artis",
+      active: "Aktif",
+      inactive: "Nonaktif",
+      activate: "Aktifkan",
+      deactivate: "Nonaktifkan",
+      delete: "Hapus",
+      deleteConfirm: "Hapus lagu ini dari pustaka?",
+      empty: "Belum ada lagu. Tambah lagu pertama di atas.",
+    },
     msg: {
       pkg_ok: "Paket disimpan.",
       pkg_invalid: "Data paket tidak valid.",
@@ -874,6 +904,11 @@ export const copy = {
       theme_ok: "Tema disimpan.",
       theme_invalid: "Data tema tidak valid.",
       theme_failed: "Gagal menyimpan tema.",
+      song_ok: "Lagu disimpan.",
+      song_invalid:
+        "Data lagu tidak valid (judul kosong / berkas bukan audio / terlalu besar).",
+      song_failed: "Gagal menyimpan lagu.",
+      song_deleted: "Lagu dihapus.",
       activate_ok: "Undangan berhasil diaktifkan.",
       activate_invalid: "Pilihan paket tidak valid.",
       activate_draft_slug: "Atur alamat undangan (slug) dulu sebelum aktivasi.",

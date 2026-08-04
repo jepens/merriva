@@ -19,7 +19,7 @@ import { copy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import type { InvitationMediaView } from "@/types/invitation";
 
-import type { EditorValues } from "./types";
+import type { EditorValues, SongOption } from "./types";
 import { useDraftAutosave, type SaveStatus } from "./use-autosave";
 
 /** Konteks yang diberikan ke tiap step (form + helper galeri + identitas). */
@@ -30,6 +30,7 @@ export interface EditorStepContext {
   media: InvitationMediaView[];
   setMedia: Dispatch<SetStateAction<InvitationMediaView[]>>;
   maxPhotos: number;
+  songs: SongOption[];
 }
 
 /** Definisi satu langkah editor (dipakai lintas kategori via konfigurasi). */
@@ -70,6 +71,7 @@ export function EditorShell({
   defaultValues,
   initialMedia,
   maxPhotos,
+  songs,
   steps,
 }: {
   invitationId: string;
@@ -77,6 +79,7 @@ export function EditorShell({
   defaultValues: EditorValues;
   initialMedia: InvitationMediaView[];
   maxPhotos: number;
+  songs: SongOption[];
   steps: EditorStep[];
 }) {
   const form = useForm<EditorValues>({
@@ -93,6 +96,7 @@ export function EditorShell({
     media,
     setMedia,
     maxPhotos,
+    songs,
   };
 
   return (

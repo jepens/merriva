@@ -66,6 +66,12 @@ export default async function AdminLayout({
               {copy.admin.nav.themes}
             </Link>
             <Link
+              href="/admin/lagu"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              {copy.admin.nav.songs}
+            </Link>
+            <Link
               href="/dashboard"
               className={buttonVariants({ variant: "ghost", size: "sm" })}
             >

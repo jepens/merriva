@@ -45,6 +45,19 @@ export const adminPackageSchema = z.object({
 });
 
 /**
+ * Tambah lagu pustaka musik (SPEC §4.9). Berkas audio divalidasi terpisah di
+ * action (tipe/ukuran via `lib/audio`); di sini hanya metadata. `artist` kosong
+ * ("" dari form) dinormalkan → undefined agar tersimpan null, bukan string kosong.
+ */
+export const adminSongSchema = z.object({
+  title: z.string().trim().min(1, "Judul wajib diisi").max(120),
+  artist: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().trim().max(120).optional(),
+  ),
+});
+
+/**
  * Edit metadata tema (SPEC §4.9): admin mengatur nama/kategori/tier/status/urutan.
  * `slug`/`demo_slug` terikat kode di repo → tidak diedit di sini.
  */

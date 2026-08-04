@@ -117,6 +117,17 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Ditolak:** spesimen tipografi sebagai tampilan utama (kurang meyakinkan → jadi fallback saja) · iframe live per kartu (10+ iframe = berat) · rating/harga ala referensi (menyesatkan) · pra-konversi WebP via `sharp` di skrip (tak perlu — Next Image sudah mengoptimasi sumber JPEG).
 **Konsekuensi:** +20 aset JPEG (~0,7 MB) di repo, wajib `pnpm thumbs` ulang saat visual tema berubah. /tema kini memuat gambar (di-lazy) — pantau Lighthouse mobile saat audit performa. Regen butuh Edge/Chrome sistem (Win11 ada).
 
+## #18 — 2026-08-04 · Pustaka lagu: diisi via unggah admin (bukan seed berkas di repo); picker musik di editor
+**Konteks:** infra musik sudah ada sejak M1/M2 (`songs`, `settings.songId`, `resolveMusic`, `<audio>` di cover-gate) tetapi PRAKTIKNYA senyap — tak ada UI memilih lagu di editor & pustaka kosong. Menegakkan #8 (hanya royalty-free) + boundary CLAUDE.md ("jangan musik berhak-cipta", "media via lib/storage + domain sendiri").
+**Keputusan:**
+1. **Pengisian pustaka = unggah admin**, bukan seed berkas audio di repo. Halaman `/admin/lagu` (+ `server/actions/admin-songs.ts`) mengunggah audio via `lib/storage` → `songs/<sha256>.<ext>` (content-addressed, idempoten) → INSERT `songs`. Audio TIDAK pernah di-commit (bukan cara media disimpan; lisensi = tanggung jawab admin, ditegaskan lewat catatan lisensi di UI). Aksi: tambah / aktif-nonaktif / hapus (hapus objek hanya bila tak dipakai baris lain).
+2. **Picker musik di editor** (langkah Pengaturan, semua kategori) → `settings.songId`, dengan pratinjau `<audio>` inline. Lagu aktif dirakit di server (`edit/page.tsx`) jadi `SongOption{url}` (URL domain sendiri) lalu diteruskan lewat `EditorShell` context.
+3. **Hardening**: `settings.songId` di-`preprocess` `""`→undefined (opsi "Tanpa musik" tak menggagalkan parse UUID saat autosave) + `setValueAs` di picker.
+4. **Bucket tunggal dipertahankan** (SPEC §6.4): bucket `media` diperluas menerima MIME audio + batas 8 MB (migrasi `20260804190000`); validasi per-tipe tetap di aplikasi (foto 2 MB `lib/media`, audio 8 MB `lib/audio`). Prefix path membedakan konten (`inv/…` vs `songs/…`).
+**Alasan:** unggah admin = mekanisme berkelanjutan & aman-lisensi tanpa menaruh audio di git; content-addressed = anti-duplikat; picker melengkapi rantai yang sudah ada (resolveMusic → halaman publik/preview) tanpa perubahan di sisi tema.
+**Ditolak:** seed berkas audio royalty-free di repo (git bukan tempat media + verifikasi lisensi tak bisa dijamin dari sini) · bucket `songs` terpisah (menyalahi desain bucket-tunggal + menyulitkan driver R2) · upload MP3 oleh klien (tetap ditolak per #8 — hanya admin).
+**Konsekuensi:** pustaka mulai KOSONG di production → pemilik wajib mengunggah trek berlisensi lebih dulu agar fitur musik terlihat (lihat `docs/MUSIC-LIBRARY.md`). Batas bucket naik ke 8 MB (backstop foto melonggar; batas ketat foto tetap di aplikasi).
+
 ---
 
 ## Template entri baru

@@ -92,6 +92,20 @@ export default async function EditInvitationPage({
   }
   const maxPhotos = photoLimitFromPackage(pkgLimits);
 
+  // Pustaka lagu aktif untuk picker musik (RLS `songs_select_public`: is_active).
+  // URL dirakit ke domain sendiri di server → tema/pratinjau tak lihat URL vendor.
+  const { data: songRows } = await supabase
+    .from("songs")
+    .select("id, title, artist, storage_path")
+    .eq("is_active", true)
+    .order("title", { ascending: true });
+  const songs = (songRows ?? []).map((s) => ({
+    id: s.id,
+    title: s.title,
+    artist: s.artist,
+    url: storage.getPublicUrl(s.storage_path),
+  }));
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center justify-between gap-3">
@@ -114,6 +128,7 @@ export default async function EditInvitationPage({
           defaultValues={{ eventDate, content, settings, events }}
           initialMedia={media}
           maxPhotos={maxPhotos}
+          songs={songs}
         />
       ) : content.category === "corporate" ? (
         <CorporateEditor
@@ -122,6 +137,7 @@ export default async function EditInvitationPage({
           defaultValues={{ eventDate, content, settings, events }}
           initialMedia={media}
           maxPhotos={maxPhotos}
+          songs={songs}
         />
       ) : (
         <FamilyEditor
@@ -130,6 +146,7 @@ export default async function EditInvitationPage({
           defaultValues={{ eventDate, content, settings, events }}
           initialMedia={media}
           maxPhotos={maxPhotos}
+          songs={songs}
         />
       )}
     </div>
