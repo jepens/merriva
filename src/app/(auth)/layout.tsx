@@ -41,6 +41,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             <ThemeMockup slug="eternal-rose" name="Eternal Rose" />
           </div>
           <div className="mrv-auth__mock">
+            <ThemeMockup slug="barakah" name="Barakah" />
+          </div>
+          <div className="mrv-auth__mock">
             <ThemeMockup slug="noir" name="Noir" />
           </div>
         </div>
