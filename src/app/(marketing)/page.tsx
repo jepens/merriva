@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { PricingCards } from "@/components/marketing/pricing-cards";
 import { SectionHead } from "@/components/marketing/section-head";
-import { ThemeCard, ThemePoster } from "@/components/marketing/theme-poster";
+import { HeroThemeCard, ThemeCard } from "@/components/marketing/theme-poster";
 import { copy } from "@/lib/copy";
 import {
   getActivePackages,
@@ -74,7 +74,7 @@ export default async function LandingPage() {
           {heroThemes.length > 0 ? (
             <div className="mrv-fan">
               {heroThemes.map((theme) => (
-                <ThemePoster key={theme.slug} theme={theme} />
+                <HeroThemeCard key={theme.slug} theme={theme} />
               ))}
             </div>
           ) : null}

@@ -367,6 +367,61 @@
   }
 }
 
+/* Kartu tema hero: satu ponsel (screenshot cover) di panel warna tema. Panel
+   selalu terang (bg tema terang / `panel` untuk tema gelap) → teks tinta gelap. */
+.mrv-hero-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 3 / 4;
+  padding: clamp(0.75rem, 2vw, 1.1rem);
+  border-radius: 1rem;
+  border: 1px solid var(--mrv-line);
+  color: var(--mrv-ink);
+  overflow: hidden;
+  box-shadow: 0 22px 48px -30px rgba(36, 31, 43, 0.5);
+}
+.mrv-hero-card__tag {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+.mrv-hero-card__phone {
+  position: relative;
+  flex: 1;
+  width: min(74%, 8.5rem);
+  margin: 0.7rem auto;
+  border-radius: 1.1rem;
+  border: 3px solid #17141a;
+  background-color: #17141a;
+  overflow: hidden;
+  box-shadow: 0 16px 30px -16px rgba(0, 0, 0, 0.55);
+}
+.mrv-hero-card__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.mrv-hero-card__name {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(0.95rem, 2.2vw, 1.15rem);
+  line-height: 1.1;
+}
+.mrv-hero-card__tier {
+  flex: none;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.75;
+}
+
 /* ---- Theme poster -------------------------------------------------------- */
 .mrv-poster {
   position: relative;

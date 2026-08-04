@@ -1,4 +1,5 @@
 import { Eye, Send } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
@@ -103,6 +104,46 @@ export function ThemeCard({ theme }: { theme: MarketingTheme }) {
           {copy.marketing.themes.soon}
         </span>
       )}
+    </div>
+  );
+}
+
+/**
+ * Kartu tema untuk KIPAS HERO landing: satu ponsel berisi screenshot cover asli
+ * di atas panel warna tema (`meta.panel ?? bg`) + nama/tier — pengganti poster
+ * tipografi agar senada mockup katalog. Fallback ke `ThemePoster` bila tema belum
+ * difoto (`pnpm thumbs`). Rotasi/tumpuk kipas diatur `.mrv-fan` (tak berubah).
+ */
+export function HeroThemeCard({ theme }: { theme: MarketingTheme }) {
+  if (!hasThemeThumb(theme.slug)) return <ThemePoster theme={theme} />;
+  const panel = theme.meta.panel ?? theme.meta.bg;
+  const tier =
+    theme.tier === "premium"
+      ? copy.marketing.themes.tierPremium
+      : copy.marketing.themes.tierStandard;
+  return (
+    <div
+      className="mrv-hero-card"
+      style={{
+        background: `linear-gradient(160deg, ${panel}, color-mix(in srgb, ${panel} 82%, #000))`,
+      }}
+    >
+      <span className="mrv-hero-card__tag">
+        {categoryText(theme.categories)}
+      </span>
+      <div className="mrv-hero-card__phone">
+        <Image
+          src={`/theme-thumbs/${theme.slug}-cover.jpg`}
+          alt={`Pratinjau tema ${theme.name}`}
+          fill
+          sizes="180px"
+          className="object-cover object-top"
+        />
+      </div>
+      <div className="mrv-hero-card__foot">
+        <span className="mrv-hero-card__name">{theme.name}</span>
+        <span className="mrv-hero-card__tier">{tier}</span>
+      </div>
     </div>
   );
 }
