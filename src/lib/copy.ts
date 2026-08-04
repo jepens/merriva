@@ -315,6 +315,9 @@ export const copy = {
     themeUnavailable: "Tema tidak tersedia untuk kategori ini.",
     submit: "Buat & Lanjut Isi",
     creating: "Membuat…",
+    viewDemo: "Lihat demo",
+    selectThemeAria: (name: string) => `Pilih tema ${name}`,
+    tier: { standard: "Standar", premium: "Premium" },
   },
   editor: {
     title: "Edit Undangan",

@@ -1,9 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowUpRight, Check } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { ThemeThumb } from "@/components/dashboard/theme-thumb";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
@@ -93,27 +95,58 @@ export function CreateInvitationForm({ themes }: { themes: ThemeOption[] }) {
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
-            {available.map((t) => (
-              <button
-                key={t.slug}
-                type="button"
-                aria-pressed={themeSlug === t.slug}
-                onClick={() =>
-                  setValue("themeSlug", t.slug, { shouldValidate: true })
-                }
-                className={cn(
-                  "rounded-lg border p-4 text-left transition-colors",
-                  themeSlug === t.slug
-                    ? "border-primary ring-primary ring-1"
-                    : "hover:bg-accent",
-                )}
-              >
-                <p className="font-medium">{t.name}</p>
-                <p className="text-muted-foreground text-xs capitalize">
-                  {t.tier}
-                </p>
-              </button>
-            ))}
+            {available.map((t) => {
+              const selected = themeSlug === t.slug;
+              const tierLabel =
+                t.tier === "premium"
+                  ? copy.create.tier.premium
+                  : copy.create.tier.standard;
+              return (
+                <div
+                  key={t.slug}
+                  className={cn(
+                    "relative overflow-hidden rounded-lg border transition-colors",
+                    selected
+                      ? "border-primary ring-primary ring-1"
+                      : "hover:border-foreground/30",
+                  )}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={copy.create.selectThemeAria(t.name)}
+                    onClick={() =>
+                      setValue("themeSlug", t.slug, { shouldValidate: true })
+                    }
+                    className="focus-visible:ring-ring block w-full focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                  >
+                    <ThemeThumb slug={t.slug} name={t.name} />
+                    {selected ? (
+                      <span className="bg-primary text-primary-foreground absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full shadow">
+                        <Check className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                    ) : null}
+                  </button>
+                  <div className="bg-card flex items-center justify-between gap-2 border-t px-3 py-2">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      {tierLabel}
+                    </span>
+                    <a
+                      href={`/preview/tema/${t.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-foreground hover:text-primary inline-flex items-center gap-1 text-xs font-medium"
+                    >
+                      {copy.create.viewDemo}
+                      <ArrowUpRight
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
         {errors.themeSlug ? (
