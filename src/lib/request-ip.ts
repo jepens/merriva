@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 
 import { headers } from "next/headers";
 
-import { resolveClientIp } from "@/lib/client-ip";
+import { ipNetworkKey, resolveClientIp } from "@/lib/client-ip";
 
 /**
  * IP klien dari header proxy (logika pemilihan murni & teruji di `client-ip.ts`).
@@ -21,11 +21,20 @@ export async function getClientIp(): Promise<string> {
 }
 
 /**
- * Kunci rate-limit ter-hash untuk sebuah aksi. Meng-hash IP (SHA-256, dipotong)
- * agar TIDAK menyimpan IP mentah di memori (selaras UU PDP: minimalkan PII).
+ * Kunci rate-limit ter-hash dari sebuah nilai (SHA-256, dipotong) — agar TIDAK
+ * menyimpan nilai mentah (IP/email) di memori (selaras UU PDP: minimalkan PII).
+ */
+export function staticRateKey(action: string, value: string): string {
+  const hash = createHash("sha256").update(value).digest("hex").slice(0, 16);
+  return `${action}:${hash}`;
+}
+
+/**
+ * Kunci rate-limit untuk sebuah aksi, per-JARINGAN klien (bukan per-IP penuh):
+ * IPv6 /64, IPv4 /24 (lihat `ipNetworkKey`) → rotasi alamat dalam satu blok tak
+ * bisa melewati plafon.
  */
 export async function clientRateKey(action: string): Promise<string> {
   const ip = await getClientIp();
-  const hash = createHash("sha256").update(ip).digest("hex").slice(0, 16);
-  return `${action}:${hash}`;
+  return staticRateKey(action, ipNetworkKey(ip));
 }

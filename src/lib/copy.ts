@@ -56,6 +56,9 @@ export const copy = {
     invalidCredentials: "Email atau kata sandi salah.",
     signOut: "Keluar",
     genericAuthError: "Gagal memproses permintaan. Silakan coba lagi.",
+    rateLimited: "Terlalu banyak percobaan. Coba lagi beberapa saat lagi.",
+    turnstileFailed:
+      "Verifikasi anti-bot gagal. Muat ulang halaman lalu coba lagi.",
     errorOauthLogin: "Gagal masuk dengan Google. Silakan coba lagi.",
     errorVerifyLink:
       "Tautan tidak valid atau sudah kedaluwarsa. Silakan minta ulang.",

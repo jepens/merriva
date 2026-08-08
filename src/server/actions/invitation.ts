@@ -7,6 +7,8 @@ import { copy } from "@/lib/copy";
 import { localToUtc } from "@/lib/datetime";
 import { draftSlug, isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { clientRateKey } from "@/lib/request-ip";
 import { slugSchema } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -194,6 +196,14 @@ export async function checkSlugAvailabilityAction(
   } = await supabase.auth.getUser();
   if (!user) return { status: "error", message: copy.auth.genericAuthError };
   if (!isUuid(invitationId)) return { status: "error" };
+
+  // Rate-limit (M2): batasi probing keberadaan slug lintas-tenant. Ringan —
+  // murni UX; keunikan sebenarnya dijamin constraint UNIQUE saat simpan.
+  const rl = checkRateLimit(await clientRateKey("slug-check"), {
+    max: 30,
+    windowMs: 60_000,
+  });
+  if (!rl.ok) return { status: "error", message: copy.auth.rateLimited };
 
   const parsed = slugSchema.safeParse(rawSlug);
   if (!parsed.success) {

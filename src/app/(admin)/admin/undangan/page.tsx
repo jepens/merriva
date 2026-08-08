@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { wibDate } from "@/lib/admin/display";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/server/guards/auth";
 import type { InvitationStatus } from "@/types";
 
 export const metadata: Metadata = { title: copy.admin.invitations.title };
@@ -29,6 +30,7 @@ export default async function AdminInvitationsPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
+  await requireAdmin(); // defense-in-depth (page pakai service_role)
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const status = STATUSES.includes(sp.status as InvitationStatus)

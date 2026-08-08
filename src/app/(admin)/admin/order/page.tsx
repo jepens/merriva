@@ -7,6 +7,7 @@ import { copy } from "@/lib/copy";
 import { wibDate } from "@/lib/admin/display";
 import { formatIdr } from "@/lib/format";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/server/guards/auth";
 import type { OrderStatus } from "@/types";
 
 export const metadata: Metadata = { title: copy.admin.orders.title };
@@ -32,6 +33,7 @@ export default async function AdminOrdersPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
+  await requireAdmin(); // defense-in-depth (page pakai service_role)
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const status = STATUSES.includes(sp.status as OrderStatus)

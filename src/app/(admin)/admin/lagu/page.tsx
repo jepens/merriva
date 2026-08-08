@@ -10,6 +10,7 @@ import {
   adminDeleteSongAction,
   adminToggleSongAction,
 } from "@/server/actions/admin-songs";
+import { requireAdmin } from "@/server/guards/auth";
 
 export const metadata: Metadata = { title: copy.admin.songs.title };
 
@@ -31,6 +32,7 @@ export default async function AdminSongsPage({
 }: {
   searchParams: Promise<{ msg?: string }>;
 }) {
+  await requireAdmin(); // defense-in-depth (page pakai service_role)
   const { msg } = await searchParams;
   const msgText =
     msg && msg in copy.admin.msg

@@ -10,6 +10,30 @@ const buckets = new Map<string, number[]>();
 // Batas kasar agar Map tak tumbuh tanpa henti bila banyak kunci unik.
 const MAX_KEYS = 20_000;
 
+/**
+ * Reklamasi memori BERTAHAP saat Map penuh — TIDAK me-reset semua bucket
+ * sekaligus (yang akan menolkan counter seluruh pengunjung sah). (1) buang
+ * bucket yang seluruh timestamp-nya sudah keluar jendela; (2) bila masih penuh
+ * (mis. serangan ledakan-kunci), buang yang TERTUA-dibuat sampai 90% kapasitas.
+ * Terpadu dengan keying per-jaringan (request-ip.ts) yang memangkas ledakan
+ * kunci di sumbernya.
+ */
+function evictIfFull(now: number, windowMs: number): void {
+  if (buckets.size < MAX_KEYS) return;
+  const cutoff = now - windowMs;
+  for (const [key, hits] of buckets) {
+    if (hits.length === 0 || hits[hits.length - 1] <= cutoff)
+      buckets.delete(key);
+  }
+  if (buckets.size >= MAX_KEYS) {
+    const target = Math.floor(MAX_KEYS * 0.9);
+    for (const key of buckets.keys()) {
+      if (buckets.size <= target) break;
+      buckets.delete(key); // Map = urutan penyisipan → tertua dulu
+    }
+  }
+}
+
 export interface RateLimitOptions {
   /** Maksimum aksi dalam jendela. */
   max: number;
@@ -38,7 +62,7 @@ export function checkRateLimit(
 
   let hits = buckets.get(key);
   if (!hits) {
-    if (buckets.size >= MAX_KEYS) buckets.clear(); // proteksi memori (kasar)
+    evictIfFull(now, windowMs); // proteksi memori bertahap (bukan reset total)
     hits = [];
     buckets.set(key, hits);
   }

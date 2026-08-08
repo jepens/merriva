@@ -11,7 +11,7 @@ import {
   adminSetUserRoleAction,
   adminSuspendUserAction,
 } from "@/server/actions/admin-users";
-import { getSessionUser } from "@/server/guards/auth";
+import { requireAdmin } from "@/server/guards/auth";
 import type { ProfileRole } from "@/types";
 
 export const metadata: Metadata = { title: copy.admin.users.title };
@@ -46,7 +46,7 @@ export default async function AdminUsersPage({
       ? copy.admin.msg[sp.msg as keyof typeof copy.admin.msg]
       : null;
 
-  const me = await getSessionUser();
+  const me = await requireAdmin(); // guard + identitas admin utk penanda "Anda"
   const admin = createSupabaseAdminClient();
 
   // GoTrue admin `listUsers` TAK punya pencarian/urut server-side → pindai semua

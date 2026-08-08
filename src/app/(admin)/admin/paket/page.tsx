@@ -6,6 +6,7 @@ import { copy } from "@/lib/copy";
 import { resolveLimits } from "@/lib/limits";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { adminUpdatePackageAction } from "@/server/actions/admin-catalog";
+import { requireAdmin } from "@/server/guards/auth";
 
 export const metadata: Metadata = { title: copy.admin.packages.title };
 
@@ -19,6 +20,7 @@ export default async function AdminPackagesPage({
 }: {
   searchParams: Promise<{ msg?: string }>;
 }) {
+  await requireAdmin(); // defense-in-depth (page pakai service_role)
   const { msg } = await searchParams;
   const msgText =
     msg && msg in copy.admin.msg

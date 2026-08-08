@@ -54,10 +54,14 @@ Ketiga endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 - [ ] **Latihan restore backup 1×** (RUNBOOK): restore ke project sementara, verifikasi jumlah baris & login
 - [ ] _(Opsional, saat media membesar)_ **Aktivasi R2**: isi `R2_*`, set `STORAGE_DRIVER=r2` + `NEXT_PUBLIC_MEDIA_URL=https://cdn.merriva.id`, CNAME `cdn.merriva.id`, jalankan `pnpm migrate-media` (ARCHITECTURE §6.4). **Boleh launch dulu dengan Supabase storage**; pindah ke R2 sebelum event klien ramai.
 
-## Fase 6 — Monitoring
+## Fase 6 — Monitoring & keamanan edge
 
 - [ ] **UptimeRobot** → `https://merriva.id/api/health`, interval 5 menit, alert bila ≠ 200
 - [ ] **Sentry** aktif: isi `NEXT_PUBLIC_SENTRY_DSN` (kosong = Sentry non-aktif); picu 1 error uji → pastikan masuk
+- [ ] **Cloudflare Cache Rule** untuk `/api/og/*` (Eligible for cache, cache key = path) → serap beban render OG di CDN (mitigasi DoS asimetris; security review #2)
+- [ ] **Cloudflare WAF Rate Limiting** di edge sebagai lapis pertama (rate-limit app = backstop per-proses; security review #1)
+- [ ] **Turnstile**: kunci _allowed hostnames_ widget ke `merriva.id` di dashboard Cloudflare (server sudah cek hostname; ini lapis utama)
+- [ ] **Supabase Auth**: aktifkan _Secure password change_ (re-auth ganti sandi) + review `[auth.rate_limit]`/`[auth.captcha]` project cloud
 
 ## Fase 7 — Uji pra-launch (SPEC §10) — WAJIB sebelum umum
 

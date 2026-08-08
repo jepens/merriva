@@ -35,6 +35,42 @@ function json(body: unknown, status: number): Response {
   });
 }
 
+/**
+ * Baca body sebagai teks dengan CAP BYTE KERAS — batalkan stream begitu melewati
+ * `maxBytes`, jadi TIDAK bergantung pada Content-Length (yang bisa absen pada
+ * body chunked / dipalsukan). Return null bila melebihi batas.
+ */
+async function readBodyCapped(
+  req: Request,
+  maxBytes: number,
+): Promise<string | null> {
+  const reader = req.body?.getReader();
+  if (!reader) {
+    const t = await req.text();
+    return new TextEncoder().encode(t).length > maxBytes ? null : t;
+  }
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const buf = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) {
+    buf.set(c, off);
+    off += c.byteLength;
+  }
+  return new TextDecoder().decode(buf);
+}
+
 export async function POST(req: Request) {
   // Rate limit endpoint publik (backstop flood; jalur mahal `transactiondetail`
   // sudah tergerbang oleh kecocokan order di DB).
@@ -49,15 +85,15 @@ export async function POST(req: Request) {
     });
   }
 
-  // Batasi ukuran body (payload webhook hanya ratusan byte). Content-Length bisa
-  // absen/dipalsukan → guard murah saja; proxy (Cloudflare/Traefik) membatasi hulu.
-  const len = Number(req.headers.get("content-length") ?? 0);
-  if (len > 8192) return json({ ok: false }, 413);
+  // Batasi ukuran body dengan CAP BYTE KERAS (payload webhook hanya ratusan
+  // byte) — dibatasi saat MEMBACA stream, bukan sekadar percaya Content-Length.
+  const raw = await readBodyCapped(req, 8192);
+  if (raw === null) return json({ ok: false }, 413);
 
   // Parse + validasi bentuk payload.
   let body: unknown;
   try {
-    body = await req.json();
+    body = JSON.parse(raw);
   } catch {
     return json({ ok: false }, 400);
   }

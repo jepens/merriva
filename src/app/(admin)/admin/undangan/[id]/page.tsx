@@ -11,6 +11,7 @@ import { isUuid } from "@/lib/id";
 import { isDraftSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { appUrl } from "@/lib/env";
+import { requireAdmin } from "@/server/guards/auth";
 import {
   adminActivateInvitationAction,
   adminChangeOwnerAction,
@@ -46,6 +47,7 @@ export default async function AdminInvitationDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ msg?: string }>;
 }) {
+  await requireAdmin(); // defense-in-depth (page pakai service_role)
   const { id } = await params;
   if (!isUuid(id)) notFound();
   const { msg } = await searchParams;

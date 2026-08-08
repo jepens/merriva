@@ -28,14 +28,65 @@ export const storagePathSchema = z
   )
   .refine((p) => !p.includes(".."), "Path tidak boleh mengandung '..'");
 
-/** Tautan YouTube (fitur Premium; penegakan tier di server, bukan di sini). */
+/**
+ * True bila string TIDAK diawali skema URL berbahaya (`javascript:`/`data:`/
+ * `vbscript:`/`file:`). Semua karakter kontrol/spasi (code ≤ 0x20) dibuang dulu
+ * agar obfuscasi seperti "java script:" / "java\tscript:" tetap terdeteksi.
+ * Dipakai di jalur DRAFT (longgar) supaya autosave tak pernah MENYIMPAN skema
+ * berbahaya meski format URL penuh belum divalidasi (validasi ketat di aktivasi).
+ */
+export function noDangerousUrlScheme(v: string): boolean {
+  const s = Array.from(v)
+    .filter((c) => c.charCodeAt(0) > 0x20)
+    .join("")
+    .toLowerCase();
+  return !/^(javascript|data|vbscript|file):/.test(s);
+}
+
+/** Wajib URL absolut ber-skema https (tolak http/`javascript:`/`data:`/dst). */
+export function httpsUrlSchema(max: number, message = "Tautan harus https") {
+  return z
+    .string()
+    .trim()
+    .max(max)
+    .refine((u) => {
+      try {
+        return new URL(u).protocol === "https:";
+      } catch {
+        return false;
+      }
+    }, message);
+}
+
+/** Host YouTube resmi (dicocokkan EKSAK atas hostname, bukan substring). */
+const YOUTUBE_HOSTS = new Set([
+  "youtube.com",
+  "www.youtube.com",
+  "m.youtube.com",
+  "music.youtube.com",
+  "youtu.be",
+]);
+
+/**
+ * Tautan YouTube (fitur Premium; penegakan tier di server). WAJIB https + host
+ * YouTube resmi via `new URL().hostname` (BUKAN substring — cegah bypass seperti
+ * `javascript:...//youtu.be` atau `https://evil/?x=youtube.com`).
+ */
 export const youtubeUrlSchema = z
-  .url("URL tidak valid")
+  .string()
+  .trim()
   .max(200)
-  .refine(
-    (u) => /(?:youtube\.com|youtu\.be)/i.test(u),
-    "Harus tautan YouTube yang valid",
-  );
+  .refine((u) => {
+    try {
+      const url = new URL(u);
+      return (
+        url.protocol === "https:" &&
+        YOUTUBE_HOSTS.has(url.hostname.toLowerCase())
+      );
+    } catch {
+      return false;
+    }
+  }, "Harus tautan YouTube resmi (https)");
 
 /**
  * Optional berformat (email/URL) yang menerima "" — nilai default input kosong
@@ -113,8 +164,10 @@ export const commonContentFields = {
   quote: quoteSchema.optional(),
   /** Embed YouTube (fitur Premium; tier ditegakkan di server). */
   youtubeUrl: optionalFormat(youtubeUrlSchema),
-  /** Tautan live streaming (fitur Premium — SPEC §2). */
-  livestreamUrl: optionalFormat(z.url("Tautan tidak valid").max(500)),
+  /** Tautan live streaming (fitur Premium — SPEC §2). WAJIB https. */
+  livestreamUrl: optionalFormat(
+    httpsUrlSchema(500, "Tautan live harus URL https yang valid"),
+  ),
   // Factory default: setiap parse dapat array `banks`/`ewallets` SEGAR.
   // `.default(objek)` akan meng-alias referensi array antar-parse (Zod v4
   // shallowClone) → mutasi in-place bocor lintas undangan. (Temuan review M1.2.)

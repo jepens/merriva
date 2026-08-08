@@ -5,7 +5,7 @@ import {
   familyContentSchema,
   weddingContentSchema,
 } from "./categories";
-import { personSchema, storyEntrySchema } from "./shared";
+import { noDangerousUrlScheme, personSchema, storyEntrySchema } from "./shared";
 
 /**
  * Skema DRAFT (longgar) — dipakai saat autosave. Field wajib direlaksasi menjadi
@@ -50,8 +50,20 @@ const draftCommonFields = {
       source: z.string().trim().max(120).optional(),
     })
     .optional(),
-  youtubeUrl: z.string().trim().max(200).optional(),
-  livestreamUrl: z.string().trim().max(500).optional(),
+  // Draft longgar (autosave saat mengetik) TAPI skema berbahaya tetap ditolak
+  // agar tak pernah tersimpan; format https/host penuh divalidasi saat aktivasi.
+  youtubeUrl: z
+    .string()
+    .trim()
+    .max(200)
+    .refine(noDangerousUrlScheme, "Tautan tidak valid")
+    .optional(),
+  livestreamUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine(noDangerousUrlScheme, "Tautan tidak valid")
+    .optional(),
 };
 
 export const weddingDraftSchema = weddingContentSchema.extend({

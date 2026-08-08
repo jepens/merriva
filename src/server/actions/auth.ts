@@ -6,8 +6,11 @@ import { redirect } from "next/navigation";
 import { copy } from "@/lib/copy";
 import { appUrl } from "@/lib/env";
 import { normalizeIndonesianPhone } from "@/lib/phone";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { clientRateKey, getClientIp, staticRateKey } from "@/lib/request-ip";
 import { safeNextPath } from "@/lib/safe-redirect";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { verifyTurnstile } from "@/lib/turnstile";
 import {
   loginSchema,
   registerSchema,
@@ -24,8 +27,9 @@ import { errorState, fieldErrorState, type ActionState } from "./types";
  *  - Google OAuth      → /auth/callback (exchangeCodeForSession)
  *  - reset kata sandi  → /auth/confirm (type=recovery) → /reset-password/ubah
  *
- * TODO(M2): rate limit + Turnstile pada signup/login/reset (anti brute-force &
- * email bombing). Interim: rate-limit bawaan Supabase Auth ([auth.rate_limit]).
+ * Hardening (security review pra-launch): rate-limit per-jaringan pada login/
+ * signup/reset + Turnstile pada signup/reset (anti brute-force & email bombing).
+ * Lapis tambahan di atas rate-limit bawaan Supabase Auth ([auth.rate_limit]).
  */
 
 // --- Register ----------------------------------------------------------------
@@ -41,6 +45,22 @@ export async function signUpAction(
   });
   if (!parsed.success) {
     return fieldErrorState(parsed.error.flatten().fieldErrors);
+  }
+
+  // Rate-limit per-jaringan + Turnstile (anti pembuatan akun massal / bot).
+  if (
+    !checkRateLimit(await clientRateKey("auth-signup"), {
+      max: 5,
+      windowMs: 60_000,
+    }).ok
+  ) {
+    return errorState(copy.auth.rateLimited);
+  }
+  const clientIp = await getClientIp();
+  if (
+    !(await verifyTurnstile(formData.get("turnstile")?.toString(), clientIp))
+  ) {
+    return errorState(copy.auth.turnstileFailed);
   }
 
   const { full_name, email, password, phone } = parsed.data;
@@ -86,6 +106,16 @@ export async function signInAction(
   });
   if (!parsed.success) {
     return fieldErrorState(parsed.error.flatten().fieldErrors);
+  }
+
+  // Rate-limit per-jaringan (anti brute-force kredensial).
+  if (
+    !checkRateLimit(await clientRateKey("auth-signin"), {
+      max: 10,
+      windowMs: 60_000,
+    }).ok
+  ) {
+    return errorState(copy.auth.rateLimited);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -136,10 +166,29 @@ export async function requestPasswordResetAction(
     return fieldErrorState(parsed.error.flatten().fieldErrors);
   }
 
-  const supabase = await createSupabaseServerClient();
-  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${appUrl}/auth/confirm?next=/reset-password/ubah`,
-  });
+  // Rate-limit per-jaringan + per-email (anti email-bombing korban) + Turnstile.
+  // SEMUA kegagalan → sukses generik yang DIAM-DIAM tak mengirim, agar tak
+  // membocorkan keberadaan email maupun status rate-limit (anti-enumerasi).
+  const ipOk = checkRateLimit(await clientRateKey("auth-reset-ip"), {
+    max: 5,
+    windowMs: 60_000,
+  }).ok;
+  const emailOk = checkRateLimit(
+    staticRateKey("auth-reset-email", parsed.data.email.toLowerCase()),
+    { max: 3, windowMs: 900_000 },
+  ).ok;
+  const clientIp = await getClientIp();
+  const human = await verifyTurnstile(
+    formData.get("turnstile")?.toString(),
+    clientIp,
+  );
+
+  if (ipOk && emailOk && human) {
+    const supabase = await createSupabaseServerClient();
+    await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+      redirectTo: `${appUrl}/auth/confirm?next=/reset-password/ubah`,
+    });
+  }
 
   // Selalu sukses generik → hindari enumerasi email terdaftar.
   return { status: "success", message: copy.auth.resetSent };

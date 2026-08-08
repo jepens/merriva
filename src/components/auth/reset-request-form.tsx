@@ -10,6 +10,7 @@ import { requestPasswordResetAction } from "@/server/actions/auth";
 import { idleState } from "@/server/actions/types";
 
 import { FieldError, FormAlert } from "./form-parts";
+import { TurnstileField } from "./turnstile-field";
 
 export function ResetRequestForm() {
   const [state, formAction, pending] = useActionState(
@@ -35,6 +36,8 @@ export function ResetRequestForm() {
         />
         <FieldError errors={fieldErrors?.email} />
       </div>
+
+      <TurnstileField />
 
       <Button type="submit" className="w-full" disabled={pending || done}>
         {copy.auth.resetCta}

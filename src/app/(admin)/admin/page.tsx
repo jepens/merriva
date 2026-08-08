@@ -6,6 +6,7 @@ import { formatEventDateTime } from "@/lib/datetime";
 import { formatIdr } from "@/lib/format";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getAdminMetrics } from "@/server/admin/metrics";
+import { requireAdmin } from "@/server/guards/auth";
 
 export const metadata: Metadata = { title: copy.admin.overview.title };
 
@@ -35,6 +36,7 @@ function Metric({
 
 /** Ringkasan admin (SPEC §4.9): metrik utama + aktivitas admin terakhir. */
 export default async function AdminOverviewPage() {
+  await requireAdmin(); // defense-in-depth di atas guard layout (page pakai service_role)
   const metrics = await getAdminMetrics();
 
   const admin = createSupabaseAdminClient();

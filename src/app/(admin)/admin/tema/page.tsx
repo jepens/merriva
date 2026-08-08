@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { adminUpdateThemeAction } from "@/server/actions/admin-catalog";
+import { requireAdmin } from "@/server/guards/auth";
 import type { InvitationCategory, ThemeTier } from "@/types";
 
 export const metadata: Metadata = { title: copy.admin.themes.title };
@@ -30,6 +31,7 @@ export default async function AdminThemesPage({
 }: {
   searchParams: Promise<{ msg?: string }>;
 }) {
+  await requireAdmin(); // defense-in-depth (page pakai service_role)
   const { msg } = await searchParams;
   const msgText =
     msg && msg in copy.admin.msg

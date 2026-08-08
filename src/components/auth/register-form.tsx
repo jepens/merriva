@@ -10,6 +10,7 @@ import { signUpAction } from "@/server/actions/auth";
 import { idleState } from "@/server/actions/types";
 
 import { FieldError, FormAlert } from "./form-parts";
+import { TurnstileField } from "./turnstile-field";
 
 export function RegisterForm() {
   const [state, formAction, pending] = useActionState(signUpAction, idleState);
@@ -71,6 +72,8 @@ export function RegisterForm() {
         />
         <FieldError errors={fieldErrors?.password} />
       </div>
+
+      <TurnstileField />
 
       <Button type="submit" className="w-full" disabled={pending || done}>
         {copy.auth.registerCta}

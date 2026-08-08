@@ -138,6 +138,18 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Ditolak:** kolom status akun sendiri di `profiles` (duplikasi `banned_until`) · RPC atomik untuk ubah peran (berlebihan utk update satu baris) · mengizinkan suspend admin langsung (risiko admin saling-kunci).
 **Konsekuensi:** ban tidak langsung mencabut sesi aktif (berlaku saat login/refresh berikutnya) — cukup untuk skala MVP. Aksi mengembalikan ke `/admin/pengguna?msg=` tanpa mempertahankan filter/paginasi (kehilangan minor, dapat diterima).
 
+## #20 — 2026-08-08 · Bundel hardening (temuan security review pra-launch)
+**Konteks:** review keamanan pra-launch (5 dimensi, adversarial) → 0 critical/high; inti (webhook, RLS, IDOR, escalation, cron, OAuth) BERSIH. 2 medium + beberapa low/info di anti-abuse & validasi ditutup di kode.
+**Keputusan:**
+1. **Rate-limit per-JARINGAN** (bukan per-IP penuh): `ipNetworkKey` → IPv6 /64, IPv4 /24 (`client-ip.ts`); rotasi alamat dalam satu blok tak lagi melewati plafon. Overflow Map = eviksi BERTAHAP (sapu kadaluarsa → buang tertua) menggantikan `buckets.clear()` total (yang menolkan counter semua pengunjung).
+2. **Rate-limit + Turnstile pada auth**: login/signup/reset di-rate-limit per-jaringan (reset juga per-email, anti bombing → gagal = sukses generik diam-diam, jaga anti-enumerasi); Turnstile pada signup/reset (`TurnstileField`, no-op tanpa site key). Menutup TODO(M2). Slug-check juga di-rate-limit.
+3. **Validasi URL**: `youtubeUrl` wajib https + host YouTube resmi via `new URL().hostname` (bukan substring); `livestreamUrl` wajib https (`httpsUrlSchema`); jalur draft menolak skema berbahaya (`noDangerousUrlScheme`, buang whitespace/kontrol dulu) → `javascript:`/`data:`/`file:` tak pernah tersimpan (stored-XSS/SSRF laten ditutup di batas validasi).
+4. **Turnstile hostname**: `verifyTurnstile` memvalidasi `hostname` respons siteverify terhadap host aplikasi (`NEXT_PUBLIC_APP_URL`) — token dari origin pihak ketiga ditolak.
+5. **Webhook byte cap KERAS**: baca body via stream + hitung byte (batalkan >8KB), tak lagi hanya percaya `Content-Length` (bisa absen pada chunked).
+6. **`requireAdmin()` di TIAP page admin** (bukan hanya guard layout) — tutup staleness peran saat soft-nav. Migrasi `20260808130000` mencabut DEFAULT PRIVILEGES anon-SELECT & authenticated-DML untuk tabel MASA DEPAN (footgun RLS-by-default; tabel existing tak terpengaruh — grant eksplisit).
+**Alasan:** transformasi provably-setara/non-destruktif; memperkuat lapis anti-abuse & validasi tanpa mengubah perilaku sah. Diverifikasi: 332 test hijau + smoke login/admin/auth.
+**Sisa = OPS (LAUNCH-CHECKLIST):** Cloudflare Cache Rule `/api/og/*` (path-only) + WAF rate-limit edge (mitigasi DoS OG), kunci allowed-hostnames widget Turnstile, toggle "Secure password change" + Leaked-Password Protection, review `[auth.rate_limit]/[auth.captcha]` cloud.
+
 ---
 
 ## Template entri baru
