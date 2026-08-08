@@ -30,6 +30,7 @@ uji lapangan). Checklist ini mengurutkannya dari nol → go-live.
 - [ ] **Resend**: verifikasi domain (SPF/DKIM); `RESEND_API_KEY` + `EMAIL_FROM` (alamat di domain terverifikasi)
 - [ ] **Turnstile**: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`
 - [ ] **Email verifikasi signup** aktif via Supabase Auth (bawaan). _(Opsional: arahkan SMTP Supabase Auth → Resend agar email verifikasi seragam dengan kuitansi/reminder.)_
+- [ ] **Leaked Password Protection** aktif (Supabase → Auth → Policies) — tolak password yang pernah bocor (HaveIBeenPwned). _Temuan security advisor; toggle dashboard, bukan kode._
 
 ## Fase 3 — Cron (Easypanel scheduled jobs)
 
