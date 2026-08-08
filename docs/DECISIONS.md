@@ -128,6 +128,16 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Ditolak:** seed berkas audio royalty-free di repo (git bukan tempat media + verifikasi lisensi tak bisa dijamin dari sini) · bucket `songs` terpisah (menyalahi desain bucket-tunggal + menyulitkan driver R2) · upload MP3 oleh klien (tetap ditolak per #8 — hanya admin).
 **Konsekuensi:** pustaka mulai KOSONG di production → pemilik wajib mengunggah trek berlisensi lebih dulu agar fitur musik terlihat (lihat `docs/MUSIC-LIBRARY.md`). Batas bucket naik ke 8 MB (backstop foto melonggar; batas ketat foto tetap di aplikasi).
 
+## #19 — 2026-08-08 · Kelola user admin: suspend akun = ban GoTrue; safeguard anti-lockout
+**Konteks:** `/admin/pengguna` semula hanya direktori/lookup (audit M4 menandai "kelola user" paling tipis). Dilengkapi mutasi per-user: ubah peran + tangguhkan akun.
+**Keputusan:**
+1. **Ubah peran** (client↔admin) = update `profiles.role` via service_role + `admin_logs` (pola admin-catalog, bukan RPC — mutasi satu baris, audit best-effort). No-op (peran sama) tak menulis audit.
+2. **Tangguhkan akun** = **ban GoTrue** (`auth.admin.updateUserById(id,{ban_duration})`, `banned_until`), memblokir login/refresh. Sengaja BERBEDA dari `admin_suspend_invitation` (moderasi konten undangan) — ini tingkat akun. Status ban dibaca dari `banned_until` (helper `isUserBanned` di luar render → aturan kemurnian React compiler).
+3. **Safeguard anti-lockout**: admin tak bisa mengubah/menangguhkan akun SENDIRI (baris sendiri render "Anda", dan action menolak `userId === adminUser.id`); akun ber-peran admin harus diturunkan ke client DULU sebelum bisa ditangguhkan. Karena admin tak bisa menurunkan dirinya sendiri → selalu tersisa ≥1 admin.
+**Alasan:** ban GoTrue = mekanisme suspend akun bawaan (tak perlu kolom/enum baru di `profiles`); safeguard mencegah admin mengunci diri/sesama admin secara tak sengaja.
+**Ditolak:** kolom status akun sendiri di `profiles` (duplikasi `banned_until`) · RPC atomik untuk ubah peran (berlebihan utk update satu baris) · mengizinkan suspend admin langsung (risiko admin saling-kunci).
+**Konsekuensi:** ban tidak langsung mencabut sesi aktif (berlaku saat login/refresh berikutnya) — cukup untuk skala MVP. Aksi mengembalikan ke `/admin/pengguna?msg=` tanpa mempertahankan filter/paginasi (kehilangan minor, dapat diterima).
+
 ---
 
 ## Template entri baru
