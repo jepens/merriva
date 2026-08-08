@@ -23,6 +23,11 @@ export const adminChangeOwnerSchema = z.object({
   newUserId: z.string().uuid(),
 });
 
+/** Ubah peran pengguna (SPEC §4.9 "kelola user"). Enum selaras `profile_role`. */
+export const adminUserRoleSchema = z.object({
+  role: z.enum(["client", "admin"]),
+});
+
 const CATEGORY_VALUES = ["wedding", "corporate", "family"] as const;
 
 /**
