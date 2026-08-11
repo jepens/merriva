@@ -1,6 +1,6 @@
 /**
  * Literal type domain bersama, selaras dengan enum di DATA-MODEL.md.
- * Tipe struktur konten per kategori (Zod-inferred) menyusul di M1.
+ * Tipe struktur konten per kategori (Zod-inferred) ada di `lib/validation/content`.
  */
 
 export type ProfileRole = "client" | "admin";

@@ -13,6 +13,8 @@ import {
   thumbPath,
   toMediaView,
 } from "@/lib/media";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { clientRateKey } from "@/lib/request-ip";
 import { getStorage } from "@/lib/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { InvitationMediaView } from "@/types/invitation";
@@ -47,7 +49,7 @@ function sanitizeDimension(value: FormDataEntryValue | null): number | null {
  * → validasi 2 varian WebP → PENEGAKAN LIMIT PAKET di server (bukan hanya UI) →
  * unggah via lib/storage → INSERT baris `media` (RLS owns_invitation) →
  * revalidate. Server TIDAK memproses gambar; hanya memvalidasi tipe & ukuran.
- * TODO(M2): rate-limit endpoint ini.
+ * Rate-limit per-jaringan (defense-in-depth: unggah berulang = beban storage).
  */
 export async function uploadGalleryPhotoAction(
   invitationId: string,
@@ -64,6 +66,17 @@ export async function uploadGalleryPhotoAction(
       message: copy.auth.genericAuthError,
     };
   if (!isUuid(invitationId)) return { status: "error", reason: "invalid" };
+
+  // Batas paket (maks 20 foto) ditegakkan atomik di DB; ini plafon per-jaringan
+  // untuk meredam unggah berulang (retry/abuse) yang membebani storage.
+  if (
+    !checkRateLimit(await clientRateKey("media-upload"), {
+      max: 40,
+      windowMs: 60_000,
+    }).ok
+  ) {
+    return { status: "error", message: copy.auth.rateLimited };
+  }
 
   const display = formData.get("display");
   const thumb = formData.get("thumb");
@@ -165,6 +178,15 @@ export async function deleteGalleryPhotoAction(
   } = await supabase.auth.getUser();
   if (!user) return { status: "error", message: copy.auth.genericAuthError };
   if (!isUuid(invitationId) || !isUuid(mediaId)) return { status: "error" };
+
+  if (
+    !checkRateLimit(await clientRateKey("media-delete"), {
+      max: 60,
+      windowMs: 60_000,
+    }).ok
+  ) {
+    return { status: "error", message: copy.auth.rateLimited };
+  }
 
   const { data: row } = await supabase
     .from("media")

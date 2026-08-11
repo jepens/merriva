@@ -20,7 +20,7 @@ import {
  * rate limit per-IP → Turnstile → cek undangan AKTIF. Baca dinding juga via
  * service-role dengan filter eksplisit: hanya `is_approved && !is_hidden` +
  * ada pesan; HANYA nama+pesan (tak pernah attendance/pax/gift/kontak).
- * TODO(M2.2b): UI moderasi (sembunyikan/setujui) + konfirmasi amplop.
+ * UI moderasi (sembunyikan/setujui) & konfirmasi amplop: halaman `/ucapan`.
  */
 
 const RSVP_LIMIT = { max: 5, windowMs: 60_000 };

@@ -343,9 +343,6 @@ export const copy = {
     category: "Jenis acara",
     backToDashboard: "Kembali ke dashboard",
     notFound: "Undangan tidak ditemukan.",
-    unsupportedCategory:
-      "Editor untuk kategori ini segera hadir. Saat ini tersedia untuk pernikahan.",
-    stepSoon: "Bagian ini hadir pada tahap berikutnya.",
     slug: {
       label: "Alamat undangan",
       prefix: "merriva.id/",
@@ -806,6 +803,9 @@ export const copy = {
       colMethod: "Metode",
       colCreated: "Dibuat",
       colPaidAt: "Dibayar",
+      colNotification: "Notifikasi",
+      viewRaw: "Lihat payload",
+      rawNone: "—",
     },
     users: {
       title: "Pengguna",

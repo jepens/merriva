@@ -70,6 +70,7 @@ const fontsPromise: Promise<[Buffer, Buffer] | null> = Promise.all([
 interface OgFields {
   kicker: string;
   names: { groom: string; bride: string } | null;
+  eventName: string | null;
   dateLabel: string | null;
 }
 
@@ -103,8 +104,8 @@ async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
 
   const content = parseContentForRender(inv.content, inv.category);
   const c = copy.public.cover;
-  // Non-wedding: names=null → fallback merek. Tak terjangkau di M1 (belum ada
-  // tema/aktivasi non-wedding); label acara khusus menyusul saat kategori itu rilis.
+  // Wedding: pasangan nama (skrip). Non-wedding (corporate/family): nama acara —
+  // `eventName` wajib di skema kategori, jadi selalu ada untuk undangan aktif.
   const names =
     content.category === "wedding"
       ? {
@@ -116,6 +117,10 @@ async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
           ),
         }
       : null;
+  const eventName =
+    content.category === "wedding"
+      ? null
+      : cap(content.eventName || copy.brand.name, 60);
 
   const tz =
     settingsSchema.safeParse(inv.settings).data?.timezone ?? "Asia/Jakarta";
@@ -140,6 +145,7 @@ async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
   return {
     kicker: names ? c.weddingKicker : c.defaultKicker,
     names,
+    eventName,
     dateLabel,
   };
 }
@@ -178,7 +184,7 @@ export async function GET(
 
   const title = fields.names
     ? `${fields.names.groom} & ${fields.names.bride}`
-    : copy.brand.name;
+    : (fields.eventName ?? copy.brand.name);
   const kicker = fields.kicker;
   const useScript = Boolean(fields.names);
   const dateLabel = fields.dateLabel;

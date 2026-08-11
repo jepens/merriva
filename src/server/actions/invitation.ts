@@ -186,7 +186,7 @@ export type SlugSaveResult =
  * keunikan LINTAS-pemilik via admin client (RLS SELECT owner-only tak dapat
  * melihat slug pemilik lain). Hanya membaca kolom `id` → tak membocorkan data;
  * slug memang alamat publik. Guard keunikan sebenarnya adalah constraint UNIQUE
- * saat simpan — ini murni untuk UX. TODO(M2): rate-limit endpoint ini.
+ * saat simpan — ini murni untuk UX. Di-rate-limit per-jaringan (lihat di bawah).
  */
 export async function checkSlugAvailabilityAction(
   invitationId: string,

@@ -24,6 +24,7 @@ interface Row {
   payment_method: string | null;
   created_at: string;
   paid_at: string | null;
+  raw_notification: unknown;
   invitations: { id: string; slug: string } | null;
   profiles: { full_name: string | null } | null;
 }
@@ -46,7 +47,7 @@ export default async function AdminOrdersPage({
   let query = admin
     .from("orders")
     .select(
-      "id, order_code, status, amount_idr, payment_method, created_at, paid_at, invitations(id, slug), profiles(full_name)",
+      "id, order_code, status, amount_idr, payment_method, created_at, paid_at, raw_notification, invitations(id, slug), profiles(full_name)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -110,13 +111,14 @@ export default async function AdminOrdersPage({
                 <th className="px-4 py-2 font-medium">{c.colInvitation}</th>
                 <th className="px-4 py-2 font-medium">{c.colOwner}</th>
                 <th className="px-4 py-2 font-medium">{c.colCreated}</th>
+                <th className="px-4 py-2 font-medium">{c.colNotification}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="text-muted-foreground px-4 py-6 text-center"
                   >
                     {copy.admin.common.empty}
@@ -146,6 +148,20 @@ export default async function AdminOrdersPage({
                       {r.profiles?.full_name ?? copy.admin.common.dash}
                     </td>
                     <td className="px-4 py-2">{wibDate(r.created_at)}</td>
+                    <td className="px-4 py-2">
+                      {r.raw_notification ? (
+                        <details>
+                          <summary className="text-muted-foreground cursor-pointer text-xs hover:underline">
+                            {c.viewRaw}
+                          </summary>
+                          <pre className="bg-muted/50 mt-2 max-w-xs overflow-x-auto rounded p-2 text-[11px] leading-snug break-all whitespace-pre-wrap">
+                            {JSON.stringify(r.raw_notification, null, 2)}
+                          </pre>
+                        </details>
+                      ) : (
+                        c.rawNone
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
