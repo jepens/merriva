@@ -54,3 +54,10 @@ yarn-error.log*
 
 # konfigurasi MCP lokal (berisi token/secret) — jangan pernah commit
 .mcp.json
+
+# handoff/ audio biner — arsip & deliverable besar (WAV master 82 MB + MP3 11 MB).
+# JANGAN bloat git history: history menyimpan blob permanen. Sumber kebenaran
+# runtime = Supabase storage (sudah di-seed); library bisa di-regenerate dari
+# handoff/music/generator/make_music.py (yang tetap di-commit).
+handoff/music/wav/
+handoff/music/mp3/

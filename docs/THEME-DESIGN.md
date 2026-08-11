@@ -1,6 +1,6 @@
 # THEME-DESIGN — Sistem Desain & Motion Tema Merriva
 
-**Versi:** 1.1 — 30 Juli 2026 · Acuan visual hidup: **6 prototipe di `prototypes/`** (buka di browser/HP; parameter uji: `?to=Nama+Tamu`, `?rich=1` untuk memaksa efek penuh di perangkat lemah)
+**Versi:** 1.2 — 31 Juli 2026 · Acuan visual hidup: **10 prototipe di `prototypes/`** (buka di browser/HP; parameter uji: `?to=Nama+Tamu`, `?rich=1` untuk memaksa efek penuh di perangkat lemah)
 **Konteks:** hasil evaluasi tema pertama (terlalu kaku/template) + riset referensi award-winning. Keputusan terkait: `DECISIONS.md` #10.
 
 ---
@@ -35,6 +35,17 @@
 **Prototipe acuan (semua diverifikasi visual, nol error konsol):** `eternal-rose-signature.html` (Editorial/Signature) · `midnight-frame-story.html` (Cinematic/Story) · `flora-atelier-story.html` (Ilustratif/Story) · `prisma-signature.html` (Eksperimental corporate/Signature) · `family-warm-craft.html` (keluarga/Craft) · `mono-universal-craft.html` (universal/Craft).
 
 Catatan tier yang dibuktikan prototipe: `family-warm` dan `mono-universal` sengaja dibangun **tanpa GSAP/Lenis/library apa pun** (murni CSS + IntersectionObserver ±25 baris) sebagai bukti tier Craft; `prisma` dan `eternal-rose` memuat shader hanya di perangkat mampu dengan fallback gradient CSS otomatis; `midnight-frame` dan `flora-atelier` memakai GSAP+Lenis tanpa WebGL (tier Story). Setiap prototipe juga mendemokan kategori acara berbeda: 3 pernikahan, corporate (gathering), keluarga (khitanan), dan universal (pesta perak).
+
+## 3b. Gelombang 2 — 31 Juli 2026 (4 tema tambahan, semua diverifikasi visual)
+
+| Prototipe | Arah & riset dasarnya | Target slug | Tier | Font |
+|---|---|---|---|---|
+| `barakah-story.html` | **Islami elegan** — lengkung mihrab (ogee), bintang segi-8/khatam yang menggambar diri, zamrud+emas+pasir (palet catalog-meta barakah). Demo: akad + walimatul 'ursy | `barakah` (upgrade) | Story | Marcellus + Figtree |
+| `meridian-story.html` | **Art Deco gala** — sunburst menggambar diri, bingkai bertingkat + sudut emas, shimmer emas CSS, "Programme" bernomor romawi (palet catalog-meta meridian) | `meridian` (upgrade) | Story | Italiana + Jost |
+| `lumina-craft.html` | **Soft film / Korean-minimal** — album tipis, surat pendek, bingkai film, Gowun Batang (serif buku Korea ber-Latin), ruang napas ekstrem (palet catalog-meta lumina) | `lumina` (upgrade) | Craft (tanpa library/canvas) | Gowun Batang + Karla |
+| `kirana-story.html` | **Jawa modern** — riset budaya: motif **truntum** (cinta bersemi; motif restu — BUKAN parang yang dilarang di pernikahan Jawa), gunungan line-art, palet sogan, rangkaian termasuk **Upacara Panggih** + catatan edukatifnya, istilah krama (katur dhumateng, rawuh) | **`kirana` (TEMA BARU)** | Story | Cormorant Upright + Figtree |
+
+Dengan gelombang 2, seluruh 9 tema existing aplikasi punya acuan visual + 1 tema baru (`kirana`) untuk segmen adat yang belum tergarap kompetitor.
 
 ## 4. Spesifikasi Redesign `eternal-rose` (benchmark)
 

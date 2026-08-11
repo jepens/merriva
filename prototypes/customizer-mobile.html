@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="id" data-font="a">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Kustomisasi Undangan — Prototipe Editor Mobile · Merriva</title>
+<meta name="description" content="Prototipe UX 'kustomisasi terpandu' Merriva: live preview + bottom sheet, mobile-first. Acuan untuk docs/CUSTOMIZER-SPEC.md." />
+<!-- ============================================================
+  MERRIVA · PROTOTIPE "CUSTOMIZER" — KUSTOMISASI TERPANDU (JALUR A)
+  Demo keputusan DECISIONS #12: pembeli mengkustom undangan dari HP
+  TANPA kanvas drag-and-drop — melalui token & opsi terkurasi:
+   • Preset warna per tema + custom accent (Premium) dengan
+     PENJAGA KONTRAS WCAG otomatis (warna di-snap ke shade aman)
+   • Pasangan font kurasi (3 pilihan)
+   • Urutan section (drag-handle + tombol panah) & on/off
+   • Gaya per-section (galeri: strip/grid/polaroid), motion, corak
+   • Live preview = undangan sungguhan; perubahan instan (CSS vars)
+   • Tombol </> menunjukkan JSON settings — bentuk data untuk spec
+============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Instrument+Sans:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500&family=Marcellus&family=Figtree:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  /* ================= TOKEN (dikendalikan editor) ================= */
+  :root{
+    --acc:#B76E79;            /* aksen — bisa preset/custom */
+    --acc-text:#9d5560;       /* aksen versi aman utk teks (hasil penjaga kontras) */
+    --paper:#F6EFE7; --ink:#241A1E;
+    --muted:rgba(36,26,30,.62); --hairline:rgba(36,26,30,.14);
+    --f-disp:"Fraunces",Georgia,serif; --f-body:"Instrument Sans",system-ui,sans-serif;
+    --ui-bg:#141117; --ui-panel:#1E1A22; --ui-ink:#F2EDF2; --ui-muted:rgba(242,237,242,.6);
+    --ui-line:rgba(242,237,242,.14); --ui-acc:#C9A5FF;
+  }
+  html[data-font="b"]{--f-disp:"Cormorant Garamond",Georgia,serif;--f-body:"Jost",system-ui,sans-serif}
+  html[data-font="c"]{--f-disp:"Marcellus",Georgia,serif;--f-body:"Figtree",system-ui,sans-serif}
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--ui-bg);font-family:var(--f-body);-webkit-font-smoothing:antialiased}
+
+  /* ================= PREVIEW (undangan hidup) ================= */
+  .preview{max-width:480px;margin:0 auto;background:var(--paper);color:var(--ink);
+    min-height:100dvh;padding-bottom:280px;display:flex;flex-direction:column}
+  .grain-on .preview{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E")}
+  section{padding:56px 24px;order:var(--ord,0)}
+  section[hidden]{display:none}
+  .center{text-align:center}
+  .eyebrow{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;font-weight:600;color:var(--acc-text)}
+
+  /* Reveal ringan (motion "penuh") */
+  .rv{opacity:1;transform:none;transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1)}
+  .motion-full .rv{opacity:0;transform:translateY(16px)}
+  .motion-full .rv.in{opacity:1;transform:none}
+
+  /* Hero */
+  .hero .mono{font-family:var(--f-disp);font-style:italic;font-size:14px;color:var(--acc-text)}
+  .hero h1{font-family:var(--f-disp);font-weight:400;font-size:clamp(38px,11vw,52px);line-height:1.06;margin:14px 0 6px}
+  .hero h1 em{font-style:italic;color:var(--acc-text)}
+  .hero .date{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-top:10px}
+  .hero .rule{width:52px;height:2px;background:var(--acc);margin:18px auto 0}
+
+  /* Quote */
+  .quote blockquote{font-family:var(--f-disp);font-style:italic;font-size:16.5px;line-height:1.85;max-width:310px;margin:0 auto;color:rgba(36,26,30,.8)}
+  .quote cite{display:block;margin-top:14px;font-style:normal;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--acc-text)}
+
+  /* Couple */
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+  .p .ph{aspect-ratio:3/3.8;border-radius:999px 999px 16px 16px;display:grid;place-items:center;
+    font-family:var(--f-disp);font-style:italic;font-size:40px;color:#fff;
+    background:linear-gradient(160deg,color-mix(in srgb,var(--acc) 70%,#fff 15%),color-mix(in srgb,var(--acc) 55%,#000 35%))}
+  .p h3{font-family:var(--f-disp);font-size:19px;margin-top:12px;text-align:center}
+  .p small{display:block;text-align:center;font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.6}
+
+  /* Countdown */
+  .cd{display:grid;grid-template-columns:repeat(4,1fr);max-width:340px;margin:20px auto 0;border-block:1px solid var(--hairline)}
+  .cd div{text-align:center;padding:14px 2px;border-left:1px solid var(--hairline)}
+  .cd div:first-child{border-left:0}
+  .cd b{font-family:var(--f-disp);font-weight:400;font-size:24px;font-variant-numeric:tabular-nums;display:block}
+  .cd span{font-size:8px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+
+  /* Galeri — 3 gaya */
+  .gal{margin-top:22px}
+  .gal .item{position:relative;overflow:hidden;border-radius:14px}
+  .gal .item i{display:grid;place-items:center;aspect-ratio:3/4;font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.85);font-style:normal}
+  .gal .item:nth-child(1) i{background:color-mix(in srgb,var(--acc) 80%,#2a1518 40%)}
+  .gal .item:nth-child(2) i{background:color-mix(in srgb,var(--acc) 55%,#241a1e 55%)}
+  .gal .item:nth-child(3) i{background:color-mix(in srgb,var(--acc) 65%,#6b4a52 45%)}
+  .gal .item:nth-child(4) i{background:color-mix(in srgb,var(--acc) 45%,#171114 60%)}
+  [data-gallery="strip"] .gal{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:4px}
+  [data-gallery="strip"] .gal::-webkit-scrollbar{display:none}
+  [data-gallery="strip"] .gal .item{flex:0 0 58%;scroll-snap-align:center}
+  [data-gallery="grid"] .gal{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  [data-gallery="grid"] .gal .item i{aspect-ratio:1}
+  [data-gallery="polaroid"] .gal{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  [data-gallery="polaroid"] .gal .item{background:#fff;padding:7px 7px 20px;border-radius:6px;
+    box-shadow:0 12px 24px -16px rgba(36,26,30,.4);border:1px solid var(--hairline)}
+  [data-gallery="polaroid"] .gal .item:nth-child(odd){transform:rotate(-2deg)}
+  [data-gallery="polaroid"] .gal .item:nth-child(even){transform:rotate(2deg)}
+  [data-gallery="polaroid"] .gal .item i{border-radius:3px;aspect-ratio:1}
+
+  /* Jadwal */
+  .ev{border:1px solid var(--hairline);border-radius:16px;padding:20px;margin-top:18px;background:rgba(255,255,255,.5)}
+  .ev h4{font-family:var(--f-disp);font-size:21px}
+  .ev p{font-size:12.5px;color:var(--muted);line-height:1.8;margin-top:6px}
+  .ev .btn{display:inline-block;margin-top:12px;font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    background:var(--acc);color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none}
+
+  /* RSVP mini */
+  .rsvp .card{background:#fff;border:1px solid var(--hairline);border-radius:16px;padding:20px;margin-top:18px}
+  .rsvp input{width:100%;border:1px solid var(--hairline);border-radius:10px;padding:11px 12px;font-family:var(--f-body);font-size:13.5px;margin-bottom:10px;background:var(--paper);color:var(--ink)}
+  .rsvp .send{width:100%;border:0;background:var(--acc);color:#fff;padding:12px;border-radius:999px;font-family:var(--f-body);font-weight:600;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+
+  footer.fin{padding:40px 24px 60px;text-align:center;order:99}
+  footer.fin .m{font-family:var(--f-disp);font-style:italic;font-size:22px;color:var(--acc-text)}
+  footer.fin p{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+
+  /* ================= EDITOR (bottom sheet) ================= */
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:50;max-width:480px;margin:0 auto;
+    background:var(--ui-panel);color:var(--ui-ink);border-radius:20px 20px 0 0;
+    box-shadow:0 -18px 50px rgba(0,0,0,.5);transform:translateY(calc(100% - 118px));transition:transform .38s cubic-bezier(.22,1,.36,1)}
+  .sheet.open{transform:translateY(0)}
+  .sheet-head{padding:10px 16px 0;cursor:pointer;user-select:none}
+  .grab{width:40px;height:4px;border-radius:99px;background:var(--ui-line);margin:0 auto 10px}
+  .tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:10px}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;font-size:12px;font-weight:600;letter-spacing:.04em;padding:10px 16px;border-radius:999px;
+    border:1px solid var(--ui-line);color:var(--ui-muted);background:transparent;cursor:pointer;font-family:inherit}
+  .tab.on{background:var(--ui-ink);color:#17131b;border-color:var(--ui-ink)}
+  .sheet-body{height:300px;overflow-y:auto;padding:6px 16px 12px;border-top:1px solid var(--ui-line)}
+  .pane{display:none}
+  .pane.on{display:block}
+  .grp{margin:14px 0 4px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ui-muted);font-weight:600}
+
+  /* Warna */
+  .swatches{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+  .sw{width:52px;height:52px;border-radius:16px;border:2px solid transparent;cursor:pointer;position:relative;flex-shrink:0}
+  .sw.on{border-color:var(--ui-ink)}
+  .sw i{position:absolute;inset:6px;border-radius:10px}
+  .sw small{position:absolute;left:50%;transform:translateX(-50%);bottom:-18px;font-size:9px;color:var(--ui-muted);white-space:nowrap}
+  .custom-row{display:flex;align-items:center;gap:12px;margin-top:30px;padding:12px;border:1px dashed var(--ui-line);border-radius:14px}
+  .custom-row input[type=color]{width:44px;height:44px;border:0;border-radius:12px;background:none;padding:0;cursor:pointer}
+  .custom-row .lbl{font-size:12.5px;font-weight:600}
+  .custom-row .lbl small{display:block;font-weight:400;font-size:10.5px;color:var(--ui-muted);margin-top:2px}
+  .badge{font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;background:var(--ui-acc);color:#1a1040;
+    border-radius:99px;padding:4px 8px;margin-left:auto;flex-shrink:0}
+  .guard-note{display:none;margin-top:10px;font-size:11px;line-height:1.6;color:var(--ui-muted);
+    background:rgba(201,165,255,.1);border-left:2px solid var(--ui-acc);padding:8px 10px;border-radius:0 8px 8px 0}
+  .guard-note.show{display:block}
+  .guard-note b{color:var(--ui-ink)}
+  .chipmini{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;margin:0 2px}
+
+  /* Font */
+  .fonts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+  .fcard{border:1px solid var(--ui-line);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;background:transparent;color:var(--ui-ink);font-family:inherit}
+  .fcard.on{border-color:var(--ui-acc);background:rgba(201,165,255,.08)}
+  .fcard .ag{font-size:26px;line-height:1}
+  .fcard .ag.fa{font-family:"Fraunces",serif;font-style:italic}
+  .fcard .ag.fb{font-family:"Cormorant Garamond",serif;font-style:italic}
+  .fcard .ag.fc{font-family:"Marcellus",serif}
+  .fcard small{display:block;margin-top:8px;font-size:9.5px;color:var(--ui-muted);line-height:1.5}
+
+  /* Bagian (reorder) */
+  .seclist{margin-top:10px}
+  .secrow{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid var(--ui-line);touch-action:none}
+  .secrow.dragging{opacity:.5;background:rgba(201,165,255,.08);border-radius:10px}
+  .secrow .handle{cursor:grab;color:var(--ui-muted);font-size:16px;padding:4px 6px;flex-shrink:0}
+  .secrow .nm{font-size:13.5px;font-weight:600;flex:1}
+  .secrow .mv{display:flex;gap:4px}
+  .secrow .mv button{width:30px;height:30px;border-radius:9px;border:1px solid var(--ui-line);background:transparent;color:var(--ui-ink);cursor:pointer;font-size:13px}
+  .switch{position:relative;width:42px;height:24px;flex-shrink:0}
+  .switch input{opacity:0;width:100%;height:100%;position:absolute;cursor:pointer;z-index:2}
+  .switch i{position:absolute;inset:0;border-radius:99px;background:var(--ui-line);transition:.25s}
+  .switch i::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.25s}
+  .switch input:checked + i{background:var(--ui-acc)}
+  .switch input:checked + i::after{transform:translateX(18px)}
+
+  /* Gaya */
+  .seg{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .seg button{font-size:12px;font-weight:600;padding:10px 16px;border-radius:999px;border:1px solid var(--ui-line);
+    background:transparent;color:var(--ui-muted);cursor:pointer;font-family:inherit}
+  .seg button.on{background:var(--ui-ink);color:#17131b;border-color:var(--ui-ink)}
+
+  /* Footer sheet */
+  .sheet-foot{display:flex;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--ui-line)}
+  .btn-ghost{flex:1;border:1px solid var(--ui-line);background:transparent;color:var(--ui-ink);border-radius:12px;padding:13px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn-save{flex:2;border:0;background:var(--ui-acc);color:#1a1040;border-radius:12px;padding:13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .btn-json{border:1px solid var(--ui-line);background:transparent;color:var(--ui-muted);border-radius:12px;padding:13px 14px;font-size:12px;cursor:pointer;font-family:ui-monospace,monospace}
+
+  .toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:150px;z-index:60;background:#0e0b11;color:#fff;
+    font-size:12.5px;padding:12px 18px;border-radius:12px;opacity:0;pointer-events:none;transition:.35s;border:1px solid var(--ui-line);max-width:86vw}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .json-modal{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6);display:none;place-items:center;padding:20px}
+  .json-modal.show{display:grid}
+  .json-box{background:#0e0b11;color:#C9F2D0;border:1px solid var(--ui-line);border-radius:14px;padding:16px;max-width:420px;width:100%;max-height:70vh;overflow:auto}
+  .json-box pre{font-family:ui-monospace,monospace;font-size:11px;line-height:1.7;white-space:pre-wrap}
+  .json-box .close{margin-top:12px;width:100%;border:1px solid var(--ui-line);background:transparent;color:#fff;border-radius:10px;padding:11px;cursor:pointer;font-family:inherit}
+  .proto-tag{position:fixed;left:14px;top:12px;z-index:70;font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+    color:#fff;background:rgba(14,11,17,.75);border:1px solid var(--ui-line);padding:7px 11px;border-radius:999px;backdrop-filter:blur(6px)}
+  @media (prefers-reduced-motion:reduce){.rv{transition:none}}
+</style>
+</head>
+<body class="grain-on motion-full" data-gallery="strip">
+<div class="proto-tag">Merriva · Customizer (Prototipe)</div>
+
+<!-- ================= PREVIEW: undangan hidup ================= -->
+<main class="preview" id="preview">
+  <section class="hero center" data-sec="hero">
+    <div class="rv"><div class="mono">B ♥ R</div></div>
+    <h1><span class="rv">The Wedding of</span><br/><em class="rv">Bima &amp; Rina</em></h1>
+    <div class="date rv">Minggu · 08 November 2026</div>
+    <div class="rule rv"></div>
+  </section>
+
+  <section class="quote center" data-sec="quote">
+    <blockquote class="rv">“Dan di antara tanda-tanda kebesaran-Nya ialah Dia menciptakan pasangan-pasangan untukmu.”</blockquote>
+    <cite class="rv">Q.S. Ar-Rum · 21</cite>
+  </section>
+
+  <section data-sec="couple">
+    <div class="center"><span class="eyebrow rv">Kedua Mempelai</span></div>
+    <div class="pair">
+      <div class="p rv"><div class="ph">B</div><h3>Bima Aditya</h3><small>Putra Bpk. Hartono<br/>&amp; Ibu Sri Lestari</small></div>
+      <div class="p rv"><div class="ph">R</div><h3>Rina Maheswari</h3><small>Putri Bpk. Agus<br/>&amp; Ibu Dewi</small></div>
+    </div>
+  </section>
+
+  <section class="center" data-sec="countdown">
+    <span class="eyebrow rv">Menghitung Hari</span>
+    <div class="cd rv">
+      <div><b id="cdD">–</b><span>Hari</span></div>
+      <div><b id="cdH">–</b><span>Jam</span></div>
+      <div><b id="cdM">–</b><span>Menit</span></div>
+      <div><b id="cdS">–</b><span>Detik</span></div>
+    </div>
+  </section>
+
+  <section data-sec="gallery">
+    <div class="center"><span class="eyebrow rv">Galeri</span></div>
+    <div class="gal rv">
+      <figure class="item"><i>Foto 01</i></figure>
+      <figure class="item"><i>Foto 02</i></figure>
+      <figure class="item"><i>Foto 03</i></figure>
+      <figure class="item"><i>Foto 04</i></figure>
+    </div>
+  </section>
+
+  <section data-sec="schedule">
+    <div class="center"><span class="eyebrow rv">Rangkaian Acara</span></div>
+    <div class="ev rv"><h4>Akad Nikah</h4><p>Minggu, 08 Nov 2026 · 08.00 WIB<br/>Masjid Agung Al-Azhar</p><a class="btn" href="#" onclick="return false">Petunjuk Arah</a></div>
+    <div class="ev rv"><h4>Resepsi</h4><p>Minggu, 08 Nov 2026 · 11.00 WIB<br/>The Glass House, Jakarta</p><a class="btn" href="#" onclick="return false">Petunjuk Arah</a></div>
+  </section>
+
+  <section class="rsvp" data-sec="rsvp">
+    <div class="center"><span class="eyebrow rv">Konfirmasi Kehadiran</span></div>
+    <div class="card rv">
+      <input value="Bapak/Ibu Tamu Undangan" readonly/>
+      <input placeholder="Tulis ucapan &amp; doa…"/>
+      <button class="send" onclick="return false">Kirim</button>
+    </div>
+  </section>
+
+  <footer class="fin">
+    <div class="m">Bima &amp; Rina</div>
+    <p>Dibuat dengan Merriva</p>
+  </footer>
+</main>
+
+<!-- ================= EDITOR: bottom sheet ================= -->
+<div class="sheet open" id="sheet">
+  <div class="sheet-head" id="sheetHead">
+    <div class="grab"></div>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-pane="warna">Warna</button>
+      <button class="tab" data-pane="font">Font</button>
+      <button class="tab" data-pane="bagian">Bagian</button>
+      <button class="tab" data-pane="gaya">Gaya</button>
+    </div>
+  </div>
+  <div class="sheet-body">
+
+    <div class="pane on" data-pane="warna">
+      <div class="grp">Varian tema (kurasi)</div>
+      <div class="swatches" id="swatches"></div>
+      <div class="custom-row">
+        <input type="color" id="customColor" value="#B76E79" aria-label="Pilih warna aksen custom"/>
+        <div class="lbl">Warna aksen custom<small>Pilih warna apa pun — kami jaga agar tetap terbaca</small></div>
+        <span class="badge">Premium</span>
+      </div>
+      <div class="guard-note" id="guardNote"></div>
+    </div>
+
+    <div class="pane" data-pane="font">
+      <div class="grp">Pasangan huruf</div>
+      <div class="fonts">
+        <button class="fcard on" data-font="a"><span class="ag fa">Ag</span><small>Fraunces<br/>+ Instrument</small></button>
+        <button class="fcard" data-font="b"><span class="ag fb">Ag</span><small>Cormorant<br/>+ Jost</small></button>
+        <button class="fcard" data-font="c"><span class="ag fc">Ag</span><small>Marcellus<br/>+ Figtree</small></button>
+      </div>
+    </div>
+
+    <div class="pane" data-pane="bagian">
+      <div class="grp">Tahan ≡ lalu seret, atau pakai panah — saklar untuk sembunyikan</div>
+      <div class="seclist" id="seclist"></div>
+    </div>
+
+    <div class="pane" data-pane="gaya">
+      <div class="grp">Gaya galeri</div>
+      <div class="seg" data-key="gallery">
+        <button data-val="strip" class="on">Strip</button>
+        <button data-val="grid">Grid</button>
+        <button data-val="polaroid">Polaroid</button>
+      </div>
+      <div class="grp">Gerakan (motion)</div>
+      <div class="seg" data-key="motion">
+        <button data-val="full" class="on">Penuh</button>
+        <button data-val="calm">Tenang</button>
+      </div>
+      <div class="grp">Corak kertas</div>
+      <div class="seg" data-key="grain">
+        <button data-val="on" class="on">Bertekstur</button>
+        <button data-val="off">Polos</button>
+      </div>
+    </div>
+
+  </div>
+  <div class="sheet-foot">
+    <button class="btn-json" id="btnJson" title="Lihat JSON settings">&lt;/&gt;</button>
+    <button class="btn-ghost" id="btnReset">Reset</button>
+    <button class="btn-save" id="btnSave">Simpan</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="json-modal" id="jsonModal">
+  <div class="json-box">
+    <div class="grp" style="margin-top:0">settings.custom — bentuk data yang disimpan</div>
+    <pre id="jsonPre"></pre>
+    <button class="close" id="jsonClose">Tutup</button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   STATE — cermin dari `settings.custom` (lihat docs/CUSTOMIZER-SPEC.md)
+===================================================================== */
+const PRESETS = [
+  { id:'rose',  name:'Rose',  acc:'#B76E79', paper:'#F6EFE7', ink:'#241A1E' },
+  { id:'sage',  name:'Sage',  acc:'#75855F', paper:'#F6F3E9', ink:'#26291E' },
+  { id:'dusk',  name:'Dusk',  acc:'#4C5B8C', paper:'#F1F1F4', ink:'#1D2130' },
+  { id:'mocha', name:'Mocha', acc:'#8A6A4F', paper:'#F7F1E8', ink:'#2A211A' },
+];
+const SECTIONS = [
+  { id:'quote',    name:'Ayat & Kutipan' },
+  { id:'couple',   name:'Mempelai' },
+  { id:'countdown',name:'Hitung Mundur' },
+  { id:'gallery',  name:'Galeri' },
+  { id:'schedule', name:'Rangkaian Acara' },
+  { id:'rsvp',     name:'RSVP & Ucapan' },
+];
+const DEFAULTS = () => ({
+  variant:'rose', accent:null,          // accent terisi hanya bila custom (Premium)
+  fontPair:'a',
+  sections:SECTIONS.map(s=>({id:s.id,visible:true})),
+  styles:{ gallery:'strip' },
+  motion:'full', grain:true,
+});
+let state = DEFAULTS();
+
+/* =====================================================================
+   PENJAGA KONTRAS WCAG — inti keputusan "custom accent yang aman"
+   Warna aksen dipakai utk TEKS di atas paper → wajib rasio ≥ 4.5 (AA).
+   Bila kurang, digelapkan bertahap sampai lolos; hasil snap ditampilkan.
+===================================================================== */
+function hexRgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function rgbHex(r,g,b){return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+function lum(h){const [r,g,b]=hexRgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);});return .2126*r+.7152*g+.0722*b;}
+function contrast(a,b){const[l1,l2]=[lum(a),lum(b)].sort((x,y)=>y-x);return (l1+.05)/(l2+.05);}
+function darken(h,f){const[r,g,b]=hexRgb(h);return rgbHex(r*f,g*f,b*f);}
+function safeTextColor(acc,paper){
+  let c=acc,i=0;
+  while(contrast(c,paper)<4.5 && i<24){c=darken(c,.92);i++;}
+  return {color:c,snapped:i>0};
+}
+
+/* ============================ APPLY ============================ */
+const root=document.documentElement, body=document.body;
+function apply(){
+  const preset=PRESETS.find(p=>p.id===state.variant)||PRESETS[0];
+  const acc=state.accent||preset.acc;
+  const paper=state.accent?preset.paper:preset.paper; // custom accent tetap di paper varian aktif
+  root.style.setProperty('--acc',acc);
+  root.style.setProperty('--paper',paper);
+  root.style.setProperty('--ink',preset.ink);
+  const safe=safeTextColor(acc,paper);
+  root.style.setProperty('--acc-text',safe.color);
+  const note=document.getElementById('guardNote');
+  if(state.accent){
+    if(safe.snapped){
+      note.innerHTML=`Penjaga kontras aktif: warna pilihanmu <span class="chipmini" style="background:${state.accent}"></span> kurang terbaca di atas kertas, jadi teks memakai versi aman <span class="chipmini" style="background:${safe.color}"></span> <b>${safe.color}</b> (rasio ${contrast(safe.color,paper).toFixed(1)} ≥ 4.5 AA). Elemen dekoratif tetap memakai warna aslimu.`;
+    } else {
+      note.innerHTML=`Warna aksenmu lolos uji keterbacaan (rasio ${contrast(acc,paper).toFixed(1)} ≥ 4.5 AA). ✓`;
+    }
+    note.classList.add('show');
+  } else note.classList.remove('show');
+
+  root.setAttribute('data-font',state.fontPair);
+  body.setAttribute('data-gallery',state.styles.gallery);
+  body.classList.toggle('motion-full',state.motion==='full');
+  body.classList.toggle('grain-on',state.grain);
+  // urutan & visibilitas section
+  state.sections.forEach((s,i)=>{
+    const el=document.querySelector(`[data-sec="${s.id}"]`);
+    if(el){el.style.setProperty('--ord',i+1);el.hidden=!s.visible;}
+  });
+  // motion tenang → tampilkan semua
+  if(state.motion!=='full') document.querySelectorAll('.rv').forEach(el=>el.classList.add('in'));
+  renderSwatches(); renderSecList();
+}
+
+/* ============================ UI: WARNA ============================ */
+function renderSwatches(){
+  const wrap=document.getElementById('swatches');
+  wrap.innerHTML=PRESETS.map(p=>`
+    <button class="sw ${state.variant===p.id&&!state.accent?'on':''}" data-preset="${p.id}" aria-label="Varian ${p.name}">
+      <i style="background:linear-gradient(135deg,${p.acc} 50%,${p.paper} 50%)"></i><small>${p.name}</small>
+    </button>`).join('');
+  wrap.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{
+    state.variant=b.dataset.preset; state.accent=null;
+    document.getElementById('customColor').value=(PRESETS.find(p=>p.id===state.variant)).acc;
+    apply();
+  }));
+}
+document.getElementById('customColor').addEventListener('input',e=>{
+  state.accent=e.target.value; apply();
+});
+
+/* ============================ UI: FONT ============================ */
+document.querySelectorAll('.fcard').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.fcard').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); state.fontPair=b.dataset.font; apply();
+}));
+
+/* ==================== UI: BAGIAN (reorder + toggle) ==================== */
+function renderSecList(){
+  const wrap=document.getElementById('seclist');
+  wrap.innerHTML=state.sections.map((s,i)=>{
+    const meta=SECTIONS.find(x=>x.id===s.id);
+    return `<div class="secrow" data-id="${s.id}">
+      <span class="handle" data-drag>≡</span>
+      <span class="nm">${meta.name}</span>
+      <span class="mv">
+        <button data-up ${i===0?'disabled':''} aria-label="Naikkan">↑</button>
+        <button data-down ${i===state.sections.length-1?'disabled':''} aria-label="Turunkan">↓</button>
+      </span>
+      <label class="switch"><input type="checkbox" ${s.visible?'checked':''} data-vis/><i></i></label>
+    </div>`;}).join('');
+  wrap.querySelectorAll('.secrow').forEach(row=>{
+    const id=row.dataset.id;
+    row.querySelector('[data-up]')?.addEventListener('click',()=>move(id,-1));
+    row.querySelector('[data-down]')?.addEventListener('click',()=>move(id,1));
+    row.querySelector('[data-vis]').addEventListener('change',e=>{
+      state.sections.find(s=>s.id===id).visible=e.target.checked; apply();
+    });
+    /* Drag-handle sentuh: seret baris, tukar saat melewati tengah baris lain */
+    const handle=row.querySelector('[data-drag]');
+    handle.addEventListener('pointerdown',ev=>{
+      ev.preventDefault(); handle.setPointerCapture(ev.pointerId);
+      row.classList.add('dragging');
+      const onMove=e=>{
+        const rows=[...wrap.querySelectorAll('.secrow')];
+        const over=rows.find(r=>{if(r===row)return false;const rc=r.getBoundingClientRect();
+          return e.clientY>rc.top&&e.clientY<rc.bottom;});
+        if(over){
+          const a=state.sections.findIndex(s=>s.id===id);
+          const b=state.sections.findIndex(s=>s.id===over.dataset.id);
+          state.sections.splice(b,0,state.sections.splice(a,1)[0]);
+          apply(); // re-render; ambil ulang row & lanjutkan drag pada elemen baru tidak perlu — pointer capture di handle lama tetap hidup hingga pointerup
+        }
+      };
+      const onUp=()=>{row.classList.remove('dragging');
+        document.removeEventListener('pointermove',onMove);document.removeEventListener('pointerup',onUp);apply();};
+      document.addEventListener('pointermove',onMove);
+      document.addEventListener('pointerup',onUp);
+    });
+  });
+}
+function move(id,dir){
+  const i=state.sections.findIndex(s=>s.id===id);const j=i+dir;
+  if(j<0||j>=state.sections.length)return;
+  [state.sections[i],state.sections[j]]=[state.sections[j],state.sections[i]];
+  apply();
+}
+
+/* ============================ UI: GAYA ============================ */
+document.querySelectorAll('.seg').forEach(seg=>{
+  seg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    const k=seg.dataset.key,v=b.dataset.val;
+    if(k==='gallery')state.styles.gallery=v;
+    if(k==='motion')state.motion=v;
+    if(k==='grain')state.grain=(v==='on');
+    apply();
+  }));
+});
+
+/* ============================ SHEET & TABS ============================ */
+document.getElementById('sheetHead').addEventListener('click',e=>{
+  if(e.target.closest('.tab'))return;
+  document.getElementById('sheet').classList.toggle('open');
+});
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.dataset.pane===t.dataset.pane));
+  document.getElementById('sheet').classList.add('open');
+}));
+
+/* ============================ SIMPAN / RESET / JSON ============================ */
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._id);t._id=setTimeout(()=>t.classList.remove('show'),2200);}
+document.getElementById('btnSave').addEventListener('click',()=>toast('Tersimpan ✓ (demo) — di produksi: PATCH settings.custom + revalidate halaman'));
+document.getElementById('btnReset').addEventListener('click',()=>{state=DEFAULTS();
+  document.getElementById('customColor').value='#B76E79';
+  document.querySelectorAll('.fcard').forEach(x=>x.classList.toggle('on',x.dataset.font==='a'));
+  document.querySelectorAll('.seg').forEach(seg=>{const def={gallery:'strip',motion:'full',grain:'on'}[seg.dataset.key];
+    seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.val===def));});
+  apply();toast('Kembali ke bawaan tema');});
+document.getElementById('btnJson').addEventListener('click',()=>{
+  document.getElementById('jsonPre').textContent=JSON.stringify({custom:state},null,2);
+  document.getElementById('jsonModal').classList.add('show');});
+document.getElementById('jsonClose').addEventListener('click',()=>document.getElementById('jsonModal').classList.remove('show'));
+
+/* ============================ Countdown + reveal ============================ */
+const target=new Date('2026-11-08T08:00:00+07:00').getTime();
+(function tick(){let ms=Math.max(0,target-Date.now());
+  const d=Math.floor(ms/864e5);ms-=d*864e5;const h=Math.floor(ms/36e5);ms-=h*36e5;
+  const m=Math.floor(ms/6e4),s=Math.floor((ms-m*6e4)/1e3);
+  cdD.textContent=d;cdH.textContent=String(h).padStart(2,'0');
+  cdM.textContent=String(m).padStart(2,'0');cdS.textContent=String(s).padStart(2,'0');
+  setTimeout(tick,1000);})();
+const io=new IntersectionObserver(es=>es.forEach(e=>{
+  if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.15});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+
+apply();
+</script>
+
+</body>
+</html>

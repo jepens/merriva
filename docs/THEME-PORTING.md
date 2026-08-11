@@ -27,6 +27,8 @@
 
 `meridian`, `barakah`, `lumina` tidak disentuh sekarang (di-upgrade belakangan dengan sistem yang sama). Slug tidak berubah → **tanpa migrasi data** untuk 5 upgrade; hanya `prisma` yang butuh seed baris `themes` baru.
 
+**Gelombang 2 (Fase F — setelah Fase A–E selesai):** prototipe untuk 3 tema tersisa + 1 tema baru sudah tersedia (THEME-DESIGN §3b): `barakah` ← `barakah-story.html` (Story; Marcellus+Figtree) · `meridian` ← `meridian-story.html` (Story; Italiana+Jost) · `lumina` ← `lumina-craft.html` (Craft murni; Gowun Batang+Karla) · **`kirana` (BARU)** ← `kirana-story.html` (Story; Cormorant Upright+Figtree; kategori wedding; butuh registry + catalog-meta `{bg:#F5EDDC, ink:#3B2F22, accent:#C09A4A, ornament:"✽"}` + demo-data + seed baris `themes` seperti pola prisma). Semua aturan §0–§5 berlaku sama.
+
 ## 2. Infrastruktur bersama baru (`src/themes/_shared/`)
 
 Dibangun SEKALI di Fase A, dipakai semua tema Story/Signature:
@@ -54,7 +56,7 @@ Dibangun SEKALI di Fase A, dipakai semua tema Story/Signature:
 
 ## 4. Dependensi & anggaran
 
-`pnpm add gsap lenis` (keduanya MIT/gratis — GSAP free sejak 2025). Larangan: three.js, framer-motion baru, CDN runtime. Anggaran (gzip, halaman tema): Craft +0KB dari baseline; **Story ≤ +50KB** (revisi dari +45KB setelah pengukuran gzip nyata: gsap core ≈26,7KB + ScrollTrigger ≈17,1KB + lenis ≈5,2KB = ~49KB; ratifikasi pemilik 2026-08-01, lihat DECISIONS #12); Signature ≤ +90KB — cek `next build` output per route dan catat angkanya di PR/commit message.
+`pnpm add gsap lenis` (keduanya MIT/gratis — GSAP free sejak 2025). Larangan: three.js, framer-motion baru, CDN runtime. Anggaran (gzip, halaman tema): Craft +0KB dari baseline; Story ≤ +45KB; Signature ≤ +90KB — cek `next build` output per route dan catat angkanya di PR/commit message.
 
 ## 5. Definition of Done per tema (dari THEME-DESIGN §5 + kenyataan repo)
 
