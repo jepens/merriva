@@ -222,6 +222,7 @@ export type Database = {
           id: string;
           package_id: string | null;
           published_at: string | null;
+          purged_at: string | null;
           reminder_sent_at: string | null;
           settings: Json;
           slug: string;
@@ -239,6 +240,7 @@ export type Database = {
           id?: string;
           package_id?: string | null;
           published_at?: string | null;
+          purged_at?: string | null;
           reminder_sent_at?: string | null;
           settings?: Json;
           slug: string;
@@ -256,6 +258,7 @@ export type Database = {
           id?: string;
           package_id?: string | null;
           published_at?: string | null;
+          purged_at?: string | null;
           reminder_sent_at?: string | null;
           settings?: Json;
           slug?: string;
@@ -731,6 +734,13 @@ export type Database = {
       };
       invitation_effective_limits: { Args: { inv_id: string }; Returns: Json };
       normalize_package_limits: { Args: { raw: Json }; Returns: Json };
+      purge_invitation_data: {
+        Args: { p_invitation_id: string };
+        Returns: {
+          media_paths: string[];
+          result: string;
+        }[];
+      };
       replace_invitation_events: {
         Args: { events: Json; inv_id: string };
         Returns: undefined;

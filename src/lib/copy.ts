@@ -92,6 +92,14 @@ export const copy = {
     cardPay: "Lanjutkan pembayaran",
     cardRenew: "Perpanjang",
     cardGuestbook: "Ucapan & amplop",
+    // Hapus undangan (self-service, hanya draf/kedaluwarsa — DATA-MODEL §5).
+    cardDelete: "Hapus",
+    deleteConfirm:
+      "Hapus undangan ini secara permanen? Semua data tamu, RSVP, ucapan, dan foto akan dihapus dan tidak bisa dikembalikan.",
+    deleting: "Menghapus…",
+    deleteError: "Gagal menghapus undangan. Coba lagi.",
+    deleteNotAllowed:
+      "Undangan yang masih aktif tidak bisa dihapus. Tunggu masa aktif berakhir.",
     // Moderasi ucapan & konfirmasi amplop (SPEC §4.6).
     guestbook: {
       title: "Ucapan & Amplop",

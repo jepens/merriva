@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { DeleteInvitationButton } from "@/components/dashboard/delete-invitation-button";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
@@ -25,10 +26,13 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const supabase = await createSupabaseServerClient();
 
+  // `purged_at` tak null = kerangka pasca-retensi (data pribadi sudah dihapus) →
+  // sembunyikan dari daftar pemilik (baris tetap ada untuk statistik & orders).
   const { data } = await supabase
     .from("invitations")
     .select("id, slug, category, status, event_date")
     .eq("user_id", user.id)
+    .is("purged_at", null)
     .order("created_at", { ascending: false });
 
   const invitations = data ?? [];
@@ -140,6 +144,9 @@ export default async function DashboardPage() {
                       >
                         {copy.dashboard.cardGuestbook}
                       </Link>
+                    ) : null}
+                    {inv.status === "draft" || inv.status === "expired" ? (
+                      <DeleteInvitationButton invitationId={inv.id} />
                     ) : null}
                   </div>
                 </CardContent>

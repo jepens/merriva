@@ -34,11 +34,12 @@ uji lapangan). Checklist ini mengurutkannya dari nol → go-live.
 
 ## Fase 3 — Cron (Easypanel scheduled jobs)
 
-Ketiga endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
+Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 
 - [ ] `POST /api/cron/expire-orders` — tiap ~1 jam (rekonsiliasi + batalkan order > 24 jam + `transactioncancel`)
 - [ ] `POST /api/cron/expire-invitations` — harian (undangan `active` lewat masa aktif → `expired` + revalidate ISR)
 - [ ] `POST /api/cron/expiry-reminders` — harian (email pengingat H-14)
+- [ ] `POST /api/cron/purge-expired` — harian (retensi UU PDP: hapus permanen data tamu/RSVP/media/gift_notes undangan `expired` > 6 bulan; baris undangan tinggal kerangka, `orders` dipertahankan)
 - Verify: panggil manual dengan Bearer benar → `200`; tanpa/ salah secret → `401`.
 
 ## Fase 4 — Konten & data awal (via panel admin)
@@ -75,7 +76,7 @@ Ketiga endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 
 - [ ] Daftar **PSE Kominfo** via OSS
 - [ ] Kebijakan **privasi & refund** tayang (`/privasi`, `/refund` sudah ada — review isi & data kontak)
-- [ ] Pastikan retensi/hapus data tamu **6 bulan pasca-expired** (UU PDP 27/2022) berjalan lewat cron expiry
+- [ ] Pastikan **cron `purge-expired`** (Fase 3) terjadwal & jalan — menghapus permanen data tamu/RSVP/media/gift_notes **6 bulan pasca-expired** (UU PDP 27/2022); baris undangan tinggal kerangka statistik, `orders` (retensi keuangan) dipertahankan. Verify di staging: undangan `expired` dengan `active_until` > 6 bln lalu → panggil cron → data pribadi terhapus, `purged_at` terisi. Klien juga bisa "hapus undangan" non-aktif kapan saja dari dashboard.
 
 ## Fase 9 — Go-live
 

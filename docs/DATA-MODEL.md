@@ -14,7 +14,7 @@ Prinsip: konten undangan yang fleksibel per kategori disimpan sebagai JSONB terv
 
 **packages** — paket harga (DB-driven agar bisa diubah tanpa deploy). `id`, `code unique` (`basic|premium`), `name`, `price_idr int`, `duration_months int`, `limits jsonb` `{max_photos, max_guests, youtube, all_themes, watermark}`, `is_active`.
 
-**invitations** — inti. `id`, `user_id → profiles`, `theme_id → themes`, `package_id → packages null` (terisi saat order paid), `slug unique` (lowercase, regex `[a-z0-9-]{3,60}`, blocklist kata terlarang, ganti maks 1× setelah aktif), `category` `'wedding'|'corporate'|'family'`, `status` `'draft'|'pending_payment'|'active'|'expired'|'suspended'`, `content jsonb` (data form — skema Zod per kategori), `settings jsonb` (tema varian warna, toggle section, moderasi ucapan on/off), `event_date date` (acara utama, untuk sorting/retensi), `active_until timestamptz null`, `published_at`, `created_at`, `updated_at`.
+**invitations** — inti. `id`, `user_id → profiles`, `theme_id → themes`, `package_id → packages null` (terisi saat order paid), `slug unique` (lowercase, regex `[a-z0-9-]{3,60}`, blocklist kata terlarang, ganti maks 1× setelah aktif), `category` `'wedding'|'corporate'|'family'`, `status` `'draft'|'pending_payment'|'active'|'expired'|'suspended'`, `content jsonb` (data form — skema Zod per kategori), `settings jsonb` (tema varian warna, toggle section, moderasi ucapan on/off), `event_date date` (acara utama, untuk sorting/retensi), `active_until timestamptz null`, `published_at`, `purged_at timestamptz null` (waktu data pribadi dihapus permanen — retensi §5; NULL = belum), `created_at`, `updated_at`.
 
 **invitation_events** — jadwal per undangan (akad/resepsi/sesi). `id`, `invitation_id FK cascade`, `name`, `start_at timestamptz`, `end_at timestamptz null`, `venue_name`, `address`, `maps_url`, `sort_order`. *(Fase 2: FK target check-in per sesi.)*
 
@@ -59,6 +59,8 @@ Data yang boleh tampil di halaman undangan publik (di-serve server-side): `conte
 ## 5. Lifecycle & retensi data (UU PDP 27/2022)
 
 Undangan `expired` + datanya (tamu, RSVP, media, gift_notes) dipertahankan **6 bulan** setelah `active_until` (grace period perpanjangan), lalu cron menghapus permanen media + data tamu (baris `invitations` boleh tinggal sebagai kerangka statistik tanpa data pribadi). Klien dapat meminta penghapusan lebih cepat (aksi "hapus undangan" pada undangan non-aktif). Email pengingat sebelum penghapusan. `raw_notification` orders disimpan ≥ 2 tahun untuk rekonsiliasi keuangan.
+
+**Implementasi (DECISIONS #21):** RPC `purge_invitation_data(uuid)` (service_role) menghapus data pribadi anak + scrub `content` + set `purged_at`; `orders` dipertahankan. Cron `/api/cron/purge-expired` (harian) memprosesnya untuk `expired` yang `active_until` lewat 6 bulan (`purged_at is null`). Aksi self-service `deleteInvitationAction`: `draft` = hard-delete penuh (cascade); `expired` = purge via RPC yang sama. Baris ber-`purged_at` disaring dari daftar dashboard pemilik.
 
 ## 6. Seed minimal
 

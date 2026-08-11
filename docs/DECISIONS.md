@@ -152,6 +152,18 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #21 — 2026-08-11 · Retensi data UU PDP: cron purge 6 bulan + "hapus undangan" self-service
+**Konteks:** audit sisa-pekerjaan menemukan celah kepatuhan: `DATA-MODEL §5` + halaman /privasi PUBLIK menjanjikan data tamu/RSVP/media/gift_notes dihapus 6 bulan pasca-expired, dan `LAUNCH-CHECKLIST` Fase 8 mengklaim keliru "berjalan lewat cron expiry" — padahal `expire-invitations` HANYA membalik status, tak ada purge. Sekaligus aksi "hapus undangan" yang dijanjikan §5 belum ada.
+**Keputusan:**
+1. **RPC `purge_invitation_data(uuid)`** (service_role, SECURITY DEFINER, `search_path=''`, kunci baris): hapus permanen `rsvps`/`gift_notes`/`guests`/`media`/`invitation_events` + scrub `content='{}'`, set kolom baru `invitations.purged_at`. Baris undangan TETAP sebagai kerangka statistik; `orders` (incl. `raw_notification`, retensi keuangan ≥ 2 tahun) DIPERTAHANKAN. Idempoten via `purged_at`; hanya status `expired`. Return `media_paths` agar pemanggil membersihkan objek storage (SQL tak bisa sentuh bucket).
+2. **Cron ke-4 `/api/cron/purge-expired`** (harian): scan `expired` + `purged_at is null` + `active_until < now−6bln` (index parsial `invitations_purge_scan_idx`) → RPC → bersihkan storage (best-effort). Cutoff dihitung `retentionCutoffIso` (diuji unit).
+3. **`deleteInvitationAction`** self-service (dashboard, hanya non-aktif): `draft` = HARD-DELETE (cascade, RLS `invitations_delete` mengizinkan draft; tak ada order lunas) · `expired` = purge via RPC (owner tak bisa hapus rsvps/gift_notes via RLS → service_role) menyisakan kerangka + orders. `active`/`pending_payment`/`suspended` ditolak (boundary: jangan hapus undangan aktif). Rate-limited; dashboard menyaring `purged_at`.
+**Alasan:** menutup satu-satunya klaim checklist yang tidak benar + menegakkan janji privasi; dua kebutuhan berbagi satu RPC purge (DRY). Kerangka + retensi orders menyeimbangkan hak hapus subjek data (PDP) vs kewajiban retensi keuangan.
+**Ditolak:** hard-delete penuh undangan expired (akan cascade-menghapus `orders` lunas → melanggar retensi keuangan); gate waktu 6 bln di dalam RPC (dipindah ke query cron agar user bisa hapus lebih cepat tanpa menunggu).
+**Konsekuensi:** kolom `purged_at` menyembunyikan baris dari daftar dashboard; halaman publik undangan ter-purge tetap menampilkan notis kedaluwarsa (content kosong, tak dirender saat expired). Cron ke-4 wajib dijadwalkan saat go-live (LAUNCH-CHECKLIST Fase 3).
+
+---
+
 ## Template entri baru
 
 ```

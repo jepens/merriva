@@ -7,9 +7,11 @@ import { copy } from "@/lib/copy";
 import { localToUtc } from "@/lib/datetime";
 import { draftSlug, isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
+import { mediaObjectPaths } from "@/lib/media";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { clientRateKey } from "@/lib/request-ip";
 import { slugSchema } from "@/lib/slug";
+import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -290,4 +292,108 @@ export async function updateInvitationSlugAction(
   revalidatePath(`/dashboard/undangan/${invitationId}/edit`);
   revalidatePath("/dashboard");
   return { status: "success", slug: updated.slug };
+}
+
+/** Hasil penghapusan undangan (self-service, SPEC §3 / DATA-MODEL §5). */
+export type DeleteInvitationResult =
+  | { status: "success" }
+  | {
+      status: "error";
+      reason?: "not_found" | "not_deletable";
+      message?: string;
+    };
+
+/**
+ * Hapus undangan NON-AKTIF (hak subjek data UU PDP, DATA-MODEL §5). Pola: auth →
+ * rate-limit (destruktif) → kepemilikan + status (RLS owner-only). Dua jalur:
+ *  - `draft` (tak pernah dibayar → tak ada order lunas): HARD-DELETE penuh; RLS
+ *    `invitations_delete` mengizinkan owner menghapus draft, cascade membersihkan
+ *    seluruh baris anak + order non-lunas.
+ *  - `expired` (PASTI pernah dibayar): PURGE data pribadi via RPC service_role —
+ *    owner tak bisa hapus `rsvps`/`gift_notes` lewat RLS (delete = admin-only).
+ *    Baris undangan tinggal sebagai kerangka + `orders` dipertahankan (retensi
+ *    keuangan). `purged_at` menyembunyikannya dari daftar dashboard.
+ * Objek storage media dibersihkan best-effort (orphan tak berbahaya).
+ * `active`/`pending_payment`/`suspended` ditolak (boundary: jangan hapus undangan
+ * aktif; transaksi berjalan / kendali admin).
+ */
+export async function deleteInvitationAction(
+  invitationId: string,
+): Promise<DeleteInvitationResult> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "error", message: copy.auth.genericAuthError };
+  if (!isUuid(invitationId)) return { status: "error" };
+
+  const rl = checkRateLimit(await clientRateKey("invitation-delete"), {
+    max: 20,
+    windowMs: 60_000,
+  });
+  if (!rl.ok) return { status: "error", message: copy.auth.rateLimited };
+
+  const { data: inv } = await supabase
+    .from("invitations")
+    .select("id, status, slug")
+    .eq("id", invitationId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!inv) return { status: "error", reason: "not_found" };
+
+  if (inv.status !== "draft" && inv.status !== "expired") {
+    return {
+      status: "error",
+      reason: "not_deletable",
+      message: copy.dashboard.deleteNotAllowed,
+    };
+  }
+
+  const storage = getStorage();
+
+  if (inv.status === "draft") {
+    // Kumpulkan path media DULU (cascade akan menghapus baris; kita butuh path
+    // untuk membersihkan objek storage sesudahnya).
+    const { data: mediaRows } = await supabase
+      .from("media")
+      .select("storage_path")
+      .eq("invitation_id", invitationId);
+
+    const { error: delErr } = await supabase
+      .from("invitations")
+      .delete()
+      .eq("id", invitationId)
+      .eq("user_id", user.id)
+      .eq("status", "draft"); // guard eksplisit selain RLS
+    if (delErr) return { status: "error", message: copy.common.error };
+
+    await Promise.allSettled(
+      (mediaRows ?? []).flatMap((m) =>
+        mediaObjectPaths(m.storage_path).map((p) => storage.delete(p)),
+      ),
+    );
+  } else {
+    // expired → purge via RPC service_role (owner-scoped: sudah diverifikasi milik
+    // pemanggil di atas). Idempoten; not_expired/already_purged → tetap sukses
+    // dari sisi user (undangan hilang dari daftar).
+    const admin = createSupabaseAdminClient();
+    const { data: res, error: rpcErr } = await admin.rpc(
+      "purge_invitation_data",
+      { p_invitation_id: invitationId },
+    );
+    if (rpcErr) return { status: "error", message: copy.common.error };
+
+    const outcome = res?.[0];
+    if (outcome?.result === "purged") {
+      await Promise.allSettled(
+        (outcome.media_paths ?? []).flatMap((prefix) =>
+          mediaObjectPaths(prefix).map((p) => storage.delete(p)),
+        ),
+      );
+    }
+    revalidatePath(`/${inv.slug}`); // ISR halaman publik (kini kerangka expired)
+  }
+
+  revalidatePath("/dashboard");
+  return { status: "success" };
 }
