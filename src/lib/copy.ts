@@ -7,6 +7,13 @@ export const copy = {
     name: "Merriva",
     tagline: "Undangan digital untuk setiap momen bahagia.",
   },
+  // Halaman 404 global (tamu yang membuka slug salah/kedaluwarsa).
+  notFoundPage: {
+    code: "404",
+    title: "Halaman tidak ditemukan",
+    body: "Tautan yang Anda buka mungkin salah ketik, kedaluwarsa, atau undangannya sudah tidak aktif.",
+    cta: "Ke beranda Merriva",
+  },
   common: {
     loading: "Memuat…",
     error: "Terjadi kesalahan. Silakan coba lagi.",

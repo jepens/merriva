@@ -3,6 +3,7 @@ import "server-only";
 import { AwsClient } from "aws4fetch";
 
 import {
+  getMediaBaseUrl,
   getR2AccessKeyId,
   getR2AccountId,
   getR2Bucket,
@@ -11,10 +12,10 @@ import {
 
 import type { StorageDriver, StorageObjectPath, UploadInput } from "./types";
 
-/** Bangun URL publik dari domain sendiri (cdn.merriva.id) + path relatif. */
+/** Bangun URL publik dari domain sendiri (cdn.merriva.id) + path relatif.
+ * `getMediaBaseUrl()` gagal-keras di production bila basis kosong. */
 function publicUrl(path: StorageObjectPath): string {
-  const base = (process.env.NEXT_PUBLIC_MEDIA_URL ?? "").replace(/\/+$/, "");
-  return `${base}/${path.replace(/^\/+/, "")}`;
+  return `${getMediaBaseUrl()}/${path.replace(/^\/+/, "")}`;
 }
 
 /** Normalkan body ke ArrayBuffer bersih (aws4fetch meng-hash-nya untuk SigV4). */

@@ -2,17 +2,21 @@ import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { getSupabaseServiceRoleKey, getSupabaseUrl } from "@/lib/env";
+import {
+  getMediaBaseUrl,
+  getSupabaseServiceRoleKey,
+  getSupabaseUrl,
+} from "@/lib/env";
 
 import type { StorageDriver, StorageObjectPath, UploadInput } from "./types";
 
 /** Bucket tunggal untuk seluruh media (foto galeri & bernama). */
 export const MEDIA_BUCKET = "media";
 
-/** Bangun URL publik dari domain sendiri + path relatif (tanpa URL vendor). */
+/** Bangun URL publik dari domain sendiri + path relatif (tanpa URL vendor).
+ * `getMediaBaseUrl()` gagal-keras di production bila basis kosong. */
 function publicUrl(path: StorageObjectPath): string {
-  const base = (process.env.NEXT_PUBLIC_MEDIA_URL ?? "").replace(/\/+$/, "");
-  return `${base}/${path.replace(/^\/+/, "")}`;
+  return `${getMediaBaseUrl()}/${path.replace(/^\/+/, "")}`;
 }
 
 /**

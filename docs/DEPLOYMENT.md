@@ -66,8 +66,8 @@ Isi minimal berikut untuk M0 (sisanya menyusul per milestone):
 | `NEXT_PUBLIC_SUPABASE_URL` | dari project **prod** |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | dari project **prod** |
 | `SUPABASE_SERVICE_ROLE_KEY` | dari project **prod** (RAHASIA) |
-| `STORAGE_DRIVER` | `supabase` |
-| `NEXT_PUBLIC_MEDIA_URL` | kosongkan dulu (fase Supabase) |
+| `STORAGE_DRIVER` | `supabase` (atau `r2` menjelang launch) |
+| `NEXT_PUBLIC_MEDIA_URL` | **WAJIB** host penyaji bucket domain sendiri — **kosong = media 404** (app gagal-keras runtime). R2: `https://cdn.merriva.id`; tetap Supabase: proxy domain sendiri |
 | `CRON_SECRET` | string acak panjang |
 | `NEXT_PUBLIC_SENTRY_DSN` | dari Sentry (opsional; kosong = Sentry non-aktif) |
 | `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | dari Sentry (opsional, untuk sourcemap) |

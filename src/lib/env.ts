@@ -41,6 +41,33 @@ export const appUrl =
 export const storageDriver = (process.env.STORAGE_DRIVER ?? "supabase") as
   "supabase" | "r2";
 
+/**
+ * Basis URL publik media (foto/musik) — WAJIB domain sendiri (SPEC §6.4), bukan
+ * URL vendor. Di **production** wajib di-set ke host yang menyajikan bucket
+ * (mis. `https://cdn.merriva.id` untuk R2, atau reverse-proxy domain sendiri ke
+ * Supabase Storage). Bila KOSONG, `getPublicUrl` menghasilkan URL RELATIF yang
+ * 404 di produksi (tak ada rewrite) → SELURUH foto/cover/musik undangan rusak
+ * senyap. Karena itu kita GAGAL-KERAS di production agar salah-konfig ketahuan
+ * saat uji staging (Fase 7), bukan diam-diam di depan tamu. Dev: boleh kosong.
+ */
+export function getMediaBaseUrl(): string {
+  const raw = (process.env.NEXT_PUBLIC_MEDIA_URL ?? "").replace(/\/+$/, "");
+  // Gagal-keras HANYA di RUNTIME production — bukan saat `next build` (build
+  // tanpa MEDIA_URL sah: media tak disajikan saat build; menjaga CI tetap hijau).
+  if (
+    !raw &&
+    process.env.NODE_ENV === "production" &&
+    process.env.NEXT_PHASE !== "phase-production-build"
+  ) {
+    throw new Error(
+      "NEXT_PUBLIC_MEDIA_URL belum di-set — media (foto/musik) akan 404 di " +
+        "produksi. Isi dengan host penyaji bucket dari domain sendiri " +
+        "(mis. https://cdn.merriva.id).",
+    );
+  }
+  return raw;
+}
+
 /** Kredensial R2 (RAHASIA — hanya server; wajib saat STORAGE_DRIVER=r2). */
 export function getR2AccountId(): string {
   return required("R2_ACCOUNT_ID", process.env.R2_ACCOUNT_ID);

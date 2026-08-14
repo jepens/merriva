@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { httpsUrlSchema } from "./shared";
+
 /**
  * Input satu sesi acara → baris `invitation_events` (SPEC §4.4 step 3;
  * DATA-MODEL §1, ternormalisasi karena menjadi fondasi check-in Fase 2).
@@ -15,9 +17,11 @@ const localDateTime = z
   .min(1, "Tanggal & jam wajib diisi")
   .refine((v) => !Number.isNaN(Date.parse(v)), "Tanggal & jam tidak valid");
 
+// Tautan peta WAJIB https (hindari mixed-content di halaman undangan https;
+// selaras livestreamUrl). Kosong/null → undefined (opsional).
 const optionalUrl = z.preprocess(
   (v) => (v === "" || v == null ? undefined : v),
-  z.url("Tautan tidak valid").max(500).optional(),
+  httpsUrlSchema(500, "Tautan peta harus URL https yang valid").optional(),
 );
 
 export const eventInputSchema = z

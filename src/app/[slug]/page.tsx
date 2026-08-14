@@ -40,13 +40,20 @@ export const dynamic = "force-static";
  */
 const getInvitationBySlug = cache(async (slug: string) => {
   const admin = createSupabaseAdminClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("invitations")
     .select(
       "id, slug, category, content, settings, event_date, package_id, theme_id, status, updated_at",
     )
     .eq("slug", slug)
     .maybeSingle();
+  // JANGAN menelan error DB jadi `notFound()` yang ter-cache. Halaman ini ISR
+  // (`force-static` + revalidate). Satu kedipan DB saat revalidasi latar → data
+  // null → notFound() → 404 DI-CACHE menggantikan undangan-baik hingga revalidasi
+  // berikutnya (bisa ~1 jam = undangan 404 bagi tamu di hari-H). Melempar membuat
+  // Next mempertahankan render statis terakhir yang baik (pola sama: catalog.ts).
+  // notFound() (di pemanggil) hanya untuk data null TANPA error = benar-benar tak ada.
+  if (error) throw error;
   return data;
 });
 

@@ -53,7 +53,7 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 
 - [ ] **Supabase Pro** (backup harian, retensi 7 hari) — sebelum ada klien berbayar (free tier auto-pause + egress 5 GB tak cukup)
 - [ ] **Latihan restore backup 1×** (RUNBOOK): restore ke project sementara, verifikasi jumlah baris & login
-- [ ] _(Opsional, saat media membesar)_ **Aktivasi R2**: isi `R2_*`, set `STORAGE_DRIVER=r2` + `NEXT_PUBLIC_MEDIA_URL=https://cdn.merriva.id`, CNAME `cdn.merriva.id`, jalankan `pnpm migrate-media` (ARCHITECTURE §6.4). **Boleh launch dulu dengan Supabase storage**; pindah ke R2 sebelum event klien ramai.
+- [ ] **Penyaji media WAJIB dari domain sendiri** (SPEC §6.4) — `NEXT_PUBLIC_MEDIA_URL` harus menunjuk host yang menyajikan bucket; **jangan dikosongkan** (kosong = media 404, app gagal-keras). Jalur turnkey & compliant: **R2** — isi `R2_*`, `STORAGE_DRIVER=r2`, `NEXT_PUBLIC_MEDIA_URL=https://cdn.merriva.id`, CNAME `cdn.merriva.id`, jalankan `pnpm migrate:media` (ARCHITECTURE §6.4). Boleh menunda R2 & launch dengan Supabase storage **hanya bila** `NEXT_PUBLIC_MEDIA_URL` sudah menunjuk host penyaji bucket (proxy domain sendiri); pindah ke R2 sebelum event klien ramai.
 
 ## Fase 6 — Monitoring & keamanan edge
 
@@ -94,7 +94,7 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Fase 1 | project **prod** |
 | `SUPABASE_SERVICE_ROLE_KEY` | Fase 1 | RAHASIA |
 | `STORAGE_DRIVER` | Fase 1 | `supabase` (→ `r2` di Fase 5) |
-| `NEXT_PUBLIC_MEDIA_URL` | Fase 1/5 | kosong saat Supabase; `https://cdn.merriva.id` saat R2 |
+| `NEXT_PUBLIC_MEDIA_URL` | Fase 1 | **WAJIB** host penyaji bucket dari domain sendiri. **Kosong = SELURUH foto/musik undangan 404** (app gagal-keras di runtime prod). R2: `https://cdn.merriva.id`. Tetap Supabase storage: domain proxy sendiri, atau sementara (deviasi §6.4) `https://<ref>.supabase.co/storage/v1/object/public/media` |
 | `CRON_SECRET` | Fase 1/3 | string acak panjang |
 | `PAKASIR_PROJECT_SLUG` / `PAKASIR_API_KEY` | Fase 2 | project production |
 | `RESEND_API_KEY` / `EMAIL_FROM` | Fase 2 | domain terverifikasi |
