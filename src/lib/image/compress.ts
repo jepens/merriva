@@ -1,10 +1,13 @@
-import { MEDIA_CONTENT_TYPE, MEDIA_VARIANTS } from "@/lib/media";
+import { MEDIA_VARIANTS } from "@/lib/media";
+
+import { encodeCanvas } from "./encode";
 
 /**
  * Kompresi foto di BROWSER klien (SPEC §4.4 / boundary CLAUDE.md): server tidak
- * pernah memproses gambar galeri. Satu file → 2 varian WebP (display 1600px,
- * thumb 400px). Memakai Canvas bawaan (tanpa dependency) agar bundel dashboard
- * tetap ramping. EXIF orientation dihormati lewat `createImageBitmap`.
+ * pernah memproses gambar galeri. Satu file → 2 varian (display 1600px, thumb
+ * 400px), **WebP atau JPEG** (fallback wajib Safari/iOS — lihat `encode.ts`).
+ * Memakai Canvas bawaan (tanpa dependency) agar bundel dashboard tetap ramping.
+ * EXIF orientation dihormati lewat `createImageBitmap`.
  */
 
 export interface CompressedPhoto {
@@ -45,7 +48,7 @@ function scaledSize(
   return { w: maxW, h: Math.max(1, Math.round((h * maxW) / w)) };
 }
 
-async function toWebp(
+async function encodeVariant(
   bitmap: ImageBitmap,
   maxW: number,
   quality: number,
@@ -58,25 +61,28 @@ async function toWebp(
   if (!ctx) throw new Error("Canvas 2D tidak tersedia.");
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(bitmap, 0, 0, w, h);
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, MEDIA_CONTENT_TYPE, quality),
-  );
-  if (!blob) throw new Error("Gagal mengubah gambar ke WebP.");
+  // WebP → fallback JPEG q0.82 bila Safari/iOS tak dukung toBlob webp.
+  const { blob } = await encodeCanvas(canvas, quality);
   return { blob, w, h };
 }
 
-/** Kompres 1 file gambar → 2 varian WebP (display 1600px + thumb 400px). */
+/**
+ * Kompres 1 file gambar → 2 varian (display 1600px + thumb 400px). Format tiap
+ * varian WebP, atau JPEG bila WebP tak didukung (iOS) — server membaca
+ * `blob.type` sebagai content-type. Nama diekspor tetap `compressToWebpVariants`
+ * untuk kompatibilitas pemanggil galeri.
+ */
 export async function compressToWebpVariants(
   file: File,
 ): Promise<CompressedPhoto> {
   const bitmap = await loadBitmap(file);
   try {
-    const display = await toWebp(
+    const display = await encodeVariant(
       bitmap,
       MEDIA_VARIANTS.display.maxWidth,
       MEDIA_VARIANTS.display.quality,
     );
-    const thumb = await toWebp(
+    const thumb = await encodeVariant(
       bitmap,
       MEDIA_VARIANTS.thumb.maxWidth,
       MEDIA_VARIANTS.thumb.quality,
