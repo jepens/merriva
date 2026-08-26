@@ -81,6 +81,7 @@ export default async function AdminInvitationDetailPage({
         .from("packages")
         .select("code, name, price_idr")
         .eq("is_active", true)
+        .eq("kind", "invitation") // aktivasi manual hanya paket undangan
         .order("price_idr", { ascending: true }),
     ]);
 

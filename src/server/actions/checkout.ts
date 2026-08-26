@@ -74,6 +74,7 @@ export async function createCheckoutAction(
     .select("id, price_idr")
     .eq("code", code)
     .eq("is_active", true)
+    .eq("kind", "invitation") // checkout undangan tak boleh pakai kode add-on
     .maybeSingle();
   if (!pkg)
     return { status: "error", message: copy.checkout.packageUnavailable };

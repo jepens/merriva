@@ -6,7 +6,6 @@ import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import {
   displayPath,
-  MEDIA_CONTENT_TYPE,
   MEDIA_MAX_BYTES,
   mediaObjectPaths,
   mediaPrefix,
@@ -30,10 +29,15 @@ export type MediaUploadResult =
 export type MediaDeleteResult =
   { status: "success" } | { status: "error"; message?: string };
 
+// Klien mengompres ke WebP, atau JPEG bila Safari/iOS tak dukung toBlob webp
+// (lib/image/encode). Terima keduanya; PNG/lainnya ditolak. Content-type storage
+// diambil dari `blob.type` aktual (bukan asumsi webp).
+const ACCEPTED_VARIANT_TYPES = new Set(["image/webp", "image/jpeg"]);
+
 function isVariantBlob(value: unknown, maxBytes: number): value is Blob {
   return (
     value instanceof Blob &&
-    value.type === MEDIA_CONTENT_TYPE &&
+    ACCEPTED_VARIANT_TYPES.has(value.type) &&
     value.size > 0 &&
     value.size <= maxBytes
   );
@@ -121,12 +125,12 @@ export async function uploadGalleryPhotoAction(
     await storage.upload({
       path: displayPath(prefix),
       body: await display.arrayBuffer(),
-      contentType: MEDIA_CONTENT_TYPE,
+      contentType: display.type, // webp atau jpeg (fallback iOS) — nyata dari blob
     });
     await storage.upload({
       path: thumbPath(prefix),
       body: await thumb.arrayBuffer(),
-      contentType: MEDIA_CONTENT_TYPE,
+      contentType: thumb.type,
     });
   } catch {
     await cleanup();

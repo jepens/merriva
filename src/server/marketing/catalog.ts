@@ -40,6 +40,7 @@ export async function getActivePackages(): Promise<MarketingPackage[]> {
     .from("packages")
     .select("code, name, price_idr, duration_months, limits")
     .eq("is_active", true)
+    .eq("kind", "invitation") // add-on Momen tak muncul di harga undangan
     .order("price_idr", { ascending: true });
 
   // Lempar bila query gagal (DB tak terjangkau saat build/revalidate) — jangan

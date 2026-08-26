@@ -403,6 +403,7 @@ export type Database = {
           duration_months: number;
           id: string;
           is_active: boolean;
+          kind: string;
           limits: Json;
           name: string;
           price_idr: number;
@@ -413,6 +414,7 @@ export type Database = {
           duration_months: number;
           id?: string;
           is_active?: boolean;
+          kind?: string;
           limits?: Json;
           name: string;
           price_idr: number;
@@ -423,6 +425,7 @@ export type Database = {
           duration_months?: number;
           id?: string;
           is_active?: boolean;
+          kind?: string;
           limits?: Json;
           name?: string;
           price_idr?: number;

@@ -82,6 +82,7 @@ export default async function ActivateInvitationPage({
     .from("packages")
     .select("code, name, price_idr, duration_months, limits, is_active")
     .eq("is_active", true)
+    .eq("kind", "invitation") // hanya paket undangan (bukan add-on Momen)
     .order("price_idr", { ascending: true });
 
   const packages: CheckoutPackage[] = (rows ?? []).map((p) => ({

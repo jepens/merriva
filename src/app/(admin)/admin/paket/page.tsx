@@ -31,6 +31,7 @@ export default async function AdminPackagesPage({
   const { data: packages } = await admin
     .from("packages")
     .select("code, name, price_idr, duration_months, is_active, limits")
+    .eq("kind", "invitation") // editor paket undangan; add-on Momen dikelola terpisah
     .order("price_idr", { ascending: true });
 
   return (

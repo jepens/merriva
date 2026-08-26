@@ -56,6 +56,7 @@ export async function adminActivateInvitationAction(
     .select("id")
     .eq("code", parsed.data.packageCode)
     .eq("is_active", true)
+    .eq("kind", "invitation") // aktivasi manual hanya paket undangan
     .maybeSingle();
   if (!pkg) detail(invitationId, "activate_pkg");
 

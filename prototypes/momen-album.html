@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Momen — Album Kamera Sekali Pakai · Prototipe Merriva</title>
+<style>
+  /* ============ Token & reset ============ */
+  :root{
+    --paper:#FAF6EF; --card:#FFFFFF; --ink:#221C14; --muted:#8A7F6F;
+    --acc:#C09A4A; --acc-ink:#7A5E23; --line:#E9E1D2;
+    --dark:#0E0C09; --dark-2:#171410; --dark-line:#2A251E; --dark-ink:#F4EEE2;
+    --ok:#3E7C4F; --danger:#A63D2F;
+    --radius:20px; --shadow:0 10px 30px rgba(34,28,20,.10);
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);
+    -webkit-font-smoothing:antialiased;overflow:hidden}
+  button{font:inherit;border:0;background:none;color:inherit;cursor:pointer}
+  input,select{font:inherit}
+  ::selection{background:#EAD9B0}
+
+  #app{position:fixed;inset:0;max-width:520px;margin:0 auto;background:var(--paper);
+    display:flex;flex-direction:column;overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,.15)}
+
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+  .screen.on{display:flex}
+
+  /* ============ Layar Masuk ============ */
+  #screen-masuk{background:
+    radial-gradient(120% 70% at 80% -10%, #F3E6C8 0%, transparent 60%),
+    radial-gradient(100% 60% at 0% 100%, #EFE3CE 0%, transparent 55%), var(--paper);
+    padding:max(env(safe-area-inset-top),20px) 24px 28px;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:8px;color:var(--acc-ink);
+    font-size:12px;letter-spacing:.22em;text-transform:uppercase;font-weight:600}
+  .brand::before{content:"";width:26px;height:1px;background:var(--acc)}
+  .masuk-hero{margin-top:6vh}
+  .masuk-hero .kicker{font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted)}
+  .masuk-hero h1{font-size:clamp(34px,9vw,44px);line-height:1.05;font-weight:650;
+    letter-spacing:-.02em;margin:10px 0 8px}
+  .masuk-hero h1 em{font-style:italic;color:var(--acc-ink)}
+  .masuk-hero p{color:var(--muted);font-size:14.5px;line-height:1.55;max-width:34ch}
+  .fitur-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .pill{font-size:11.5px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;
+    background:rgba(255,255,255,.7);color:var(--acc-ink)}
+  .masuk-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:18px}
+  .masuk-card label{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:8px}
+  #input-nama{width:100%;padding:14px 16px;border:1.5px solid var(--line);border-radius:14px;
+    background:#FDFBF6;color:var(--ink);outline:none;font-size:16px}
+  #input-nama:focus{border-color:var(--acc)}
+  .cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:12px;
+    padding:15px;border-radius:14px;background:var(--ink);color:#F8F3E8;font-weight:600;font-size:15.5px;
+    transition:transform .15s ease, opacity .15s}
+  .cta:active{transform:scale(.98)}
+  .cta[disabled]{opacity:.45}
+  .masuk-note{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:12px;
+    font-size:11.5px;color:var(--muted)}
+  .masuk-note .dot{width:5px;height:5px;border-radius:50%;background:var(--acc)}
+
+  /* ============ Layar Kamera ============ */
+  #screen-kamera{background:var(--dark);color:var(--dark-ink)}
+  .cam-stage{position:relative;flex:1;overflow:hidden;background:#000}
+  #cam-video,#cam-demo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  #cam-overlay{position:absolute;inset:0;pointer-events:none}
+  #cam-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+  #cam-flash.zap{animation:zap .38s ease-out}
+  @keyframes zap{0%{opacity:.9}100%{opacity:0}}
+  .cam-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;
+    justify-content:space-between;padding:max(env(safe-area-inset-top),14px) 16px 30px;
+    background:linear-gradient(rgba(0,0,0,.55),transparent);z-index:3}
+  .cam-title{font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.9}
+  .cam-title b{display:block;font-size:13px;letter-spacing:.02em;text-transform:none;margin-top:2px}
+  .pips{display:flex;gap:5px;align-items:center}
+  .pip{width:9px;height:9px;border-radius:50%;background:#F1E5C8;box-shadow:0 0 8px rgba(241,229,200,.6)}
+  .pip.used{background:rgba(255,255,255,.22);box-shadow:none}
+  .icon-btn{width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.4);
+    display:flex;align-items:center;justify-content:center;color:#fff;backdrop-filter:blur(6px)}
+  .cam-bottom{position:absolute;left:0;right:0;bottom:0;z-index:3;
+    padding:14px 0 max(env(safe-area-inset-bottom),18px);
+    background:linear-gradient(transparent,rgba(0,0,0,.65))}
+  .filter-row{display:flex;gap:10px;overflow-x:auto;padding:6px 16px 14px;scrollbar-width:none}
+  .filter-row::-webkit-scrollbar{display:none}
+  .fchip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;opacity:.75;
+    transition:opacity .15s, transform .15s}
+  .fchip.on{opacity:1;transform:translateY(-3px)}
+  .fchip canvas{width:52px;height:52px;border-radius:14px;border:2px solid transparent;display:block}
+  .fchip.on canvas{border-color:#F1E5C8}
+  .fchip span{font-size:10.5px;letter-spacing:.06em}
+  .cam-actions{display:flex;align-items:center;justify-content:space-between;padding:0 34px}
+  #btn-galeri,#btn-flip{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.14);
+    display:flex;align-items:center;justify-content:center}
+  #btn-galeri.hide{visibility:hidden}
+  #btn-shutter{width:76px;height:76px;border-radius:50%;border:4px solid #F1E5C8;
+    display:flex;align-items:center;justify-content:center;transition:transform .12s}
+  #btn-shutter::after{content:"";width:58px;height:58px;border-radius:50%;background:#F8F3E8;
+    transition:transform .12s}
+  #btn-shutter:active::after{transform:scale(.86)}
+  #btn-shutter[disabled]{opacity:.35}
+  .cam-toast{position:absolute;left:50%;top:18%;transform:translateX(-50%) translateY(-8px);
+    background:rgba(14,12,9,.86);border:1px solid rgba(241,229,200,.25);color:#F4EEE2;
+    padding:10px 16px;border-radius:999px;font-size:12.5px;letter-spacing:.03em;opacity:0;
+    pointer-events:none;z-index:4;white-space:nowrap;backdrop-filter:blur(8px)}
+  .cam-toast.show{animation:toast 2.1s ease forwards}
+  @keyframes toast{0%{opacity:0;transform:translateX(-50%) translateY(-8px)}
+    12%,80%{opacity:1;transform:translateX(-50%) translateY(0)}
+    100%{opacity:0;transform:translateX(-50%) translateY(-6px)}}
+  #polaroid{position:absolute;left:50%;top:44%;width:150px;transform:translate(-50%,-50%) rotate(-4deg) scale(.4);
+    background:#fff;padding:8px 8px 26px;box-shadow:0 18px 50px rgba(0,0,0,.5);opacity:0;
+    pointer-events:none;z-index:4}
+  #polaroid img{width:100%;display:block;aspect-ratio:3/4;object-fit:cover;background:#111}
+  #polaroid figcaption{position:absolute;left:0;right:0;bottom:6px;text-align:center;
+    font-size:10px;color:#6b6b6b}
+  #polaroid.drop{animation:drop 1.5s cubic-bezier(.2,.8,.25,1) forwards}
+  @keyframes drop{0%{opacity:0;transform:translate(-50%,-58%) rotate(4deg) scale(.5)}
+    22%{opacity:1;transform:translate(-50%,-50%) rotate(-4deg) scale(1)}
+    72%{opacity:1;transform:translate(-50%,-50%) rotate(-4deg) scale(1)}
+    100%{opacity:0;transform:translate(-50%,10%) rotate(-7deg) scale(.7)}}
+  .demo-badge{position:absolute;top:calc(max(env(safe-area-inset-top),14px) + 52px);left:16px;z-index:3;
+    font-size:10.5px;letter-spacing:.08em;padding:5px 10px;border-radius:999px;
+    background:rgba(192,154,74,.2);border:1px solid rgba(192,154,74,.5);color:#EBD9AE;display:none}
+  .demo-badge.on{display:block}
+
+  /* ============ Layar Habis / Status ============ */
+  #screen-habis{background:
+    radial-gradient(110% 60% at 50% -10%, #F1E4C6 0%, transparent 60%), var(--paper);
+    align-items:center;justify-content:center;text-align:center;padding:32px}
+  .habis-emoji{font-size:44px}
+  #screen-habis h2{font-size:26px;font-weight:650;letter-spacing:-.01em;margin:14px 0 8px}
+  #screen-habis p{color:var(--muted);font-size:14.5px;line-height:1.6;max-width:32ch}
+  .count-wrap{display:flex;gap:10px;margin:26px 0 8px}
+  .count-cell{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    min-width:64px;padding:12px 8px;box-shadow:var(--shadow)}
+  .count-cell b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
+  .count-cell span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .ghost-btn{margin-top:20px;padding:12px 22px;border:1.5px solid var(--ink);border-radius:999px;
+    font-weight:600;font-size:14px}
+  .mini-note{margin-top:14px;font-size:12px;color:var(--muted)}
+
+  /* ============ Layar Galeri ============ */
+  #screen-galeri{background:var(--paper)}
+  .galeri-head{padding:max(env(safe-area-inset-top),18px) 20px 14px;
+    border-bottom:1px solid var(--line);background:rgba(250,246,239,.92);backdrop-filter:blur(8px)}
+  .galeri-head .kicker{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--acc-ink)}
+  .galeri-head h2{font-size:24px;font-weight:650;letter-spacing:-.01em;margin-top:2px}
+  .galeri-head p{font-size:12.5px;color:var(--muted);margin-top:2px}
+  /* Dua kolom block-flow (bukan CSS grid): ukuran baris grid terbukti
+     mengabaikan kontribusi tinggi item rasio di kombinasi flex+overflow ini
+     (baris kolaps & tile tumpang) — block flow tidak punya moda gagal itu. */
+  #grid{flex:1;overflow-y:auto;padding:14px 14px calc(env(safe-area-inset-bottom) + 90px);
+    display:flex;gap:10px;align-items:flex-start}
+  #grid .col{flex:1;min-width:0}
+  .ph{position:relative;border-radius:14px;overflow:hidden;background:#E7DFCE;
+    margin:0 0 10px;box-shadow:0 6px 18px rgba(34,28,20,.08);opacity:0;
+    transform:translateY(14px);animation:phin .5s ease forwards}
+  .ph::before{content:"";display:block;padding-top:133.33%}
+  @keyframes phin{to{opacity:1;transform:none}}
+  .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .ph .who{position:absolute;left:8px;bottom:8px;right:8px;display:flex;align-items:center;gap:6px;
+    font-size:10.5px;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7)}
+  .ph .who::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--acc);flex:0 0 auto}
+  .ph .who i{font-style:normal;opacity:.75;margin-left:auto}
+
+  /* ============ Bar bawah umum ============ */
+  .bottom-bar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;z-index:5;
+    padding:12px 16px max(env(safe-area-inset-bottom),14px);
+    background:linear-gradient(transparent,rgba(250,246,239,.9) 40%)}
+  .bar-btn{flex:1;padding:14px;border-radius:14px;background:var(--ink);color:#F8F3E8;
+    font-weight:600;font-size:14px;box-shadow:var(--shadow)}
+  .bar-btn.ghost{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
+
+  /* ============ Sheet Host & Modal ============ */
+  .scrim{position:absolute;inset:0;background:rgba(20,16,10,.45);opacity:0;pointer-events:none;
+    transition:opacity .25s;z-index:8}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .sheet{position:absolute;left:0;right:0;bottom:0;max-height:86%;display:flex;flex-direction:column;
+    background:var(--card);border-radius:22px 22px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.2);
+    transform:translateY(105%);transition:transform .3s cubic-bezier(.25,.9,.3,1);z-index:9}
+  .sheet.on{transform:none}
+  .sheet-grip{width:44px;height:5px;border-radius:99px;background:var(--line);margin:10px auto 4px;flex:0 0 auto}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 10px;
+    border-bottom:1px solid var(--line);flex:0 0 auto}
+  .sheet-head h3{font-size:16px;font-weight:650}
+  .sheet-head .x{color:var(--muted);font-size:22px;line-height:1;padding:6px}
+  .sheet-body{overflow-y:auto;padding:16px 18px calc(env(safe-area-inset-bottom) + 20px)}
+  .set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;
+    border-bottom:1px dashed var(--line)}
+  .set-row:last-child{border-bottom:0}
+  .set-row .lbl b{display:block;font-size:14px;font-weight:600}
+  .set-row .lbl span{font-size:11.5px;color:var(--muted)}
+  .stepper{display:flex;align-items:center;gap:2px;border:1.5px solid var(--line);border-radius:12px}
+  .stepper button{width:38px;height:38px;font-size:18px;color:var(--acc-ink)}
+  .stepper b{min-width:30px;text-align:center;font-variant-numeric:tabular-nums}
+  .seg{display:flex;background:#F3EDE0;border-radius:12px;padding:3px;gap:3px}
+  .seg button{padding:8px 12px;border-radius:10px;font-size:12px;color:var(--muted)}
+  .seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .switch{position:relative;width:48px;height:28px;border-radius:99px;background:#DDD3BF;transition:background .2s}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+    background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25);transition:left .2s}
+  .switch.on{background:var(--acc)}
+  .switch.on::after{left:23px}
+  select.plain{padding:9px 12px;border:1.5px solid var(--line);border-radius:12px;background:#FDFBF6}
+  input[type=datetime-local].plain{padding:9px 12px;border:1.5px solid var(--line);border-radius:12px;
+    background:#FDFBF6;font-size:13px;max-width:180px}
+  .quota-band{margin:6px 0 2px;background:#F3EDE0;border-radius:99px;height:8px;overflow:hidden}
+  .quota-band i{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width .3s}
+  .mod-list{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .mod-item{display:flex;gap:12px;align-items:center;background:#FBF8F1;border:1px solid var(--line);
+    border-radius:14px;padding:8px}
+  .mod-item img{width:52px;height:52px;object-fit:cover;border-radius:10px}
+  .mod-item.hidden-ph img{filter:grayscale(1) brightness(.6)}
+  .mod-item .mi{flex:1;min-width:0}
+  .mod-item .mi b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mod-item .mi span{font-size:11px;color:var(--muted)}
+  .mod-act{font-size:11.5px;font-weight:600;padding:8px 10px;border-radius:10px;border:1.5px solid var(--line)}
+  .mod-act.danger{color:var(--danger);border-color:#E7C3BC}
+  .host-cta{width:100%;margin-top:14px;padding:13px;border-radius:13px;background:var(--acc);
+    color:#231A08;font-weight:650;font-size:14px}
+  .host-sub{width:100%;margin-top:8px;padding:12px;border-radius:13px;border:1.5px solid var(--line);
+    font-weight:600;font-size:13px;color:var(--muted)}
+  .sec-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+    margin:18px 0 4px}
+
+  /* data modal */
+  #modal-data pre{background:var(--dark-2);color:#D8CFBB;border-radius:14px;padding:14px;
+    font-size:10.8px;line-height:1.5;overflow:auto;max-height:52vh;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+  /* lightbox */
+  #lightbox{position:absolute;inset:0;background:rgba(10,8,5,.94);z-index:12;display:none;
+    flex-direction:column;align-items:center;justify-content:center;padding:20px}
+  #lightbox.on{display:flex}
+  #lightbox img{max-width:100%;max-height:70%;border-radius:8px;box-shadow:0 20px 70px rgba(0,0,0,.6)}
+  #lightbox .lb-cap{color:#EFE7D6;font-size:13px;margin-top:14px}
+  #lightbox .lb-row{display:flex;gap:10px;margin-top:16px}
+  #lightbox .lb-btn{padding:11px 18px;border-radius:999px;border:1.5px solid rgba(244,238,226,.35);
+    color:#F4EEE2;font-size:13px;font-weight:600}
+
+  /* util pojok kiri: tombol host & data (floating, di semua layar kecuali kamera) */
+  .float-utils{position:absolute;top:max(env(safe-area-inset-top),14px);right:14px;display:flex;
+    gap:8px;z-index:7}
+  .fu-btn{width:38px;height:38px;border-radius:12px;background:var(--card);border:1px solid var(--line);
+    box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--acc-ink)}
+  #app.cam-on .float-utils{display:none}
+
+  @media (min-width:521px){ body{background:#EDE7DB} }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0ms!important;
+      transition-duration:.01ms!important}
+    .ph{opacity:1;transform:none}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== MASUK ===== -->
+  <section class="screen on" id="screen-masuk">
+    <div class="brand">Merriva Momen</div>
+    <div class="masuk-hero">
+      <div class="kicker">Resepsi · Sab, 05 Sep 2026</div>
+      <h1>Dewi <em>&amp;</em> Raka</h1>
+      <p>Jadilah fotografer di pesta kami! Kamu punya <b id="masuk-jatah">5 jepretan</b> —
+        semua foto tersembunyi dan terbuka serentak saat <b id="masuk-reveal">21:00</b>.</p>
+      <div class="fitur-pills">
+        <span class="pill">✦ Tanpa install aplikasi</span>
+        <span class="pill">✦ 6 filter film</span>
+        <span class="pill">✦ Terbuka bersama</span>
+      </div>
+    </div>
+    <div>
+      <div class="masuk-card">
+        <label for="input-nama">Namamu (tampil di fotomu)</label>
+        <input id="input-nama" type="text" maxlength="40" placeholder="mis. Sasa" autocomplete="off">
+        <button class="cta" id="btn-mulai" disabled>Mulai Memotret <span>→</span></button>
+        <div class="masuk-note"><span class="dot"></span> Dilindungi verifikasi anti-bot (Turnstile)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== KAMERA ===== -->
+  <section class="screen" id="screen-kamera">
+    <div class="cam-stage">
+      <video id="cam-video" autoplay playsinline muted></video>
+      <canvas id="cam-demo"></canvas>
+      <div id="cam-overlay"></div>
+      <div id="cam-flash"></div>
+      <div class="cam-top">
+        <div class="cam-title">Album Momen<b id="cam-nama">—</b></div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="pips" id="pips" aria-label="sisa jepretan"></div>
+          <button class="icon-btn" id="btn-tutup-kamera" aria-label="tutup">✕</button>
+        </div>
+      </div>
+      <div class="demo-badge" id="demo-badge">MODE DEMO — kamera tidak tersedia, pakai adegan simulasi</div>
+      <div class="cam-toast" id="cam-toast">Tersimpan ✓ — tersembunyi sampai reveal</div>
+      <figure id="polaroid"><img id="polaroid-img" alt=""><figcaption>tersembunyi sampai reveal</figcaption></figure>
+      <div class="cam-bottom">
+        <div class="filter-row" id="filter-row"></div>
+        <div class="cam-actions">
+          <button id="btn-galeri" aria-label="unggah dari galeri">🖼️</button>
+          <button id="btn-shutter" aria-label="jepret"></button>
+          <button id="btn-flip" aria-label="balik kamera">⟳</button>
+        </div>
+      </div>
+      <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden>
+    </div>
+  </section>
+
+  <!-- ===== HABIS / STATUS ===== -->
+  <section class="screen" id="screen-habis">
+    <div class="habis-emoji">🎞️</div>
+    <h2>Jatahmu terpakai semua!</h2>
+    <p>Terima kasih sudah ikut memotret. <b id="habis-total">—</b> foto sudah terkumpul di album.
+      Semua terbuka serentak dalam:</p>
+    <div class="count-wrap" id="countdown">
+      <div class="count-cell"><b id="cd-h">–</b><span>Jam</span></div>
+      <div class="count-cell"><b id="cd-m">–</b><span>Menit</span></div>
+      <div class="count-cell"><b id="cd-s">–</b><span>Detik</span></div>
+    </div>
+    <button class="ghost-btn" id="btn-simulasi">⏩ Simulasi reveal (demo)</button>
+    <div class="mini-note">Di produksi, tombol ini tidak ada — reveal mengikuti jadwal host.</div>
+  </section>
+
+  <!-- ===== GALERI ===== -->
+  <section class="screen" id="screen-galeri">
+    <div class="galeri-head">
+      <div class="kicker">Album Momen · Terbuka 🎉</div>
+      <h2>Dewi &amp; Raka</h2>
+      <p id="galeri-sub">— foto oleh — fotografer dadakan</p>
+    </div>
+    <div id="grid"></div>
+    <div class="bottom-bar">
+      <button class="bar-btn ghost" id="btn-kamera-lagi">Kamera</button>
+      <button class="bar-btn" id="btn-unduh-info">Unduh Album (ZIP)</button>
+    </div>
+  </section>
+
+  <!-- floating utils -->
+  <div class="float-utils">
+    <button class="fu-btn" id="btn-data" title="lihat bentuk data">&lt;/&gt;</button>
+    <button class="fu-btn" id="btn-host" title="mode host">⚙</button>
+  </div>
+
+  <!-- ===== SHEET HOST ===== -->
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet-host" role="dialog" aria-label="Pengaturan host">
+    <div class="sheet-grip"></div>
+    <div class="sheet-head"><h3>Mode Host — Kelola Album</h3>
+      <button class="x" data-close aria-label="tutup">×</button></div>
+    <div class="sheet-body">
+      <div class="sec-label">Kapasitas</div>
+      <div class="quota-band"><i id="quota-fill" style="width:4%"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted)">
+        <span id="quota-text">12 / 300 foto</span><span>Add-on: Momen 300</span>
+      </div>
+
+      <div class="sec-label">Pengaturan</div>
+      <div class="set-row">
+        <div class="lbl"><b>Jatah per tamu</b><span>1–20 jepretan</span></div>
+        <div class="stepper">
+          <button id="jatah-min" aria-label="kurangi">−</button>
+          <b id="jatah-val">5</b>
+          <button id="jatah-plus" aria-label="tambah">+</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <div class="lbl"><b>Waktu reveal</b><span id="reveal-desc">Foto terbuka 21:00 malam ini</span></div>
+        <div class="seg" id="seg-reveal">
+          <button data-mode="instan">Instan</button>
+          <button data-mode="jadwal" class="on">Jadwal</button>
+        </div>
+      </div>
+      <div class="set-row" id="row-jadwal">
+        <div class="lbl"><b>Jadwal</b><span>zona waktu WIB</span></div>
+        <input type="datetime-local" class="plain" id="reveal-input">
+      </div>
+      <div class="set-row">
+        <div class="lbl"><b>Filter bawaan</b><span>saat tamu pertama membuka kamera</span></div>
+        <select class="plain" id="sel-filter"></select>
+      </div>
+      <div class="set-row">
+        <div class="lbl"><b>Izinkan unggah dari galeri</b><span>mati = hanya jepretan langsung</span></div>
+        <button class="switch" id="sw-galeri" role="switch" aria-checked="true"></button>
+      </div>
+
+      <div class="sec-label">Moderasi (host melihat semua foto sebelum reveal)</div>
+      <div class="mod-list" id="mod-list"></div>
+
+      <button class="host-cta" id="btn-reveal-now">Reveal sekarang</button>
+      <button class="host-sub" id="btn-qr">Cetak QR meja (A6) — di produksi</button>
+    </div>
+  </div>
+
+  <!-- ===== MODAL DATA ===== -->
+  <div class="sheet" id="modal-data" role="dialog" aria-label="Bentuk data">
+    <div class="sheet-grip"></div>
+    <div class="sheet-head"><h3>Bentuk data (settings &amp; foto)</h3>
+      <button class="x" data-close aria-label="tutup">×</button></div>
+    <div class="sheet-body"><pre id="data-pre">—</pre></div>
+  </div>
+
+  <!-- ===== LIGHTBOX ===== -->
+  <div id="lightbox">
+    <img id="lb-img" alt="">
+    <div class="lb-cap" id="lb-cap">—</div>
+    <div class="lb-row">
+      <button class="lb-btn" id="lb-unduh">Unduh foto</button>
+      <button class="lb-btn" id="lb-tutup">Tutup</button>
+    </div>
+  </div>
+
+</div>
+<script>
+"use strict";
+/* ================================================================
+   BAGIAN 1 — Modul film: port literal dari handoff/momen
+   (film-presets.ts + film-render.ts). Sumber kebenaran = TS.
+   ================================================================ */
+const NEUTRAL = { bright:1, contrast:1, saturate:1, temp:0, tint:0, fade:0,
+  mono:false, vignette:0, grain:0, halation:0 };
+
+const FILM_PRESETS = [
+  { id:"polos", name:"Polos", desc:"Apa adanya",
+    css:"none", overlay:"", params:{ ...NEUTRAL } },
+  { id:"hangat", name:"Hangat", desc:"Lembut, hitam pudar",
+    css:"brightness(1.04) contrast(0.94) saturate(0.92) sepia(0.14)",
+    overlay:"radial-gradient(140% 110% at 50% 45%, rgba(255,176,102,0.10), rgba(31,20,10,0.18) 100%)",
+    params:{ ...NEUTRAL, bright:1.04, contrast:.94, saturate:.92, temp:.28, tint:.04, fade:.35, vignette:.16, grain:.22 } },
+  { id:"vivid", name:"Vivid", desc:"Warna berani",
+    css:"brightness(1.02) contrast(1.14) saturate(1.32)",
+    overlay:"radial-gradient(150% 120% at 50% 45%, rgba(0,0,0,0), rgba(10,8,16,0.22) 100%)",
+    params:{ ...NEUTRAL, bright:1.02, contrast:1.14, saturate:1.32, temp:.06, vignette:.2, grain:.12 } },
+  { id:"pesta", name:"Pesta", desc:"Kamera saku + flash",
+    css:"brightness(1.1) contrast(1.2) saturate(1.12)",
+    overlay:"radial-gradient(120% 95% at 50% 42%, rgba(255,255,255,0.06), rgba(6,8,18,0.34) 100%)",
+    params:{ ...NEUTRAL, bright:1.1, contrast:1.2, saturate:1.12, temp:-.08, tint:.05, fade:.1, vignette:.38, grain:.42 } },
+  { id:"mono", name:"Mono", desc:"Hitam-putih klasik",
+    css:"grayscale(1) brightness(1.03) contrast(1.16)",
+    overlay:"radial-gradient(150% 120% at 50% 45%, rgba(0,0,0,0), rgba(0,0,0,0.26) 100%)",
+    params:{ ...NEUTRAL, bright:1.03, contrast:1.16, mono:true, fade:.18, vignette:.24, grain:.5 } },
+  { id:"senja", name:"Senja", desc:"Malam sinematik",
+    css:"brightness(1.02) contrast(1.08) saturate(1.06)",
+    overlay:"radial-gradient(140% 110% at 50% 45%, rgba(96,150,255,0.08), rgba(4,6,20,0.30) 100%)",
+    params:{ ...NEUTRAL, bright:1.02, contrast:1.08, saturate:1.06, temp:-.22, tint:.06, fade:.12, vignette:.28, grain:.3, halation:.55 } },
+];
+const PRESET_BY_ID = new Map(FILM_PRESETS.map(p => [p.id, p]));
+const getFilmPreset = id => PRESET_BY_ID.get(id) ?? FILM_PRESETS[0];
+
+function mulberry32(seed){
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const luma = (r,g,b) => 0.299*r + 0.587*g + 0.114*b;
+const clamp255 = v => v < 0 ? 0 : v > 255 ? 255 : v;
+
+function boxBlur1(src, w, h, radius){
+  const r = Math.max(0, Math.floor(radius));
+  if (r === 0) return Float32Array.from(src);
+  const tmp = new Float32Array(src.length);
+  const out = new Float32Array(src.length);
+  const win = 2*r + 1;
+  for (let y = 0; y < h; y++){
+    const row = y*w; let acc = 0;
+    for (let x = -r; x <= r; x++) acc += src[row + Math.min(w-1, Math.max(0,x))];
+    for (let x = 0; x < w; x++){
+      tmp[row+x] = acc/win;
+      acc += src[row + Math.min(w-1, x+r+1)] - src[row + Math.max(0, x-r)];
+    }
+  }
+  for (let x = 0; x < w; x++){
+    let acc = 0;
+    for (let y = -r; y <= r; y++) acc += tmp[Math.min(h-1, Math.max(0,y))*w + x];
+    for (let y = 0; y < h; y++){
+      out[y*w+x] = acc/win;
+      acc += tmp[Math.min(h-1, y+r+1)*w + x] - tmp[Math.max(0, y-r)*w + x];
+    }
+  }
+  return out;
+}
+
+function applyFilmToPixels(data, w, h, p, opts = {}){
+  if (data.length !== w*h*4) throw new Error("ukuran buffer salah");
+  const n = w*h;
+  let glow = null;
+  if (p.halation > 0){
+    const mask = new Float32Array(n);
+    for (let i = 0; i < n; i++){
+      const j = i*4;
+      const L = luma(data[j], data[j+1], data[j+2]) / 255;
+      mask[i] = L > 0.82 ? (L - 0.82)/0.18 : 0;
+    }
+    const radius = Math.max(2, Math.round(Math.min(w,h)/60));
+    glow = boxBlur1(boxBlur1(mask, w, h, radius), w, h, radius);
+  }
+  const cx = (w-1)/2, cy = (h-1)/2;
+  const maxDist = Math.sqrt(cx*cx + cy*cy) || 1;
+  const tempR = 1 + 0.16*p.temp, tempB = 1 - 0.2*p.temp, tintG = 1 - 0.12*p.tint;
+  const fadeLift = 46*p.fade;
+  const rand = mulberry32(opts.seed ?? 1);
+  const grainAmp = 26*p.grain;
+  for (let i = 0; i < n; i++){
+    const j = i*4;
+    let r = data[j], g = data[j+1], b = data[j+2];
+    r *= tempR; b *= tempB; g *= tintG;
+    r *= p.bright; g *= p.bright; b *= p.bright;
+    r = (r-128)*p.contrast + 128; g = (g-128)*p.contrast + 128; b = (b-128)*p.contrast + 128;
+    if (p.mono){ const L = luma(r,g,b); r = g = b = L; }
+    else if (p.saturate !== 1){
+      const L = luma(r,g,b);
+      r = L + (r-L)*p.saturate; g = L + (g-L)*p.saturate; b = L + (b-L)*p.saturate;
+    }
+    if (fadeLift > 0){
+      r += fadeLift*(1 - r/255); g += fadeLift*(1 - g/255); b += fadeLift*(1 - b/255);
+    }
+    if (glow){
+      const q = glow[i]*p.halation;
+      if (q > 0){
+        r = 255 - (255-r)*(255 - 255*q*1.0)/255;
+        g = 255 - (255-g)*(255 - 255*q*0.45)/255;
+        b = 255 - (255-b)*(255 - 255*q*0.25)/255;
+      }
+    }
+    if (p.vignette > 0){
+      const x = i % w, y = (i-x)/w;
+      const dx = (x-cx)/maxDist, dy = (y-cy)/maxDist;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      const v = 1 - p.vignette*d*d*1.15;
+      r *= v; g *= v; b *= v;
+    }
+    if (grainAmp > 0){
+      const gn = (rand()-0.5)*2*grainAmp;
+      const L = luma(r,g,b)/255;
+      const mod = 1 - Math.abs(2*L-1)*0.6;
+      r += gn*mod; g += gn*mod; b += gn*mod;
+    }
+    data[j] = clamp255(r); data[j+1] = clamp255(g); data[j+2] = clamp255(b);
+  }
+  return data;
+}
+
+/* ================================================================
+   BAGIAN 2 — Pelukis adegan demo (fallback tanpa kamera + foto seed)
+   Deterministik via mulberry32 supaya verifikasi konsisten.
+   ================================================================ */
+function paintScene(ctx, w, h, kind, seed, t = 0){
+  const rnd = mulberry32(seed);
+  const sky = ctx.createLinearGradient(0, 0, 0, h);
+  if (kind === "senja-luar"){
+    sky.addColorStop(0, "#1B2440"); sky.addColorStop(.55, "#5A3A55"); sky.addColorStop(1, "#C96F3B");
+  } else if (kind === "taman"){
+    sky.addColorStop(0, "#B9D2B4"); sky.addColorStop(.6, "#7FA678"); sky.addColorStop(1, "#4F7249");
+  } else if (kind === "panggung"){
+    sky.addColorStop(0, "#120E1C"); sky.addColorStop(.7, "#2A1830"); sky.addColorStop(1, "#4A2436");
+  } else { // "resepsi" default — ballroom hangat
+    sky.addColorStop(0, "#3A2A1C"); sky.addColorStop(.6, "#6B4A2C"); sky.addColorStop(1, "#8F6437");
+  }
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+  // bokeh lampu
+  const nb = 14;
+  for (let i = 0; i < nb; i++){
+    const x = rnd()*w, y = rnd()*h*.62, rr = (8 + rnd()*26) * (w/480);
+    const drift = Math.sin(t*.0012 + i)*6;
+    const gl = ctx.createRadialGradient(x, y+drift, 0, x, y+drift, rr);
+    const warm = rnd() > .35;
+    gl.addColorStop(0, warm ? "rgba(255,222,150,.95)" : "rgba(180,210,255,.9)");
+    gl.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gl;
+    ctx.beginPath(); ctx.arc(x, y+drift, rr, 0, 7); ctx.fill();
+  }
+  // string lights
+  ctx.strokeStyle = "rgba(255,230,170,.35)"; ctx.lineWidth = Math.max(1, w/480);
+  for (let s = 0; s < 3; s++){
+    ctx.beginPath();
+    for (let x = 0; x <= w; x += 8){
+      const y = h*(.12 + s*.09) + Math.sin(x/70 + s)*14;
+      x === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+  // siluet tamu
+  ctx.fillStyle = "rgba(18,12,8,.9)";
+  const np = 4 + Math.floor(rnd()*3);
+  for (let i = 0; i < np; i++){
+    const px = w*(0.08 + 0.85*rnd()), pw = w*(.09 + rnd()*.05), ph = h*(.24 + rnd()*.1);
+    const bob = Math.sin(t*.002 + i*2)*3;
+    ctx.beginPath();
+    ctx.arc(px, h - ph + bob, pw*.32, 0, 7);           // kepala
+    ctx.fill();
+    ctx.beginPath();                                     // badan
+    ctx.moveTo(px - pw/2, h);
+    ctx.quadraticCurveTo(px, h - ph*.92 + bob, px + pw/2, h);
+    ctx.fill();
+  }
+  // meja kue / dekor depan
+  ctx.fillStyle = "rgba(250,244,230,.92)";
+  const cw = w*.2, chx = w*.5 - cw/2, cy0 = h*.78;
+  ctx.fillRect(chx, cy0, cw, h*.05);
+  ctx.fillRect(chx + cw*.18, cy0 - h*.04, cw*.64, h*.04);
+  ctx.fillRect(chx + cw*.34, cy0 - h*.07, cw*.32, h*.03);
+  ctx.fillStyle = "#F2C14E";
+  ctx.fillRect(w*.5 - 1.5, cy0 - h*.095, 3, h*.025); // lilin
+}
+
+function sceneDataUrl(kind, seed, presetId, w = 300, h = 400, grainSeed = 7){
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently:true });
+  paintScene(ctx, w, h, kind, seed, seed*137);
+  const img = ctx.getImageData(0, 0, w, h);
+  applyFilmToPixels(img.data, w, h, getFilmPreset(presetId).params, { seed:grainSeed });
+  ctx.putImageData(img, 0, 0);
+  return c.toDataURL("image/jpeg", .85);
+}
+/* ================================================================
+   BAGIAN 3 — Logika album (port album-phase/shot-quota) + aplikasi
+   ================================================================ */
+function resolveAlbumPhase(nowMs, revealAtIso){
+  if (revealAtIso === null) return "revealed";
+  const t = Date.parse(revealAtIso);
+  if (Number.isNaN(t)) return "hidden";
+  return nowMs >= t ? "revealed" : "hidden";
+}
+function msUntilReveal(nowMs, revealAtIso){
+  if (revealAtIso === null) return 0;
+  const t = Date.parse(revealAtIso);
+  if (Number.isNaN(t)) return 0;
+  return Math.max(0, t - nowMs);
+}
+function countdownParts(ms){
+  const total = Math.max(0, Math.floor(ms/1000));
+  return { d:Math.floor(total/86400), h:Math.floor((total%86400)/3600),
+           m:Math.floor((total%3600)/60), s:total%60 };
+}
+function remainingForDevice(s){
+  const nn = v => Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+  const perGuest = Math.max(0, nn(s.quotaPerGuest) - nn(s.deviceCount));
+  return Math.min(perGuest, Math.max(0, nn(s.quotaTotal) - nn(s.photoCount)));
+}
+
+const $ = sel => document.querySelector(sel);
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
+  : "xxxx-xxxx-4xxx-yxxx".replace(/[xy]/g, c => {
+      const r = Math.random()*16|0; return (c === "x" ? r : (r&3|8)).toString(16);
+    }));
+const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsSet = (k,v) => { try { localStorage.setItem(k,v); } catch {} };
+
+/* ---- "DB" demo ---- */
+const revealDefault = new Date(Date.now() + 2*3600*1000);
+const store = {
+  album: {
+    id: uuid(), invitation_id: "inv_dewiraka_demo",
+    quota_total: 300, quota_per_guest: 5,
+    reveal_at: revealDefault.toISOString(),
+    default_filter: "hangat", allow_library_upload: true,
+    photo_count: 0,
+  },
+  photos: [], // {id, guest_name, device_id, filter_id, status, url, mine}
+};
+const me = {
+  name: lsGet("momen-nama") || "",
+  deviceId: lsGet("momen-device") || uuid(),
+  taken: 0,
+};
+lsSet("momen-device", me.deviceId);
+
+const SEED_GUESTS = [
+  ["Bunda Rina","resepsi","hangat"], ["Om Hendra","taman","vivid"],
+  ["Alya","senja-luar","senja"], ["Bima","panggung","pesta"],
+  ["Tante Wulan","resepsi","mono"], ["Nadia","taman","hangat"],
+  ["Pak Dedi","panggung","senja"], ["Raka (CPP)","resepsi","vivid"],
+  ["Kak Ima","senja-luar","hangat"], ["Mas Yoga","taman","pesta"],
+  ["Bu Sari","resepsi","polos"], ["Dinda","panggung","mono"],
+];
+function seedPhotos(){
+  SEED_GUESTS.forEach(([name, kind, filter], i) => {
+    store.photos.push({
+      id: uuid(), guest_name: name, device_id: "seed-"+i, filter_id: filter,
+      status: "visible", mine:false,
+      url: sceneDataUrl(kind, 11 + i*3, filter, 330, 440, 100 + i),
+    });
+  });
+  store.album.photo_count = store.photos.length;
+}
+
+/* ---- Navigasi layar ---- */
+const SCREENS = ["masuk","kamera","habis","galeri"];
+let current = "masuk";
+function show(name){
+  current = name;
+  SCREENS.forEach(s => $("#screen-"+s).classList.toggle("on", s === name));
+  $("#app").classList.toggle("cam-on", name === "kamera");
+  if (name === "kamera") ensureCamera(); else stopDemoLoop();
+  if (name === "habis") refreshHabis();
+  if (name === "galeri") renderGallery();
+}
+function phaseNow(){ return resolveAlbumPhase(Date.now(), store.album.reveal_at); }
+function quotaState(){
+  return { quotaTotal: store.album.quota_total, photoCount: store.album.photo_count,
+           quotaPerGuest: store.album.quota_per_guest, deviceCount: me.taken };
+}
+
+/* ---- Layar masuk ---- */
+const inputNama = $("#input-nama"), btnMulai = $("#btn-mulai");
+inputNama.value = me.name;
+function syncMulai(){ btnMulai.disabled = inputNama.value.trim().length === 0; }
+inputNama.addEventListener("input", syncMulai); syncMulai();
+btnMulai.addEventListener("click", () => {
+  me.name = inputNama.value.trim().slice(0, 40);
+  lsSet("momen-nama", me.name);
+  $("#cam-nama").textContent = me.name;
+  show(phaseNow() === "revealed" && remainingForDevice(quotaState()) === 0 ? "galeri" : "kamera");
+});
+function syncMasukText(){
+  $("#masuk-jatah").textContent = store.album.quota_per_guest + " jepretan";
+  const t = store.album.reveal_at;
+  $("#masuk-reveal").textContent = t === null ? "langsung tampil"
+    : new Date(t).toLocaleTimeString("id-ID", { hour:"2-digit", minute:"2-digit" });
+}
+
+/* ---- Kamera ---- */
+const video = $("#cam-video"), demo = $("#cam-demo"), overlay = $("#cam-overlay");
+let stream = null, facing = "environment", demoOn = false, demoRaf = 0, demoSeed = 21;
+let selectedFilter = store.album.default_filter;
+
+async function ensureCamera(){
+  updatePips(); applyPreviewFilter();
+  $("#btn-galeri").classList.toggle("hide", !store.album.allow_library_upload);
+  if (stream || demoOn) return;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    demo.style.display = "none";
+  } catch {
+    enterDemoMode();
+  }
+}
+function enterDemoMode(){
+  demoOn = true;
+  video.style.display = "none";
+  $("#demo-badge").classList.add("on");
+  const fit = () => {
+    const r = demo.parentElement.getBoundingClientRect();
+    demo.width = Math.max(2, Math.round(r.width));
+    demo.height = Math.max(2, Math.round(r.height));
+  };
+  fit(); window.addEventListener("resize", fit);
+  const ctx = demo.getContext("2d", { willReadFrequently:true });
+  const loop = t => {
+    if (current === "kamera"){
+      paintScene(ctx, demo.width, demo.height, "resepsi", demoSeed, t);
+      demoRaf = requestAnimationFrame(loop);
+    }
+  };
+  demoRaf = requestAnimationFrame(loop);
+}
+function stopDemoLoop(){ if (demoRaf) cancelAnimationFrame(demoRaf), demoRaf = 0; }
+function applyPreviewFilter(){
+  const p = getFilmPreset(selectedFilter);
+  const css = p.css === "none" ? "" : p.css;
+  video.style.filter = css; demo.style.filter = css;
+  overlay.style.background = p.overlay;
+  document.querySelectorAll(".fchip").forEach(el =>
+    el.classList.toggle("on", el.dataset.id === selectedFilter));
+}
+function updatePips(){
+  const wrap = $("#pips"); wrap.innerHTML = "";
+  const q = store.album.quota_per_guest;
+  for (let i = 0; i < q; i++){
+    const d = document.createElement("i");
+    d.className = "pip" + (i < me.taken ? " used" : "");
+    wrap.appendChild(d);
+  }
+  $("#btn-shutter").disabled = remainingForDevice(quotaState()) === 0;
+}
+
+/* chip filter dengan thumbnail hasil bake asli */
+function buildChips(){
+  const row = $("#filter-row");
+  FILM_PRESETS.forEach(p => {
+    const b = document.createElement("button");
+    b.className = "fchip"; b.dataset.id = p.id;
+    b.setAttribute("aria-label", "filter " + p.name);
+    const c = document.createElement("canvas");
+    c.width = 104; c.height = 104;
+    const ctx = c.getContext("2d", { willReadFrequently:true });
+    paintScene(ctx, 104, 104, "resepsi", 5, 400);
+    const img = ctx.getImageData(0, 0, 104, 104);
+    applyFilmToPixels(img.data, 104, 104, p.params, { seed:5 });
+    ctx.putImageData(img, 0, 0);
+    const s = document.createElement("span"); s.textContent = p.name;
+    b.append(c, s);
+    b.addEventListener("click", () => { selectedFilter = p.id; applyPreviewFilter(); });
+    row.appendChild(b);
+  });
+}
+
+/* jepret / unggah */
+let busy = false;
+function captureFrom(drawSource, sw, sh){
+  const MAXW = 1280;
+  const scale = Math.min(1, MAXW / sw);
+  const w = Math.max(2, Math.round(sw*scale)), h = Math.max(2, Math.round(sh*scale));
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently:true });
+  drawSource(ctx, w, h);
+  const img = ctx.getImageData(0, 0, w, h);
+  applyFilmToPixels(img.data, w, h, getFilmPreset(selectedFilter).params, { seed: me.taken + 1 });
+  ctx.putImageData(img, 0, 0);
+  return c.toDataURL("image/jpeg", 0.85);
+}
+function commitPhoto(url){
+  store.photos.unshift({
+    id: uuid(), guest_name: me.name || "Tamu", device_id: me.deviceId,
+    filter_id: selectedFilter, status: "visible", mine:true, url,
+  });
+  store.album.photo_count = store.photos.length;
+  me.taken += 1;
+  updatePips(); syncHostQuota();
+  $("#cam-flash").classList.remove("zap"); void $("#cam-flash").offsetWidth;
+  $("#cam-flash").classList.add("zap");
+  const pol = $("#polaroid");
+  $("#polaroid-img").src = url;
+  pol.classList.remove("drop"); void pol.offsetWidth; pol.classList.add("drop");
+  const toast = $("#cam-toast");
+  toast.classList.remove("show"); void toast.offsetWidth; toast.classList.add("show");
+  if (remainingForDevice(quotaState()) === 0){
+    setTimeout(() => show(phaseNow() === "revealed" ? "galeri" : "habis"), 1700);
+  }
+}
+$("#btn-shutter").addEventListener("click", () => {
+  if (busy || remainingForDevice(quotaState()) === 0) return;
+  busy = true;
+  requestAnimationFrame(() => {
+    let url;
+    if (!demoOn && video.videoWidth > 0){
+      url = captureFrom((ctx,w,h) => ctx.drawImage(video, 0, 0, w, h),
+                        video.videoWidth, video.videoHeight);
+    } else {
+      const sw = demo.width || 480, sh = demo.height || 640;
+      url = captureFrom((ctx,w,h) => {
+        if (demoOn) ctx.drawImage(demo, 0, 0, w, h);
+        else paintScene(ctx, w, h, "resepsi", demoSeed, performance.now());
+      }, sw, sh);
+    }
+    commitPhoto(url);
+    busy = false;
+  });
+});
+$("#btn-flip").addEventListener("click", async () => {
+  if (demoOn){ demoSeed += 1; return; }
+  facing = facing === "environment" ? "user" : "environment";
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  await ensureCamera();
+});
+$("#btn-galeri").addEventListener("click", () => $("#file-input").click());
+$("#file-input").addEventListener("change", async e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!f || busy || remainingForDevice(quotaState()) === 0) return;
+  if (!/^image\/(jpeg|png|webp)$/i.test(f.type)) return;
+  busy = true;
+  try {
+    let bmp;
+    try { bmp = await createImageBitmap(f, { imageOrientation:"from-image" }); }
+    catch { bmp = await createImageBitmap(f); }
+    const url = captureFrom((ctx,w,h) => ctx.drawImage(bmp, 0, 0, w, h), bmp.width, bmp.height);
+    commitPhoto(url);
+  } catch {} finally { busy = false; }
+});
+$("#btn-tutup-kamera").addEventListener("click", () => {
+  if (phaseNow() === "revealed") show("galeri");
+  else if (me.taken > 0) show("habis");
+  else show("masuk");
+});
+
+/* ---- Layar habis + countdown ---- */
+function refreshHabis(){ $("#habis-total").textContent = store.album.photo_count; }
+setInterval(() => {
+  const ms = msUntilReveal(Date.now(), store.album.reveal_at);
+  const p = countdownParts(ms);
+  $("#cd-h").textContent = String(p.d*24 + p.h).padStart(2,"0");
+  $("#cd-m").textContent = String(p.m).padStart(2,"0");
+  $("#cd-s").textContent = String(p.s).padStart(2,"0");
+  if (current === "habis" && phaseNow() === "revealed") show("galeri");
+}, 1000);
+$("#btn-simulasi").addEventListener("click", () => {
+  store.album.reveal_at = new Date(Date.now() - 1000).toISOString();
+  syncHostReveal(); show("galeri");
+});
+
+/* ---- Galeri ---- */
+function visiblePhotos(){ return store.photos.filter(p => p.status === "visible"); }
+function renderGallery(){
+  const grid = $("#grid"); grid.innerHTML = "";
+  const cols = [document.createElement("div"), document.createElement("div")];
+  cols.forEach(c => { c.className = "col"; grid.appendChild(c); });
+  const list = visiblePhotos();
+  const who = new Set(list.map(p => p.guest_name));
+  $("#galeri-sub").textContent = list.length + " foto oleh " + who.size + " fotografer dadakan";
+  list.forEach((p, i) => {
+    const d = document.createElement("figure");
+    d.className = "ph"; d.style.animationDelay = Math.min(i*45, 500) + "ms";
+    const img = document.createElement("img");
+    img.src = p.url; img.alt = "foto oleh " + p.guest_name; img.loading = "lazy";
+    const cap = document.createElement("figcaption");
+    cap.className = "who";
+    cap.innerHTML = "<b></b><i></i>";
+    cap.querySelector("b").textContent = p.guest_name;
+    cap.querySelector("i").textContent = getFilmPreset(p.filter_id).name;
+    d.append(img, cap);
+    d.addEventListener("click", () => openLightbox(p));
+    cols[i % 2].appendChild(d);
+  });
+}
+$("#btn-kamera-lagi").addEventListener("click", () => {
+  show(remainingForDevice(quotaState()) > 0 ? "kamera" : "habis");
+});
+$("#btn-unduh-info").addEventListener("click", function(){
+  const old = this.textContent;
+  this.textContent = "Di produksi: ZIP streaming (host)";
+  setTimeout(() => { this.textContent = old; }, 1800);
+});
+
+/* lightbox */
+function openLightbox(p){
+  $("#lb-img").src = p.url;
+  $("#lb-cap").textContent = "oleh " + p.guest_name + " · filter " + getFilmPreset(p.filter_id).name;
+  $("#lb-unduh").onclick = () => {
+    const a = document.createElement("a");
+    a.href = p.url; a.download = "momen-" + p.id.slice(0,8) + ".jpg";
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  $("#lightbox").classList.add("on");
+}
+$("#lb-tutup").addEventListener("click", () => $("#lightbox").classList.remove("on"));
+
+/* ---- Sheet host ---- */
+const sheetHost = $("#sheet-host"), modalData = $("#modal-data"), scrim = $("#scrim");
+function openSheet(el){ el.classList.add("on"); scrim.classList.add("on"); }
+function closeSheets(){
+  sheetHost.classList.remove("on"); modalData.classList.remove("on");
+  scrim.classList.remove("on");
+}
+scrim.addEventListener("click", closeSheets);
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", closeSheets));
+$("#btn-host").addEventListener("click", () => { renderModeration(); openSheet(sheetHost); });
+$("#btn-data").addEventListener("click", () => { renderDataView(); openSheet(modalData); });
+
+function syncHostQuota(){
+  const a = store.album;
+  $("#quota-fill").style.width = Math.min(100, 100*a.photo_count/a.quota_total) + "%";
+  $("#quota-text").textContent = a.photo_count + " / " + a.quota_total + " foto";
+}
+$("#jatah-min").addEventListener("click", () => setJatah(store.album.quota_per_guest - 1));
+$("#jatah-plus").addEventListener("click", () => setJatah(store.album.quota_per_guest + 1));
+function setJatah(v){
+  store.album.quota_per_guest = Math.min(20, Math.max(1, v));
+  $("#jatah-val").textContent = store.album.quota_per_guest;
+  syncMasukText(); updatePips();
+}
+const revealInput = $("#reveal-input");
+function toLocalInputValue(d){
+  const p = n => String(n).padStart(2,"0");
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes());
+}
+revealInput.value = toLocalInputValue(revealDefault);
+revealInput.addEventListener("change", () => {
+  if (revealInput.value){
+    store.album.reveal_at = new Date(revealInput.value).toISOString();
+    syncHostReveal();
+  }
+});
+$("#seg-reveal").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  document.querySelectorAll("#seg-reveal button").forEach(x => x.classList.toggle("on", x === b));
+  if (b.dataset.mode === "instan") store.album.reveal_at = null;
+  else store.album.reveal_at = new Date(revealInput.value || revealDefault).toISOString();
+  syncHostReveal();
+});
+function syncHostReveal(){
+  const t = store.album.reveal_at;
+  $("#row-jadwal").style.display = t === null ? "none" : "";
+  $("#reveal-desc").textContent = t === null ? "Foto langsung tampil di album"
+    : (phaseNow() === "revealed" ? "Sudah reveal — album terbuka"
+       : "Foto terbuka " + new Date(t).toLocaleString("id-ID",
+           { weekday:"short", hour:"2-digit", minute:"2-digit" }));
+  syncMasukText();
+}
+const selFilter = $("#sel-filter");
+FILM_PRESETS.forEach(p => {
+  const o = document.createElement("option");
+  o.value = p.id; o.textContent = p.name + " — " + p.desc;
+  selFilter.appendChild(o);
+});
+selFilter.value = store.album.default_filter;
+selFilter.addEventListener("change", () => {
+  store.album.default_filter = selFilter.value;
+  selectedFilter = selFilter.value; applyPreviewFilter();
+});
+const swGaleri = $("#sw-galeri");
+swGaleri.classList.toggle("on", store.album.allow_library_upload);
+swGaleri.addEventListener("click", () => {
+  store.album.allow_library_upload = !store.album.allow_library_upload;
+  swGaleri.classList.toggle("on", store.album.allow_library_upload);
+  swGaleri.setAttribute("aria-checked", String(store.album.allow_library_upload));
+  $("#btn-galeri").classList.toggle("hide", !store.album.allow_library_upload);
+});
+function renderModeration(){
+  const wrap = $("#mod-list"); wrap.innerHTML = "";
+  store.photos.forEach(p => {
+    const row = document.createElement("div");
+    row.className = "mod-item" + (p.status === "hidden" ? " hidden-ph" : "");
+    const img = document.createElement("img"); img.src = p.url; img.alt = "";
+    const mi = document.createElement("div"); mi.className = "mi";
+    mi.innerHTML = "<b></b><span></span>";
+    mi.querySelector("b").textContent = p.guest_name;
+    mi.querySelector("span").textContent =
+      getFilmPreset(p.filter_id).name + (p.status === "hidden" ? " · disembunyikan" : "");
+    const btnHide = document.createElement("button");
+    btnHide.className = "mod-act";
+    btnHide.textContent = p.status === "hidden" ? "Tampilkan" : "Sembunyikan";
+    btnHide.addEventListener("click", () => {
+      p.status = p.status === "hidden" ? "visible" : "hidden";
+      renderModeration(); if (current === "galeri") renderGallery();
+    });
+    const btnDel = document.createElement("button");
+    btnDel.className = "mod-act danger"; btnDel.textContent = "Hapus";
+    btnDel.addEventListener("click", () => {
+      store.photos = store.photos.filter(x => x !== p);
+      store.album.photo_count = store.photos.length;
+      syncHostQuota(); renderModeration();
+      if (current === "galeri") renderGallery();
+    });
+    row.append(img, mi, btnHide, btnDel);
+    wrap.appendChild(row);
+  });
+}
+$("#btn-reveal-now").addEventListener("click", () => {
+  store.album.reveal_at = new Date(Date.now() - 1000).toISOString();
+  syncHostReveal(); closeSheets(); show("galeri");
+});
+$("#btn-qr").addEventListener("click", function(){
+  const old = this.textContent;
+  this.textContent = "→ route /dashboard/undangan/[id]/momen/qr";
+  setTimeout(() => { this.textContent = old; }, 2000);
+});
+
+/* ---- Modal data ---- */
+function renderDataView(){
+  const a = store.album;
+  const sample = store.photos.slice(0, 2).map(p => ({
+    id: p.id, guest_name: p.guest_name, device_id: p.device_id,
+    filter_id: p.filter_id, status: p.status,
+    storage_path: "momen/" + a.id.slice(0,8) + "…/" + p.id.slice(0,8) + "…/display.webp",
+  }));
+  $("#data-pre").textContent = JSON.stringify({
+    "momen_albums (baris)": {
+      invitation_id: a.invitation_id, quota_total: a.quota_total,
+      quota_per_guest: a.quota_per_guest, reveal_at: a.reveal_at,
+      default_filter: a.default_filter, allow_library_upload: a.allow_library_upload,
+      photo_count: a.photo_count,
+    },
+    "payload updateMomenSettings (Zod strict)": {
+      quotaPerGuest: a.quota_per_guest, revealAt: a.reveal_at,
+      defaultFilter: a.default_filter, allowLibraryUpload: a.allow_library_upload,
+    },
+    "payload upload (momenUploadMetaSchema)": {
+      guestName: me.name || "Sasa", deviceId: me.deviceId,
+      filterId: selectedFilter, width: 1280, height: 960,
+      displayBytes: 342117, thumbBytes: 28455,
+    },
+    "momen_photos (2 contoh)": sample,
+    "fase": { now: new Date().toISOString(), phase: phaseNow() },
+  }, null, 2);
+}
+
+/* ---- Init ---- */
+seedPhotos();
+buildChips();
+syncMasukText(); syncHostQuota(); syncHostReveal(); setJatah(5);
+applyPreviewFilter();
+window.__momen = { store, me, show, FILM_PRESETS }; // hook verifikasi/dev
+</script>
+</body>
+</html>
