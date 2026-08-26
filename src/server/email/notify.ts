@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendTransactionalEmail, type SendEmailResult } from "@/lib/email/send";
 import {
   renderExpiryReminderEmail,
+  renderMomenReceiptEmail,
   renderReceiptEmail,
 } from "@/lib/email/templates";
 import { appUrl } from "@/lib/env";
@@ -73,7 +74,7 @@ export async function notifyOrderPaid(
           .maybeSingle(),
         admin
           .from("packages")
-          .select("name")
+          .select("name, kind")
           .eq("id", order.package_id)
           .maybeSingle(),
         admin
@@ -85,15 +86,27 @@ export async function notifyOrderPaid(
     );
     if (!inv) return;
 
-    const rendered = renderReceiptEmail({
-      name: profile?.full_name ?? null,
-      packageName: pkg?.name ?? "",
-      amountIdr: order.amount_idr,
-      orderCode: order.order_code,
-      paidAtLabel: fmtDateTime(order.paid_at),
-      activeUntilLabel: fmtDate(inv.active_until),
-      invitationUrl: `${appUrl}/${inv.slug}`,
-    });
+    // Add-on Album Momen: kuitansi berbeda (album ikut retensi undangan, bukan
+    // durasi paket) & CTA menuju halaman kelola album — bukan link undangan.
+    const rendered =
+      pkg?.kind === "addon_momen"
+        ? renderMomenReceiptEmail({
+            name: profile?.full_name ?? null,
+            packageName: pkg?.name ?? "",
+            amountIdr: order.amount_idr,
+            orderCode: order.order_code,
+            paidAtLabel: fmtDateTime(order.paid_at),
+            manageUrl: `${appUrl}/dashboard/undangan/${order.invitation_id}/momen`,
+          })
+        : renderReceiptEmail({
+            name: profile?.full_name ?? null,
+            packageName: pkg?.name ?? "",
+            amountIdr: order.amount_idr,
+            orderCode: order.order_code,
+            paidAtLabel: fmtDateTime(order.paid_at),
+            activeUntilLabel: fmtDate(inv.active_until),
+            invitationUrl: `${appUrl}/${inv.slug}`,
+          });
     const result = await sendTransactionalEmail({
       to: email,
       subject: rendered.subject,

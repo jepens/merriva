@@ -263,6 +263,13 @@ export const copy = {
     perDuration: (months: number) => `Masa aktif ${months} bulan`,
     notPayable: "Undangan ini tidak dapat dibayar saat ini.",
     packageUnavailable: "Paket tidak tersedia. Silakan coba lagi.",
+    // Add-on Album Momen (dibeli untuk undangan yang sudah aktif).
+    momenNeedsActive:
+      "Album Momen hanya bisa diaktifkan untuk undangan yang sudah aktif.",
+    momenAlreadyOwned:
+      "Undangan ini sudah punya Album Momen aktif. Upgrade tier belum tersedia.",
+    momenPackageUnavailable:
+      "Paket Album Momen tidak tersedia. Silakan coba lagi.",
     // Guard: slug masih `draft-…` (belum diatur). Alamat terkunci setelah aktif,
     // jadi wajib diatur SEBELUM bayar agar halaman publik tak 404 permanen.
     setSlugTitle: "Atur alamat undangan dulu",
@@ -716,6 +723,23 @@ export const copy = {
       activeUntil: "Aktif hingga",
       cta: "Lihat undangan",
       outro: "Simpan email ini sebagai bukti pembayaran.",
+    },
+    // Kuitansi add-on Album Momen (dikirim saat order add-on → paid). Album ikut
+    // masa retensi undangan (bukan durasi paket) → tanpa baris "aktif hingga".
+    momenReceipt: {
+      subject: "Album Momen aktif — undangan Anda kini punya kamera bersama",
+      preheader: "Pembayaran diterima. Album Momen siap dibagikan ke tamu.",
+      heading: "Album Momen aktif 📸",
+      greeting: (name: string | null) => (name ? `Halo ${name},` : "Halo,"),
+      intro:
+        "Terima kasih. Pembayaran Anda telah kami terima dan Album Momen kini aktif. Tamu bisa memotret momen acara Anda lewat kamera bersama.",
+      pkg: "Paket",
+      total: "Total",
+      order: "Kode order",
+      paidAt: "Tanggal bayar",
+      cta: "Kelola Album Momen",
+      outro:
+        "Buka pengaturan album untuk mengatur waktu buka foto & mencetak QR bagi tamu. Simpan email ini sebagai bukti pembayaran.",
     },
     // Pengingat masa aktif (cron H-14).
     reminder: {

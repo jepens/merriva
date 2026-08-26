@@ -332,6 +332,109 @@ export type Database = {
           },
         ];
       };
+      momen_albums: {
+        Row: {
+          allow_library_upload: boolean;
+          created_at: string;
+          default_filter: string;
+          id: string;
+          invitation_id: string;
+          photo_ceiling: number | null;
+          photo_count: number;
+          quota_per_guest: number;
+          quota_peserta: number | null;
+          reveal_at: string | null;
+          status: string;
+        };
+        Insert: {
+          allow_library_upload?: boolean;
+          created_at?: string;
+          default_filter?: string;
+          id?: string;
+          invitation_id: string;
+          photo_ceiling?: number | null;
+          photo_count?: number;
+          quota_per_guest?: number;
+          quota_peserta?: number | null;
+          reveal_at?: string | null;
+          status?: string;
+        };
+        Update: {
+          allow_library_upload?: boolean;
+          created_at?: string;
+          default_filter?: string;
+          id?: string;
+          invitation_id?: string;
+          photo_ceiling?: number | null;
+          photo_count?: number;
+          quota_per_guest?: number;
+          quota_peserta?: number | null;
+          reveal_at?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "momen_albums_invitation_id_fkey";
+            columns: ["invitation_id"];
+            isOneToOne: true;
+            referencedRelation: "invitations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      momen_photos: {
+        Row: {
+          album_id: string;
+          bytes: number;
+          created_at: string;
+          device_id: string;
+          filter_id: string;
+          guest_name: string;
+          height: number;
+          id: string;
+          status: string;
+          storage_path: string;
+          thumb_path: string;
+          width: number;
+        };
+        Insert: {
+          album_id: string;
+          bytes: number;
+          created_at?: string;
+          device_id: string;
+          filter_id: string;
+          guest_name: string;
+          height: number;
+          id?: string;
+          status?: string;
+          storage_path: string;
+          thumb_path: string;
+          width: number;
+        };
+        Update: {
+          album_id?: string;
+          bytes?: number;
+          created_at?: string;
+          device_id?: string;
+          filter_id?: string;
+          guest_name?: string;
+          height?: number;
+          id?: string;
+          status?: string;
+          storage_path?: string;
+          thumb_path?: string;
+          width?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "momen_photos_album_id_fkey";
+            columns: ["album_id"];
+            isOneToOne: false;
+            referencedRelation: "momen_albums";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       orders: {
         Row: {
           amount_idr: number;
@@ -652,6 +755,17 @@ export type Database = {
           slug: string;
         }[];
       };
+      create_momen_album: {
+        Args: {
+          p_default_filter?: string;
+          p_invitation_id: string;
+          // Nullable di SQL (null = tak terbatas / tanpa plafon) — koreksi manual
+          // seperti activate_paid_order. Pertahankan saat regen.
+          p_photo_ceiling: number | null;
+          p_quota_peserta: number | null;
+        };
+        Returns: string;
+      };
       expire_pending_order: {
         Args: { p_order_code: string };
         Returns: {
@@ -736,6 +850,32 @@ export type Database = {
         };
       };
       invitation_effective_limits: { Args: { inv_id: string }; Returns: Json };
+      momen_claim_upload: {
+        Args: { p_album_id: string; p_device_id: string };
+        Returns: {
+          photo_id: string | null;
+          remaining: number;
+          result: string;
+        }[];
+      };
+      momen_confirm_photo: {
+        Args: {
+          p_album_id: string;
+          p_bytes: number;
+          p_device_id: string;
+          p_filter_id: string;
+          p_guest_name: string;
+          p_height: number;
+          p_photo_id: string;
+          p_storage_path: string;
+          p_thumb_path: string;
+          p_width: number;
+        };
+        Returns: {
+          remaining: number;
+          result: string;
+        }[];
+      };
       normalize_package_limits: { Args: { raw: Json }; Returns: Json };
       purge_invitation_data: {
         Args: { p_invitation_id: string };

@@ -27,6 +27,17 @@ export interface ReceiptEmailData {
   invitationUrl: string;
 }
 
+export interface MomenReceiptEmailData {
+  name: string | null;
+  packageName: string;
+  amountIdr: number;
+  orderCode: string;
+  /** Sudah diformat (mis. "30 Januari 2027, 14.00 WIB") atau null. */
+  paidAtLabel: string | null;
+  /** Halaman kelola album (dashboard) — tempat atur reveal & cetak QR. */
+  manageUrl: string;
+}
+
 export interface ReminderEmailData {
   name: string | null;
   daysLeft: number;
@@ -114,6 +125,45 @@ ${detailRows(rows)}
       : []),
     "",
     `${r.cta}: ${data.invitationUrl}`,
+    "",
+    r.outro,
+  ].join("\n");
+
+  return {
+    subject: r.subject,
+    html: layout(r.preheader, r.heading, inner),
+    text,
+  };
+}
+
+export function renderMomenReceiptEmail(
+  data: MomenReceiptEmailData,
+): RenderedEmail {
+  const r = C.momenReceipt;
+  const rows: [string, string][] = [
+    [r.pkg, data.packageName],
+    [r.total, formatIdr(data.amountIdr)],
+    [r.order, data.orderCode],
+  ];
+  if (data.paidAtLabel) rows.push([r.paidAt, data.paidAtLabel]);
+
+  const inner = `<p style="margin:0 0 16px">${escapeHtml(r.greeting(data.name))}</p>
+<p style="margin:0 0 8px">${escapeHtml(r.intro)}</p>
+${detailRows(rows)}
+<p style="margin:0 0 24px">${button(data.manageUrl, r.cta)}</p>
+<p style="margin:0;font-size:13px;color:${MUTED}">${escapeHtml(r.outro)}</p>`;
+
+  const text = [
+    r.greeting(data.name),
+    "",
+    r.intro,
+    "",
+    `${r.pkg}: ${data.packageName}`,
+    `${r.total}: ${formatIdr(data.amountIdr)}`,
+    `${r.order}: ${data.orderCode}`,
+    ...(data.paidAtLabel ? [`${r.paidAt}: ${data.paidAtLabel}`] : []),
+    "",
+    `${r.cta}: ${data.manageUrl}`,
     "",
     r.outro,
   ].join("\n");
