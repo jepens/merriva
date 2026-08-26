@@ -164,6 +164,19 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #22 — 2026-08-12 · Album Momen (FASE H): add-on kamera sekali pakai — model peserta, aktivasi & fallback encode
+**Konteks:** implementasi MOMEN-SPEC (kamera browser + filter film + hidden-until-reveal). Modul inti teruji dipindah dari `handoff/momen/`. Owner mengubah model harga saat survei FASE H.
+**Keputusan:**
+1. **Harga per PESERTA, bukan per foto** (model satualbum, keputusan owner 12 Agu — deviasi dari MOMEN-SPEC §7 draft yang photo-based). Tier: 5 gratis · 50 Rp199rb · 100 Rp349rb · 200 Rp649rb · ∞ Rp1.099rb. Data model: `momen_albums.quota_peserta` (NULL=∞) + `photo_ceiling` (rem storage tier ∞) gantikan `quota_total`. Peserta = `count(distinct device_id)` yang pernah memotret. `quota_per_guest` default 5 (1–20, host atur).
+2. **Add-on = baris `packages` ber-`kind='addon_momen'`** (kolom `kind` baru; `orders.package_id` NOT NULL FK TAK berubah — hindari sentuh tabel uang). Query katalog/harga/admin filter `kind='invitation'`.
+3. **Aktivasi bercabang di `activate_paid_order`** (paket add-on → order→paid + buat `momen_albums`, TIDAK sentuh undangan) + `notifyOrderPaid` (email add-on). `verifyAndActivate`, webhook route, poll page **tak berubah** → verifikasi 2 lapis utuh. **Tier gratis** = server action langsung buat album TANPA order/Pakasir (deviasi MOMEN-SPEC §7 "tanpa tier gratis" — owner setuju izinkan).
+4. **Kuota confirm-gated**: `momen_confirm_photo` = gerbang ATOMIK (advisory lock album: per-tamu + peserta + plafon). `momen_claim_upload` hanya validasi sesi/album + pra-cek UX. Upload ditolak = objek yatim → purge harian. SECURITY DEFINER (tamu anon; beda dari `insert_gallery_media` INVOKER).
+5. **Fallback encode WebP→JPEG** (`lib/image/encode.ts`): `toBlob('image/webp')` tak didukung Safari/iOS → cek `blob.type`, fallback JPEG q0.82. Sekalian menutup bug laten galeri undangan (iOS ditolak `isVariantBlob`). Bucket `media` +`image/jpeg`.
+**Ditolak:** tabel `add-ons` terpisah (paksa ubah `orders.package_id` nullable — sentuh tabel uang); reserve-at-claim (lebih kompleks vs orphan-purge); tabel `momen_participants` (cap peserta cukup via `count(distinct device_id)` di RPC — lebih dekat spec asli).
+**Konsekuensi:** upgrade kapasitas tier di tengah acara = backlog (§9). `quota_peserta` soft (ganti perangkat = peserta baru, konsisten §6). Modul `shot-quota.ts`/`momen-settings-schema.ts` dipakai apa adanya (tak ditulis ulang); gerbang peserta = kode+test baru.
+
+---
+
 ## Template entri baru
 
 ```
