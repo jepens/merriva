@@ -1,0 +1,707 @@
+/* Album Momen — halaman kamera tamu. Art direction diadopsi dari
+   prototypes/momen-album.html (kertas hangat + aksen emas + panggung kamera
+   gelap). Semua selektor di-scope ke `.mn-app` + prefix `mn-` agar tak bocor ke
+   tema undangan / dashboard. Dibuka mayoritas via WebView WhatsApp → ringan,
+   fokus sentuh, aman-notch (safe-area). */
+
+.mn-app {
+  --mn-paper: #faf6ef;
+  --mn-card: #fff;
+  --mn-ink: #221c14;
+  --mn-muted: #8a7f6f;
+  --mn-acc: #c09a4a;
+  --mn-acc-ink: #7a5e23;
+  --mn-line: #e9e1d2;
+  --mn-dark: #0e0c09;
+  --mn-dark-ink: #f4eee2;
+  --mn-danger: #a63d2f;
+  --mn-radius: 20px;
+  --mn-shadow: 0 10px 30px rgba(34, 28, 20, 0.1);
+  --mn-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+
+  position: fixed;
+  inset: 0;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--mn-paper);
+  color: var(--mn-ink);
+  font-family: var(--mn-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.15);
+}
+.mn-app *,
+.mn-app *::before,
+.mn-app *::after {
+  box-sizing: border-box;
+}
+.mn-app button {
+  font: inherit;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.mn-screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mn-screen.mn-on {
+  display: flex;
+}
+
+/* ---------- Masuk ---------- */
+.mn-masuk {
+  padding: max(env(safe-area-inset-top), 22px) 24px 28px;
+  justify-content: space-between;
+  background:
+    radial-gradient(120% 70% at 80% -10%, #f3e6c8 0%, transparent 60%),
+    radial-gradient(100% 60% at 0% 100%, #efe3ce 0%, transparent 55%),
+    var(--mn-paper);
+}
+.mn-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mn-acc-ink);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.mn-brand::before {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: var(--mn-acc);
+}
+.mn-hero {
+  margin-top: 5vh;
+}
+.mn-hero .mn-kicker {
+  font-size: 12px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--mn-muted);
+}
+.mn-hero h1 {
+  font-size: clamp(32px, 8.5vw, 42px);
+  line-height: 1.05;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 10px 0 10px;
+}
+.mn-hero h1 em {
+  font-style: italic;
+  color: var(--mn-acc-ink);
+}
+.mn-hero p {
+  color: var(--mn-muted);
+  font-size: 14.5px;
+  line-height: 1.55;
+  max-width: 34ch;
+}
+.mn-hero p b {
+  color: var(--mn-ink);
+}
+.mn-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.mn-pill {
+  font-size: 11.5px;
+  padding: 7px 12px;
+  border: 1px solid var(--mn-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--mn-acc-ink);
+}
+.mn-card {
+  background: var(--mn-card);
+  border: 1px solid var(--mn-line);
+  border-radius: var(--mn-radius);
+  box-shadow: var(--mn-shadow);
+  padding: 18px;
+}
+.mn-card label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mn-muted);
+  margin-bottom: 8px;
+}
+.mn-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--mn-line);
+  border-radius: 14px;
+  background: #fdfbf6;
+  color: var(--mn-ink);
+  outline: none;
+  font-size: 16px;
+}
+.mn-input:focus {
+  border-color: var(--mn-acc);
+}
+.mn-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 15px;
+  border-radius: 14px;
+  background: var(--mn-ink);
+  color: #f8f3e8;
+  font-weight: 600;
+  font-size: 15.5px;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s;
+}
+.mn-cta:active {
+  transform: scale(0.98);
+}
+.mn-cta[disabled] {
+  opacity: 0.45;
+}
+.mn-note {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--mn-muted);
+}
+.mn-note .mn-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--mn-acc);
+}
+.mn-turnstile {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  min-height: 0;
+}
+.mn-err {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--mn-danger);
+  text-align: center;
+}
+
+/* ---------- Kamera ---------- */
+.mn-kamera {
+  background: var(--mn-dark);
+  color: var(--mn-dark-ink);
+}
+.mn-stage {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: #000;
+}
+.mn-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mn-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.mn-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+.mn-flash.mn-zap {
+  animation: mn-zap 0.38s ease-out;
+}
+@keyframes mn-zap {
+  0% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.mn-camtop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(env(safe-area-inset-top), 14px) 16px 30px;
+  background: linear-gradient(rgba(0, 0, 0, 0.55), transparent);
+  z-index: 3;
+}
+.mn-camtitle {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+.mn-camtitle b {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  margin-top: 2px;
+}
+.mn-pips {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.mn-pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f1e5c8;
+  box-shadow: 0 0 8px rgba(241, 229, 200, 0.6);
+}
+.mn-pip.mn-used {
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: none;
+}
+.mn-iconbtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+.mn-hint {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translateX(-50%);
+  width: min(80%, 320px);
+  text-align: center;
+  color: #f4eee2;
+  font-size: 13px;
+  line-height: 1.5;
+  z-index: 2;
+}
+.mn-cambottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding: 14px 0 max(env(safe-area-inset-bottom), 18px);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
+}
+.mn-filterrow {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 6px 16px 14px;
+  scrollbar-width: none;
+}
+.mn-filterrow::-webkit-scrollbar {
+  display: none;
+}
+.mn-fchip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.75;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+.mn-fchip.mn-on {
+  opacity: 1;
+  transform: translateY(-3px);
+}
+.mn-fswatch {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  background-image: linear-gradient(135deg, #6b4a2c, #b98a4e 55%, #f0d7a2);
+  background-size: cover;
+}
+.mn-fchip.mn-on .mn-fswatch {
+  border-color: #f1e5c8;
+}
+.mn-fchip span {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+}
+.mn-camactions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 34px;
+}
+.mn-round {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.mn-round.mn-invisible {
+  visibility: hidden;
+}
+.mn-shutter {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 4px solid #f1e5c8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s;
+}
+.mn-shutter::after {
+  content: "";
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #f8f3e8;
+  transition: transform 0.12s;
+}
+.mn-shutter:active::after {
+  transform: scale(0.86);
+}
+.mn-shutter[disabled] {
+  opacity: 0.35;
+}
+.mn-toast {
+  position: absolute;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%) translateY(-8px);
+  background: rgba(14, 12, 9, 0.86);
+  border: 1px solid rgba(241, 229, 200, 0.25);
+  color: #f4eee2;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+.mn-toast.mn-show {
+  animation: mn-toast 2.1s ease forwards;
+}
+@keyframes mn-toast {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  12%,
+  80% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+  }
+}
+
+/* ---------- Habis / countdown ---------- */
+.mn-habis {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  background:
+    radial-gradient(110% 60% at 50% -10%, #f1e4c6 0%, transparent 60%),
+    var(--mn-paper);
+}
+.mn-habis .mn-emoji {
+  font-size: 44px;
+}
+.mn-habis h2 {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 14px 0 8px;
+}
+.mn-habis p {
+  color: var(--mn-muted);
+  font-size: 14.5px;
+  line-height: 1.6;
+  max-width: 32ch;
+}
+.mn-countwrap {
+  display: flex;
+  gap: 10px;
+  margin: 26px 0 8px;
+}
+.mn-cell {
+  background: var(--mn-card);
+  border: 1px solid var(--mn-line);
+  border-radius: 14px;
+  min-width: 64px;
+  padding: 12px 8px;
+  box-shadow: var(--mn-shadow);
+}
+.mn-cell b {
+  display: block;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.mn-cell span {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mn-muted);
+}
+.mn-ghost {
+  margin-top: 22px;
+  padding: 13px 24px;
+  border: 1.5px solid var(--mn-ink);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* ---------- Galeri ---------- */
+.mn-galeri {
+  background: var(--mn-paper);
+}
+.mn-galhead {
+  padding: max(env(safe-area-inset-top), 18px) 20px 14px;
+  border-bottom: 1px solid var(--mn-line);
+  background: rgba(250, 246, 239, 0.92);
+  backdrop-filter: blur(8px);
+}
+.mn-galhead .mn-kicker {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--mn-acc-ink);
+}
+.mn-galhead h2 {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin-top: 2px;
+}
+.mn-galhead p {
+  font-size: 12.5px;
+  color: var(--mn-muted);
+  margin-top: 2px;
+}
+/* Dua kolom block-flow (BUKAN CSS grid) — sesuai catatan prototipe: baris grid
+   mengabaikan tinggi item rasio di kombinasi flex+overflow ini (tile tumpang);
+   block flow tidak punya moda gagal itu. */
+.mn-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 14px calc(env(safe-area-inset-bottom) + 92px);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.mn-col {
+  flex: 1;
+  min-width: 0;
+}
+.mn-ph {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #e7dfce;
+  margin: 0 0 10px;
+  box-shadow: 0 6px 18px rgba(34, 28, 20, 0.08);
+  cursor: pointer;
+}
+.mn-ph::before {
+  content: "";
+  display: block;
+  padding-top: 133.33%;
+}
+.mn-ph img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mn-who {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+.mn-who::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mn-acc);
+  flex: 0 0 auto;
+}
+.mn-who i {
+  font-style: normal;
+  opacity: 0.75;
+  margin-left: auto;
+}
+.mn-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--mn-muted);
+  font-size: 14px;
+  padding: 40px;
+}
+.mn-bottombar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  z-index: 5;
+  padding: 12px 16px max(env(safe-area-inset-bottom), 14px);
+  background: linear-gradient(transparent, rgba(250, 246, 239, 0.9) 40%);
+}
+.mn-barbtn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--mn-ink);
+  color: #f8f3e8;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: var(--mn-shadow);
+  text-align: center;
+}
+.mn-barbtn.mn-ghostbtn {
+  background: var(--mn-card);
+  color: var(--mn-ink);
+  border: 1.5px solid var(--mn-line);
+}
+
+/* ---------- Lightbox ---------- */
+.mn-lightbox {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 5, 0.94);
+  z-index: 12;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.mn-lightbox.mn-on {
+  display: flex;
+}
+.mn-lightbox img {
+  max-width: 100%;
+  max-height: 70%;
+  border-radius: 8px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.6);
+}
+.mn-lbcap {
+  color: #efe7d6;
+  font-size: 13px;
+  margin-top: 14px;
+}
+.mn-lbrow {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.mn-lbbtn {
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(244, 238, 226, 0.35);
+  color: #f4eee2;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ---------- Belum aktif ---------- */
+.mn-inactive {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 28px;
+  position: static;
+  display: flex;
+  flex: 1;
+  background:
+    radial-gradient(110% 60% at 50% -10%, #f1e4c6 0%, transparent 60%),
+    var(--mn-paper);
+}
+.mn-inactive .mn-emoji {
+  font-size: 44px;
+}
+.mn-inactive h2 {
+  font-size: 24px;
+  font-weight: 650;
+  margin: 14px 0 8px;
+}
+.mn-inactive p {
+  color: var(--mn-muted);
+  font-size: 14.5px;
+  line-height: 1.6;
+  max-width: 34ch;
+}
+
+@media (min-width: 521px) {
+  .mn-app {
+    border-radius: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mn-app *,
+  .mn-app *::before,
+  .mn-app *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
