@@ -48,6 +48,18 @@ export const momenSettingsSchema = z.strictObject({
 export type MomenSettings = z.infer<typeof momenSettingsSchema>;
 
 /**
+ * Payload memulai sesi tamu (`startMomenSessionAction`): nama + deviceId. Nama &
+ * deviceId lalu diikat ke cookie sesi ber-tanda-tangan (lib/momen/session) →
+ * saat unggah, keduanya diambil dari cookie, bukan dari form (cegah impersonasi).
+ */
+export const momenSessionStartSchema = z.strictObject({
+  guestName,
+  deviceId: z.uuid(),
+});
+
+export type MomenSessionStart = z.infer<typeof momenSessionStartSchema>;
+
+/**
  * Metadata upload satu foto — divalidasi RPC/route SEBELUM izin upload
  * diberikan. Ukuran & dimensi dibatasi keras; `deviceId` = UUID localStorage.
  */

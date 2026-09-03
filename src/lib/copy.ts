@@ -702,6 +702,74 @@ export const copy = {
       close: "Tutup",
     },
   },
+  // Album Momen — halaman kamera tamu publik (/[slug]/momen). Dibuka mayoritas
+  // via WebView WhatsApp; teks pendek & jelas untuk layar HP.
+  momen: {
+    brand: "Merriva Momen",
+    notActive: {
+      title: "Album Momen belum aktif",
+      body: "Undangan ini belum mengaktifkan kamera bersama. Hubungi tuan rumah bila kamu ingin ikut memotret momen acara.",
+    },
+    masuk: {
+      quota: (n: number) => `${n} jepretan`,
+      introInstant: (shots: string) =>
+        `Jadilah fotografer di acara ini! Kamu punya ${shots} — foto langsung tampil di album bersama.`,
+      introReveal: (shots: string, revealLabel: string) =>
+        `Jadilah fotografer di acara ini! Kamu punya ${shots} — semua foto tersembunyi dan terbuka serentak pada ${revealLabel}.`,
+      pills: ["Tanpa install aplikasi", "6 filter film", "Terbuka bersama"],
+      nameLabel: "Namamu (tampil di fotomu)",
+      namePlaceholder: "mis. Sasa",
+      start: "Mulai Memotret",
+      starting: "Menyiapkan…",
+      turnstileNote: "Dilindungi verifikasi anti-bot",
+    },
+    camera: {
+      title: "Album Momen",
+      remaining: (n: number) => `${n} jepretan tersisa`,
+      close: "Tutup",
+      flip: "Balik kamera",
+      shutter: "Jepret",
+      fromGallery: "Unggah dari galeri",
+      uploading: "Menyimpan…",
+      savedHidden: "Tersimpan ✓ — tersembunyi sampai reveal",
+      savedInstant: "Tersimpan ✓",
+      permissionHint:
+        "Izinkan akses kamera di browser, atau unggah foto dari galeri.",
+    },
+    habis: {
+      title: "Jatahmu terpakai semua!",
+      body: (total: number) =>
+        `Terima kasih sudah ikut memotret. ${total} foto sudah terkumpul di album. Semua terbuka serentak dalam:`,
+      revealed: "Album sudah terbuka — lihat semua foto sekarang.",
+      toGallery: "Lihat Album",
+      d: "Hari",
+      h: "Jam",
+      m: "Menit",
+      s: "Detik",
+    },
+    gallery: {
+      kickerRevealed: "Album Momen · Terbuka 🎉",
+      sub: (photos: number, people: number) =>
+        `${photos} foto oleh ${people} fotografer dadakan`,
+      empty: "Belum ada foto di album. Jadilah yang pertama memotret!",
+      cameraAgain: "Kamera",
+      downloadPhoto: "Unduh foto",
+      close: "Tutup",
+      by: (name: string) => `oleh ${name}`,
+    },
+    // Pesan kesalahan aksi tamu (dipetakan dari alasan RPC claim/confirm).
+    error: {
+      generic: "Gagal menyimpan foto. Coba lagi.",
+      rateLimited: "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.",
+      session: "Sesi berakhir. Muat ulang halaman lalu masukkan namamu lagi.",
+      turnstile: "Verifikasi anti-bot gagal. Coba lagi.",
+      invalid: "Data foto tidak valid.",
+      albumFull: "Album sudah penuh.",
+      guestQuota: "Jatah jepretanmu sudah habis.",
+      pesertaFull: "Kuota peserta album sudah penuh.",
+      notActive: "Album tidak aktif.",
+    },
+  },
   // Email transaksional (Resend — M3.5). Teks terpusat; markup dirakit di
   // `lib/email/templates.ts`.
   email: {
