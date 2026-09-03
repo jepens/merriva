@@ -1,0 +1,87 @@
+/* Halaman cetak QR meja Album Momen (A6). Isolasi cetak: sembunyikan seluruh
+   chrome dashboard, sisakan kartu QR sebagai satu halaman A6 penuh. */
+
+.mn-qr-wrap {
+  max-width: 420px;
+  margin: 0 auto;
+}
+.mn-qr-card {
+  background: #fff;
+  border: 1px solid #e9e1d2;
+  border-radius: 18px;
+  padding: 28px 24px;
+  text-align: center;
+  color: #221c14;
+  box-shadow: 0 10px 30px rgba(34, 28, 20, 0.08);
+}
+.mn-qr-kicker {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #7a5e23;
+  font-weight: 600;
+}
+.mn-qr-title {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 6px 0 18px;
+}
+.mn-qr-svg {
+  width: 240px;
+  height: 240px;
+  margin: 0 auto;
+}
+.mn-qr-svg svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.mn-qr-instruction {
+  margin-top: 18px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.mn-qr-url {
+  margin-top: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  color: #8a7f6f;
+}
+.mn-qr-hint {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8a7f6f;
+}
+
+@media print {
+  @page {
+    size: A6;
+    margin: 8mm;
+  }
+  body {
+    background: #fff;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .mn-qr-card,
+  .mn-qr-card * {
+    visibility: visible;
+  }
+  .mn-qr-card {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .mn-noprint {
+    display: none !important;
+  }
+}

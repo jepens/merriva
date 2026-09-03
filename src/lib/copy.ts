@@ -820,6 +820,15 @@ export const copy = {
       by: (name: string) => `oleh ${name}`,
       error: "Gagal. Coba lagi.",
     },
+    // Halaman cetak QR meja (A6).
+    qr: {
+      title: "QR Meja — Album Momen",
+      kicker: "Album Momen",
+      instruction: "Pindai untuk ikut memotret momen acara",
+      hint: "Setiap tamu dapat jatah jepretan terbatas + filter film. Foto terbuka bersama saat reveal.",
+      print: "Cetak / Simpan PDF",
+      back: "Kembali",
+    },
     // Pesan kesalahan aksi tamu (dipetakan dari alasan RPC claim/confirm).
     error: {
       generic: "Gagal menyimpan foto. Coba lagi.",

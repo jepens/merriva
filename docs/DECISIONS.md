@@ -177,6 +177,14 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #23 — 2026-09-04 · Album Momen #8: QR meja (`qrcode`) + unduh ZIP streaming (`client-zip`)
+**Konteks:** dashboard host butuh cetak QR meja A6 + unduh ZIP seluruh album (MOMEN-SPEC §5) — dua utilitas tak ada di dependency.
+**Keputusan:** tambah `qrcode` (server-side → string SVG; TIDAK masuk bundle klien) untuk halaman QR A6 (`/dashboard/undangan/[id]/momen/qr`, isolasi cetak via `@media print` + `@page A6`). Tambah `client-zip` untuk route `/momen/zip`: ZIP di-STREAM sebagai Web `Response` (STORE, tanpa kompres ulang — WebP/JPEG sudah terkompres) lewat generator async yang menarik foto satu per satu → memori VPS ~1 foto (aman album ≥100, DoD §8). Byte foto diambil via `getStorage().getPublicUrl` + `fetch` → **driver-agnostik** (supabase|r2 pakai jalur penyajian yang sama).
+**Ditolak:** hand-roll QR/ZIP (rawan salah lintas alat unzip / scanner); `archiver` (Node stream, lebih berat + perlu konversi ke Web stream); QR via API gambar pihak ketiga (mengirim URL undangan ke luar + langgar boundary "jangan serve media dari URL vendor").
+**Konsekuensi:** 2 dep MIT kecil (`qrcode` server-only; `client-zip` ~5KB). ZIP mengandalkan `NEXT_PUBLIC_MEDIA_URL` + bucket publik (sama seperti seluruh penyajian media); foto gagal-fetch dilewati, ZIP tetap terbentuk. context7 tak tersedia sesi ini (butuh auth) → API dipakai dari pengetahuan versi stabil.
+
+---
+
 ## Template entri baru
 
 ```
