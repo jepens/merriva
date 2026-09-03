@@ -385,11 +385,14 @@ export async function deleteInvitationAction(
 
     const outcome = res?.[0];
     if (outcome?.result === "purged") {
-      await Promise.allSettled(
-        (outcome.media_paths ?? []).flatMap((prefix) =>
+      await Promise.allSettled([
+        // media_paths = prefix galeri → expand ke 2 varian.
+        ...(outcome.media_paths ?? []).flatMap((prefix) =>
           mediaObjectPaths(prefix).map((p) => storage.delete(p)),
         ),
-      );
+        // momen_paths = path objek PENUH foto momen → hapus langsung.
+        ...(outcome.momen_paths ?? []).map((p) => storage.delete(p)),
+      ]);
     }
     revalidatePath(`/${inv.slug}`); // ISR halaman publik (kini kerangka expired)
   }

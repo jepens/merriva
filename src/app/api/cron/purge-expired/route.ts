@@ -82,13 +82,14 @@ export async function POST(req: Request) {
     }
     purged += 1;
 
-    // Bersihkan objek storage media (best-effort). `media_paths` = prefix per
-    // foto; tiap prefix punya 2 varian WebP (display + thumb).
-    const results = await Promise.allSettled(
-      (outcome.media_paths ?? []).flatMap((prefix) =>
+    // Bersihkan objek storage (best-effort). `media_paths` = prefix galeri (2
+    // varian WebP per prefix); `momen_paths` = path objek PENUH foto momen.
+    const results = await Promise.allSettled([
+      ...(outcome.media_paths ?? []).flatMap((prefix) =>
         mediaObjectPaths(prefix).map((p) => storage.delete(p)),
       ),
-    );
+      ...(outcome.momen_paths ?? []).map((p) => storage.delete(p)),
+    ]);
     if (results.some((r) => r.status === "rejected")) storageFailed += 1;
   }
 

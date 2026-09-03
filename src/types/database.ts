@@ -881,6 +881,7 @@ export type Database = {
         Args: { p_invitation_id: string };
         Returns: {
           media_paths: string[];
+          momen_paths: string[];
           result: string;
         }[];
       };
