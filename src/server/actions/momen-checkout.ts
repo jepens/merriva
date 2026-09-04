@@ -146,7 +146,7 @@ export async function activateFreeMomenAction(
 
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status")
+    .select("id, status, slug")
     .eq("id", invitationId)
     .maybeSingle();
   if (!inv) return { status: "error" };
@@ -190,5 +190,7 @@ export async function activateFreeMomenAction(
 
   revalidatePath("/dashboard");
   revalidatePath(momenManagePath(invitationId));
+  // Halaman undangan publik (ISR) → agar tombol "Album Momen" muncul.
+  revalidatePath(`/${inv.slug}`);
   return { status: "ok" };
 }

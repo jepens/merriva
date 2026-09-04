@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { ExpiredNotice } from "@/components/public/expired-notice";
 import { GuestPersonalizationProvider } from "@/components/public/guest-personalization";
+import { MomenFab } from "@/components/public/momen/momen-fab";
 import { copy } from "@/lib/copy";
 import { parseContentForRender } from "@/lib/invitation-content";
 import { isDraftSlug, isReservedSlug } from "@/lib/slug";
@@ -141,22 +142,33 @@ export default async function PublicInvitationPage({
   if (inv.status !== "active") notFound(); // draft/pending/suspended = tak publik
 
   const admin = createSupabaseAdminClient();
-  const [{ data: theme }, { data: eventRows }, { data: mediaRows }] =
-    await Promise.all([
-      admin.from("themes").select("slug").eq("id", inv.theme_id).maybeSingle(),
-      admin
-        .from("invitation_events")
-        .select("id, name, start_at, end_at, venue_name, address, maps_url")
-        .eq("invitation_id", inv.id)
-        .order("sort_order", { ascending: true })
-        .order("start_at", { ascending: true }),
-      admin
-        .from("media")
-        .select("id, storage_path, width, height")
-        .eq("invitation_id", inv.id)
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true }),
-    ]);
+  const [
+    { data: theme },
+    { data: eventRows },
+    { data: mediaRows },
+    { data: momenAlbum },
+  ] = await Promise.all([
+    admin.from("themes").select("slug").eq("id", inv.theme_id).maybeSingle(),
+    admin
+      .from("invitation_events")
+      .select("id, name, start_at, end_at, venue_name, address, maps_url")
+      .eq("invitation_id", inv.id)
+      .order("sort_order", { ascending: true })
+      .order("start_at", { ascending: true }),
+    admin
+      .from("media")
+      .select("id, storage_path, width, height")
+      .eq("invitation_id", inv.id)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+    // Add-on Album Momen aktif → tampilkan tombol masuk melayang (di luar tema).
+    admin
+      .from("momen_albums")
+      .select("id")
+      .eq("invitation_id", inv.id)
+      .eq("status", "active")
+      .maybeSingle(),
+  ]);
 
   const limits = await getEffectiveLimits(admin, inv.package_id);
   const songId = settingsSchema.safeParse(inv.settings).data?.songId;
@@ -185,6 +197,7 @@ export default async function PublicInvitationPage({
   return (
     <GuestPersonalizationProvider slug={data.slug}>
       <Theme data={data} />
+      {momenAlbum ? <MomenFab slug={data.slug} /> : null}
     </GuestPersonalizationProvider>
   );
 }

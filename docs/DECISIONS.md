@@ -185,6 +185,14 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #24 — 2026-09-04 · Album Momen: entry point tamu = FAB overlay (bukan ubah kontrak tema)
+**Konteks:** DoD §8 minta tombol "Album Momen" muncul di undangan saat add-on aktif; FASE H sengaja TAK menyentuh kontrak tema (boundary: ubah props tema = berdampak semua tema).
+**Keputusan:** render tombol melayang (FAB) di halaman undangan publik `[slug]/page.tsx` **DI LUAR** komponen tema (di dalam `GuestPersonalizationProvider`), muncul hanya bila `momen_albums` berstatus `active` (query service_role saat render ISR). NOL perubahan `InvitationData`/kode tema. Aktivasi gratis + webhook add-on me-`revalidatePath('/{slug}')` agar FAB muncul pasca-aktivasi.
+**Ditolak:** menambah field `momen` ke `InvitationData` + render di tiap tema (10 tema, blast-radius besar, langgar boundary kontrak tema).
+**Konsekuensi:** posisi FAB bawah-tengah universal (bisa bertumpuk dgn kontrol tema tertentu; mudah digeser). Integrasi in-theme yang lebih menyatu = opsi lanjutan bila diinginkan.
+
+---
+
 ## Template entri baru
 
 ```
