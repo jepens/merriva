@@ -13,7 +13,9 @@ import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
-import "./aria.css";
+// CSS tema TIDAK di-import di sini: ia dikirim sebagai aset statis lewat
+// `<ThemeStyles slug="aria" />` supaya undangan tak mengunduh stylesheet
+// kesepuluh tema (AUDIT PER-2 / DECISIONS #31). Sumbernya tetap ./aria.css
 import { AriaCover } from "./cover";
 import { L } from "./labels";
 import { ariaOptions } from "./options";

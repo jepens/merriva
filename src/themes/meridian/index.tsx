@@ -13,7 +13,9 @@ import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
-import "./mrd.css";
+// CSS tema TIDAK di-import di sini: ia dikirim sebagai aset statis lewat
+// `<ThemeStyles slug="meridian" />` supaya undangan tak mengunduh stylesheet
+// kesepuluh tema (AUDIT PER-2 / DECISIONS #31). Sumbernya tetap ./mrd.css
 import { MeridianCover } from "./cover";
 import { MeridianFx } from "./fx";
 import { L } from "./labels";

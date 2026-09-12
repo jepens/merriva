@@ -19,7 +19,9 @@ import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
-import "./kr.css";
+// CSS tema TIDAK di-import di sini: ia dikirim sebagai aset statis lewat
+// `<ThemeStyles slug="kirana" />` supaya undangan tak mengunduh stylesheet
+// kesepuluh tema (AUDIT PER-2 / DECISIONS #31). Sumbernya tetap ./kr.css
 import { KiranaCover } from "./cover";
 import { KiranaFx } from "./fx";
 import { kiranaOptions } from "./options";

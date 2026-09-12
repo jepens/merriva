@@ -22,3 +22,6 @@ prototypes
 
 # manifest foto demo (di-generate `pnpm demo:photos`, JSON — di luar format Prettier)
 src/themes/_shared/demo-photos.generated.ts
+
+# manifest CSS tema (di-generate `scripts/build-theme-css.mjs`)
+src/themes/theme-css.generated.ts

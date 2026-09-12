@@ -45,6 +45,20 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: baseSecurityHeaders },
+      // CSS tema = aset ber-HASH ISI (`/themes/{slug}.{hash}.css`, dihasilkan
+      // `scripts/build-theme-css.mjs`) → nama berubah saat isinya berubah,
+      // jadi aman di-cache selamanya. Tanpa ini `public/` default-nya
+      // `max-age=0` dan setiap kunjungan ulang membayar satu request
+      // revalidasi di jalur RENDER-BLOCKING.
+      {
+        source: "/themes/:file*.css",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
       { source: "/dashboard/:path*", headers: noFrameHeaders },
       { source: "/admin/:path*", headers: noFrameHeaders },
     ];

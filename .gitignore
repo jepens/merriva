@@ -61,3 +61,6 @@ yarn-error.log*
 # handoff/music/generator/make_music.py (yang tetap di-commit).
 handoff/music/wav/
 handoff/music/mp3/
+
+# CSS tema hasil generate (scripts/build-theme-css.mjs) — dibuat ulang saat dev/build.
+/public/themes/

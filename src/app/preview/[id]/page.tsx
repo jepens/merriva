@@ -16,6 +16,7 @@ import { getEffectiveLimits } from "@/server/limits";
 import { requireUser } from "@/server/guards/auth";
 import { settingsSchema } from "@/lib/validation/content";
 import { getThemeLoader } from "@/themes/registry";
+import { ThemeStyles } from "@/themes/theme-styles";
 
 export const metadata: Metadata = { title: copy.preview.badge };
 
@@ -94,9 +95,12 @@ export default async function PreviewPage({
     music,
   });
 
-  const loader = theme?.slug ? getThemeLoader(theme.slug) : null;
+  // Slug ditangkap terpisah agar tetap ter-narrow setelah guard di bawah
+  // (`theme` sendiri masih nullable menurut TS).
+  const themeSlug = theme?.slug ?? null;
+  const loader = themeSlug ? getThemeLoader(themeSlug) : null;
 
-  if (!loader) {
+  if (!loader || !themeSlug) {
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
         <p className="text-muted-foreground text-sm">
@@ -116,6 +120,7 @@ export default async function PreviewPage({
   const Theme = (await loader()).default;
   return (
     <GuestPersonalizationProvider slug={data.slug}>
+      <ThemeStyles slug={themeSlug} />
       <PreviewEmbedStyle />
       <Theme data={data} />
     </GuestPersonalizationProvider>

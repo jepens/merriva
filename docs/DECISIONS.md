@@ -265,6 +265,21 @@ Keduanya harus lolos. Penolakan rate limit kini juga DAPAT DIBEDAKAN dari "tidak
 
 ---
 
+## #31 — 2026-09-05 · CSS tema keluar dari graph modul JS → aset statis ber-hash isi
+**Konteks:** AUDIT-2026-09-04 PER-2/PER-5 mengukur `/[slug]` mengirim **13 stylesheet render-blocking / 57,2 KB gz** pada setiap pembukaan undangan — CSS KESEPULUH tema, padahal satu undangan hanya memakai satu (±3–5,5 KB gz). Penyebabnya bukan salah pakai: `src/themes/registry.ts` sudah memakai `import()` dinamis, tetapi dokumentasi Next menyatakan dynamic import sebuah **Server Component** hanya me-lazy-load Client Component ANAK-nya, dan `getLinkAndScriptTags` berkunci pada path entry halaman (`entryCSSFiles["…/[slug]/page"]`). Selama CSS tema melewati graph modul JS halaman, ia SELALU ikut ter-emit. Ini batas framework, bukan konfigurasi yang salah.
+
+**Keputusan:** keluarkan CSS tema dari graph modul. `scripts/build-theme-css.mjs` menyalin `src/themes/{slug}/*.css` ke `public/themes/{slug}.{hash-isi}.css` dan menghasilkan `src/themes/theme-css.generated.ts`; `<ThemeStyles slug>` meng-emit `<link rel="stylesheet" precedence="theme">` HANYA untuk tema yang dipakai. Skrip berjalan otomatis pada `pnpm dev`, `pnpm build`, dan `pnpm typecheck`. Nama ber-hash isi → `Cache-Control: immutable` di `next.config.ts`.
+
+**Alasan:** sumber kebenaran CSS TIDAK pindah — penulis tema tetap mengedit `src/themes/{slug}/*.css` seperti biasa; yang berubah hanya cara pengirimannya. `precedence` membuat React menaikkan `<link>` ke `<head>`, men-dedup, dan MENUNGGU stylesheet termuat sebelum konten tampil, sehingga tak ada kedipan tanpa gaya. Minifikasi tak diperlukan: sumber CSS ke-10 tema ter-gzip **42 KB** versus **45,1 KB** hasil bundler (selisihnya `@font-face` dari next/font) — jadi tak ada dependency minifier baru.
+
+**Terukur sesudah:** `/[slug]` CSS render-blocking **57,2 → 25,9 KB gz** (13 → 12 berkas; −31,3 KB gz). Verifikasi visual: `eternal-rose`, `prisma`, `meridian` identik piksel sebelum/sesudah, dan `/andi-sinta-demo` memuat **tepat satu** `/themes/*.css`, termasuk section di bawah cover.
+
+**Ditolak:** `next/dynamic` (dokumentasi Next eksplisit: tak memecah Server Component itu sendiri); route handler penyaji CSS (biaya CPU per request + butuh header cache manual, tanpa keuntungan atas `public/`); memindahkan `next/font` sekaligus (menghapus sisa 12,7 KB gz `@font-face`, tetapi menyentuh sistem pasangan font kustomisasi `fontPairs` a/b/c di 6 tema — pekerjaan terpisah).
+
+**Konsekuensi:** kontrak penulisan tema BERUBAH — tepat satu CSS di akar folder tema, tanpa `import "./x.css"`, dan pemanggil wajib merender `<ThemeStyles>` (didokumentasikan di THEME-PORTING §3b; skrip gagal keras bila ada >1 CSS di akar). CSS tema kini di luar pipeline PostCSS/Lightning Next: aman karena CSS tema polos (tanpa direktif Tailwind — diverifikasi), tetapi tema baru TIDAK boleh memakai `@apply`. `public/themes/` di-gitignore (dibuat ulang saat dev/build); `theme-css.generated.ts` di-commit mengikuti konvensi `demo-photos.generated.ts`. Sisa 12,7 KB gz `@font-face` masih render-blocking.
+
+---
+
 ## Template entri baru
 
 ```

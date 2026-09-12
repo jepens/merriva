@@ -19,7 +19,9 @@ import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
-import "./verdant.css";
+// CSS tema TIDAK di-import di sini: ia dikirim sebagai aset statis lewat
+// `<ThemeStyles slug="verdant" />` supaya undangan tak mengunduh stylesheet
+// kesepuluh tema (AUDIT PER-2 / DECISIONS #31). Sumbernya tetap ./verdant.css
 import { VerdantCover } from "./cover";
 import { VerdantFx } from "./fx";
 import { verdantOptions } from "./options";

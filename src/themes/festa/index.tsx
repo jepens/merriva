@@ -14,7 +14,9 @@ import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
-import "./festa.css";
+// CSS tema TIDAK di-import di sini: ia dikirim sebagai aset statis lewat
+// `<ThemeStyles slug="festa" />` supaya undangan tak mengunduh stylesheet
+// kesepuluh tema (AUDIT PER-2 / DECISIONS #31). Sumbernya tetap ./festa.css
 import { FestaCover } from "./cover";
 import { FestaFx } from "./fx";
 import { L } from "./labels";

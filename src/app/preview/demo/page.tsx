@@ -7,6 +7,7 @@ import {
   PreviewFrame,
 } from "@/components/preview/preview-frame";
 import EternalRose from "@/themes/eternal-rose";
+import { ThemeStyles } from "@/themes/theme-styles";
 import { demoInvitationData } from "@/themes/eternal-rose/demo-data";
 
 export const metadata: Metadata = { title: "Contoh Tema — Eternal Rose" };
@@ -31,6 +32,7 @@ export default async function DemoPreviewPage({
     );
   return (
     <GuestPersonalizationProvider slug={demoInvitationData.slug}>
+      <ThemeStyles slug="eternal-rose" />
       <PreviewEmbedStyle />
       <EternalRose data={demoInvitationData} />
     </GuestPersonalizationProvider>

@@ -15,7 +15,9 @@ import { Lightbox } from "@/themes/_shared/lightbox";
 import type { StoryEntry } from "@/lib/validation/content";
 import type { ThemeComponentProps } from "@/themes/registry";
 
-import "./lm.css";
+// CSS tema TIDAK di-import di sini: ia dikirim sebagai aset statis lewat
+// `<ThemeStyles slug="lumina" />` supaya undangan tak mengunduh stylesheet
+// kesepuluh tema (AUDIT PER-2 / DECISIONS #31). Sumbernya tetap ./lm.css
 import { LuminaCover } from "./cover";
 import { L } from "./labels";
 import { luminaOptions } from "./options";

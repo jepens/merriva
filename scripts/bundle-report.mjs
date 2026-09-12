@@ -37,7 +37,9 @@ const APP_DIR = join(NEXT_DIR, "server", "app");
  * merah. Turunkan seiring perbaikan struktural (pisahkan tema dari graph modul).
  */
 const BUDGETS = {
-  "/[slug]/page": { cssGz: 96 * 1024, jsGz: 200 * 1024, fontBytes: 256 * 1024 },
+  // Diturunkan dari 96 KB setelah CSS tema dikeluarkan dari graph modul
+  // (DECISIONS #31): 57,2 → 25,9 KB gz. Sisa headroom untuk satu tema baru.
+  "/[slug]/page": { cssGz: 34 * 1024, jsGz: 64 * 1024, fontBytes: 32 * 1024 },
   "/[slug]/momen/page": {
     cssGz: 32 * 1024,
     jsGz: 200 * 1024,

@@ -10,6 +10,7 @@ import { copy } from "@/lib/copy";
 import { getActiveThemes } from "@/server/marketing/catalog";
 import { getThemeDemoLoader } from "@/themes/demo-data-registry";
 import { getThemeLoader } from "@/themes/registry";
+import { ThemeStyles } from "@/themes/theme-styles";
 import type { InvitationCategory } from "@/types";
 
 function humanizeSlug(slug: string): string {
@@ -121,6 +122,7 @@ export default async function ThemeDemoPage({
     const { demoInvitationData } = await demoLoader();
     return (
       <GuestPersonalizationProvider slug={demoInvitationData.slug}>
+        <ThemeStyles slug={slug} />
         <PreviewEmbedStyle />
         <Theme data={demoInvitationData} />
       </GuestPersonalizationProvider>

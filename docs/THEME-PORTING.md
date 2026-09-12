@@ -54,6 +54,18 @@ Dibangun SEKALI di Fase A, dipakai semua tema Story/Signature:
 - **aria ← mono-universal (Craft):** perubahan hampir seluruhnya CSS + struktur section bernomor; tanpa canvas apa pun; tetap paling ringan (jadikan pembanding bundle).
 - **prisma (BARU, Signature, corporate):** folder `src/themes/prisma/` lengkap (index, sections, css, labels, demo-data mengikuti skema konten **corporate**), `SilkCanvas` fragment aurora, marquee ganda CSS, stats count-up (IO + rAF, dari prototipe), agenda dari `data.events` (waktu = `formatEventDateTime`), tiket RSVP membungkus `GuestbookSection` yang sudah ada (jangan buat form RSVP baru), barcode CSS. Tambah: baris `themeRegistry`, entri `catalog-meta` (`bg:#0A0A16, ink:#F2F2F7, accent:#D8FF5F, dark:true, ornament:"✦"`), entri `demo-data-registry`, dan **seed/migrasi baris `themes`** (`slug:'prisma'`, categories `{corporate}`, tier premium, aktif) untuk staging & production.
 
+### CSS tema: TIDAK di-import dari `index.tsx`
+
+Sejak 5 Sep 2026 (DECISIONS #31) setiap tema WAJIB:
+
+1. menyimpan **tepat satu** berkas CSS di akar foldernya — `src/themes/{slug}/{apa-pun}.css` (tetap sumber kebenaran; berkas tambahan pindahkan ke komponen bersama `src/themes/_shared/`);
+2. **TIDAK** menulis `import "./{slug}.css"` di `index.tsx`;
+3. pemanggil merender `<ThemeStyles slug={...} />` berdampingan dengan komponen tema.
+
+Alasannya batas framework: selama CSS tema melewati graph modul JS, Next mengumpulkan SELURUH CSS yang terjangkau dari graph modul halaman ke `entryCSSFiles` dan meng-emit `<link>` untuk semuanya — setiap undangan mengunduh stylesheet kesepuluh tema (57,2 → 25,9 KB gz setelah dipisah). `scripts/build-theme-css.mjs` (otomatis pada `pnpm dev`/`pnpm build`/`pnpm typecheck`) menyalinnya ke `public/themes/{slug}.{hash}.css` dan menulis `src/themes/theme-css.generated.ts`. Skrip **gagal keras** bila sebuah tema punya lebih dari satu CSS di akar folder.
+
+Titik render yang sudah terpasang: `src/app/[slug]/page.tsx`, `src/app/preview/[id]/page.tsx`, `src/app/preview/tema/[slug]/page.tsx`, `src/app/preview/demo/page.tsx`.
+
 ## 4. Dependensi & anggaran
 
 `pnpm add gsap lenis` (keduanya MIT/gratis — GSAP free sejak 2025). Larangan: three.js, framer-motion baru, CDN runtime. Anggaran (gzip, halaman tema): Craft +0KB dari baseline; Story ≤ +45KB; Signature ≤ +90KB — jalankan **`pnpm bundle:report`** (sesudah `pnpm build`) dan catat angkanya di PR/commit message. Sejak Next 16 + Turbopack, `next build` **tidak lagi mencetak tabel First Load JS**, sehingga anggaran ini sempat tak bisa ditegakkan sama sekali — itulah sebabnya `/[slug]` diam-diam tumbuh menjadi 116 berkas font (2,03 MB) dari KESEPULUH tema tanpa ketahuan (AUDIT-2026-09-04 PER-1/PER-14). `pnpm bundle:report --check` membaca manifest resmi Next dan **keluar non-nol** bila anggaran per-route di `scripts/bundle-report.mjs` terlampaui; ia berjalan sebagai gerbang CI sesudah build.

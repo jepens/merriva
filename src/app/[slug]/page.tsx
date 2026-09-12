@@ -13,6 +13,7 @@ import { settingsSchema } from "@/lib/validation/content";
 import { buildInvitationData, resolveMusic } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
 import { getThemeLoader } from "@/themes/registry";
+import { ThemeStyles } from "@/themes/theme-styles";
 import type { InvitationContent } from "@/lib/validation/content";
 
 /**
@@ -196,6 +197,7 @@ export default async function PublicInvitationPage({
   // dihapus setelah seluruh tema di-port ke cover-gate (DECISIONS #13).
   return (
     <GuestPersonalizationProvider slug={data.slug}>
+      <ThemeStyles slug={themeSlug} />
       <Theme data={data} />
       {momenAlbum ? <MomenFab slug={data.slug} /> : null}
     </GuestPersonalizationProvider>
