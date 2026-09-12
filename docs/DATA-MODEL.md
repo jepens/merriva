@@ -32,6 +32,12 @@ Prinsip: konten undangan yang fleksibel per kategori disimpan sebagai JSONB terv
 
 **admin_logs** — audit aksi admin. `id`, `admin_id`, `action`, `target_type`, `target_id`, `detail jsonb`, `created_at`.
 
+**momen_albums** — Album Momen per undangan (add-on FASE H). `id`, `invitation_id FK cascade **unique**` (satu album per undangan), `status` `'active'|'archived'`, `quota_peserta int null` (**unit yang dijual**; null = ∞), `photo_ceiling int null` (rem biaya storage tier ∞; tak diiklankan), `quota_per_guest int default 5` (1..20), `reveal_at timestamptz null` (**null = langsung tampil**), `default_filter`, `allow_library_upload bool default false` (false = hanya jepretan kamera), `photo_count int default 0` (counter dirawat RPC, race-safe), `created_at`.
+
+**momen_photos** — foto tamu. **PRIVAT sampai `reveal_at`.** `id`, `album_id FK cascade`, `guest_name`, `device_id uuid` (identitas peserta dari localStorage → dasar kuota peserta & jatah), `filter_id`, `storage_path`/`thumb_path` (constraint regex `momen/<album>/<photo>/(display|thumb).(webp|jpg)`), `width`, `height`, `bytes`, `status` `'visible'|'hidden'` (hidden = dimoderasi host), `created_at`.
+
+`packages` memperoleh `kind` `'invitation'|'addon_momen'` — add-on adalah baris `packages` biasa, sehingga `orders.package_id` tak berubah bentuk dan jalur uang memakai-ulang alur order/Pakasir/webhook yang sudah ada.
+
 ## 2. Transisi status
 
 `invitations`: `draft` →(checkout dibuat)→ `pending_payment` →(order paid)→ `active` →(cron lewat `active_until`)→ `expired` →(bayar perpanjangan)→ `active`. `suspended` hanya oleh admin (konten bermasalah), bisa kembali ke status sebelumnya. Catatan: `draft` → langsung `active` juga sah lewat aktivasi manual admin (klien jasa EO). `orders`: `pending` → `paid` | `expired` (cron 24 jam + cancel ke Pakasir) | `failed`; `refunded` hanya manual admin.
@@ -49,18 +55,19 @@ Prinsip: konten undangan yang fleksibel per kategori disimpan sebagai JSONB terv
 | gift_notes | — | SELECT via kepemilikan | ALL | ALL |
 | orders | — | SELECT miliknya | ALL | ALL |
 | admin_logs | — | — | SELECT; INSERT via server | ALL |
+| momen_albums, momen_photos | **— (tanpa policy sama sekali: fail-closed)** | SELECT via kepemilikan undangan induk | ALL | ALL |
 
-Data yang boleh tampil di halaman undangan publik (di-serve server-side): `content`, `settings`, `events`, `media`, `rsvps` yang `is_approved && !is_hidden` (nama + pesan saja), nama tamu dari token. **Tidak pernah:** `guests` selain nama pemilik token itu sendiri, `gift_notes`, `orders`, kontak.
+Data yang boleh tampil di halaman undangan publik (di-serve server-side): `content`, `settings`, `events`, `media`, `rsvps` yang `is_approved && !is_hidden` (nama + pesan saja), nama tamu dari token. **Tidak pernah:** `guests` selain nama pemilik token itu sendiri, `gift_notes`, `orders`, kontak. Foto Album Momen adalah pengecualian paling ketat: tamu anon TIDAK punya policy apa pun, dan seluruh baca/tulis-nya lewat server action service_role yang memverifikasi sesi cookie HMAC + fase reveal lebih dulu — foto tak pernah terpancar sebelum `reveal_at`, termasuk pada jalur "muat lebih" yang memeriksa ulang fase secara mandiri (DECISIONS #32).
 
 ## 4. Index penting
 
-`invitations(slug)` unique · `invitations(user_id, status)` · `guests(token)` unique · `guests(invitation_id)` · `rsvps(invitation_id, created_at desc)` · unique partial `rsvps(invitation_id, guest_id)` · `orders(order_code)` unique · `orders(status, created_at)` untuk cron · `invitation_events(invitation_id, sort_order)`.
+`invitations(slug)` unique · `invitations(user_id, status)` · `guests(token)` unique · `guests(invitation_id)` · `rsvps(invitation_id, created_at desc)` · unique partial `rsvps(invitation_id, guest_id)` · `orders(order_code)` unique · `orders(status, created_at)` untuk cron · `invitation_events(invitation_id, sort_order)` · `momen_photos(album_id, created_at)` (paginasi keyset galeri) · `momen_photos(album_id, device_id)` (jatah per perangkat & hitung peserta).
 
 ## 5. Lifecycle & retensi data (UU PDP 27/2022)
 
 Undangan `expired` + datanya (tamu, RSVP, media, gift_notes) dipertahankan **6 bulan** setelah `active_until` (grace period perpanjangan), lalu cron menghapus permanen media + data tamu (baris `invitations` boleh tinggal sebagai kerangka statistik tanpa data pribadi). Klien dapat meminta penghapusan lebih cepat (aksi "hapus undangan" pada undangan non-aktif). Email pengingat sebelum penghapusan. `raw_notification` orders disimpan ≥ 2 tahun untuk rekonsiliasi keuangan.
 
-**Implementasi (DECISIONS #21):** RPC `purge_invitation_data(uuid)` (service_role) menghapus data pribadi anak + scrub `content` + set `purged_at`; `orders` dipertahankan. Cron `/api/cron/purge-expired` (harian) memprosesnya untuk `expired` yang `active_until` lewat 6 bulan (`purged_at is null`). Aksi self-service `deleteInvitationAction`: `draft` = hard-delete penuh (cascade); `expired` = purge via RPC yang sama. Baris ber-`purged_at` disaring dari daftar dashboard pemilik.
+**Implementasi (DECISIONS #21):** RPC `purge_invitation_data(uuid)` (service_role) menghapus data pribadi anak + scrub `content` + set `purged_at`; `orders` dipertahankan. Cron `/api/cron/purge-expired` (harian) memprosesnya untuk `expired` yang `active_until` lewat 6 bulan (`purged_at is null`). Aksi self-service `deleteInvitationAction`: `draft` = hard-delete penuh (cascade); `expired` = purge via RPC yang sama. Baris ber-`purged_at` disaring dari daftar dashboard pemilik. **Album Momen ikut retensi undangan induknya**, bukan `duration_months` paket add-on: `purge_invitation_data` menghapus baris `momen_albums` (cascade ke `momen_photos`) dan mengembalikan `momen_paths` — path objek PENUH yang dihapus pemanggil dari storage. Kolom terpisah dari `media_paths` karena jalur galeri meng-*expand* prefix menjadi `1600.webp`/`400.webp`, sedangkan foto momen bernama `display`/`thumb`.
 
 ## 6. Seed minimal
 

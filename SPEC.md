@@ -192,6 +192,18 @@ Via Resend (atau SMTP VPS sebagai fallback): verifikasi akun, kuitansi pembayara
 
 **Kriteria terima:** semua email terkirim < 1 menit setelah trigger → tautan di email benar → unsubscribe tersedia untuk email non-transaksional.
 
+### 4.11 Album Momen (add-on berbayar — FASE H)
+
+Kamera sekali-pakai berbasis browser untuk tamu di lokasi acara. Tamu memindai QR meja / membuka tombol melayang di undangan → memasukkan nama (Turnstile) → memotret dengan jatah jepretan terbatas + 6 filter film → foto **tersembunyi sampai waktu reveal**, lalu terbuka serentak sebagai galeri bersama. Host memoderasi (sembunyikan/hapus), mencetak QR meja A6, dan mengunduh album sebagai ZIP.
+
+**Dijual per JUMLAH PESERTA** (peserta = `device_id` unik yang pernah memotret), bukan per foto: `momen_5` gratis · `momen_50` Rp199.000 · `momen_100` Rp349.000 · `momen_200` Rp649.000 · `momen_unlimited` Rp1.099.000 (ber-`photo_ceiling` 8.000 sebagai rem biaya storage). Add-on dibeli untuk undangan yang **sudah aktif** dan TIDAK mengubah status/masa-aktif undangan; album mengikuti retensi undangan induknya, bukan `duration_months` paket. Upgrade tier belum tersedia.
+
+Pemrosesan gambar **hanya di browser** (bake filter piksel + encode 2 varian WebP, fallback JPEG untuk iOS) — server memvalidasi tipe/ukuran/magic-byte lalu menyimpan via `lib/storage/`. Jalur uang memakai-ulang alur order + Pakasir + webhook yang sudah ada; **tak ada alur bayar kedua**.
+
+**Kriteria terima:** tamu tanpa aplikasi bisa memotret dari WebView WhatsApp → foto tak pernah terpancar sebelum reveal (fail-closed, diperiksa ulang di setiap jalur baca publik) → kuota peserta & jatah per tamu tak bisa ditembus oleh unggahan paralel (gerbang atomik advisory-lock) → aktivasi add-on hanya terjadi setelah verifikasi `transactiondetail` yang OTORITATIF → menyembunyikan foto menghilangkannya dari galeri tamu → ZIP berisi seluruh foto album → album & objeknya ikut terhapus saat undangan di-purge.
+
+**Detail lengkap:** `docs/MOMEN-SPEC.md`.
+
 ---
 
 ## 5. Model Data (PostgreSQL / Supabase)
@@ -225,9 +237,21 @@ orders            id, user_id, invitation_id, package_id, amount_idr int,
                   payment_method, paid_at, raw_notification jsonb, created_at
 admin_logs        id, admin_id, action, target_type, target_id, detail jsonb, created_at
 songs             id, title, artist, storage_path, is_active   -- library musik royalty-free
+
+-- Album Momen (add-on, FASE H — detail: docs/MOMEN-SPEC.md)
+momen_albums      id, invitation_id→invitations UNIQUE, status('active'|'archived'),
+                  quota_peserta int (NULL=∞), photo_ceiling int (NULL=tanpa plafon),
+                  quota_per_guest int 1..20, reveal_at timestamptz (NULL=instan),
+                  default_filter, allow_library_upload bool, photo_count int, created_at
+momen_photos      id, album_id→momen_albums, guest_name, device_id uuid, filter_id,
+                  storage_path, thumb_path, width, height, bytes,
+                  status('visible'|'hidden'), created_at
+                  -- PRIVAT pra-reveal; device_id = identitas peserta (unit yang dijual)
 ```
 
-**Row Level Security (wajib aktif di semua tabel):** klien hanya membaca/menulis baris miliknya; halaman undangan publik dilayani dari server (service role) dengan penyaringan eksplisit — data yang boleh publik hanya: `content`, `settings`, `events`, `media`, ucapan yang tidak disembunyikan; `guests`, `gift_notes`, `orders` **tidak pernah** dikirim ke klien publik. Insert `rsvps` publik lewat server action dengan Turnstile + rate limit, tidak langsung dari browser ke Supabase.
+`packages` memperoleh kolom `kind('invitation'|'addon_momen')` — add-on adalah baris `packages` biasa sehingga `orders.package_id` tidak berubah bentuk.
+
+**Row Level Security (wajib aktif di semua tabel):** klien hanya membaca/menulis baris miliknya; halaman undangan publik dilayani dari server (service role) dengan penyaringan eksplisit — data yang boleh publik hanya: `content`, `settings`, `events`, `media`, ucapan yang tidak disembunyikan; `guests`, `gift_notes`, `orders` **tidak pernah** dikirim ke klien publik. Insert `rsvps` publik lewat server action dengan Turnstile + rate limit, tidak langsung dari browser ke Supabase. `momen_albums`/`momen_photos` mengikuti pola yang sama namun lebih ketat: **anon tanpa policy sama sekali** (fail-closed) — seluruh baca/tulis tamu lewat server action service_role yang memverifikasi sesi HMAC + fase reveal terlebih dahulu.
 
 ---
 
