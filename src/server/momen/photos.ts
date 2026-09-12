@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { reportHandledError } from "@/lib/observability";
 import { getStorage } from "@/lib/storage";
 import type { Database } from "@/types/database";
 
@@ -77,7 +78,14 @@ export async function fetchMomenPhotos(
   if (!opts.includeHidden) query = query.eq("status", "visible");
   if (opts.cursor) query = query.lt("created_at", opts.cursor);
 
-  const { data } = await query;
+  const { data, error } = await query;
+  // Error DB di sini pernah tertelan diam-diam → galeri tampil KOSONG dan itu
+  // tak bisa dibedakan dari album yang memang belum berisi (mis. saat migrasi
+  // kolom baru belum terpasang di lingkungan itu). Laporkan; bentuk hasilnya
+  // tetap degradasi jinak agar halaman tak ikut tumbang.
+  if (error) {
+    reportHandledError(error, "momen.photos.fetch", { albumId });
+  }
   const rows = data ?? [];
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
@@ -109,9 +117,12 @@ export async function fetchMomenAlbumStats(
   admin: SupabaseClient<Database>,
   albumId: string,
 ): Promise<MomenAlbumStats> {
-  const { data } = await admin.rpc("momen_album_stats", {
+  const { data, error } = await admin.rpc("momen_album_stats", {
     p_album_id: albumId,
   });
+  if (error) {
+    reportHandledError(error, "momen.stats", { albumId });
+  }
   const row = data?.[0];
   return {
     visibleCount: row?.visible_count ?? 0,
