@@ -14,7 +14,7 @@ import { getPaymentGateway } from "@/lib/payment";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { CheckoutState } from "@/server/actions/checkout";
-import { findPendingMomenOrder } from "@/server/momen/pending-order";
+import { findPendingMomenOrder } from "@/server/momen/orders";
 
 /**
  * Aktivasi add-on Album Momen (FASE H, DECISIONS #22). MEMAKAI-ULANG alur order

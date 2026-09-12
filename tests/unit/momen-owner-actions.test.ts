@@ -46,7 +46,7 @@ const { findPendingMomenOrder } = vi.hoisted(() => ({
     () => Promise.resolve(null),
   ),
 }));
-vi.mock("@/server/momen/pending-order", () => ({ findPendingMomenOrder }));
+vi.mock("@/server/momen/orders", () => ({ findPendingMomenOrder }));
 
 import {
   activateFreeMomenAction,

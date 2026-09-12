@@ -239,6 +239,19 @@ Keduanya harus lolos. Penolakan rate limit kini juga DAPAT DIBEDAKAN dari "tidak
 
 ---
 
+## #29 — 2026-09-05 · Add-on Momen: jalur aktivasi otoritatif kedua berkunci pada status ORDER
+**Konteks:** jalur undangan punya TIGA lapis aktivasi — webhook Pakasir, poll `checkPaymentStatusAction` saat pembeli kembali dari Pakasir, dan cron rekonsiliasi. Add-on Album Momen hanya punya webhook. Penyebabnya struktural, bukan kelalaian: `checkPaymentStatusAction` berkunci pada status UNDANGAN dan `return { status: "active" }` lebih dulu bila undangan sudah aktif — sedangkan pembeli add-on undangannya SELALU `active` (itu syarat checkout-nya). Akibatnya order add-on tak pernah direkonsiliasi poll, sehingga aktivasi bergantung PENUH pada webhook yang TANPA signature dan bisa hilang, dengan backstop cron baru 24 jam kemudian (AUDIT-2026-09-04 KUA-2b). Wajah UX-nya: pemilik yang baru membayar hanya melihat halaman diam (UXA-7).
+
+**Keputusan:** tambah `checkMomenPaymentStatusAction` yang berkunci pada **keberadaan ALBUM** (kondisi berhenti) dan **status ORDER** (apa yang direkonsiliasi) — bukan status undangan. Ia memakai inti `verifyAndActivate` yang SAMA, dipasang di halaman kelola album lewat `MomenPaymentPoller` yang mencerminkan poller undangan.
+
+**Alasan:** verifikasi 2-lapis adalah invarian keamanan yang tak boleh diduplikasi — karena itu HANYA pemilihan kondisi yang berubah, bukan cara verifikasinya. `transactiondetail` OTORITATIF tetap satu-satunya yang boleh mengaktifkan; poll sendiri tak pernah cukup. `redirectUrl` Pakasir memang sudah mengarah ke halaman kelola album, jadi pemasangan poller di sana melengkapi alur yang sudah ada tanpa rute baru.
+
+**Ditolak:** melonggarkan early-return di `checkPaymentStatusAction` agar ikut menangani add-on (mencampur dua siklus hidup berbeda dalam satu aksi — undangan punya `suspended`/`held`/masa-aktif, add-on tidak); mempercepat cron backstop (mengobati gejala, dan tetap menyisakan jendela diam bagi pembeli).
+
+**Konsekuensi:** `paid` tanpa album kini punya state eksplisit `review` — poll TIDAK mencoba memperbaikinya sendiri karena itu anomali yang butuh mata manusia (mis. order dari era sebelum KUA-2a ditutup, ketika album tier gratis yang dibuat lebih dulu membuat `create_momen_album` menjadi no-op). Kuitansi tetap hanya pada transisi `activated` (RPC mengunci baris → hanya satu pemenang), jadi webhook dan poll yang berlomba tak mengirim email ganda. Poll berhenti otomatis setelah ~6 menit; webhook & cron tetap bekerja di latar.
+
+---
+
 ## Template entri baru
 
 ```

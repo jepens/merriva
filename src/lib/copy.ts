@@ -792,7 +792,33 @@ export const copy = {
       pendingBody: (orderCode: string) =>
         `Pesanan ${orderCode} belum terverifikasi. Album Momen akan aktif otomatis begitu pembayaranmu diterima — biasanya beberapa menit.`,
       pendingHint:
-        "Sudah membayar? Muat ulang halaman ini sebentar lagi. Jangan membuat pesanan baru agar tidak tertagih dua kali.",
+        "Jangan membuat pesanan baru agar tidak tertagih dua kali. Halaman ini memeriksa sendiri secara berkala.",
+    },
+    // Status pembayaran add-on (poll otoritatif kedua — DECISIONS #29).
+    payment: {
+      package: "Paket",
+      amount: "Total",
+      order: "Kode pesanan",
+      checkNow: "Periksa sekarang",
+      checking: "Memeriksa…",
+      back: "Kembali ke dashboard",
+      activeTitle: "Album Momen aktif 🎉",
+      activeBody:
+        "Pembayaranmu terverifikasi. Bagikan link kamera atau cetak QR meja untuk tamu.",
+      manage: "Kelola album",
+      expiredTitle: "Pesanan kedaluwarsa",
+      expiredBody:
+        "Pesanan ini sudah tidak berlaku. Kamu bisa memilih paket lagi tanpa tertagih dua kali.",
+      chooseAgain: "Pilih paket lagi",
+      reviewTitle: "Perlu dicek tim kami",
+      reviewBody:
+        "Pembayaranmu tercatat tetapi album belum terbentuk. Tim kami akan menindaklanjuti — hubungi kami dengan menyebut kode pesanan di atas bila album belum aktif dalam 1x24 jam.",
+      timeoutTitle: "Masih menunggu konfirmasi",
+      timeoutBody:
+        "Pembayaran belum terkonfirmasi sampai sekarang. Album tetap akan aktif otomatis begitu pembayaran diterima — kamu boleh menutup halaman ini.",
+      errorTitle: "Gagal memeriksa status",
+      errorBody: "Terjadi kendala saat memeriksa pembayaran. Coba lagi.",
+      retry: "Coba lagi",
     },
     // Dashboard host — kelola album aktif.
     manage: {

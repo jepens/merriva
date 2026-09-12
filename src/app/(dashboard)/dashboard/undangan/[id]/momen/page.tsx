@@ -10,6 +10,7 @@ import {
   MomenManager,
   type MomenPhotoRow,
 } from "@/components/dashboard/momen/momen-manager";
+import { MomenPaymentPoller } from "@/components/dashboard/momen/momen-payment-poller";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
@@ -20,7 +21,7 @@ import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser } from "@/server/guards/auth";
-import { findPendingMomenOrder } from "@/server/momen/pending-order";
+import { findLatestMomenOrder } from "@/server/momen/orders";
 
 export const metadata: Metadata = { title: copy.momen.manage.title };
 
@@ -86,24 +87,23 @@ export default async function MomenManagePage({
   if (!album) {
     // …KECUALI masih ada order add-on yang belum lunas. Menampilkan panel harga
     // di sini pernah membuat pemilik menekan "Aktifkan gratis" setelah membayar
-    // → album tier gratis terbentuk, aktivasi berbayar jadi no-op (AUDIT KUA-2),
+    // → album tier gratis terbentuk, aktivasi berbayar jadi no-op (AUDIT KUA-2a),
     // dan pemilik yang baru bayar melihat lagi tombol "Pilih & bayar" (UXA-7).
-    const pending = await findPendingMomenOrder(admin, id);
-    if (pending) {
+    //
+    // Poller-nya sekaligus menjadi jalur aktivasi OTORITATIF KEDUA (KUA-2b):
+    // tanpa itu order add-on hanya bisa diaktifkan webhook Pakasir (tanpa
+    // signature, bisa hilang) dengan backstop cron 24 jam.
+    const order = await findLatestMomenOrder(admin, id);
+    if (order && order.status === "pending") {
       return (
         <div className="mx-auto max-w-2xl space-y-6">
           <h1 className="text-xl font-semibold tracking-tight">{a.title}</h1>
-          <Card>
-            <CardContent className="space-y-3 py-8 text-center">
-              <h2 className="text-lg font-medium">{a.pendingTitle}</h2>
-              <p className="text-muted-foreground mx-auto max-w-md text-sm">
-                {a.pendingBody(pending.orderCode)}
-              </p>
-              <p className="text-muted-foreground mx-auto max-w-md text-xs">
-                {a.pendingHint}
-              </p>
-            </CardContent>
-          </Card>
+          <MomenPaymentPoller
+            invitationId={id}
+            orderCode={order.orderCode}
+            amountIdr={order.amountIdr}
+            packageName={order.packageName}
+          />
           {back}
         </div>
       );
