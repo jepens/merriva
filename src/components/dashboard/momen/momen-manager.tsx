@@ -88,7 +88,21 @@ export function MomenManager(props: MomenManagerProps) {
   const [revealing, setRevealing] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [revealErr, setRevealErr] = useState<string | null>(null);
+  const [revealPast, setRevealPast] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  /**
+   * Perbandingan waktu dilakukan di HANDLER, bukan saat render — `Date.now()` di
+   * badan komponen melanggar `react-hooks/purity`.
+   */
+  function onRevealLocalChange(value: string) {
+    setRevealLocal(value);
+    setRevealErr(null);
+    setRevealPast(
+      value !== "" && new Date(localToWibIso(value)).getTime() <= Date.now(),
+    );
+  }
 
   const revealed = props.revealed;
   const pesertaLabel =
@@ -99,15 +113,20 @@ export function MomenManager(props: MomenManagerProps) {
   async function saveSettings() {
     setError(null);
     setSavedMsg(null);
+    // Mode "Jadwal sendiri" TANPA tanggal sebelumnya tersimpan diam-diam sebagai
+    // reveal_at = null = "langsung tampil" — sambil menampilkan "Tersimpan ✓".
+    // Blokir di klien (pesan di dekat field) DAN di skema server.
+    if (revealMode === "schedule" && !revealLocal) {
+      setRevealErr(m.revealNeedsDate);
+      return;
+    }
+    setRevealErr(null);
     setSaving(true);
     try {
-      const revealAt =
-        revealMode === "instant" || !revealLocal
-          ? null
-          : localToWibIso(revealLocal);
       const res = await updateMomenSettingsAction(invitationId, {
         quotaPerGuest,
-        revealAt,
+        revealMode,
+        revealAt: revealMode === "schedule" ? localToWibIso(revealLocal) : null,
         defaultFilter,
         allowLibraryUpload: allowLibrary,
       });
@@ -131,6 +150,8 @@ export function MomenManager(props: MomenManagerProps) {
       if (res.status === "success") {
         setRevealMode("instant");
         setRevealLocal("");
+        setRevealErr(null);
+        setRevealPast(false);
         router.refresh();
       } else {
         setError(res.message ?? m.error);
@@ -254,9 +275,10 @@ export function MomenManager(props: MomenManagerProps) {
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={revealMode}
-                onChange={(e) =>
-                  setRevealMode(e.target.value as "instant" | "schedule")
-                }
+                onChange={(e) => {
+                  setRevealMode(e.target.value as "instant" | "schedule");
+                  setRevealErr(null);
+                }}
                 className={cn(field, "w-40")}
               >
                 <option value="instant">{m.revealInstant}</option>
@@ -266,12 +288,26 @@ export function MomenManager(props: MomenManagerProps) {
                 <input
                   type="datetime-local"
                   value={revealLocal}
-                  onChange={(e) => setRevealLocal(e.target.value)}
+                  onChange={(e) => onRevealLocalChange(e.target.value)}
                   className={cn(field, "w-56")}
                   aria-label={m.revealAtLabel}
+                  aria-invalid={revealErr !== null}
+                  aria-describedby={revealErr ? "mn-reveal-err" : undefined}
                 />
               ) : null}
             </div>
+            {revealErr ? (
+              <p
+                id="mn-reveal-err"
+                role="alert"
+                className="text-destructive text-xs"
+              >
+                {revealErr}
+              </p>
+            ) : null}
+            {revealMode === "schedule" && revealPast && !revealErr ? (
+              <p className="text-xs text-amber-600">{m.revealPastWarning}</p>
+            ) : null}
           </div>
 
           <div className="grid gap-1.5">

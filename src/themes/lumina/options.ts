@@ -19,7 +19,7 @@ export const luminaOptions: ThemeOptions = {
   fontPairs: [
     {
       id: "a",
-      name: "Gowun Batang + Karla",
+      name: "Spectral + Karla",
       dispVar: "var(--lm-display)",
       bodyVar: "var(--lm-body)",
     },

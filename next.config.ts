@@ -1,10 +1,54 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
+/**
+ * Header keamanan (AUDIT-2026-09-04 KEA-5 — sebelumnya TIDAK ADA satu pun).
+ *
+ * `Permissions-Policy: camera=(self)` WAJIB: Album Momen memakai `getUserMedia`
+ * di `/[slug]/momen` (same-origin). HSTS hanya di production — mengirimnya dari
+ * `next dev` akan memaksa https pada `localhost` dan mematikan dev server.
+ */
+const isProd = process.env.NODE_ENV === "production";
+
+const baseSecurityHeaders = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(self), microphone=(), geolocation=(), payment=()",
+  },
+  // Halaman undangan & `/preview/*` sengaja SAMEORIGIN: `PreviewFrame` +
+  // `appearance-editor` membingkainya dari dashboard (same-origin).
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  ...(isProd
+    ? [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=63072000; includeSubDomains",
+        },
+      ]
+    : []),
+];
+
+// Permukaan ter-auth: aksi destruktif (hapus undangan, reveal album) tak boleh
+// bisa di-clickjack → larang pembingkaian sepenuhnya. `frame-ancestors`
+// mengalahkan `X-Frame-Options` di browser yang mendukung keduanya.
+const noFrameHeaders = [
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+];
+
 const nextConfig: NextConfig = {
   // Image kecil untuk Docker/Easypanel — runtime hanya `.next/standalone`.
   output: "standalone",
   reactStrictMode: true,
+  async headers() {
+    return [
+      { source: "/:path*", headers: baseSecurityHeaders },
+      { source: "/dashboard/:path*", headers: noFrameHeaders },
+      { source: "/admin/:path*", headers: noFrameHeaders },
+    ];
+  },
   images: {
     // Tanpa optimisasi on-the-fly (SPEC §6.4): foto sudah dikompres jadi 2 varian
     // WebP di klien & disajikan dari domain sendiri; `sharp` sengaja tidak dibundel.

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 
 import { copy } from "@/lib/copy";
 import { matchesDeclaredFormat } from "@/lib/image/magic-bytes";
+import { reportHandledError } from "@/lib/observability";
 import {
   MOMEN_LIMITS,
   momenSessionStartSchema,
@@ -45,6 +46,7 @@ export type MomenUploadState =
 interface ActiveAlbum {
   albumId: string;
   quotaPerGuest: number;
+  allowLibraryUpload: boolean;
 }
 
 /**
@@ -65,12 +67,16 @@ async function resolveActiveAlbum(
 
   const { data: album } = await admin
     .from("momen_albums")
-    .select("id, status, quota_per_guest")
+    .select("id, status, quota_per_guest, allow_library_upload")
     .eq("invitation_id", inv.id)
     .maybeSingle();
   if (!album || album.status !== "active") return null;
 
-  return { albumId: album.id, quotaPerGuest: album.quota_per_guest };
+  return {
+    albumId: album.id,
+    quotaPerGuest: album.quota_per_guest,
+    allowLibraryUpload: album.allow_library_upload,
+  };
 }
 
 /** Berapa foto yang sudah diambil perangkat ini di album (dasar sisa jatah). */
@@ -205,6 +211,7 @@ export async function uploadMomenPhotoAction(
     deviceId: session.deviceId,
     filterId: formData.get("filterId"),
     format: formData.get("format"),
+    source: formData.get("source"),
     width: Number(formData.get("width")),
     height: Number(formData.get("height")),
     displayBytes: Number(formData.get("displayBytes")),
@@ -214,6 +221,11 @@ export async function uploadMomenPhotoAction(
     return { status: "error", message: copy.momen.error.invalid };
   }
   const { format } = meta.data;
+
+  // Setting host "hanya jepretan langsung" ditegakkan di SERVER, bukan cuma UI.
+  if (meta.data.source === "library" && !album.allowLibraryUpload) {
+    return { status: "error", message: copy.momen.error.libraryDisabled };
+  }
 
   const display = formData.get("display");
   const thumb = formData.get("thumb");
@@ -240,7 +252,10 @@ export async function uploadMomenPhotoAction(
     "momen_claim_upload",
     { p_album_id: album.albumId, p_device_id: session.deviceId },
   );
-  if (claimErr) return { status: "error", message: copy.momen.error.generic };
+  if (claimErr) {
+    reportHandledError(claimErr, "momen.claim", { albumId: album.albumId });
+    return { status: "error", message: copy.momen.error.generic };
+  }
   const claim = claimRows?.[0];
   if (!claim || claim.result !== "ok" || !claim.photo_id) {
     return {
@@ -273,7 +288,10 @@ export async function uploadMomenPhotoAction(
       body: thumbBuf,
       contentType: thumb.type,
     });
-  } catch {
+  } catch (err) {
+    // Storage bermasalah saat resepsi = seluruh tamu gagal memotret; ini harus
+    // memicu alarm, bukan hanya toast "Gagal menyimpan foto".
+    reportHandledError(err, "momen.storage", { albumId: album.albumId });
     await cleanup();
     return { status: "error", message: copy.momen.error.generic };
   }
@@ -296,6 +314,7 @@ export async function uploadMomenPhotoAction(
     },
   );
   if (confirmErr) {
+    reportHandledError(confirmErr, "momen.confirm", { albumId: album.albumId });
     await cleanup();
     return { status: "error", message: copy.momen.error.generic };
   }

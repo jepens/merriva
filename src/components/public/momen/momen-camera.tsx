@@ -12,6 +12,7 @@ import {
 } from "@/lib/momen/album-phase";
 import { FILM_PRESETS, getFilmPreset } from "@/lib/momen/film-presets";
 import { applyFilmToPixels } from "@/lib/momen/film-render";
+import { cn } from "@/lib/utils";
 import {
   startMomenSessionAction,
   uploadMomenPhotoAction,
@@ -230,6 +231,15 @@ export function MomenCamera(props: MomenCameraProps) {
     setToast(msg);
     window.setTimeout(() => setToast(null), 2100);
   };
+  /**
+   * Kegagalan yang HARUS terlihat tamu: pesan persisten (dirender di layar masuk
+   * DAN layar kamera) + toast. Sebelumnya banyak jalur hanya `setError`, yang di
+   * layar kamera tak dirender sama sekali → gagal senyap (AUDIT KUA/UXA-2).
+   */
+  const fail = (msg: string) => {
+    setError(msg);
+    popToast(msg);
+  };
 
   async function beginSession(goGallery: boolean) {
     const trimmed = name.trim();
@@ -252,18 +262,22 @@ export function MomenCamera(props: MomenCameraProps) {
       if (goGallery || (phase === "revealed" && res.remaining === 0)) {
         setScreen("galeri");
       } else {
-        setScreen("kamera");
+        // Jatah sudah habis pada album TERJADWAL (tamu membuka link lagi) →
+        // layar "habis" + countdown, bukan kamera dengan shutter mati senyap.
+        setScreen(res.remaining <= 0 ? "habis" : "kamera");
       }
     } finally {
       setStarting(false);
     }
   }
 
-  async function sendPhoto(v: Variants) {
+  async function sendPhoto(v: Variants, source: "camera" | "library") {
     const ext = v.format === "webp" ? "webp" : "jpg";
     const fd = new FormData();
     fd.set("filterId", selectedFilter);
     fd.set("format", v.format);
+    // Asal foto dideklarasikan agar server bisa menegakkan `allow_library_upload`.
+    fd.set("source", source);
     fd.set("width", String(v.width));
     fd.set("height", String(v.height));
     fd.set("displayBytes", String(v.displayBlob.size));
@@ -274,8 +288,7 @@ export function MomenCamera(props: MomenCameraProps) {
     const res = await uploadMomenPhotoAction(slug, fd);
     if (res.status !== "ok") {
       URL.revokeObjectURL(v.displayUrl);
-      setError(res.message ?? c.error.generic);
-      popToast(res.message ?? c.error.generic);
+      fail(res.message ?? c.error.generic);
       return;
     }
     setError(null);
@@ -310,6 +323,7 @@ export function MomenCamera(props: MomenCameraProps) {
   async function shoot() {
     const video = videoRef.current;
     if (busy || remaining <= 0 || !video || video.videoWidth === 0) return;
+    setError(null);
     setBusy(true);
     try {
       const v = await bakeAndEncode(
@@ -319,20 +333,23 @@ export function MomenCamera(props: MomenCameraProps) {
         selectedFilter,
         taken + 1,
       );
-      await sendPhoto(v);
+      await sendPhoto(v, "camera");
     } catch {
-      setError(c.error.generic);
+      fail(c.error.generic);
     } finally {
       setBusy(false);
     }
   }
 
-  async function onFile(file: File | undefined) {
+  async function onFile(file: File | undefined, source: "camera" | "library") {
     if (!file || busy || remaining <= 0) return;
+    // HEIC/HEIF = bawaan kamera iPhone → sering terpilih dari galeri. Pesan harus
+    // spesifik & menawarkan jalan keluar, bukan "Data foto tidak valid".
     if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
-      setError(c.error.invalid);
+      fail(c.error.formatUnsupported);
       return;
     }
+    setError(null);
     setBusy(true);
     try {
       let bmp: ImageBitmap;
@@ -349,9 +366,9 @@ export function MomenCamera(props: MomenCameraProps) {
         taken + 1,
       );
       bmp.close?.();
-      await sendPhoto(v);
+      await sendPhoto(v, source);
     } catch {
-      setError(c.error.generic);
+      fail(c.error.generic);
     } finally {
       setBusy(false);
     }
@@ -378,9 +395,14 @@ export function MomenCamera(props: MomenCameraProps) {
 
   return (
     <div className="mn-app">
-      {/* ===== MASUK ===== */}
+      {/* ===== MASUK =====
+          Kelas kondisional WAJIB lewat `cn()`, JANGAN template literal
+          `${on ? " mn-on" : ""}`: prettier-plugin-tailwindcss membuang spasi di
+          awal string kondisional → class menyatu ("mn-masukmn-on") sehingga
+          `.mn-screen.mn-on` tak pernah cocok dan SEMUA layar tetap
+          `display:none`. Lihat AUDIT-2026-09-04 KUA-1. */}
       <section
-        className={`mn-screen mn-masuk${shownScreen === "masuk" ? "mn-on" : ""}`}
+        className={cn("mn-screen mn-masuk", shownScreen === "masuk" && "mn-on")}
       >
         <div className="mn-brand">{c.brand}</div>
         <div className="mn-hero">
@@ -452,7 +474,10 @@ export function MomenCamera(props: MomenCameraProps) {
 
       {/* ===== KAMERA ===== */}
       <section
-        className={`mn-screen mn-kamera${shownScreen === "kamera" ? "mn-on" : ""}`}
+        className={cn(
+          "mn-screen mn-kamera",
+          shownScreen === "kamera" && "mn-on",
+        )}
       >
         <div className="mn-stage">
           <video
@@ -472,6 +497,20 @@ export function MomenCamera(props: MomenCameraProps) {
             <div className="mn-hint">{c.camera.permissionHint}</div>
           ) : null}
           {toast ? <div className="mn-toast mn-show">{toast}</div> : null}
+          {/* Antara jepret → tersimpan ada bake piksel + encode 2 varian + 2
+              unggah. Tanpa indikator, tamu mengira aplikasi hang lalu menutup
+              halaman (foto batal). */}
+          {busy ? (
+            <div className="mn-busy" role="status">
+              <span className="mn-spin" aria-hidden="true" />
+              {c.camera.uploading}
+            </div>
+          ) : null}
+          {error ? (
+            <div className="mn-camerr" role="alert">
+              {error}
+            </div>
+          ) : null}
 
           <div className="mn-camtop">
             <div className="mn-camtitle">
@@ -484,10 +523,7 @@ export function MomenCamera(props: MomenCameraProps) {
                 aria-label={c.camera.remaining(remaining)}
               >
                 {Array.from({ length: quotaPerGuest }).map((_, i) => (
-                  <i
-                    key={i}
-                    className={`mn-pip${i < taken ? "mn-used" : ""}`}
-                  />
+                  <i key={i} className={cn("mn-pip", i < taken && "mn-used")} />
                 ))}
               </div>
               <button
@@ -507,7 +543,7 @@ export function MomenCamera(props: MomenCameraProps) {
                 <button
                   key={p.id}
                   type="button"
-                  className={`mn-fchip${p.id === selectedFilter ? "mn-on" : ""}`}
+                  className={cn("mn-fchip", p.id === selectedFilter && "mn-on")}
                   aria-label={`filter ${p.name}`}
                   onClick={() => setSelectedFilter(p.id)}
                 >
@@ -520,7 +556,11 @@ export function MomenCamera(props: MomenCameraProps) {
               ))}
             </div>
             <div className="mn-camactions">
-              {allowLibraryUpload || camError ? (
+              {/* `|| camError` DIBUANG: sebelumnya izin kamera yang ditolak
+                  diam-diam membuka unggah galeri meski host memilih "hanya
+                  jepretan langsung". Jalur cadangan saat kamera gagal tetap ada
+                  di shutter `capture="environment"` di bawah. */}
+              {allowLibraryUpload ? (
                 <label className="mn-round" aria-label={c.camera.fromGallery}>
                   🖼️
                   <input
@@ -528,7 +568,7 @@ export function MomenCamera(props: MomenCameraProps) {
                     accept="image/jpeg,image/png,image/webp"
                     hidden
                     onChange={(e) => {
-                      void onFile(e.target.files?.[0]);
+                      void onFile(e.target.files?.[0], "library");
                       e.target.value = "";
                     }}
                   />
@@ -545,7 +585,7 @@ export function MomenCamera(props: MomenCameraProps) {
                     capture="environment"
                     hidden
                     onChange={(e) => {
-                      void onFile(e.target.files?.[0]);
+                      void onFile(e.target.files?.[0], "camera");
                       e.target.value = "";
                     }}
                   />
@@ -555,6 +595,7 @@ export function MomenCamera(props: MomenCameraProps) {
                   type="button"
                   className="mn-shutter"
                   aria-label={c.camera.shutter}
+                  aria-busy={busy}
                   disabled={busy || remaining <= 0}
                   onClick={() => void shoot()}
                 />
@@ -575,7 +616,7 @@ export function MomenCamera(props: MomenCameraProps) {
 
       {/* ===== HABIS ===== */}
       <section
-        className={`mn-screen mn-habis${shownScreen === "habis" ? "mn-on" : ""}`}
+        className={cn("mn-screen mn-habis", shownScreen === "habis" && "mn-on")}
       >
         <div className="mn-emoji">🎞️</div>
         <h2>{c.habis.title}</h2>
@@ -604,7 +645,10 @@ export function MomenCamera(props: MomenCameraProps) {
 
       {/* ===== GALERI ===== */}
       <section
-        className={`mn-screen mn-galeri${shownScreen === "galeri" ? "mn-on" : ""}`}
+        className={cn(
+          "mn-screen mn-galeri",
+          shownScreen === "galeri" && "mn-on",
+        )}
       >
         <div className="mn-galhead">
           <div className="mn-kicker">{c.gallery.kickerRevealed}</div>
@@ -653,7 +697,7 @@ export function MomenCamera(props: MomenCameraProps) {
       </section>
 
       {/* ===== LIGHTBOX ===== */}
-      <div className={`mn-lightbox${lightbox ? "mn-on" : ""}`}>
+      <div className={cn("mn-lightbox", lightbox && "mn-on")}>
         {lightbox ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}

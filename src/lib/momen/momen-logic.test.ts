@@ -131,12 +131,13 @@ describe("shot-quota", () => {
 describe("momenSettingsSchema", () => {
   const valid = {
     quotaPerGuest: 5,
+    revealMode: "schedule" as const,
     revealAt: "2026-09-05T21:00:00+07:00",
     defaultFilter: "hangat",
     allowLibraryUpload: false,
   };
 
-  it("payload sah lolos (offset & UTC & null)", () => {
+  it("payload sah lolos (offset & UTC & instan)", () => {
     expect(momenSettingsSchema.safeParse(valid).success).toBe(true);
     expect(
       momenSettingsSchema.safeParse({
@@ -145,8 +146,32 @@ describe("momenSettingsSchema", () => {
       }).success,
     ).toBe(true);
     expect(
-      momenSettingsSchema.safeParse({ ...valid, revealAt: null }).success,
+      momenSettingsSchema.safeParse({
+        ...valid,
+        revealMode: "instant",
+        revealAt: null,
+      }).success,
     ).toBe(true);
+  });
+
+  // Invarian privasi: mode "jadwal" TANPA tanggal tidak boleh lolos menjadi
+  // reveal_at null (= semua foto tamu langsung publik). Lihat AUDIT UXA-6.
+  it("mode jadwal tanpa tanggal DITOLAK (tak jadi 'langsung tampil')", () => {
+    expect(
+      momenSettingsSchema.safeParse({
+        ...valid,
+        revealMode: "schedule",
+        revealAt: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("mode reveal wajib ada & hanya instant|schedule", () => {
+    const { revealMode: _drop, ...tanpaMode } = valid;
+    expect(momenSettingsSchema.safeParse(tanpaMode).success).toBe(false);
+    expect(
+      momenSettingsSchema.safeParse({ ...valid, revealMode: "nanti" }).success,
+    ).toBe(false);
   });
 
   it("datetime tanpa zona / teks bebas ditolak", () => {
@@ -186,6 +211,7 @@ describe("momenUploadMetaSchema", () => {
     deviceId: "2f5b0d0e-4a1c-4c8e-9b3a-8f2f6f1a7d42",
     filterId: "senja",
     format: "webp",
+    source: "camera",
     width: 1600,
     height: 1200,
     displayBytes: 380_000,
@@ -213,6 +239,19 @@ describe("momenUploadMetaSchema", () => {
         momenUploadMetaSchema.safeParse({ ...valid, guestName }).success,
       ).toBe(false);
     }
+  });
+
+  // `source` menegakkan setting host `allow_library_upload` di server (AUDIT
+  // KEA-2) — nilainya wajib ada & terbatas pada dua asal yang dikenal.
+  it("source wajib ada dan hanya camera|library", () => {
+    const { source: _drop, ...tanpaSource } = valid;
+    expect(momenUploadMetaSchema.safeParse(tanpaSource).success).toBe(false);
+    expect(
+      momenUploadMetaSchema.safeParse({ ...valid, source: "library" }).success,
+    ).toBe(true);
+    expect(
+      momenUploadMetaSchema.safeParse({ ...valid, source: "airdrop" }).success,
+    ).toBe(false);
   });
 
   it("deviceId bukan UUID & filter liar ditolak", () => {

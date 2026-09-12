@@ -193,6 +193,35 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #25 — 2026-09-05 · Revalidasi ISR halaman publik saat status undangan berubah
+**Konteks:** halaman `/[slug]` disajikan ISR (`revalidate = 3600`). Perubahan status yang terjadi di LUAR aksi pemilik — aktivasi via webhook Pakasir, kedaluwarsa via cron — tidak menyentuh editor, sehingga cache lama bisa bertahan hingga 1 jam: undangan yang baru dibayar tetap tampil sebagai belum aktif, undangan kedaluwarsa tetap tampil normal.
+**Keputusan:** setiap jalur yang mengubah status undangan WAJIB memanggil `revalidatePath('/{slug}')` sendiri — bukan mengandalkan TTL. Berlaku di webhook Pakasir (`activated` **dan** `already_paid`; idempoten sehingga aman dipanggil ganda) dan cron `expire-invitations` (per slug yang ter-expire).
+**Alasan:** TTL 1 jam adalah jeda yang tak dapat diterima untuk transisi yang dilihat pembeli dan tamu; revalidate eksplisit murah dan deterministik.
+**Ditolak:** menurunkan `revalidate` global (mengorbankan seluruh manfaat cache untuk kasus yang jarang); `force-dynamic` pada halaman undangan (melanggar target LCP < 2,5 dtk).
+**Konsekuensi:** setiap jalur baru yang mengubah `invitations.status` harus ikut memanggil revalidate. Add-on Album Momen mengikuti pola yang sama untuk kemunculan FAB (#24).
+**Catatan:** entri ini ditulis menyusul pada 5 Sep 2026 untuk memulihkan rujukan "DECISIONS #25" yang sudah lebih dulu ada di `src/app/api/webhooks/pakasir/route.ts` dan `src/app/api/cron/expire-invitations/route.ts` (AUDIT-2026-09-04 KUA-8). Keputusannya sendiri sudah berlaku di kode sejak M3.
+
+---
+
+## #26 — 2026-09-05 · Font tema: `preload:false` menyeluruh + Spectral menggantikan Gowun Batang di lumina
+**Konteks:** AUDIT-2026-09-04 PER-1 mengukur dari `next-font-manifest.json` bahwa `/[slug]` mem-preload **116 berkas font / 2.034 KB** — font dari SELURUH 10 tema, bukan tema yang dipakai — karena registry tema tergabung dalam satu graph modul halaman. Tema `eternal-rose` sesungguhnya hanya butuh 3 berkas/109 KB. Target proyek LCP < 2,5 dtk di 4G mustahil tercapai selama ini ada.
+**Keputusan:** (a) SEMUA instance `next/font` di `src/themes/*` memakai `preload: false`; (b) `lumina` mengganti `Gowun_Batang` → `Spectral`.
+**Alasan:** `rel=preload as=font` diambil browser dengan prioritas High dan MELEWATI mekanisme `unicode-range`, jadi seluruh 2 MB terunduh berebut bandwidth dengan LCP. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan browser hanya mengunduh slice yang benar-benar dipakai. Gowun Batang (font Korea) disajikan Google sebagai 95 slice = 1.465 KB font + 93 KB `@font-face` CSS **render-blocking** padahal konten Merriva seluruhnya Latin — melanggar anggaran Craft "+0KB dari baseline" (`THEME-PORTING.md` §5). Spectral = serif buku layar kontras-rendah, mempertahankan rasa "soft film" lumina dengan 4 berkas.
+**Ditolak:** self-host woff2 Gowun Batang ter-subset Latin (tampilan identik, tetapi menambah aset biner + langkah subsetting ke pipeline build); menurunkan jumlah tema (bukan masalahnya).
+**Terukur sesudah:** preload `/[slug]` **116 berkas → 0 berkas**; tak ada lagi berkas CSS >47 KB (sebelumnya lumina 103,6 KB, 93,2 KB di antaranya `@font-face`). Prototipe `lumina-craft.html` sengaja TIDAK diubah — ia artefak acuan; penyimpangan dicatat di `THEME-DESIGN.md`.
+**Konsekuensi:** teks tema kini memakai fallback sesaat (`display: "swap"` sudah aktif) alih-alih menunggu font ter-preload — trade-off yang benar untuk 4G. Ini perbaikan CEPAT; akar masalahnya (10 tema dalam satu graph modul) tetap perlu pemisahan per-tema, bersama gate `pnpm bundle:report` di CI agar anggaran bisa ditegakkan lagi.
+
+---
+
+## #27 — 2026-09-05 · Security header di `next.config.ts`, bukan di reverse proxy
+**Konteks:** AUDIT-2026-09-04 KEA-5 menemukan aplikasi tidak mengirim SATU PUN security header (tanpa HSTS, nosniff, Referrer-Policy, proteksi framing, Permissions-Policy). Konfigurasi Traefik/Easypanel tidak ada di repo sehingga tak dapat direview maupun diuji.
+**Keputusan:** header ditetapkan di `next.config.ts` lewat `async headers()` — bukan di reverse proxy. Global: `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=()`, `X-Frame-Options: SAMEORIGIN`. Khusus `/dashboard/*` dan `/admin/*`: `X-Frame-Options: DENY` + `Content-Security-Policy: frame-ancestors 'none'`. HSTS **hanya production**.
+**Alasan:** header ikut versi kode & review, terbawa ke lingkungan mana pun (termasuk `pnpm start` lokal), dan tak bergantung pada konfigurasi infrastruktur yang tak tersimpan di repo. `camera=(self)` WAJIB: Album Momen memakai `getUserMedia`. `SAMEORIGIN` (bukan `DENY`) global karena `PreviewFrame` + `appearance-editor` membingkai `/preview/*` dari dashboard. HSTS digate production agar `next dev` tidak memaksa https pada `localhost` dan mematikan dev server.
+**Ditolak:** CSP penuh sekarang (tema memakai style inline; perlu diawali `Report-Only` + inventarisasi — masuk backlog).
+**Konsekuensi:** bila reverse proxy kelak menambahkan header yang sama, nilainya bisa ganda — konfigurasi edge harus MENGIKUTI berkas ini, bukan menduplikasinya. Verifikasi: `.next/routes-manifest.json` bagian `headers`.
+
+---
+
 ## Template entri baru
 
 ```

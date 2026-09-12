@@ -1,4 +1,4 @@
-import { Gowun_Batang, Karla } from "next/font/google";
+import { Karla, Spectral } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -44,21 +44,29 @@ const LEGACY_TOGGLE = new Set<SectionKey>([
 const isLegacyToggle = (id: string): id is SectionKey =>
   LEGACY_TOGGLE.has(id as SectionKey);
 
-// Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). Gowun Batang =
-// serif buku lembut (display + nama), Karla = humanist sans (teks/label). Estetika
-// "soft film / Korean-minimal": tenang, hangat, banyak ruang napas. Netral &
-// adaptif untuk SEMUA kategori.
-const display = Gowun_Batang({
+// Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). Spectral =
+// serif buku layar kontras-rendah (display + nama), Karla = humanist sans
+// (teks/label). Estetika "soft film / Korean-minimal": tenang, hangat, banyak
+// ruang napas. Netral & adaptif untuk SEMUA kategori.
+//
+// Gowun Batang (font Korea) DIGANTI pada AUDIT-2026-09-04 PER-1/PER-2: Google
+// menyajikannya sebagai 95 slice `unicode-range` = 1.465 KB font + 93 KB
+// `@font-face` CSS RENDER-BLOCKING di setiap undangan, padahal konten Merriva
+// seluruhnya Latin. Spectral menyampaikan karakter serif-buku yang sama dengan
+// 4 berkas. `preload:false` — lihat catatan PER-1 di tema lain.
+const display = Spectral({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--lm-display",
   display: "swap",
+  preload: false,
 });
 const body = Karla({
   subsets: ["latin"],
   weight: ["400", "600"],
   variable: "--lm-body",
   display: "swap",
+  preload: false,
 });
 
 /**

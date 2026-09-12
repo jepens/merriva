@@ -42,7 +42,9 @@ Catatan tier yang dibuktikan prototipe: `family-warm` dan `mono-universal` senga
 |---|---|---|---|---|
 | `barakah-story.html` | **Islami elegan** — lengkung mihrab (ogee), bintang segi-8/khatam yang menggambar diri, zamrud+emas+pasir (palet catalog-meta barakah). Demo: akad + walimatul 'ursy | `barakah` (upgrade) | Story | Marcellus + Figtree |
 | `meridian-story.html` | **Art Deco gala** — sunburst menggambar diri, bingkai bertingkat + sudut emas, shimmer emas CSS, "Programme" bernomor romawi (palet catalog-meta meridian) | `meridian` (upgrade) | Story | Italiana + Jost |
-| `lumina-craft.html` | **Soft film / Korean-minimal** — album tipis, surat pendek, bingkai film, Gowun Batang (serif buku Korea ber-Latin), ruang napas ekstrem (palet catalog-meta lumina) | `lumina` (upgrade) | Craft (tanpa library/canvas) | Gowun Batang + Karla |
+| `lumina-craft.html` | **Soft film / Korean-minimal** — album tipis, surat pendek, bingkai film, serif buku kontras-rendah, ruang napas ekstrem (palet catalog-meta lumina) | `lumina` (upgrade) | Craft (tanpa library/canvas) | **Spectral** + Karla ¹ |
+
+¹ Prototipe memakai **Gowun Batang**; implementasi memakai **Spectral** sejak 5 Sep 2026. Google menyajikan Gowun Batang sebagai 95 slice `unicode-range` (1.465 KB font + 93 KB `@font-face` CSS render-blocking) padahal konten Merriva seluruhnya Latin — melanggar anggaran Craft "+0KB dari baseline" (`THEME-PORTING.md` §5). Rasa serif-buku dipertahankan; lihat `docs/DECISIONS.md` #25.
 | `kirana-story.html` | **Jawa modern** — riset budaya: motif **truntum** (cinta bersemi; motif restu — BUKAN parang yang dilarang di pernikahan Jawa), gunungan line-art, palet sogan, rangkaian termasuk **Upacara Panggih** + catatan edukatifnya, istilah krama (katur dhumateng, rawuh) | **`kirana` (TEMA BARU)** | Story | Cormorant Upright + Figtree |
 
 Dengan gelombang 2, seluruh 9 tema existing aplikasi punya acuan visual + 1 tema baru (`kirana`) untuk segmen adat yang belum tergarap kompetitor.

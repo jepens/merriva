@@ -44,8 +44,12 @@ const isLegacyToggle = (id: string): id is SectionKey =>
   LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
-// DUA PASANGAN font kurasi (kustomisasi Fase G — anggaran font). Pasangan "a" =
-// bawaan → di-preload; "b" `preload:false` (hanya diunduh saat dipilih).
+// DUA PASANGAN font kurasi (kustomisasi Fase G — anggaran font).
+// SEMUA instance `preload:false` (AUDIT-2026-09-04 PER-1): `next/font` meng-emit
+// `<link rel=preload as=font>` untuk SETIAP tema yang tergabung di graph modul
+// `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
+// undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
+// browser hanya mengunduh slice yang benar-benar dipakai.
 // a: Marcellus = serif display bertakik lembut (nama & judul); Figtree = sans
 // humanis bersih (teks). b: Cormorant Garamond = serif kontras-tinggi bergaya
 // Garamond (nama & ayat); Jost = sans geometris bersih (keterbacaan body).
@@ -54,12 +58,14 @@ const dispA = Marcellus({
   weight: ["400"],
   variable: "--bk-disp-a",
   display: "swap",
+  preload: false,
 });
 const bodyA = Figtree({
   subsets: ["latin"],
   weight: ["400", "600"],
   variable: "--bk-body-a",
   display: "swap",
+  preload: false,
 });
 const dispB = Cormorant_Garamond({
   subsets: ["latin"],

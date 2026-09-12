@@ -46,17 +46,24 @@ const isLegacyToggle = (id: string): id is SectionKey =>
 // Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). Bricolage
 // Grotesque = display ekspresif tebal (nama + judul); Figtree = sans humanis
 // (teks). Nuansa hangat & meriah.
+// SEMUA instance `preload:false` (AUDIT-2026-09-04 PER-1): `next/font` meng-emit
+// `<link rel=preload as=font>` untuk SETIAP tema yang tergabung di graph modul
+// `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
+// undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
+// browser hanya mengunduh slice yang benar-benar dipakai.
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
   weight: ["500", "700", "800"],
   variable: "--ft-disp",
   display: "swap",
+  preload: false,
 });
 const body = Figtree({
   subsets: ["latin"],
   weight: ["400", "600"],
   variable: "--ft-body",
   display: "swap",
+  preload: false,
 });
 
 /**

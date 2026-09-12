@@ -48,9 +48,12 @@ const isLegacyToggle = (id: string): id is SectionKey =>
   LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
-// Dua PASANGAN font kurasi (kustomisasi Fase G). Pasangan "a" = bawaan → di-
-// preload; "b" `preload:false` (hanya diunduh saat dipilih; @font-face tak
-// dipakai = tak di-fetch → halaman default utuh & render IDENTIK).
+// Dua PASANGAN font kurasi (kustomisasi Fase G).
+// SEMUA instance `preload:false` (AUDIT-2026-09-04 PER-1): `next/font` meng-emit
+// `<link rel=preload as=font>` untuk SETIAP tema yang tergabung di graph modul
+// `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
+// undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
+// browser hanya mengunduh slice yang benar-benar dipakai.
 // a) EB Garamond = serif Garalde lembut (nama + judul, italic botanikal); Karla
 // = grotesque humanis (teks/label). Nuansa buku sketsa botani.
 // b) Cormorant Garamond = serif display high-contrast anggun; Nunito Sans = sans
@@ -61,12 +64,14 @@ const dispA = EB_Garamond({
   style: ["normal", "italic"],
   variable: "--vd-disp-a",
   display: "swap",
+  preload: false,
 });
 const bodyA = Karla({
   subsets: ["latin"],
   weight: ["400", "600"],
   variable: "--vd-body-a",
   display: "swap",
+  preload: false,
 });
 const dispB = Cormorant_Garamond({
   subsets: ["latin"],

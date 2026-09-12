@@ -36,9 +36,12 @@ import {
 } from "./sections";
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
-// Dua PASANGAN font kurasi (kustomisasi Fase G). Pasangan "a" = bawaan →
-// di-preload; "b" `preload:false` (hanya diunduh saat dipilih → halaman default
-// utuh). Pasangan a: Cormorant Garamond (serif Garalde sinematik) + Jost
+// Dua PASANGAN font kurasi (kustomisasi Fase G). Pasangan a:
+// SEMUA instance `preload:false` (AUDIT-2026-09-04 PER-1): `next/font` meng-emit
+// `<link rel=preload as=font>` untuk SETIAP tema yang tergabung di graph modul
+// `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
+// undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
+// browser hanya mengunduh slice yang benar-benar dipakai. Cormorant Garamond (serif Garalde sinematik) + Jost
 // (geometric sans). Pasangan b: Playfair Display (serif high-contrast) +
 // Montserrat (grotesk geometris) — kontras tinggi & monokrom, cocok DNA noir.
 const dispA = Cormorant_Garamond({
@@ -47,12 +50,14 @@ const dispA = Cormorant_Garamond({
   style: ["normal", "italic"],
   variable: "--nr-disp-a",
   display: "swap",
+  preload: false,
 });
 const bodyA = Jost({
   subsets: ["latin"],
   weight: ["300", "400", "500"],
   variable: "--nr-body-a",
   display: "swap",
+  preload: false,
 });
 const dispB = Playfair_Display({
   subsets: ["latin"],

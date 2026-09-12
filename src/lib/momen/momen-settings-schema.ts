@@ -33,17 +33,30 @@ const guestName = z
   .refine((v) => !/[\p{Cc}\p{Cf}<>]/u.test(v), "karakter tidak diizinkan");
 
 /** Pengaturan album oleh host — payload server action `updateMomenSettings`. */
-export const momenSettingsSchema = z.strictObject({
-  quotaPerGuest: z
-    .number()
-    .int()
-    .min(MOMEN_LIMITS.quotaPerGuestMin)
-    .max(MOMEN_LIMITS.quotaPerGuestMax),
-  /** ISO datetime dengan offset (timestamptz) atau null = instan. */
-  revealAt: z.iso.datetime({ offset: true }).nullable(),
-  defaultFilter: filterEnum,
-  allowLibraryUpload: z.boolean(),
-});
+export const momenSettingsSchema = z
+  .strictObject({
+    quotaPerGuest: z
+      .number()
+      .int()
+      .min(MOMEN_LIMITS.quotaPerGuestMin)
+      .max(MOMEN_LIMITS.quotaPerGuestMax),
+    /**
+     * Niat host dikirim EKSPLISIT. Tanpa ini server tak bisa membedakan
+     * "Langsung tampil" dari "Jadwal sendiri yang tanggalnya lupa diisi" —
+     * keduanya mengirim `revealAt: null`, sehingga salah-isi diam-diam menjadi
+     * "semua foto tamu langsung publik": kebalikan niat host, pada fitur privasi,
+     * dan TAK BISA dibatalkan setelah foto terlihat.
+     */
+    revealMode: z.enum(["instant", "schedule"]),
+    /** ISO datetime dengan offset (timestamptz) atau null = instan. */
+    revealAt: z.iso.datetime({ offset: true }).nullable(),
+    defaultFilter: filterEnum,
+    allowLibraryUpload: z.boolean(),
+  })
+  .refine((v) => v.revealMode === "instant" || v.revealAt !== null, {
+    message: "waktu reveal wajib diisi pada mode jadwal",
+    path: ["revealAt"],
+  });
 
 export type MomenSettings = z.infer<typeof momenSettingsSchema>;
 
@@ -74,6 +87,14 @@ export const momenUploadMetaSchema = z.strictObject({
    * menghasilkan file raksasa tanpa kompresi lossy → harus ditolak server.
    */
   format: z.enum(["webp", "jpeg"]),
+  /**
+   * Asal foto yang DIDEKLARASIKAN klien, untuk menegakkan setting host
+   * `allow_library_upload` di server (sebelumnya hanya dicek di UI). Ini
+   * penegakan KEBIJAKAN, bukan batas keamanan: setelah di-bake di kanvas, foto
+   * kamera dan galeri adalah byte yang identik sehingga provenance tak bisa
+   * dibuktikan server. Yang ditutup: jalur bypass diam-diam di UI.
+   */
+  source: z.enum(["camera", "library"]),
   width: z.number().int().min(1).max(MOMEN_LIMITS.maxDim),
   height: z.number().int().min(1).max(MOMEN_LIMITS.maxDim),
   displayBytes: z.number().int().min(1).max(MOMEN_LIMITS.displayBytesMax),

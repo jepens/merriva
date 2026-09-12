@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
+import { reportHandledError } from "@/lib/observability";
 import {
   momenModerationSchema,
   momenSettingsSchema,
@@ -74,12 +75,18 @@ export async function updateMomenSettingsAction(
     .from("momen_albums")
     .update({
       quota_per_guest: parsed.data.quotaPerGuest,
-      reveal_at: parsed.data.revealAt,
+      // Mode "instant" selalu menulis null; mode "schedule" dijamin skema punya
+      // tanggal (refine) → tak ada jalan diam-diam ke "langsung tampil".
+      reveal_at:
+        parsed.data.revealMode === "instant" ? null : parsed.data.revealAt,
       default_filter: parsed.data.defaultFilter,
       allow_library_upload: parsed.data.allowLibraryUpload,
     })
     .eq("id", owned.albumId);
-  if (error) return { status: "error", message: copy.common.error };
+  if (error) {
+    reportHandledError(error, "momen.settings", { albumId: owned.albumId });
+    return { status: "error", message: copy.common.error };
+  }
 
   revalidate(invitationId);
   return { status: "success" };
@@ -98,7 +105,10 @@ export async function revealMomenNowAction(
     .from("momen_albums")
     .update({ reveal_at: null })
     .eq("id", owned.albumId);
-  if (error) return { status: "error", message: copy.common.error };
+  if (error) {
+    reportHandledError(error, "momen.reveal", { albumId: owned.albumId });
+    return { status: "error", message: copy.common.error };
+  }
 
   revalidate(invitationId);
   return { status: "success" };
@@ -136,7 +146,12 @@ export async function moderateMomenPhotoAction(
       .delete()
       .eq("id", photo.id)
       .eq("album_id", owned.albumId);
-    if (error) return { status: "error", message: copy.common.error };
+    if (error) {
+      reportHandledError(error, "momen.moderate.delete", {
+        albumId: owned.albumId,
+      });
+      return { status: "error", message: copy.common.error };
+    }
 
     // Turunkan counter (dua langkah; moderasi jarang & owner-only → race abai).
     const { data: album } = await admin
@@ -163,7 +178,12 @@ export async function moderateMomenPhotoAction(
       .update({ status })
       .eq("id", photo.id)
       .eq("album_id", owned.albumId);
-    if (error) return { status: "error", message: copy.common.error };
+    if (error) {
+      reportHandledError(error, "momen.moderate.status", {
+        albumId: owned.albumId,
+      });
+      return { status: "error", message: copy.common.error };
+    }
   }
 
   revalidate(invitationId);

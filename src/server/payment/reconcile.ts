@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { toDbJson } from "@/lib/json";
+import { reportHandledError } from "@/lib/observability";
 import { getPaymentGateway } from "@/lib/payment";
 import type { Database, Json } from "@/types/database";
 
@@ -58,7 +59,12 @@ export async function verifyAndActivate(
       order.order_code,
       order.amount_idr,
     );
-  } catch {
+  } catch (err) {
+    // JALUR UANG: kegagalan verifikasi tak boleh senyap — tanpa sinyal ini,
+    // Pakasir/jaringan bermasalah di hari-H hanya tampak sebagai order pending.
+    reportHandledError(err, "payment.verify", {
+      orderCode: order.order_code,
+    });
     return { kind: "verify_error" };
   }
 
@@ -75,7 +81,14 @@ export async function verifyAndActivate(
       rawOverride ??
       toDbJson({ source: "status_poll", transaction: verification }),
   });
-  if (error) return { kind: "rpc_error" };
+  if (error) {
+    // Pembayaran SUDAH terverifikasi lunas tetapi aktivasi gagal → paling parah:
+    // pelanggan membayar dan tak menerima apa pun sampai poll/cron berikutnya.
+    reportHandledError(error, "payment.activate", {
+      orderCode: order.order_code,
+    });
+    return { kind: "rpc_error" };
+  }
 
   const row = data?.[0];
   const result = row?.result;

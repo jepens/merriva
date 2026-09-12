@@ -39,6 +39,15 @@ vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => refs.admin,
 }));
 
+// Deteksi order add-on `pending` di-mock agar tes fokus pada INVARIAN aksi
+// (tolak checkout & aktivasi gratis), bukan pada bentuk query helper-nya.
+const { findPendingMomenOrder } = vi.hoisted(() => ({
+  findPendingMomenOrder: vi.fn<() => Promise<{ orderCode: string } | null>>(
+    () => Promise.resolve(null),
+  ),
+}));
+vi.mock("@/server/momen/pending-order", () => ({ findPendingMomenOrder }));
+
 import {
   activateFreeMomenAction,
   createMomenCheckoutAction,
@@ -98,6 +107,7 @@ beforeEach(() => {
   calls = [];
   createPaymentLink.mockClear();
   storage.delete.mockClear();
+  findPendingMomenOrder.mockResolvedValue(null);
 });
 
 describe("createMomenCheckoutAction — jalur uang add-on", () => {
@@ -154,6 +164,24 @@ describe("createMomenCheckoutAction — jalur uang add-on", () => {
     expect(calls.some((c) => c.table === "orders")).toBe(false);
   });
 
+  it("ada order add-on PENDING → tolak (cegah tagih-ganda)", async () => {
+    refs.server = makeClient(
+      { invitations: { id: INV, status: "active" } },
+      calls,
+    );
+    refs.admin = makeClient(
+      { momen_albums: null, packages: { id: "pkg-50", price_idr: 199000 } },
+      calls,
+    );
+    findPendingMomenOrder.mockResolvedValue({ orderCode: "MRV-PENDING" });
+
+    const res = await createMomenCheckoutAction(INV, "momen_50");
+
+    expect(res.status).toBe("error");
+    expect(calls.some((c) => c.table === "orders")).toBe(false);
+    expect(createPaymentLink).not.toHaveBeenCalled();
+  });
+
   it("sukses: order pakai harga DB, undangan TIDAK disentuh, redirect Pakasir", async () => {
     refs.server = makeClient(
       { invitations: { id: INV, status: "active" } },
@@ -207,6 +235,30 @@ describe("activateFreeMomenAction — tier gratis", () => {
     );
     const rpc = vi.fn(() => Promise.resolve({ data: ALBUM, error: null }));
     refs.admin = { ...makeClient({ momen_albums: { id: ALBUM } }, calls), rpc };
+
+    const res = await activateFreeMomenAction(INV);
+
+    expect(res.status).toBe("error");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  // INVARIAN UANG (AUDIT KUA-2): album gratis yang dibuat saat order berbayar
+  // masih pending membuat aktivasi berbayar jadi no-op (`on conflict do
+  // nothing`) → pemilik membayar tetapi tetap mendapat tier gratis.
+  it("ada order add-on PENDING → aktivasi gratis DITOLAK (bayar tanpa barang)", async () => {
+    refs.server = makeClient(
+      { invitations: { id: INV, status: "active", slug: "s" } },
+      calls,
+    );
+    const rpc = vi.fn(() => Promise.resolve({ data: ALBUM, error: null }));
+    refs.admin = {
+      ...makeClient(
+        { momen_albums: null, packages: { limits: { quota_peserta: 5 } } },
+        calls,
+      ),
+      rpc,
+    };
+    findPendingMomenOrder.mockResolvedValue({ orderCode: "MRV-PENDING" });
 
     const res = await activateFreeMomenAction(INV);
 

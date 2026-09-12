@@ -46,13 +46,13 @@
   margin-top: 6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12.5px;
-  color: #8a7f6f;
+  color: #6f6559;
 }
 .mn-qr-hint {
   margin-top: 12px;
   font-size: 12px;
   line-height: 1.5;
-  color: #8a7f6f;
+  color: #6f6559;
 }
 
 @media print {

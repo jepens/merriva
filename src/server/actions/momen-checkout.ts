@@ -14,6 +14,7 @@ import { getPaymentGateway } from "@/lib/payment";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { CheckoutState } from "@/server/actions/checkout";
+import { findPendingMomenOrder } from "@/server/momen/pending-order";
 
 /**
  * Aktivasi add-on Album Momen (FASE H, DECISIONS #22). MEMAKAI-ULANG alur order
@@ -79,6 +80,11 @@ export async function createMomenCheckoutAction(
     .maybeSingle();
   if (existing) {
     return { status: "error", message: copy.checkout.momenAlreadyOwned };
+  }
+
+  // Order add-on yang belum lunas → jangan buat order kedua (cegah tagih-ganda).
+  if (await findPendingMomenOrder(admin, invitationId)) {
+    return { status: "error", message: copy.checkout.momenOrderPending };
   }
 
   // Harga otoritatif dari DB (paket add-on aktif; kode undangan tak akan cocok).
@@ -163,6 +169,13 @@ export async function activateFreeMomenAction(
     .maybeSingle();
   if (existing) {
     return { status: "error", message: copy.checkout.momenAlreadyOwned };
+  }
+
+  // INVARIAN UANG: tier gratis TIDAK boleh mendahului add-on yang sedang dibayar.
+  // Album gratis yang dibuat lebih dulu membuat aktivasi berbayar jadi no-op
+  // (`on conflict do nothing`) → pemilik membayar dan tetap dapat tier gratis.
+  if (await findPendingMomenOrder(admin, invitationId)) {
+    return { status: "error", message: copy.checkout.momenOrderPending };
   }
 
   // Kuota peserta tier gratis dari DB (jangan hardcode → satu sumber kebenaran).

@@ -69,6 +69,7 @@ function imageFile(magic: number[], type: string, name: string): File {
 interface AdminOpts {
   invitationStatus?: string | null;
   albumId?: string | null;
+  allowLibraryUpload?: boolean;
   claim?: { data: unknown; error: unknown };
   confirm?: { data: unknown; error: unknown };
 }
@@ -77,6 +78,7 @@ function makeAdmin(opts: AdminOpts = {}) {
   const {
     invitationStatus = "active",
     albumId = ALBUM,
+    allowLibraryUpload = true,
     claim = {
       data: [{ result: "ok", photo_id: PHOTO, remaining: 3 }],
       error: null,
@@ -98,7 +100,12 @@ function makeAdmin(opts: AdminOpts = {}) {
           : null
         : table === "momen_albums"
           ? albumId
-            ? { id: albumId, status: "active", quota_per_guest: 5 }
+            ? {
+                id: albumId,
+                status: "active",
+                quota_per_guest: 5,
+                allow_library_upload: allowLibraryUpload,
+              }
             : null
           : null;
     const chain: Record<string, unknown> = {};
@@ -115,6 +122,7 @@ function form(over: Record<string, string> = {}, magic = WEBP): FormData {
   const fd = new FormData();
   fd.set("filterId", "hangat");
   fd.set("format", "webp");
+  fd.set("source", "camera");
   fd.set("width", "1200");
   fd.set("height", "1600");
   fd.set("displayBytes", "212");
@@ -199,6 +207,38 @@ describe("uploadMomenPhotoAction — fail-closed", () => {
     expect(res.status).toBe("error");
     expect(admin.rpc).not.toHaveBeenCalled();
     expect(storage.upload).not.toHaveBeenCalled();
+  });
+
+  it("host melarang unggah galeri → source 'library' ditolak SEBELUM claim", async () => {
+    cookieValue.current = signFor(ALBUM);
+    const admin = makeAdmin({ allowLibraryUpload: false });
+    adminRef.current = admin;
+
+    const res = await uploadMomenPhotoAction(SLUG, form({ source: "library" }));
+
+    expect(res.status).toBe("error");
+    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(storage.upload).not.toHaveBeenCalled();
+  });
+
+  it("host melarang galeri tapi foto dari KAMERA tetap diterima", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin({ allowLibraryUpload: false });
+
+    const res = await uploadMomenPhotoAction(SLUG, form({ source: "camera" }));
+
+    expect(res).toEqual({ status: "ok", remaining: 2 });
+  });
+
+  it("source tak dikenal ditolak skema Zod", async () => {
+    cookieValue.current = signFor(ALBUM);
+    const admin = makeAdmin();
+    adminRef.current = admin;
+
+    const res = await uploadMomenPhotoAction(SLUG, form({ source: "scanner" }));
+
+    expect(res.status).toBe("error");
+    expect(admin.rpc).not.toHaveBeenCalled();
   });
 
   it("meta liar (dimensi melebihi batas) ditolak skema Zod", async () => {

@@ -7,7 +7,7 @@ import { L } from "./labels";
 
 /**
  * Visual cover Lumina (klien, tier Craft) — kartu film soft-minimal: bingkai
- * film tipis ganda, tanggal ber-spasi, sprig garis, nama serif (Gowun Batang),
+ * film tipis ganda, tanggal ber-spasi, sprig garis, nama serif (Spectral),
  * surat singkat, kartu tamu, tombol garis. Membaca `useCoverGate()` untuk nama
  * tamu & aksi buka. TANPA gsap/canvas. Entrance ringan via CSS (`.is-js`),
  * dinetralkan saat reduced-motion. Wipe cover (fade) digerakkan CSS `.is-open`.

@@ -271,6 +271,8 @@ export const copy = {
       "Undangan ini sudah punya Album Momen aktif. Upgrade tier belum tersedia.",
     momenPackageUnavailable:
       "Paket Album Momen tidak tersedia. Silakan coba lagi.",
+    momenOrderPending:
+      "Masih ada pembayaran Album Momen yang belum selesai. Tunggu sampai terverifikasi — album akan aktif sendiri.",
     // Guard: slug masih `draft-…` (belum diatur). Alamat terkunci setelah aktif,
     // jadi wajib diatur SEBELUM bayar agar halaman publik tak 404 permanen.
     setSlugTitle: "Atur alamat undangan dulu",
@@ -781,6 +783,13 @@ export const copy = {
       securedBy: "Pembayaran diproses oleh Pakasir (QRIS & Virtual Account).",
       error: "Gagal mengaktifkan. Coba lagi.",
       back: "Kembali ke dashboard",
+      // Order add-on masih menunggu pembayaran → JANGAN tampilkan panel harga
+      // (pemilik bisa menekan "Aktifkan gratis" dan kehilangan tier yang dibeli).
+      pendingTitle: "Menunggu pembayaran",
+      pendingBody: (orderCode: string) =>
+        `Pesanan ${orderCode} belum terverifikasi. Album Momen akan aktif otomatis begitu pembayaranmu diterima — biasanya beberapa menit.`,
+      pendingHint:
+        "Sudah membayar? Muat ulang halaman ini sebentar lagi. Jangan membuat pesanan baru agar tidak tertagih dua kali.",
     },
     // Dashboard host — kelola album aktif.
     manage: {
@@ -796,6 +805,10 @@ export const copy = {
       revealInstant: "Langsung tampil",
       revealSchedule: "Jadwal sendiri",
       revealAtLabel: "Buka pada (WIB)",
+      revealNeedsDate:
+        'Isi dulu tanggal & jam bukanya. Bila ingin foto tampil seketika, pilih "Langsung tampil".',
+      revealPastWarning:
+        "Waktu itu sudah lewat — album akan langsung terbuka begitu disimpan.",
       defaultFilter: "Filter bawaan",
       allowLibrary: "Izinkan unggah dari galeri",
       allowLibraryHint: "Mati = hanya jepretan langsung",
@@ -841,6 +854,10 @@ export const copy = {
       session: "Sesi berakhir. Muat ulang halaman lalu masukkan namamu lagi.",
       turnstile: "Verifikasi anti-bot gagal. Coba lagi.",
       invalid: "Data foto tidak valid.",
+      formatUnsupported:
+        "Format foto ini belum didukung. Pilih foto JPG, PNG, atau WebP — atau jepret langsung dengan kamera.",
+      libraryDisabled:
+        "Tuan rumah hanya mengizinkan jepretan langsung dari kamera.",
       albumFull: "Album sudah penuh.",
       guestQuota: "Jatah jepretanmu sudah habis.",
       pesertaFull: "Kuota peserta album sudah penuh.",

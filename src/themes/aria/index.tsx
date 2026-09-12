@@ -32,18 +32,25 @@ import {
 // Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). Instrument
 // Serif = serif display kontras tinggi (judul + angka italic); Inter = grotesque
 // netral (teks/label). Monokrom minimalis — aksen merah tunggal.
+// SEMUA instance `preload:false` (AUDIT-2026-09-04 PER-1): `next/font` meng-emit
+// `<link rel=preload as=font>` untuk SETIAP tema yang tergabung di graph modul
+// `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
+// undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
+// browser hanya mengunduh slice yang benar-benar dipakai.
 const serif = Instrument_Serif({
   subsets: ["latin"],
   weight: ["400"],
   style: ["normal", "italic"],
   variable: "--ar-serif",
   display: "swap",
+  preload: false,
 });
 const sans = Inter({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--ar-sans",
   display: "swap",
+  preload: false,
 });
 
 /**

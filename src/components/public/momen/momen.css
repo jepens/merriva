@@ -8,7 +8,10 @@
   --mn-paper: #faf6ef;
   --mn-card: #fff;
   --mn-ink: #221c14;
-  --mn-muted: #8a7f6f;
+  /* Kontras ≥4,5:1 di atas --mn-paper (5,16:1) & putih (5,56:1) — WCAG AA.
+     Nilai lama #8a7f6f hanya 3,65:1 dan dipakai di 10+ titik, termasuk teks
+     pada QR meja yang DICETAK (permanen di kertas). */
+  --mn-muted: #6f6559;
   --mn-acc: #c09a4a;
   --mn-acc-ink: #7a5e23;
   --mn-line: #e9e1d2;
@@ -23,6 +26,11 @@
 
   position: fixed;
   inset: 0;
+  /* Ikuti viewport DINAMIS: saat keyboard virtual terbuka / bilah browser
+     berubah, tinggi ikut menyusut sehingga layar yang bisa di-scroll benar-benar
+     terjangkau. Browser tanpa dukungan `dvh` membuang baris ini → `inset:0`
+     tetap berlaku sebagai fallback. */
+  height: 100dvh;
   max-width: 520px;
   margin: 0 auto;
   display: flex;
@@ -62,6 +70,13 @@
 /* ---------- Masuk ---------- */
 .mn-masuk {
   padding: max(env(safe-area-inset-top), 22px) 24px 28px;
+  /* HP pendek (iPhone SE) / keyboard terbuka: brand + hero + kartu (input +
+     Turnstile ±65px + CTA) melebihi viewport. Tanpa scroll, tombol "Mulai
+     Memotret" tak terjangkau sama sekali → tamu tak bisa masuk (WCAG 1.4.10).
+     `space-between` menaruh item pertama di flex-start, jadi aman dari
+     pemotongan-atas khas flex+overflow. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
   justify-content: space-between;
   background:
     radial-gradient(120% 70% at 80% -10%, #f3e6c8 0%, transparent 60%),
@@ -424,6 +439,56 @@
 .mn-toast.mn-show {
   animation: mn-toast 2.1s ease forwards;
 }
+/* Indikator "Menyimpan…" saat bake+encode+unggah berjalan (jaringan resepsi
+   sering lambat) dan pesan kesalahan PERSISTEN di panggung kamera — toast saja
+   tidak cukup: ia hilang 2,1 detik dan nihil pada reduced-motion. */
+.mn-busy {
+  position: absolute;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(14, 12, 9, 0.86);
+  border: 1px solid rgba(241, 229, 200, 0.25);
+  color: #f4eee2;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  z-index: 4;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+.mn-spin {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid rgba(244, 238, 226, 0.35);
+  border-top-color: #f4eee2;
+  animation: mn-spin 0.8s linear infinite;
+}
+@keyframes mn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.mn-camerr {
+  position: absolute;
+  left: 50%;
+  bottom: 168px;
+  transform: translateX(-50%);
+  width: min(86%, 340px);
+  text-align: center;
+  background: rgba(166, 61, 47, 0.94);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  z-index: 4;
+}
 @keyframes mn-toast {
   0% {
     opacity: 0;
@@ -443,7 +508,12 @@
 /* ---------- Habis / countdown ---------- */
 .mn-habis {
   align-items: center;
-  justify-content: center;
+  /* `safe center`: tetap di tengah bila muat, tetapi saat konten (judul + teks +
+     countdown) melebihi tinggi, jatuh ke flex-start sehingga bagian atas tidak
+     terpotong di luar area scroll. */
+  justify-content: safe center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   text-align: center;
   padding: 32px;
   background:
@@ -703,5 +773,18 @@
   .mn-app *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+  /* `forwards` pada durasi ~0 melompat ke keyframe 100% = `opacity:0`, sehingga
+     toast — SATU-SATUNYA konfirmasi "Tersimpan ✓" — hilang total. Tahan terlihat;
+     JS tetap melepasnya setelah 2,1 detik. */
+  .mn-app .mn-toast.mn-show {
+    animation: none !important;
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+  /* Spinner: diam, bukan berputar 100.000×/detik. Teks "Menyimpan…" yang
+     memikul maknanya. */
+  .mn-app .mn-spin {
+    animation: none !important;
   }
 }

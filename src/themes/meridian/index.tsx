@@ -41,21 +41,26 @@ const isLegacyToggle = (id: string): id is SectionKey =>
   LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (aman WebView &
-// LCP). Dua PASANGAN font kurasi (kustomisasi Fase G). Pasangan "a" = bawaan →
-// di-preload; "b" `preload:false` (hanya diunduh saat dipilih; @font-face tak
-// dipakai = tak di-fetch → halaman default utuh & render identik).
+// LCP). Dua PASANGAN font kurasi (kustomisasi Fase G).
+// SEMUA instance `preload:false` (AUDIT-2026-09-04 PER-1): `next/font` meng-emit
+// `<link rel=preload as=font>` untuk SETIAP tema yang tergabung di graph modul
+// `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
+// undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
+// browser hanya mengunduh slice yang benar-benar dipakai.
 // a: Italiana (display seni-deco renggang) + Jost (geometric sans).
 const dispA = Italiana({
   subsets: ["latin"],
   weight: ["400"],
   variable: "--mrd-disp-a",
   display: "swap",
+  preload: false,
 });
 const bodyA = Jost({
   subsets: ["latin"],
   weight: ["300", "400", "500"],
   variable: "--mrd-body-a",
   display: "swap",
+  preload: false,
 });
 // b: Bodoni Moda (display serif Didone kontras-tinggi, set italic lengkap) +
 // Jost (sans geometris) — pasangan editorial/high-fashion, DNA premium Meridian.

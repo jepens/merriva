@@ -20,6 +20,7 @@ import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser } from "@/server/guards/auth";
+import { findPendingMomenOrder } from "@/server/momen/pending-order";
 
 export const metadata: Metadata = { title: copy.momen.manage.title };
 
@@ -83,6 +84,31 @@ export default async function MomenManagePage({
 
   // Belum ada album → panel aktivasi (gratis + berbayar).
   if (!album) {
+    // …KECUALI masih ada order add-on yang belum lunas. Menampilkan panel harga
+    // di sini pernah membuat pemilik menekan "Aktifkan gratis" setelah membayar
+    // → album tier gratis terbentuk, aktivasi berbayar jadi no-op (AUDIT KUA-2),
+    // dan pemilik yang baru bayar melihat lagi tombol "Pilih & bayar" (UXA-7).
+    const pending = await findPendingMomenOrder(admin, id);
+    if (pending) {
+      return (
+        <div className="mx-auto max-w-2xl space-y-6">
+          <h1 className="text-xl font-semibold tracking-tight">{a.title}</h1>
+          <Card>
+            <CardContent className="space-y-3 py-8 text-center">
+              <h2 className="text-lg font-medium">{a.pendingTitle}</h2>
+              <p className="text-muted-foreground mx-auto max-w-md text-sm">
+                {a.pendingBody(pending.orderCode)}
+              </p>
+              <p className="text-muted-foreground mx-auto max-w-md text-xs">
+                {a.pendingHint}
+              </p>
+            </CardContent>
+          </Card>
+          {back}
+        </div>
+      );
+    }
+
     const { data: pkgs } = await admin
       .from("packages")
       .select("code, price_idr, limits")

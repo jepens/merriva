@@ -49,21 +49,26 @@ const isLegacyToggle = (id: string): id is SectionKey =>
   LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
-// Dua PASANGAN font kurasi (kustomisasi Fase G, anggaran font). Pasangan "a" =
-// bawaan → di-preload; "b" `preload:false` (hanya diunduh saat dipilih; tanpa
-// @font-face tak dipakai = tak di-fetch → halaman default utuh).
+// Dua PASANGAN font kurasi (kustomisasi Fase G, anggaran font).
+// SEMUA instance `preload:false` (AUDIT-2026-09-04 PER-1): `next/font` meng-emit
+// `<link rel=preload as=font>` untuk SETIAP tema yang tergabung di graph modul
+// `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
+// undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
+// browser hanya mengunduh slice yang benar-benar dipakai.
 // a: Cormorant Upright (display serif tegak) + Figtree (humanist sans).
 const dispA = Cormorant_Upright({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--kr-disp-a",
   display: "swap",
+  preload: false,
 });
 const bodyA = Figtree({
   subsets: ["latin"],
   weight: ["400", "600"],
   variable: "--kr-body-a",
   display: "swap",
+  preload: false,
 });
 // b: Playfair Display (serif editorial elegan, italic) + Karla (grotesque bersih).
 const dispB = Playfair_Display({

@@ -40,20 +40,26 @@ import {
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
 // Tiga PASANGAN font kurasi (kustomisasi Fase G, maks 3 — anggaran font).
-// Pasangan "a" = bawaan → di-preload; "b"/"c" `preload:false` (hanya diunduh
-// saat dipilih; @font-face tak dipakai = tak di-fetch → halaman default utuh).
+// @font-face pasangan non-default tetap terbit tetapi tak di-fetch bila tak dipakai.
+// SEMUA instance `preload:false` (AUDIT-2026-09-04 PER-1): `next/font` meng-emit
+// `<link rel=preload as=font>` untuk SETIAP tema yang tergabung di graph modul
+// `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
+// undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
+// browser hanya mengunduh slice yang benar-benar dipakai.
 const dispA = Fraunces({
   subsets: ["latin"],
   weight: ["300", "400", "500"],
   style: ["normal", "italic"],
   variable: "--er-disp-a",
   display: "swap",
+  preload: false,
 });
 const bodyA = Instrument_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--er-body-a",
   display: "swap",
+  preload: false,
 });
 const dispB = Cormorant_Garamond({
   subsets: ["latin"],

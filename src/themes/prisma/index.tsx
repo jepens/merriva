@@ -33,17 +33,24 @@ import {
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
 // Space Grotesk = grotesque display eksperimental; Space Mono = mono untuk label,
 // index section, kode tiket. Palet aurora violet/cyan/lime (di CSS).
+// SEMUA instance `preload:false` (AUDIT-2026-09-04 PER-1): `next/font` meng-emit
+// `<link rel=preload as=font>` untuk SETIAP tema yang tergabung di graph modul
+// `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
+// undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
+// browser hanya mengunduh slice yang benar-benar dipakai.
 const disp = Space_Grotesk({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   variable: "--pr-disp",
   display: "swap",
+  preload: false,
 });
 const mono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--pr-mono",
   display: "swap",
+  preload: false,
 });
 
 /** Inisial merek dari nama organizer (buang prefiks badan usaha), fallback "M". */
