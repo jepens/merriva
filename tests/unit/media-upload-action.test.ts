@@ -146,12 +146,15 @@ describe("uploadGalleryPhotoAction — gerbang sebelum menyentuh storage", () =>
   });
 
   it("dimensi hilang / liar ditolak", async () => {
-    for (const over of [
+    // Anotasi eksplisit: literal objek berkunci beda disimpulkan TS sebagai union
+    // ber-properti `undefined`, yang tak cocok dengan Record<string, string>.
+    const cases: Record<string, string>[] = [
       { width: "0" },
       { height: "-5" },
       { width: "abc" },
       { height: "99999" },
-    ]) {
+    ];
+    for (const over of cases) {
       storage.upload.mockClear();
       const res = await uploadGalleryPhotoAction(INV, form(over));
       expect(res.status).toBe("error");
