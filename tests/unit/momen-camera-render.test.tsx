@@ -36,6 +36,10 @@ const baseProps = {
   // null → widget Turnstile tak dirender (tak ada skrip eksternal di test).
   turnstileSiteKey: null,
   initialPhotos: [],
+  // Galeri ber-paginasi (PER-4): kursor null = tak ada halaman berikutnya.
+  initialCursor: null,
+  totalPhotos: 0,
+  photographers: 0,
 };
 
 function screens(root: HTMLElement) {

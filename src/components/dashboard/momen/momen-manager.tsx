@@ -44,6 +44,8 @@ export interface MomenManagerProps {
     allowLibraryUpload: boolean;
   };
   photos: MomenPhotoRow[];
+  /** Tautan "muat lebih" moderasi (server-rendered, `?foto=N`); null = habis. */
+  moreHref: string | null;
 }
 
 /** datetime-local "YYYY-MM-DDTHH:mm" → ISO dengan offset WIB (+07:00). */
@@ -445,6 +447,14 @@ export function MomenManager(props: MomenManagerProps) {
               ))}
             </ul>
           )}
+          {props.moreHref ? (
+            <Link
+              href={props.moreHref}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              {m.moderationMore}
+            </Link>
+          ) : null}
         </CardContent>
       </Card>
 

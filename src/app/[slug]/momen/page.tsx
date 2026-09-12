@@ -10,8 +10,8 @@ import { copy } from "@/lib/copy";
 import { parseContentForRender } from "@/lib/invitation-content";
 import { resolveAlbumPhase } from "@/lib/momen/album-phase";
 import { isDraftSlug, isReservedSlug } from "@/lib/slug";
-import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { fetchMomenAlbumStats, fetchMomenPhotos } from "@/server/momen/photos";
 import type { InvitationCategory } from "@/types";
 import type { Json } from "@/types/database";
 
@@ -105,22 +105,31 @@ export default async function MomenGuestPage({
 
   // Foto HANYA dipancarkan saat revealed (fail-closed). Pra-reveal: daftar kosong
   // (tamu tak boleh melihat foto orang lain sebelum waktunya).
+  //
+  // HALAMAN PERTAMA SAJA (PER-4): route ini `force-dynamic` — tak pernah
+  // ter-cache — jadi album besar dulu ditarik utuh pada SETIAP pembukaan oleh
+  // SETIAP tamu. Sisanya dimuat via `loadMomenPhotosAction` saat diminta.
   let initialPhotos: MomenPhotoView[] = [];
+  let initialCursor: string | null = null;
+  let totalPhotos = 0;
+  let photographers = 0;
   if (phase === "revealed") {
-    const storage = getStorage();
-    const { data: rows } = await admin
-      .from("momen_photos")
-      .select("id, guest_name, filter_id, storage_path, thumb_path")
-      .eq("album_id", album.id)
-      .eq("status", "visible")
-      .order("created_at", { ascending: false });
-    initialPhotos = (rows ?? []).map((r) => ({
+    const [page, stats] = await Promise.all([
+      fetchMomenPhotos(admin, album.id),
+      // Angka ringkasan dari agregat DB, BUKAN dari daftar yang termuat —
+      // dengan paginasi, `photos.length` bukan lagi jumlah foto album.
+      fetchMomenAlbumStats(admin, album.id),
+    ]);
+    initialPhotos = page.photos.map((r) => ({
       id: r.id,
-      guestName: r.guest_name,
-      filterId: r.filter_id,
-      url: storage.getPublicUrl(r.storage_path),
-      thumbUrl: storage.getPublicUrl(r.thumb_path),
+      guestName: r.guestName,
+      filterId: r.filterId,
+      url: r.url,
+      thumbUrl: r.thumbUrl,
     }));
+    initialCursor = page.nextCursor;
+    totalPhotos = stats.visibleCount;
+    photographers = stats.photographerCount;
   }
 
   return (
@@ -134,6 +143,9 @@ export default async function MomenGuestPage({
       dateLabel={dateLabelFrom(inv.event_date)}
       turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null}
       initialPhotos={initialPhotos}
+      initialCursor={initialCursor}
+      totalPhotos={totalPhotos}
+      photographers={photographers}
     />
   );
 }

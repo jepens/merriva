@@ -280,6 +280,21 @@ Keduanya harus lolos. Penolakan rate limit kini juga DAPAT DIBEDAKAN dari "tidak
 
 ---
 
+## #32 — 2026-09-13 · Galeri Momen: paginasi KEYSET + angka ringkasan dari agregat DB
+**Konteks:** AUDIT-2026-09-04 PER-4 — `/{slug}/momen` adalah route publik `force-dynamic` (TAK PERNAH ter-cache) yang menarik SELURUH baris foto album tanpa `limit`, lalu menurunkan angka ringkasan dari daftar itu (`photos.length`, `new Set(guestName).size`). Album 500 foto ≈ 150 KB payload per pembukaan + 500 node `<img>`; 200 tamu membuka bersamaan ≈ 100.000 baris terbaca dan ~30 MB egress dari satu instance — tepat di hari acara. Dashboard memuat seluruh album termasuk foto tersembunyi.
+
+**Keputusan:** (1) baca ber-halaman lewat `fetchMomenPhotos` dengan **kursor keyset** pada `created_at` (`created_at < cursor`, ambil `limit + 1` untuk mendeteksi halaman berikutnya tanpa query hitung), memakai index `momen_photos_album_created_idx (album_id, created_at)` yang sudah ada; (2) angka ringkasan pindah ke RPC agregat baru `momen_album_stats(album_id)` — satu query, payload konstan.
+
+**Alasan:** begitu daftar tak lagi utuh, menurunkan "50 foto oleh 7 fotografer" dari daftar yang termuat menjadi SALAH — subjudul akan berbunyi "40 foto" pada album 50 foto. Agregat harus datang dari tempat yang melihat seluruh baris, yaitu DB. Keyset dipilih di atas OFFSET karena biayanya tidak tumbuh linear dan tidak melompati baris pada feed hidup (foto baru masuk saat tamu memuat halaman berikutnya). Klien tetap men-dedup by id: foto yang baru diunggah tamu sendiri disisipkan lokal dan bisa tumpang-tindih dengan halaman berikutnya.
+
+**Semantik `momen_album_stats` sengaja dibedakan:** `photographer_count` hanya menghitung foto `visible` (foto yang disembunyikan host tak boleh menambah angka yang dilihat tamu), sedangkan `participant_count` menghitung `device_id` unik tanpa memandang status — itu UNIT YANG DIJUAL dan harus selaras persis dengan `momen_claim_upload` yang menegakkan `quota_peserta` (menyembunyikan foto tidak mengembalikan jatah peserta).
+
+**Ditolak:** `count: "exact"` terpisah per angka (dua-tiga round-trip, dan `count(distinct …)` tak bisa diungkapkan lewat PostgREST); memuat kolom `guest_name` seluruh album untuk dihitung di aplikasi (tetap O(N) lewat kabel — persis yang hendak dihindari); paginasi OFFSET (biaya linear + lompat baris).
+
+**Konsekuensi:** `loadMomenPhotosAction` adalah aksi PUBLIK, jadi gerbang fase reveal diperiksa ULANG di dalamnya — ia tak boleh bergantung pada halaman yang memanggilnya; pra-reveal mengembalikan daftar kosong berapa pun kursor yang dikirim klien (diuji). Dashboard dibatasi `?foto=N` (server-rendered, tanpa state klien) dengan plafon keras 400 per render. Sekalian PER-7: detak 1 detik kini BERHENTI setelah reveal — sebelumnya React mendiff seluruh grid tiap detik selamanya.
+
+---
+
 ## Template entri baru
 
 ```

@@ -14,6 +14,7 @@ import { FILM_PRESETS, getFilmPreset } from "@/lib/momen/film-presets";
 import { applyFilmToPixels } from "@/lib/momen/film-render";
 import { cn } from "@/lib/utils";
 import {
+  loadMomenPhotosAction,
   startMomenSessionAction,
   uploadMomenPhotoAction,
 } from "@/server/actions/momen-guest";
@@ -45,6 +46,11 @@ export interface MomenCameraProps {
   dateLabel: string | null;
   turnstileSiteKey: string | null;
   initialPhotos: MomenPhotoView[];
+  /** Kursor halaman berikutnya (PER-4); null = album sudah termuat semua. */
+  initialCursor: string | null;
+  /** Jumlah foto & fotografer dari AGREGAT DB — bukan dari daftar yang termuat. */
+  totalPhotos: number;
+  photographers: number;
 }
 
 type Screen = "masuk" | "kamera" | "habis" | "galeri";
@@ -128,6 +134,7 @@ export function MomenCamera(props: MomenCameraProps) {
     dateLabel,
     turnstileSiteKey,
     initialPhotos,
+    initialCursor,
   } = props;
 
   const [screen, setScreen] = useState<Screen>("masuk");
@@ -138,6 +145,11 @@ export function MomenCamera(props: MomenCameraProps) {
   const [taken, setTaken] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState(defaultFilter);
   const [photos, setPhotos] = useState<MomenPhotoView[]>(initialPhotos);
+  const [cursor, setCursor] = useState<string | null>(initialCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // Angka ringkasan berasal dari agregat server; hitungan lokal hanya menambah
+  // foto yang BARU saja diunggah tamu ini (galeri tak lagi memuat album penuh).
+  const [totalPhotos, setTotalPhotos] = useState(props.totalPhotos);
   const [busy, setBusy] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -174,11 +186,15 @@ export function MomenCamera(props: MomenCameraProps) {
     return () => clearTimeout(id);
   }, []);
 
-  // Detak untuk countdown + flip fase saat reveal terlampaui.
+  // Detak untuk countdown + flip fase saat reveal terlampaui. BERHENTI setelah
+  // reveal: tanpa ini React mendiff seluruh grid foto tiap detik selamanya —
+  // termasuk saat tamu sedang membidik (AUDIT PER-7).
   useEffect(() => {
+    if (revealAtIso === null) return;
+    if (resolveAlbumPhase(Date.now(), revealAtIso) === "revealed") return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [revealAtIso]);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -299,6 +315,7 @@ export function MomenCamera(props: MomenCameraProps) {
       phase === "revealed" ? c.camera.savedInstant : c.camera.savedHidden,
     );
     if (phase === "revealed") {
+      setTotalPhotos((n) => n + 1);
       setPhotos((prev) => [
         {
           id: `local-${Date.now()}`,
@@ -381,6 +398,26 @@ export function MomenCamera(props: MomenCameraProps) {
     await startCamera();
   }
 
+  /**
+   * Halaman berikutnya galeri (PER-4). Dedup by id: feed hidup + foto lokal yang
+   * baru diunggah bisa tumpang-tindih dengan halaman berikutnya.
+   */
+  async function loadMore() {
+    if (loadingMore || !cursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await loadMomenPhotosAction(slug, cursor);
+      if (res.status !== "ok") return;
+      setPhotos((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...res.photos.filter((p) => !seen.has(p.id))];
+      });
+      setCursor(res.nextCursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   function closeCamera() {
     if (phase === "revealed") setScreen("galeri");
     else if (taken > 0) setScreen("habis");
@@ -389,7 +426,6 @@ export function MomenCamera(props: MomenCameraProps) {
 
   const previewFilter = preset.css === "none" ? undefined : preset.css;
   const cd = countdownParts(msUntilReveal(now, revealAtIso));
-  const photographers = new Set(photos.map((p) => p.guestName)).size;
   const cols: MomenPhotoView[][] = [[], []];
   photos.forEach((p, i) => cols[i % 2]!.push(p));
 
@@ -653,7 +689,7 @@ export function MomenCamera(props: MomenCameraProps) {
         <div className="mn-galhead">
           <div className="mn-kicker">{c.gallery.kickerRevealed}</div>
           <h2>{heroTitle}</h2>
-          <p>{c.gallery.sub(photos.length, photographers)}</p>
+          <p>{c.gallery.sub(totalPhotos, props.photographers)}</p>
         </div>
         {photos.length === 0 ? (
           <div className="mn-empty">{c.gallery.empty}</div>
@@ -685,6 +721,18 @@ export function MomenCamera(props: MomenCameraProps) {
             ))}
           </div>
         )}
+        {cursor ? (
+          <div className="mn-more">
+            <button
+              type="button"
+              className="mn-ghost"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+            >
+              {loadingMore ? c.gallery.loading : c.gallery.loadMore}
+            </button>
+          </div>
+        ) : null}
         <div className="mn-bottombar">
           <button
             type="button"

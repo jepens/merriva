@@ -764,6 +764,8 @@ export const copy = {
         `${photos} foto oleh ${people} fotografer dadakan`,
       empty: "Belum ada foto di album. Jadilah yang pertama memotret!",
       cameraAgain: "Kamera",
+      loadMore: "Muat lebih banyak",
+      loading: "Memuat…",
       downloadPhoto: "Unduh foto",
       close: "Tutup",
       by: (name: string) => `oleh ${name}`,
@@ -853,6 +855,7 @@ export const copy = {
       moderationHint:
         "Kamu bisa melihat semua foto sebelum reveal. Sembunyikan atau hapus yang tak pantas.",
       moderationEmpty: "Belum ada foto masuk.",
+      moderationMore: "Muat lebih banyak foto",
       hide: "Sembunyikan",
       show: "Tampilkan",
       del: "Hapus",

@@ -850,6 +850,15 @@ export type Database = {
         };
       };
       invitation_effective_limits: { Args: { inv_id: string }; Returns: Json };
+      momen_album_stats: {
+        Args: { p_album_id: string };
+        Returns: {
+          hidden_count: number;
+          participant_count: number;
+          photographer_count: number;
+          visible_count: number;
+        }[];
+      };
       momen_claim_upload: {
         Args: { p_album_id: string; p_device_id: string };
         Returns: {

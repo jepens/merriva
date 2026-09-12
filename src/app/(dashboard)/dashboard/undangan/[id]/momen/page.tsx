@@ -17,20 +17,29 @@ import { copy } from "@/lib/copy";
 import { appUrl } from "@/lib/env";
 import { isUuid } from "@/lib/id";
 import { resolveAlbumPhase } from "@/lib/momen/album-phase";
-import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser } from "@/server/guards/auth";
 import { findLatestMomenOrder } from "@/server/momen/orders";
+import {
+  fetchMomenAlbumStats,
+  fetchMomenPhotos,
+  MOMEN_PAGE_SIZE,
+} from "@/server/momen/photos";
 
 export const metadata: Metadata = { title: copy.momen.manage.title };
 
 const a = copy.momen.activate;
 
+/** Plafon keras satu render halaman moderasi (rem terhadap album raksasa). */
+const PHOTO_LIMIT_MAX = 400;
+
 export default async function MomenManagePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ foto?: string }>;
 }) {
   const { id } = await params;
   await requireUser();
@@ -135,24 +144,36 @@ export default async function MomenManagePage({
     );
   }
 
-  // Album aktif → manager. Muat semua foto (incl. hidden) untuk moderasi.
-  const storage = getStorage();
-  const { data: rows } = await admin
-    .from("momen_photos")
-    .select("id, guest_name, device_id, filter_id, thumb_path, status")
-    .eq("album_id", album.id)
-    .order("created_at", { ascending: false });
-  const list = rows ?? [];
+  // Album aktif → manager. Foto (incl. hidden) untuk moderasi, DIBATASI: album
+  // besar dulu ditarik utuh di setiap render (AUDIT PER-4). "Muat lebih" lewat
+  // `?foto=N` — tetap server-rendered, tanpa state klien tambahan.
+  const requested = Number((await searchParams).foto);
+  const photoLimit = Math.min(
+    Math.max(
+      Number.isFinite(requested) ? requested : MOMEN_PAGE_SIZE,
+      MOMEN_PAGE_SIZE,
+    ),
+    PHOTO_LIMIT_MAX,
+  );
+  const [page, stats] = await Promise.all([
+    fetchMomenPhotos(admin, album.id, {
+      includeHidden: true,
+      limit: photoLimit,
+    }),
+    // Angka kartu statistik dari agregat DB — bukan dari daftar yang termuat.
+    fetchMomenAlbumStats(admin, album.id),
+  ]);
 
-  const photos: MomenPhotoRow[] = list.map((r) => ({
+  const photos: MomenPhotoRow[] = page.photos.map((r) => ({
     id: r.id,
-    guestName: r.guest_name,
-    filterId: r.filter_id,
-    thumbUrl: storage.getPublicUrl(r.thumb_path),
-    status: r.status === "hidden" ? "hidden" : "visible",
+    guestName: r.guestName,
+    filterId: r.filterId,
+    thumbUrl: r.thumbUrl,
+    status: r.status,
   }));
-  const participants = new Set(list.map((r) => r.device_id)).size;
-  const hiddenCount = list.filter((r) => r.status === "hidden").length;
+  const participants = stats.participantCount;
+  const hiddenCount = stats.hiddenCount;
+  const totalPhotos = stats.visibleCount + stats.hiddenCount;
   // Server Component dinamis (dashboard = SSR ter-auth) — waktu per-request
   // disengaja; aturan purity react-hooks tak berlaku di sini.
   // eslint-disable-next-line react-hooks/purity
@@ -171,7 +192,7 @@ export default async function MomenManagePage({
         invitationId={id}
         guestUrl={guestUrl}
         quotaPeserta={album.quota_peserta}
-        photoCount={list.length}
+        photoCount={totalPhotos}
         participants={participants}
         hiddenCount={hiddenCount}
         revealed={revealed}
@@ -182,6 +203,11 @@ export default async function MomenManagePage({
           allowLibraryUpload: album.allow_library_upload,
         }}
         photos={photos}
+        moreHref={
+          page.nextCursor
+            ? `/dashboard/undangan/${id}/momen?foto=${Math.min(photoLimit + MOMEN_PAGE_SIZE, PHOTO_LIMIT_MAX)}`
+            : null
+        }
       />
     </div>
   );

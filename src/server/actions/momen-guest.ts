@@ -15,6 +15,7 @@ import {
   signMomenSession,
   verifyMomenSession,
 } from "@/lib/momen/session";
+import { resolveAlbumPhase } from "@/lib/momen/album-phase";
 import { momenObjectPaths } from "@/lib/momen/storage-path";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -25,6 +26,7 @@ import {
 import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { fetchMomenPhotos } from "@/server/momen/photos";
 
 /**
  * Aksi TAMU Album Momen (FASE H, MOMEN-SPEC §4–§6). Tamu ANON tak menyentuh DB
@@ -71,6 +73,9 @@ const UPLOAD_VENUE_LIMIT = { max: 900, windowMs: 60_000 };
 /** Jatah per tamu maksimal 20 foto (skema) → 20/menit sudah sangat longgar. */
 const UPLOAD_DEVICE_LIMIT = { max: 20, windowMs: 60_000 };
 
+/** Baca galeri: murah & hanya saat tamu menekan "muat lebih". Per acara. */
+const GALLERY_LIMIT = { max: 600, windowMs: 60_000 };
+
 export type MomenSessionState =
   | { status: "ok"; remaining: number; deviceCount: number }
   | { status: "error"; message?: string };
@@ -82,6 +87,7 @@ interface ActiveAlbum {
   albumId: string;
   quotaPerGuest: number;
   allowLibraryUpload: boolean;
+  revealAt: string | null;
 }
 
 /**
@@ -102,7 +108,7 @@ async function resolveActiveAlbum(
 
   const { data: album } = await admin
     .from("momen_albums")
-    .select("id, status, quota_per_guest, allow_library_upload")
+    .select("id, status, quota_per_guest, allow_library_upload, reveal_at")
     .eq("invitation_id", inv.id)
     .maybeSingle();
   if (!album || album.status !== "active") return null;
@@ -111,6 +117,7 @@ async function resolveActiveAlbum(
     albumId: album.id,
     quotaPerGuest: album.quota_per_guest,
     allowLibraryUpload: album.allow_library_upload,
+    revealAt: album.reveal_at,
   };
 }
 
@@ -399,4 +406,71 @@ export async function uploadMomenPhotoAction(
   }
 
   return { status: "ok", remaining: confirm.remaining };
+}
+
+/** Satu foto galeri untuk klien (URL sudah lewat `lib/storage` + domain sendiri). */
+export interface MomenGalleryPhoto {
+  id: string;
+  guestName: string;
+  filterId: string;
+  url: string;
+  thumbUrl: string;
+}
+
+export type MomenGalleryState =
+  | { status: "ok"; photos: MomenGalleryPhoto[]; nextCursor: string | null }
+  | { status: "error" };
+
+/**
+ * Halaman BERIKUTNYA galeri album (PER-4). Halaman pertama dirender server di
+ * `/{slug}/momen`; ini hanya dipanggil saat tamu menekan "muat lebih".
+ *
+ * FAIL-CLOSED: gerbang fase diperiksa ULANG di sini — aksi ini publik, jadi
+ * tidak boleh bergantung pada halaman yang memanggilnya. Pra-reveal → daftar
+ * kosong, sama seperti render awal.
+ */
+export async function loadMomenPhotosAction(
+  slug: string,
+  cursor: string | null,
+): Promise<MomenGalleryState> {
+  const rateKey = typeof slug === "string" ? slug.trim().toLowerCase() : "";
+  if (
+    !checkRateLimit(
+      await scopedClientRateKey("momen-gallery", rateKey),
+      GALLERY_LIMIT,
+    ).ok
+  ) {
+    return { status: "error" };
+  }
+
+  // Kursor = `created_at` ISO dari baris terakhir; tolak bentuk lain.
+  const safeCursor =
+    typeof cursor === "string" && cursor.length > 0 && cursor.length <= 40
+      ? cursor
+      : null;
+  if (cursor !== null && safeCursor === null) return { status: "error" };
+
+  const admin = createSupabaseAdminClient();
+  const album = await resolveActiveAlbum(admin, slug);
+  if (!album) return { status: "error" };
+
+  // Gerbang fase: foto tak pernah terpancar sebelum reveal.
+  if (resolveAlbumPhase(Date.now(), album.revealAt) !== "revealed") {
+    return { status: "ok", photos: [], nextCursor: null };
+  }
+
+  const page = await fetchMomenPhotos(admin, album.albumId, {
+    cursor: safeCursor,
+  });
+  return {
+    status: "ok",
+    photos: page.photos.map((p) => ({
+      id: p.id,
+      guestName: p.guestName,
+      filterId: p.filterId,
+      url: p.url,
+      thumbUrl: p.thumbUrl,
+    })),
+    nextCursor: page.nextCursor,
+  };
 }

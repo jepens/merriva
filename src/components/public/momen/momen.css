@@ -505,6 +505,14 @@
   }
 }
 
+/* Tombol "muat lebih banyak" galeri — di bawah grid, di atas bilah bawah.
+   Padding bawah menghindari tertutup `.mn-bottombar` yang melayang. */
+.mn-more {
+  display: flex;
+  justify-content: center;
+  padding: 4px 24px 14px;
+}
+
 /* ---------- Habis / countdown ---------- */
 .mn-habis {
   align-items: center;
