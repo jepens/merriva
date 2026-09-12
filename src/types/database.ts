@@ -392,6 +392,7 @@ export type Database = {
           guest_name: string;
           height: number;
           id: string;
+          purged_at: string | null;
           status: string;
           storage_path: string;
           thumb_path: string;
@@ -406,6 +407,7 @@ export type Database = {
           guest_name: string;
           height: number;
           id?: string;
+          purged_at?: string | null;
           status?: string;
           storage_path: string;
           thumb_path: string;
@@ -420,6 +422,7 @@ export type Database = {
           guest_name?: string;
           height?: number;
           id?: string;
+          purged_at?: string | null;
           status?: string;
           storage_path?: string;
           thumb_path?: string;

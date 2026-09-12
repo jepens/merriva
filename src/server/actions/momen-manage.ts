@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
+import { resolveAlbumPhase } from "@/lib/momen/album-phase";
 import { reportHandledError } from "@/lib/observability";
 import {
   momenModerationSchema,
@@ -30,7 +31,7 @@ export type MomenManageResult =
  */
 async function resolveOwnedAlbumId(
   invitationId: string,
-): Promise<{ albumId: string } | null> {
+): Promise<{ albumId: string; revealAt: string | null } | null> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -47,11 +48,11 @@ async function resolveOwnedAlbumId(
   const admin = createSupabaseAdminClient();
   const { data: album } = await admin
     .from("momen_albums")
-    .select("id")
+    .select("id, reveal_at")
     .eq("invitation_id", invitationId)
     .maybeSingle();
   if (!album) return null;
-  return { albumId: album.id };
+  return { albumId: album.id, revealAt: album.reveal_at };
 }
 
 function revalidate(invitationId: string): void {
@@ -118,6 +119,17 @@ export async function revealMomenNowAction(
  * Moderasi satu foto: sembunyikan / tampilkan / hapus. Host boleh melihat semua
  * foto pra-reveal (jalur dashboard service_role). Hapus = buang baris + objek
  * storage (best-effort) + turunkan `photo_count` (rem plafon tetap konsisten).
+ *
+ * "Sembunyikan" SADAR-FASE (AUDIT-2026-09-04 KEA-3, DECISIONS #33). Bucket media
+ * publik + cache 1 tahun, jadi setelah reveal URL foto sudah tersebar ke setiap
+ * tamu: menandai `status='hidden'` saja membuat baris hilang dari galeri
+ * sementara OBJEKNYA TETAP MELAYANI 200 selamanya — UI berbohong.
+ *   * Pra-reveal  → objek belum pernah publik: cukup penanda status, dapat
+ *     ditampilkan lagi.
+ *   * Pasca-reveal → objek DIHAPUS dan `purged_at` dicatat; permanen, dan
+ *     "Tampilkan" tak lagi ditawarkan untuk foto itu.
+ * Baris tetap dipertahankan: jatah jepret tamu & slot peserta yang sudah
+ * terpakai TIDAK dikembalikan oleh moderasi.
  */
 export async function moderateMomenPhotoAction(
   invitationId: string,
@@ -134,7 +146,7 @@ export async function moderateMomenPhotoAction(
   // Foto WAJIB milik album pemilik ini (cegah moderasi foto album lain).
   const { data: photo } = await admin
     .from("momen_photos")
-    .select("id, storage_path, thumb_path")
+    .select("id, storage_path, thumb_path, purged_at")
     .eq("id", parsed.data.photoId)
     .eq("album_id", owned.albumId)
     .maybeSingle();
@@ -171,11 +183,15 @@ export async function moderateMomenPhotoAction(
       storage.delete(photo.storage_path),
       storage.delete(photo.thumb_path),
     ]);
-  } else {
-    const status = parsed.data.action === "hide" ? "hidden" : "visible";
+  } else if (parsed.data.action === "show") {
+    // Objek sudah dihapus pada moderasi pasca-reveal → tak ada yang bisa
+    // ditampilkan kembali. Tolak eksplisit (UI juga menyembunyikan tombolnya).
+    if (photo.purged_at) {
+      return { status: "error", message: copy.momen.manage.showPurged };
+    }
     const { error } = await admin
       .from("momen_photos")
-      .update({ status })
+      .update({ status: "visible" })
       .eq("id", photo.id)
       .eq("album_id", owned.albumId);
     if (error) {
@@ -183,6 +199,36 @@ export async function moderateMomenPhotoAction(
         albumId: owned.albumId,
       });
       return { status: "error", message: copy.common.error };
+    }
+  } else {
+    // hide — pencabutan bergantung fase (lihat docstring).
+    const revealed =
+      resolveAlbumPhase(Date.now(), owned.revealAt) === "revealed";
+    const { error } = await admin
+      .from("momen_photos")
+      .update({
+        status: "hidden",
+        // Dicatat SEBELUM penghapusan: bila proses mati di tengah, foto tetap
+        // ditandai tercabut (fail-closed) alih-alih tampak masih bisa dipulihkan.
+        ...(revealed && !photo.purged_at
+          ? { purged_at: new Date().toISOString() }
+          : {}),
+      })
+      .eq("id", photo.id)
+      .eq("album_id", owned.albumId);
+    if (error) {
+      reportHandledError(error, "momen.moderate.status", {
+        albumId: owned.albumId,
+      });
+      return { status: "error", message: copy.common.error };
+    }
+
+    if (revealed && !photo.purged_at) {
+      const storage = getStorage();
+      await Promise.allSettled([
+        storage.delete(photo.storage_path),
+        storage.delete(photo.thumb_path),
+      ]);
     }
   }
 

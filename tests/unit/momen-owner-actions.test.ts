@@ -58,6 +58,8 @@ const INV = "44444444-4444-4444-8444-444444444444";
 const ALBUM = "11111111-1111-4111-8111-111111111111";
 const PHOTO = "22222222-2222-4222-8222-222222222222";
 const USER = "55555555-5555-4555-8555-555555555555";
+/** Reveal jauh di masa depan → album masih PRA-reveal. */
+const FUTURE = "2099-01-01T00:00:00+07:00";
 
 interface TableCall {
   table: string;
@@ -295,7 +297,7 @@ describe("moderateMomenPhotoAction — otorisasi", () => {
     refs.server = makeClient({ invitations: { id: INV } }, calls);
     // momen_photos null = filter album_id tak menemukan baris.
     refs.admin = makeClient(
-      { momen_albums: { id: ALBUM }, momen_photos: null },
+      { momen_albums: { id: ALBUM, reveal_at: FUTURE }, momen_photos: null },
       calls,
     );
 
@@ -313,7 +315,10 @@ describe("moderateMomenPhotoAction — otorisasi", () => {
 
   it("bukan pemilik undangan → ditolak sebelum menyentuh foto", async () => {
     refs.server = makeClient({ invitations: null }, calls); // RLS → 0 baris
-    refs.admin = makeClient({ momen_albums: { id: ALBUM } }, calls);
+    refs.admin = makeClient(
+      { momen_albums: { id: ALBUM, reveal_at: FUTURE } },
+      calls,
+    );
 
     const res = await moderateMomenPhotoAction(INV, {
       photoId: PHOTO,
@@ -328,8 +333,13 @@ describe("moderateMomenPhotoAction — otorisasi", () => {
     refs.server = makeClient({ invitations: { id: INV } }, calls);
     refs.admin = makeClient(
       {
-        momen_albums: { id: ALBUM },
-        momen_photos: { id: PHOTO, storage_path: "a", thumb_path: "b" },
+        momen_albums: { id: ALBUM, reveal_at: FUTURE },
+        momen_photos: {
+          id: PHOTO,
+          storage_path: "a",
+          thumb_path: "b",
+          purged_at: null,
+        },
       },
       calls,
     );
@@ -344,5 +354,102 @@ describe("moderateMomenPhotoAction — otorisasi", () => {
       (c) => c.table === "momen_photos" && c.op === "update",
     );
     expect(upd?.payload).toEqual({ status: "hidden" });
+  });
+});
+
+/**
+ * Moderasi SADAR-FASE (AUDIT-2026-09-04 KEA-3). Bucket media publik + cache 1
+ * tahun: setelah reveal, URL foto sudah tersebar ke setiap tamu, sehingga
+ * menandai `status='hidden'` saja membuat baris hilang dari galeri sementara
+ * objeknya tetap melayani 200 selamanya — UI berbohong.
+ */
+describe("moderateMomenPhotoAction — pencabutan akses sadar-fase", () => {
+  function setup(revealAt: string | null, purgedAt: string | null = null) {
+    refs.server = makeClient({ invitations: { id: INV } }, calls);
+    refs.admin = makeClient(
+      {
+        momen_albums: { id: ALBUM, reveal_at: revealAt },
+        momen_photos: {
+          id: PHOTO,
+          storage_path: "momen/a/p/display.webp",
+          thumb_path: "momen/a/p/thumb.webp",
+          purged_at: purgedAt,
+        },
+      },
+      calls,
+    );
+  }
+  const hidePayload = () =>
+    calls.find((c) => c.table === "momen_photos" && c.op === "update")
+      ?.payload as Record<string, unknown> | undefined;
+
+  it("PRA-reveal: objek belum pernah publik → TIDAK dihapus, bisa dipulihkan", async () => {
+    setup(FUTURE);
+
+    const res = await moderateMomenPhotoAction(INV, {
+      photoId: PHOTO,
+      action: "hide",
+    });
+
+    expect(res).toEqual({ status: "success" });
+    expect(storage.delete).not.toHaveBeenCalled();
+    expect(hidePayload()).toEqual({ status: "hidden" });
+    expect(hidePayload()).not.toHaveProperty("purged_at");
+  });
+
+  it("PASCA-reveal: objek DIHAPUS dan purged_at dicatat", async () => {
+    setup(null); // null = langsung tampil = sudah revealed
+
+    const res = await moderateMomenPhotoAction(INV, {
+      photoId: PHOTO,
+      action: "hide",
+    });
+
+    expect(res).toEqual({ status: "success" });
+    expect(storage.delete).toHaveBeenCalledTimes(2);
+    expect(storage.delete).toHaveBeenCalledWith("momen/a/p/display.webp");
+    expect(storage.delete).toHaveBeenCalledWith("momen/a/p/thumb.webp");
+    expect(hidePayload()?.status).toBe("hidden");
+    expect(hidePayload()?.purged_at).toEqual(expect.any(String));
+  });
+
+  it("foto yang berkasnya sudah dihapus TIDAK bisa ditampilkan lagi", async () => {
+    setup(null, "2026-09-13T10:00:00.000Z");
+
+    const res = await moderateMomenPhotoAction(INV, {
+      photoId: PHOTO,
+      action: "show",
+    });
+
+    expect(res.status).toBe("error");
+    // Tak boleh ada update status yang membuatnya "visible" tanpa berkas.
+    expect(
+      calls.some((c) => c.table === "momen_photos" && c.op === "update"),
+    ).toBe(false);
+  });
+
+  it("foto yang disembunyikan PRA-reveal tetap bisa ditampilkan lagi", async () => {
+    setup(FUTURE, null);
+
+    const res = await moderateMomenPhotoAction(INV, {
+      photoId: PHOTO,
+      action: "show",
+    });
+
+    expect(res).toEqual({ status: "success" });
+    expect(hidePayload()).toEqual({ status: "visible" });
+  });
+
+  it("sembunyikan ulang foto yang sudah tercabut → tak menghapus dua kali", async () => {
+    setup(null, "2026-09-13T10:00:00.000Z");
+
+    const res = await moderateMomenPhotoAction(INV, {
+      photoId: PHOTO,
+      action: "hide",
+    });
+
+    expect(res).toEqual({ status: "success" });
+    expect(storage.delete).not.toHaveBeenCalled();
+    expect(hidePayload()).not.toHaveProperty("purged_at");
   });
 });

@@ -26,6 +26,8 @@ export interface MomenPhotoRecord {
   url: string;
   thumbUrl: string;
   status: "visible" | "hidden";
+  /** Objek storage sudah dihapus saat moderasi pasca-reveal (KEA-3). */
+  purged: boolean;
   createdAt: string;
 }
 
@@ -65,7 +67,7 @@ export async function fetchMomenPhotos(
   let query = admin
     .from("momen_photos")
     .select(
-      "id, guest_name, device_id, filter_id, storage_path, thumb_path, status, created_at",
+      "id, guest_name, device_id, filter_id, storage_path, thumb_path, status, purged_at, created_at",
     )
     .eq("album_id", albumId)
     .order("created_at", { ascending: false })
@@ -89,6 +91,7 @@ export async function fetchMomenPhotos(
     url: storage.getPublicUrl(r.storage_path),
     thumbUrl: storage.getPublicUrl(r.thumb_path),
     status: r.status === "hidden" ? "hidden" : "visible",
+    purged: r.purged_at !== null,
     createdAt: r.created_at,
   }));
 

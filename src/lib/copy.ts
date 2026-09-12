@@ -858,6 +858,13 @@ export const copy = {
       moderationMore: "Muat lebih banyak foto",
       hide: "Sembunyikan",
       show: "Tampilkan",
+      // Pasca-reveal, menyembunyikan IKUT menghapus berkas (KEA-3) — host wajib
+      // tahu sebelum menekan, karena tindakannya permanen.
+      hidePermanentConfirm:
+        "Album sudah terbuka untuk tamu, jadi menyembunyikan foto ini sekaligus MENGHAPUS berkasnya agar tautannya tak bisa dibuka lagi. Tindakan ini permanen — foto tak bisa ditampilkan kembali. Lanjutkan?",
+      purgedBadge: "Berkas dihapus",
+      showPurged:
+        "Berkas foto ini sudah dihapus saat disembunyikan, jadi tak bisa ditampilkan lagi.",
       del: "Hapus",
       delConfirm: "Hapus foto ini permanen?",
       hiddenBadge: "Disembunyikan",

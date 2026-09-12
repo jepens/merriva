@@ -170,6 +170,7 @@ export default async function MomenManagePage({
     filterId: r.filterId,
     thumbUrl: r.thumbUrl,
     status: r.status,
+    purged: r.purged,
   }));
   const participants = stats.participantCount;
   const hiddenCount = stats.hiddenCount;

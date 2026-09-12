@@ -295,6 +295,25 @@ Keduanya harus lolos. Penolakan rate limit kini juga DAPAT DIBEDAKAN dari "tidak
 
 ---
 
+## #33 — 2026-09-13 · Moderasi Album Momen: pencabutan akses bergantung FASE
+**Konteks:** AUDIT-2026-09-04 KEA-3. Bucket `media` dibuat `public = true` dan objek diunggah ber-`cacheControl: 31536000`. Setelah reveal, URL foto dipancarkan ke SETIAP pengunjung tanpa autentikasi. Ketika host memoderasi foto sensitif dengan "Sembunyikan", cabang `hide` hanya `update({ status })` — barisnya hilang dari galeri tetapi **objeknya tetap melayani 200 selamanya** dan tertahan di cache CDN/browser hingga setahun. UI memberi kesan foto sudah tak dapat diakses; itu tidak benar.
+
+**Nuansa yang menentukan keputusan:** menghapus objek pada SETIAP "Sembunyikan" terlalu kasar. Pra-reveal, URL foto **belum pernah** publik (jalur baca tamu fail-closed pada fase), sehingga menyembunyikan di sana adalah penyortiran biasa — menghancurkan berkas tamu untuk itu berlebihan, dan mematikan tombol "Tampilkan" yang sah dipakai host saat menyortir sebelum acara dibuka.
+
+**Keputusan:** perilaku "Sembunyikan" bergantung fase album.
+* **Pra-reveal** → hanya penanda `status='hidden'`; objek dipertahankan; dapat ditampilkan kembali.
+* **Pasca-reveal** → `status='hidden'` **DAN** objek storage dihapus, dengan `momen_photos.purged_at` dicatat. Permanen; "Tampilkan" tak lagi ditawarkan (UI menghilangkan tombolnya, server menolak aksinya). Konfirmasi eksplisit sebelum tindakan.
+
+Baris foto SELALU dipertahankan (bukan dihapus): metadata, jatah jepret per tamu, dan hitungan peserta tetap konsisten — moderasi tidak mengembalikan jatah yang sudah terpakai.
+
+**Kenapa kolom, bukan inferensi:** menebak "objek sudah dihapus?" dari fase album SALAH. Foto yang disembunyikan pra-reveal masih punya objek utuh, dan album yang kemudian ter-reveal tidak boleh membuatnya tampak terhapus. `purged_at` ditulis SEBELUM penghapusan storage: bila proses mati di tengah, foto tetap ditandai tercabut (fail-closed) alih-alih tampak masih dapat dipulihkan.
+
+**Ditolak:** signed URL / route proxy berumur pendek dengan bucket privat (paling kuat — pencabutan seketika dan sekalian menutup kelemahan pra-reveal yang kini bersandar pada "path UUID tak tertebak" — tetapi butuh migrasi seluruh objek yang sudah ada, dukungan signed URL di KEDUA driver storage `supabase|r2`, dan mengubah setiap thumbnail menjadi request ber-tanda-tangan; tetap opsi yang benar bila kelak dibutuhkan); menghapus objek pada setiap "Sembunyikan" (moderasi jadi satu arah, merugikan penyortiran pra-reveal).
+
+**Konsekuensi & batas yang JUJUR:** ini mencabut akses BARU. Cache CDN/browser yang sudah terlanjur menyimpan objek tetap hidup sampai TTL-nya habis, dan siapa pun yang sudah melihat foto bisa saja sudah menyimpannya — tak ada mekanisme yang bisa membatalkan itu. Copy konfirmasi sengaja menjanjikan "tautannya tak bisa dibuka lagi", bukan "fotonya hilang dari mana pun".
+
+---
+
 ## Template entri baru
 
 ```

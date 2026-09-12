@@ -26,6 +26,8 @@ export interface MomenPhotoRow {
   filterId: string;
   thumbUrl: string;
   status: "visible" | "hidden";
+  /** Berkas storage sudah dihapus saat moderasi pasca-reveal (KEA-3). */
+  purged: boolean;
 }
 
 export interface MomenManagerProps {
@@ -165,6 +167,14 @@ export function MomenManager(props: MomenManagerProps) {
 
   async function moderate(photoId: string, action: "hide" | "show" | "delete") {
     if (action === "delete" && !window.confirm(m.delConfirm)) return;
+    // Pasca-reveal, "Sembunyikan" IKUT menghapus berkas agar tautan yang sudah
+    // tersebar ke tamu benar-benar mati (KEA-3) — permanen, jadi konfirmasi dulu.
+    if (
+      action === "hide" &&
+      revealed &&
+      !window.confirm(m.hidePermanentConfirm)
+    )
+      return;
     setError(null);
     setBusyPhoto(photoId);
     try {
@@ -408,7 +418,7 @@ export function MomenManager(props: MomenManagerProps) {
                     />
                     {p.status === "hidden" ? (
                       <span className="absolute top-1.5 left-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">
-                        {m.hiddenBadge}
+                        {p.purged ? m.purgedBadge : m.hiddenBadge}
                       </span>
                     ) : null}
                   </div>
@@ -420,19 +430,23 @@ export function MomenManager(props: MomenManagerProps) {
                       {getFilmPreset(p.filterId).name}
                     </p>
                     <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        disabled={busyPhoto === p.id}
-                        onClick={() =>
-                          void moderate(
-                            p.id,
-                            p.status === "hidden" ? "show" : "hide",
-                          )
-                        }
-                        className="rounded border px-2 py-1 text-[11px] font-medium"
-                      >
-                        {p.status === "hidden" ? m.show : m.hide}
-                      </button>
+                      {/* Berkas sudah dihapus → tak ada yang bisa ditampilkan
+                          kembali; tombolnya dihilangkan, bukan sekadar mati. */}
+                      {p.purged ? null : (
+                        <button
+                          type="button"
+                          disabled={busyPhoto === p.id}
+                          onClick={() =>
+                            void moderate(
+                              p.id,
+                              p.status === "hidden" ? "show" : "hide",
+                            )
+                          }
+                          className="rounded border px-2 py-1 text-[11px] font-medium"
+                        >
+                          {p.status === "hidden" ? m.show : m.hide}
+                        </button>
+                      )}
                       <button
                         type="button"
                         disabled={busyPhoto === p.id}
