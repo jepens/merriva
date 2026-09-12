@@ -222,6 +222,23 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ---
 
+## #28 — 2026-09-05 · Rate limit dua lapis: identitas untuk keadilan, jaringan untuk rem banjir
+**Konteks:** seluruh proteksi anti-abuse di-key `staticRateKey(aksi, ipNetworkKey(ip))` = satu bucket per /24, tanpa cakupan sumber daya. Di WiFi venue SEMUA tamu tampak sebagai satu alamat publik (diperparah CGNAT operator Indonesia), sehingga plafon berubah makna: bukan "per orang" melainkan "per acara". AUDIT-2026-09-04 PER-3 mengukur akibatnya — hanya 20 tamu/menit bisa memulai sesi Momen dan 60 foto/menit untuk SELURUH acara (kuota default saja 5 foto x 200 tamu = 1.000 foto); dinding ucapan mengembalikan daftar KOSONG diam-diam setelah 40 pemuatan; personalisasi `?g=` berhenti bekerja setelah 30. Album Momen praktis tak terpakai persis di hari-H.
+
+**Keputusan:** pisahkan dua peran yang selama ini ditumpuk pada satu bucket.
+1. **Lapis IDENTITAS** = kendali keadilan. Di-key pada `deviceId` (bukan IP). Untuk unggah Momen, `deviceId` diambil dari cookie sesi ber-TANDA-TANGAN (HMAC sudah diverifikasi) → tepercaya. Plafon: unggah 20/menit/perangkat, mulai-sesi 5/menit/perangkat.
+2. **Lapis JARINGAN** = rem anti-banjir saja. Tetap per /24 tetapi DI-SCOPE per sumber daya lewat `scopedClientRateKey(aksi, scope)`, dan dilonggarkan seukuran satu resepsi: sesi 150/menit, unggah 900/menit, baca dinding 600/menit, personalisasi 300/menit.
+
+Keduanya harus lolos. Penolakan rate limit kini juga DAPAT DIBEDAKAN dari "tidak ada data": `getGuestbookAction` mengembalikan `rateLimited: true` dan `viewGuestByTokenAction` mengembalikan `{status:"rate"}` — UI menampilkan "coba lagi", bukan "belum ada ucapan".
+
+**Alasan:** plafon per-jaringan tak bisa sekaligus longgar (agar venue jalan) dan ketat (agar satu penyalahguna terhenti) — itu dua tujuan berbeda yang butuh dua kunci berbeda. Men-scope kunci jaringan per sumber daya membuat pelonggaran aman: satu acara ramai tak lagi menghabiskan jatah acara lain yang kebetulan sejaringan. Urutan pemeriksaan disusun dari yang termurah: Zod (tanpa I/O) → limiter in-memory → Turnstile → DB.
+
+**Ditolak:** menaikkan plafon per-jaringan saja (menghilangkan rem terhadap satu penyalahguna); memakai cookie sesi untuk baca dinding/personalisasi (tamu belum tentu punya sesi; keduanya jalur baca publik); pindah ke Redis sekarang (limiter in-memory masih memadai untuk MVP satu instance — lihat catatan R-1 audit).
+
+**Konsekuensi:** `deviceId` pada MULAI SESI masih dari form dan dapat dirotasi, jadi lapis identitas di sana bersifat best-effort — gerbang bot sesungguhnya tetap Turnstile, dan rotasi deviceId untuk menguras kuota PESERTA tetap temuan terbuka (KEA-4). Kunci jaringan di-scope pakai `slug` (bukan `albumId`) agar tak perlu query untuk membentuk kunci; memvariasikan slug memberi bucket berbeda, tetapi jalur mahal (DB + storage) tetap terkunci di belakang sesi terverifikasi + plafon per-perangkat. Saat pindah multi-instance (M4+), lapis identitas HARUS ikut pindah ke store bersama — kalau tidak, plafon terbagi diam-diam sebanyak jumlah replika.
+
+---
+
 ## Template entri baru
 
 ```

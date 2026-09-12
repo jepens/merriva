@@ -682,6 +682,9 @@ export const copy = {
       empty: "Belum ada ucapan. Jadilah yang pertama memberi doa!",
       loadMore: "Muat lebih banyak",
       loading: "Memuat…",
+      // Dibedakan dari `empty`: gagal memuat BUKAN berarti belum ada ucapan.
+      failed: "Ucapan belum bisa dimuat sekarang.",
+      retry: "Coba lagi",
     },
     gift: {
       trigger: "Konfirmasi Kirim Amplop / Kado",

@@ -1,7 +1,7 @@
 "use server";
 
 import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey } from "@/lib/request-ip";
+import { scopedClientRateKey } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -13,20 +13,39 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
  * mencegah enumerasi token.
  */
 
-const VIEW_LIMIT = { max: 30, windowMs: 60_000 };
+/**
+ * Plafon di-scope PER UNDANGAN dan dilonggarkan (AUDIT-2026-09-04 PER-3).
+ *
+ * Nilai lama 30/menit per-/24 tanpa cakupan: di WiFi venue tamu ke-31 kehilangan
+ * sapaan personal tanpa penjelasan. Proteksi enumerasi token tetap utuh — token
+ * 10-64 karakter, dan 300/menit (~432 ribu percobaan/hari untuk SATU undangan
+ * dari SATU jaringan) masih jauh di luar jangkauan tebakan.
+ */
+const VIEW_LIMIT = { max: 300, windowMs: 60_000 };
+
+/**
+ * `rate` DIBEDAKAN dari `none` supaya UI bisa mencoba lagi. Sebelumnya keduanya
+ * `null`: penolakan rate limit tak bisa dibedakan dari token tak dikenal, jadi
+ * tamu sah kehilangan namanya secara permanen di pemuatan itu.
+ */
+export type GuestViewResult =
+  { status: "ok"; name: string } | { status: "rate" } | { status: "none" };
 
 export async function viewGuestByTokenAction(
   slug: string,
   token: string,
-): Promise<{ name: string } | null> {
+): Promise<GuestViewResult> {
   const cleanSlug = typeof slug === "string" ? slug.trim().toLowerCase() : "";
   const cleanToken = typeof token === "string" ? token.trim() : "";
   if (!cleanSlug || cleanToken.length < 10 || cleanToken.length > 64) {
-    return null;
+    return { status: "none" };
   }
 
-  const rl = checkRateLimit(await clientRateKey("guest-view"), VIEW_LIMIT);
-  if (!rl.ok) return null;
+  const rl = checkRateLimit(
+    await scopedClientRateKey("guest-view", cleanSlug),
+    VIEW_LIMIT,
+  );
+  if (!rl.ok) return { status: "rate" };
 
   const admin = createSupabaseAdminClient();
   const { data: inv } = await admin
@@ -34,7 +53,7 @@ export async function viewGuestByTokenAction(
     .select("id, status")
     .eq("slug", cleanSlug)
     .maybeSingle();
-  if (!inv || inv.status !== "active") return null;
+  if (!inv || inv.status !== "active") return { status: "none" };
 
   const { data: guest } = await admin
     .from("guests")
@@ -42,7 +61,7 @@ export async function viewGuestByTokenAction(
     .eq("invitation_id", inv.id)
     .eq("token", cleanToken)
     .maybeSingle();
-  if (!guest) return null;
+  if (!guest) return { status: "none" };
 
   // Catat akses pertama (idempotent — hanya bila belum pernah dibuka).
   if (!guest.first_viewed_at) {
@@ -53,5 +72,5 @@ export async function viewGuestByTokenAction(
       .is("first_viewed_at", null);
   }
 
-  return { name: guest.name };
+  return { status: "ok", name: guest.name };
 }

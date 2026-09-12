@@ -25,6 +25,10 @@ export function GuestbookWall({
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
+  // Dipisahkan dari "kosong": daftar kosong karena rate limit pernah tampil
+  // sebagai fakta ("belum ada ucapan") — menyesatkan tamu (AUDIT PER-3).
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   // Muat awal / muat ulang (saat refreshKey berubah). Di dalam effect → `await`
   // dulu, JANGAN setState sinkron (hindari cascading render). `loading` awal
@@ -35,6 +39,7 @@ export function GuestbookWall({
       if (!active) return;
       setEntries(res.entries);
       setHasMore(res.hasMore);
+      setFailed(res.rateLimited === true);
       setPage(0);
       setLoaded(true);
       setLoading(false);
@@ -42,13 +47,18 @@ export function GuestbookWall({
     return () => {
       active = false;
     };
-  }, [slug, refreshKey]);
+  }, [slug, refreshKey, attempt]);
 
   // Tombol "muat lebih" — handler (bukan effect), boleh setState sinkron.
   const loadMore = useCallback(async () => {
     setLoading(true);
     const next = page + 1;
     const res = await getGuestbookAction(slug, next);
+    if (res.rateLimited) {
+      setFailed(true);
+      setLoading(false);
+      return;
+    }
     // Dedup by id: offset pagination atas feed hidup bisa menggeser jendela →
     // cegah entri ganda / tabrakan React key.
     setEntries((prev) => {
@@ -63,8 +73,24 @@ export function GuestbookWall({
   return (
     <div className="gb-wall">
       <h3 className="gb-wall__title">{t.heading}</h3>
-      {loaded && entries.length === 0 && !loading ? (
+      {loaded && entries.length === 0 && !loading && !failed ? (
         <p className="gb-wall__empty">{t.empty}</p>
+      ) : null}
+      {failed && !loading ? (
+        <p className="gb-wall__empty" role="status">
+          {t.failed}{" "}
+          <button
+            type="button"
+            className="gb-retry"
+            onClick={() => {
+              setFailed(false);
+              setLoading(true);
+              setAttempt((n) => n + 1);
+            }}
+          >
+            {t.retry}
+          </button>
+        </p>
       ) : null}
       <ul className="gb-wall__list">
         {entries.map((e) => (

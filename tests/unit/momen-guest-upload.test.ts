@@ -15,8 +15,13 @@ const { checkRateLimit } = vi.hoisted(() => ({
   checkRateLimit: vi.fn(() => ({ ok: true, remaining: 9, retryAfterMs: 0 })),
 }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit }));
+// Pembentukan kunci dipalsukan di sini (perilaku aslinya diuji terpisah di
+// `momen-rate-limit.test.ts`); berkas ini fokus pada invarian keamanan unggah.
 vi.mock("@/lib/request-ip", () => ({
   clientRateKey: () => Promise.resolve("k"),
+  scopedClientRateKey: (action: string, scope: string) =>
+    Promise.resolve(`${action}:${scope}`),
+  staticRateKey: (action: string, value: string) => `${action}:${value}`,
   getClientIp: () => Promise.resolve("1.2.3.4"),
 }));
 

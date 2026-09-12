@@ -38,3 +38,21 @@ export async function clientRateKey(action: string): Promise<string> {
   const ip = await getClientIp();
   return staticRateKey(action, ipNetworkKey(ip));
 }
+
+/**
+ * Kunci rate-limit per-JARINGAN yang DIPERSEMPIT ke satu sumber daya (album,
+ * undangan, dst).
+ *
+ * Tanpa `scope`, seluruh lalu lintas satu blok /24 berbagi SATU bucket: di WiFi
+ * venue semua tamu tampak sebagai satu alamat publik, sehingga satu resepsi
+ * ramai menghabiskan jatah dirinya sendiri — dan jatah acara lain yang kebetulan
+ * sejaringan (AUDIT-2026-09-04 PER-3). Men-scope per sumber daya membuat plafon
+ * bisa dinaikkan seukuran satu acara tanpa membuka pintu banjir lintas-acara.
+ */
+export async function scopedClientRateKey(
+  action: string,
+  scope: string,
+): Promise<string> {
+  const ip = await getClientIp();
+  return staticRateKey(action, `${scope}|${ipNetworkKey(ip)}`);
+}

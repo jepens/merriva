@@ -2,7 +2,11 @@
 
 import { copy } from "@/lib/copy";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey, getClientIp } from "@/lib/request-ip";
+import {
+  clientRateKey,
+  getClientIp,
+  scopedClientRateKey,
+} from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { settingsSchema } from "@/lib/validation/content";
@@ -25,7 +29,13 @@ import {
 
 const RSVP_LIMIT = { max: 5, windowMs: 60_000 };
 const GIFT_LIMIT = { max: 5, windowMs: 60_000 };
-const READ_LIMIT = { max: 40, windowMs: 60_000 };
+/**
+ * Baca dinding: di-scope PER UNDANGAN dan dilonggarkan (AUDIT-2026-09-04 PER-3).
+ * Nilai lama 40/menit per-/24 tanpa cakupan berarti di WiFi venue dinding ucapan
+ * mengembalikan DAFTAR KOSONG secara diam-diam setelah 40 pemuatan — tamu ke-41
+ * menyimpulkan belum ada yang menulis ucapan. 300 tamu x ~2 pemuatan harus muat.
+ */
+const READ_LIMIT = { max: 600, windowMs: 60_000 };
 const PAGE_SIZE = 8;
 
 export type RsvpResult =
@@ -239,6 +249,12 @@ export async function submitGiftNoteAction(
 export interface GuestbookPage {
   entries: GuestbookEntry[];
   hasMore: boolean;
+  /**
+   * Benar bila permintaan ditolak rate limit — BUKAN berarti dinding kosong.
+   * UI wajib membedakan keduanya: "belum ada ucapan" vs "gagal memuat, coba
+   * lagi". Tanpa penanda ini kegagalan tampak sebagai fakta (PER-3).
+   */
+  rateLimited?: boolean;
 }
 
 /**
@@ -250,12 +266,17 @@ export async function getGuestbookAction(
   slug: string,
   page = 0,
 ): Promise<GuestbookPage> {
-  const rl = checkRateLimit(await clientRateKey("gb-read"), READ_LIMIT);
-  if (!rl.ok) return { entries: [], hasMore: false };
-
   const p = Number.isInteger(page) && page >= 0 ? page : 0;
   const cleanSlug = typeof slug === "string" ? slug.trim().toLowerCase() : "";
   if (!cleanSlug) return { entries: [], hasMore: false };
+
+  // Kunci di-scope ke undangan → satu resepsi ramai tak menghabiskan jatah
+  // acara lain yang kebetulan sejaringan.
+  const rl = checkRateLimit(
+    await scopedClientRateKey("gb-read", cleanSlug),
+    READ_LIMIT,
+  );
+  if (!rl.ok) return { entries: [], hasMore: false, rateLimited: true };
 
   const admin = createSupabaseAdminClient();
   const { data: inv } = await admin

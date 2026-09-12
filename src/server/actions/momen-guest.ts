@@ -17,7 +17,11 @@ import {
 } from "@/lib/momen/session";
 import { momenObjectPaths } from "@/lib/momen/storage-path";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey, getClientIp } from "@/lib/request-ip";
+import {
+  getClientIp,
+  scopedClientRateKey,
+  staticRateKey,
+} from "@/lib/request-ip";
 import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -33,8 +37,39 @@ import { verifyTurnstile } from "@/lib/turnstile";
  */
 
 const COOKIE_NAME = "momen_sess";
-const SESSION_LIMIT = { max: 20, windowMs: 60_000 };
-const UPLOAD_LIMIT = { max: 60, windowMs: 60_000 };
+
+/**
+ * Rate limit DUA LAPIS (AUDIT-2026-09-04 PER-3).
+ *
+ * Plafon lama di-key per-jaringan /24 tanpa cakupan: di WiFi venue SELURUH tamu
+ * berbagi satu bucket, sehingga hanya 20 tamu/menit bisa masuk dan 60 foto/menit
+ * untuk seluruh acara — padahal kuota default saja 5 foto x 200 tamu = 1.000
+ * foto. Album Momen praktis tak terpakai persis di hari-H. Tamu seluler juga
+ * ikut kena karena CGNAT operator Indonesia.
+ *
+ * Sekarang:
+ *  - lapis JARINGAN = rem anti-banjir, di-scope PER ALBUM dan dilonggarkan
+ *    seukuran satu resepsi (lihat angka di bawah);
+ *  - lapis PERANGKAT = kendali keadilan sesungguhnya, sehingga satu perangkat
+ *    tak bisa menghabiskan kapasitas acara.
+ *
+ * Keduanya harus lolos. Untuk unggah, identitas perangkat diambil dari cookie
+ * ber-TANDA-TANGAN (HMAC terverifikasi) → tepercaya. Untuk mulai sesi, cookie
+ * belum ada sehingga `deviceId` masih dari form (bisa dirotasi): di sana lapis
+ * perangkat hanya meredam loop naif, dan gerbang bot sesungguhnya tetap
+ * Turnstile. Rotasi deviceId untuk menguras kuota PESERTA adalah temuan
+ * terpisah (KEA-4) yang belum ditangani di sini.
+ */
+
+/** Mulai sesi: 300 tamu memindai QR dalam 2-3 menit harus muat. */
+const SESSION_VENUE_LIMIT = { max: 150, windowMs: 60_000 };
+/** Satu tamu memulai sesi sekali; sisanya ruang untuk percobaan ulang. */
+const SESSION_DEVICE_LIMIT = { max: 5, windowMs: 60_000 };
+
+/** Rem tepi unggah (sebelum identitas diketahui) — melindungi DB & storage. */
+const UPLOAD_VENUE_LIMIT = { max: 900, windowMs: 60_000 };
+/** Jatah per tamu maksimal 20 foto (skema) → 20/menit sudah sangat longgar. */
+const UPLOAD_DEVICE_LIMIT = { max: 20, windowMs: 60_000 };
 
 export type MomenSessionState =
   | { status: "ok"; remaining: number; deviceCount: number }
@@ -113,22 +148,37 @@ function denyMessage(result: string): string {
 /**
  * Mulai sesi tamu: verifikasi Turnstile → ikat {albumId, deviceId, guestName} ke
  * cookie ber-tanda-tangan. Mengembalikan sisa jatah perangkat agar UI menampilkan
- * pips. Rate-limit per-jaringan (redam pembuatan sesi massal / brute Turnstile).
+ * pips.
+ *
+ * Urutan sengaja: Zod dulu (murni, tanpa I/O) agar `deviceId` tersedia untuk
+ * lapis perangkat, lalu kedua lapis rate-limit, BARU Turnstile & DB — penolakan
+ * termurah didahulukan. Cakupan jaringan memakai `slug` (bukan `albumId`) supaya
+ * tak perlu query untuk membentuk kunci.
  */
 export async function startMomenSessionAction(
   slug: string,
   formData: FormData,
 ): Promise<MomenSessionState> {
-  if (!checkRateLimit(await clientRateKey("momen-session"), SESSION_LIMIT).ok) {
-    return { status: "error", message: copy.momen.error.rateLimited };
-  }
-
   const parsed = momenSessionStartSchema.safeParse({
     guestName: formData.get("guestName"),
     deviceId: formData.get("deviceId"),
   });
   if (!parsed.success) {
     return { status: "error", message: copy.momen.error.invalid };
+  }
+
+  const rateKey = typeof slug === "string" ? slug.trim().toLowerCase() : "";
+  if (
+    !checkRateLimit(
+      staticRateKey("momen-session-device", parsed.data.deviceId),
+      SESSION_DEVICE_LIMIT,
+    ).ok ||
+    !checkRateLimit(
+      await scopedClientRateKey("momen-session", rateKey),
+      SESSION_VENUE_LIMIT,
+    ).ok
+  ) {
+    return { status: "error", message: copy.momen.error.rateLimited };
   }
 
   const token = formData.get("turnstileToken");
@@ -189,7 +239,16 @@ export async function uploadMomenPhotoAction(
   slug: string,
   formData: FormData,
 ): Promise<MomenUploadState> {
-  if (!checkRateLimit(await clientRateKey("momen-upload"), UPLOAD_LIMIT).ok) {
+  // Rem tepi per-acara: murah, melindungi query DB & unggah storage di bawah.
+  // Jalur mahal (DB + storage) tetap terkunci di belakang sesi terverifikasi,
+  // jadi banjir tanpa cookie hanya membayar satu verifikasi HMAC lalu ditolak.
+  const rateKey = typeof slug === "string" ? slug.trim().toLowerCase() : "";
+  if (
+    !checkRateLimit(
+      await scopedClientRateKey("momen-upload", rateKey),
+      UPLOAD_VENUE_LIMIT,
+    ).ok
+  ) {
     return { status: "error", message: copy.momen.error.rateLimited };
   }
 
@@ -197,6 +256,18 @@ export async function uploadMomenPhotoAction(
   const store = await cookies();
   const session = verifyMomenSession(store.get(COOKIE_NAME)?.value);
   if (!session) return { status: "error", message: copy.momen.error.session };
+
+  // Kendali keadilan: di-key pada perangkat dari sesi ber-TANDA-TANGAN (bukan
+  // jaringan), sehingga satu tamu tak bisa menghabiskan kapasitas acara dan
+  // tamu lain di WiFi yang sama tidak ikut terkena.
+  if (
+    !checkRateLimit(
+      staticRateKey("momen-upload-device", session.deviceId),
+      UPLOAD_DEVICE_LIMIT,
+    ).ok
+  ) {
+    return { status: "error", message: copy.momen.error.rateLimited };
+  }
 
   const admin = createSupabaseAdminClient();
   const album = await resolveActiveAlbum(admin, slug);
