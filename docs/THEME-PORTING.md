@@ -56,7 +56,7 @@ Dibangun SEKALI di Fase A, dipakai semua tema Story/Signature:
 
 ## 4. Dependensi & anggaran
 
-`pnpm add gsap lenis` (keduanya MIT/gratis — GSAP free sejak 2025). Larangan: three.js, framer-motion baru, CDN runtime. Anggaran (gzip, halaman tema): Craft +0KB dari baseline; Story ≤ +45KB; Signature ≤ +90KB — cek `next build` output per route dan catat angkanya di PR/commit message.
+`pnpm add gsap lenis` (keduanya MIT/gratis — GSAP free sejak 2025). Larangan: three.js, framer-motion baru, CDN runtime. Anggaran (gzip, halaman tema): Craft +0KB dari baseline; Story ≤ +45KB; Signature ≤ +90KB — jalankan **`pnpm bundle:report`** (sesudah `pnpm build`) dan catat angkanya di PR/commit message. Sejak Next 16 + Turbopack, `next build` **tidak lagi mencetak tabel First Load JS**, sehingga anggaran ini sempat tak bisa ditegakkan sama sekali — itulah sebabnya `/[slug]` diam-diam tumbuh menjadi 116 berkas font (2,03 MB) dari KESEPULUH tema tanpa ketahuan (AUDIT-2026-09-04 PER-1/PER-14). `pnpm bundle:report --check` membaca manifest resmi Next dan **keluar non-nol** bila anggaran per-route di `scripts/bundle-report.mjs` terlampaui; ia berjalan sebagai gerbang CI sesudah build.
 
 ## 5. Definition of Done per tema (dari THEME-DESIGN §5 + kenyataan repo)
 

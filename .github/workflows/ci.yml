@@ -44,3 +44,11 @@ jobs:
       # menangkap regresi build standalone sebelum deploy Easypanel.
       - name: Build
         run: pnpm build
+
+      # Gerbang anggaran bundle (AUDIT-2026-09-04 PER-14). Sejak Next 16 +
+      # Turbopack tak lagi mencetak tabel First Load JS, anggaran di
+      # docs/THEME-PORTING.md §4 berhenti bisa ditegakkan — dan itulah sebabnya
+      # /[slug] diam-diam tumbuh jadi 116 berkas font dari KESEPULUH tema.
+      # Membaca manifest resmi Next; harus SESUDAH build.
+      - name: Anggaran bundle
+        run: pnpm bundle:report --check

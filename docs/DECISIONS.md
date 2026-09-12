@@ -252,6 +252,19 @@ Keduanya harus lolos. Penolakan rate limit kini juga DAPAT DIBEDAKAN dari "tidak
 
 ---
 
+## #30 — 2026-09-05 · Anggaran bundle ditegakkan dari manifest Next, bukan dari output `next build`
+**Konteks:** `docs/THEME-PORTING.md` §4 menetapkan anggaran gzip per tier tema dengan instruksi "cek `next build` output per route". Sejak Next 16 + Turbopack, tabel First Load JS **tidak lagi dicetak**, sehingga anggaran itu berhenti bisa ditegakkan — tanpa ada yang menyadarinya. Akibat langsungnya terukur di AUDIT-2026-09-04: `/[slug]` tumbuh menjadi 116 berkas font (2.034 KB) dan 13 stylesheet render-blocking dari KESEPULUH tema, bukan hanya tema yang dipakai. Ketiadaan alat ukur inilah sebab PER-1/PER-2/PER-5 lolos melewati berbagai commit dan review.
+
+**Keputusan:** `scripts/bundle-report.mjs` (`pnpm bundle:report`) membaca **manifest resmi Next** — `entryCSSFiles`/`entryJSFiles` dari `page_client-reference-manifest.js` dan `next-font-manifest.json` per route — lalu melaporkan CSS gzip, JS gzip, dan byte font ter-preload per route. `--check` keluar non-nol bila anggaran di `BUDGETS` terlampaui, dan dipasang sebagai langkah CI **setelah** build.
+
+**Alasan:** angka harus berasal dari apa yang Next benar-benar emit sebagai `<link>`/`<script>` untuk route itu, bukan dari penjumlahan berkas di `.next/static` (yang mencampur seluruh route) apalagi dari perkiraan. Membaca manifest membuat laporan tetap sahih meski format output CLI Next berubah lagi.
+
+**Ditolak:** `@next/bundle-analyzer` (butuh webpack; proyek memakai Turbopack, dan keluarannya visual — tak bisa jadi gerbang CI); menjumlahkan ukuran `.next/static` (tidak per-route); mengandalkan Lighthouse CI (butuh server berjalan + jauh lebih lambat; berguna sebagai pelengkap, bukan pengganti).
+
+**Konsekuensi:** angka awal `BUDGETS` sengaja ditaruh SEDIKIT di atas kondisi saat ini agar gerbang menangkap pertumbuhan BARU alih-alih langsung merah — nilainya wajib DITURUNKAN seiring perbaikan struktural, kalau tidak ia hanya membekukan keadaan yang buruk. Gerbang ini mengukur byte, bukan waktu: ia tidak menggantikan pengukuran LCP nyata, yang tetap butuh Docker/staging (di Windows lokal server standalone tak bisa bind port).
+
+---
+
 ## Template entri baru
 
 ```
