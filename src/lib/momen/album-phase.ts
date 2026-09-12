@@ -36,11 +36,23 @@ export function msUntilReveal(
 }
 
 /**
- * Boleh melihat isi album? Tamu hanya saat `revealed`; pemilik selalu.
- * Server WAJIB memakai aturan yang sama di query publik (fail-closed).
+ * Gerbang FAIL-CLOSED foto untuk jalur TAMU (MOMEN-SPEC §4). SATU-SATUNYA tempat
+ * aturan ini tinggal — setiap jalur baca publik wajib melewatinya, supaya
+ * perubahan tak bisa diterapkan ke satu jalur dan terlupa di jalur lain.
+ *
+ * Pemanggil: `src/app/[slug]/momen/page.tsx` (render awal) dan
+ * `loadMomenPhotosAction` (halaman berikutnya) — aksi publik itu memeriksa
+ * ULANG, tak boleh bersandar pada halaman pemanggilnya.
+ *
+ * Akses PEMILIK sengaja TIDAK punya parameter di sini: ia dipisahkan secara
+ * struktural, bukan lewat flag. Dashboard adalah route terautentikasi yang
+ * memverifikasi kepemilikan lalu membaca via service_role tanpa gerbang fase
+ * sama sekali (host memang harus bisa memoderasi pra-reveal). Parameter
+ * `isOwner` yang dulu ada tak pernah dipanggil dengan `true` oleh siapa pun —
+ * flag mati yang justru mengundang salah pakai.
  */
-export function canViewPhotos(phase: AlbumPhase, isOwner: boolean): boolean {
-  return isOwner || phase === "revealed";
+export function canGuestViewPhotos(phase: AlbumPhase): boolean {
+  return phase === "revealed";
 }
 
 /** Pecahan hitung-mundur untuk UI (hari/jam/menit/detik), floor & non-negatif. */

@@ -294,6 +294,79 @@ describe("uploadMomenPhotoAction — gerbang kuota & kebersihan storage", () => 
     expect(storage.upload).not.toHaveBeenCalled();
   });
 
+  /**
+   * Pemetaan alasan penolakan RPC → copy tamu adalah SATU-SATUNYA representasi
+   * aturan kuota di TypeScript (otoritas sesungguhnya ada di SQL, atomik).
+   * Sebelumnya yang ber-test justru `shot-quota.ts` yang TAK PERNAH dipakai
+   * produksi — dan modelnya sudah usang: ia mengenal "kuota foto se-album" dan
+   * tak punya konsep `peserta-penuh` sama sekali (AUDIT KUA-6 / DECISIONS #34).
+   * Tiga alasan di bawah WAJIB menghasilkan pesan yang BERBEDA: tamu harus tahu
+   * apakah jatahnya sendiri yang habis, kuota peserta album, atau plafon foto.
+   */
+  it("setiap alasan penolakan RPC → pesan tamu yang BERBEDA", async () => {
+    const pesan: Record<string, string | undefined> = {};
+    for (const result of ["guest-quota", "peserta-penuh", "album-full"]) {
+      cookieValue.current = signFor(ALBUM);
+      adminRef.current = makeAdmin({
+        claim: {
+          data: [{ result, photo_id: null, remaining: 0 }],
+          error: null,
+        },
+      });
+      const res = await uploadMomenPhotoAction(SLUG, form());
+      expect(res.status).toBe("error");
+      pesan[result] = res.status === "error" ? res.message : undefined;
+    }
+
+    for (const r of ["guest-quota", "peserta-penuh", "album-full"]) {
+      expect(pesan[r]).toBeTruthy();
+    }
+    // Tiga pesan berbeda — bukan satu pesan generik untuk tiga sebab berbeda.
+    expect(new Set(Object.values(pesan)).size).toBe(3);
+  });
+
+  it("alasan RPC tak dikenal → pesan generik, TIDAK bocor string mentah", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin({
+      claim: {
+        data: [{ result: "sesuatu-yang-baru", photo_id: null, remaining: 0 }],
+        error: null,
+      },
+    });
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(res.status).toBe("error");
+    if (res.status !== "error") return;
+    expect(res.message).not.toContain("sesuatu-yang-baru");
+    expect(storage.upload).not.toHaveBeenCalled();
+  });
+
+  it("album non-aktif menurut RPC → pesan 'album tidak aktif', bukan generik", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin({
+      claim: {
+        data: [{ result: "not_active", photo_id: null, remaining: 0 }],
+        error: null,
+      },
+    });
+    const notActive = await uploadMomenPhotoAction(SLUG, form());
+
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin({
+      claim: {
+        data: [{ result: "guest-quota", photo_id: null, remaining: 0 }],
+        error: null,
+      },
+    });
+    const quota = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(notActive.status).toBe("error");
+    expect(quota.status).toBe("error");
+    if (notActive.status !== "error" || quota.status !== "error") return;
+    expect(notActive.message).not.toBe(quota.message);
+  });
+
   it("confirm menolak setelah unggah → kedua objek storage dibersihkan", async () => {
     cookieValue.current = signFor(ALBUM);
     adminRef.current = makeAdmin({

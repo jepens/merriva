@@ -173,7 +173,7 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 4. **Kuota confirm-gated**: `momen_confirm_photo` = gerbang ATOMIK (advisory lock album: per-tamu + peserta + plafon). `momen_claim_upload` hanya validasi sesi/album + pra-cek UX. Upload ditolak = objek yatim → purge harian. SECURITY DEFINER (tamu anon; beda dari `insert_gallery_media` INVOKER).
 5. **Fallback encode WebP→JPEG** (`lib/image/encode.ts`): `toBlob('image/webp')` tak didukung Safari/iOS → cek `blob.type`, fallback JPEG q0.82. Sekalian menutup bug laten galeri undangan (iOS ditolak `isVariantBlob`). Bucket `media` +`image/jpeg`.
 **Ditolak:** tabel `add-ons` terpisah (paksa ubah `orders.package_id` nullable — sentuh tabel uang); reserve-at-claim (lebih kompleks vs orphan-purge); tabel `momen_participants` (cap peserta cukup via `count(distinct device_id)` di RPC — lebih dekat spec asli).
-**Konsekuensi:** upgrade kapasitas tier di tengah acara = backlog (§9). `quota_peserta` soft (ganti perangkat = peserta baru, konsisten §6). Modul `shot-quota.ts`/`momen-settings-schema.ts` dipakai apa adanya (tak ditulis ulang); gerbang peserta = kode+test baru.
+**Konsekuensi:** upgrade kapasitas tier di tengah acara = backlog (§9). `quota_peserta` soft (ganti perangkat = peserta baru, konsisten §6). Modul `shot-quota.ts`/`momen-settings-schema.ts` dipakai apa adanya (tak ditulis ulang); gerbang peserta = kode+test baru. **Ditinjau ulang 13 Sep 2026 (#34):** asumsi "`shot-quota.ts` dipakai apa adanya" ternyata TIDAK terjadi — modul itu tak pernah tersambung ke jalur mana pun, dan modelnya (kuota foto se-album) justru digantikan model peserta yang diputuskan di entri ini. Modul dihapus.
 
 ---
 
@@ -311,6 +311,24 @@ Baris foto SELALU dipertahankan (bukan dihapus): metadata, jatah jepret per tamu
 **Ditolak:** signed URL / route proxy berumur pendek dengan bucket privat (paling kuat — pencabutan seketika dan sekalian menutup kelemahan pra-reveal yang kini bersandar pada "path UUID tak tertebak" — tetapi butuh migrasi seluruh objek yang sudah ada, dukungan signed URL di KEDUA driver storage `supabase|r2`, dan mengubah setiap thumbnail menjadi request ber-tanda-tangan; tetap opsi yang benar bila kelak dibutuhkan); menghapus objek pada setiap "Sembunyikan" (moderasi jadi satu arah, merugikan penyortiran pra-reveal).
 
 **Konsekuensi & batas yang JUJUR:** ini mencabut akses BARU. Cache CDN/browser yang sudah terlanjur menyimpan objek tetap hidup sampai TTL-nya habis, dan siapa pun yang sudah melihat foto bisa saja sudah menyimpannya — tak ada mekanisme yang bisa membatalkan itu. Copy konfirmasi sengaja menjanjikan "tautannya tak bisa dibuka lagi", bukan "fotonya hilang dari mana pun".
+
+---
+
+## #34 — 2026-09-13 · `shot-quota.ts` dihapus; gerbang fase tamu disatukan
+**Konteks:** AUDIT-2026-09-04 KUA-6. `grep` membuktikan `canCapture`/`remainingForDevice`/`remainingTotal`/`canViewPhotos` hanya muncul di definisinya sendiri dan di `momen-logic.test.ts` — **nol pemakaian produksi**. Sekitar 9 test hijau memberi rasa aman untuk logika yang tak pernah dijalankan, sementara jalur nyata tak ter-test.
+
+Audit menyarankan "sambungkan ke jalur nyata (opsi terbaik) ATAU hapus". Penelusuran menunjukkan opsi pertama tidak berlaku untuk `shot-quota.ts`: modelnya **sudah digantikan**, bukan sekadar terduplikasi. `QuotaState` mengenal `quotaTotal` (kuota foto se-album) dan hanya dua alasan tolak (`album-full`, `guest-quota`), sedangkan yang dijual adalah **peserta** (`quota_peserta` = `device_id` unik) dengan `photo_ceiling` sebagai rem biaya storage — dan alasan `peserta-penuh` tidak ada sama sekali di modul itu. "Menyambungkan" berarti menulis ulang seluruhnya. Lagi pula tak ada representasi TypeScript kedua untuk disatukan: otoritas kuota ada di SQL (atomik, advisory-lock), dan klien hanya MENAMPILKAN `remaining` yang dikirim server.
+
+**Keputusan:**
+1. **Hapus `src/lib/momen/shot-quota.ts`** beserta test-nya. Membiarkannya lebih buruk daripada tak ada: kontributor berikutnya bisa menyambungkannya dan mendapat aturan yang salah.
+2. **Pertahankan & SAMBUNGKAN gerbang fase**, tetapi sebagai `canGuestViewPhotos(phase)` — parameter `isOwner` dibuang karena tak ada satu pun pemanggil yang mengirim `true`. Dipakai kedua jalur baca tamu: render awal `/{slug}/momen` dan `loadMomenPhotosAction`.
+3. **Ganti test logika mati dengan test jalur NYATA:** pemetaan alasan penolakan RPC → copy tamu (satu-satunya representasi aturan kuota di TS), termasuk invarian bahwa `guest-quota`, `peserta-penuh`, dan `album-full` menghasilkan pesan BERBEDA, dan alasan tak dikenal tidak membocorkan string mentah.
+
+**Alasan membuang `isOwner`:** akses pemilik dipisahkan secara STRUKTURAL, bukan lewat flag — dashboard adalah route terautentikasi yang memverifikasi kepemilikan lalu membaca via service_role tanpa gerbang fase sama sekali (host memang harus memoderasi pra-reveal). Parameter boolean yang selalu `false` di setiap pemanggil adalah beban mati yang mengundang salah pakai: satu `true` yang keliru akan membocorkan foto pra-reveal.
+
+**Ditolak:** menulis ulang `shot-quota.ts` ke model peserta (akan MENCIPTAKAN representasi kedua aturan yang otoritasnya ada di SQL — persis risiko yang hendak dihindari); membiarkannya dengan komentar "belum dipakai" (test-nya tetap menghijaukan logika yang salah).
+
+**Konsekuensi:** jumlah test turun (467 dari 469) tetapi yang tersisa mengukur kode yang benar-benar berjalan. Bila kelak dibutuhkan pratinjau pemilik pada route publik, gerbangnya ditambahkan kembali secara eksplisit di `canGuestViewPhotos` — bukan dengan menghidupkan lagi flag yang dorman.
 
 ---
 

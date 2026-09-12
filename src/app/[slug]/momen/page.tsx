@@ -8,7 +8,7 @@ import {
 import "@/components/public/momen/momen.css";
 import { copy } from "@/lib/copy";
 import { parseContentForRender } from "@/lib/invitation-content";
-import { resolveAlbumPhase } from "@/lib/momen/album-phase";
+import { canGuestViewPhotos, resolveAlbumPhase } from "@/lib/momen/album-phase";
 import { isDraftSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { fetchMomenAlbumStats, fetchMomenPhotos } from "@/server/momen/photos";
@@ -113,7 +113,7 @@ export default async function MomenGuestPage({
   let initialCursor: string | null = null;
   let totalPhotos = 0;
   let photographers = 0;
-  if (phase === "revealed") {
+  if (canGuestViewPhotos(phase)) {
     const [page, stats] = await Promise.all([
       fetchMomenPhotos(admin, album.id),
       // Angka ringkasan dari agregat DB, BUKAN dari daftar yang termuat —

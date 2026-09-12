@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  canViewPhotos,
+  canGuestViewPhotos,
   countdownParts,
   msUntilReveal,
   resolveAlbumPhase,
@@ -12,7 +12,6 @@ import {
   momenSettingsSchema,
   momenUploadMetaSchema,
 } from "./momen-settings-schema";
-import { canCapture, remainingForDevice, remainingTotal } from "./shot-quota";
 
 const NOW = Date.parse("2026-09-05T12:00:00+07:00");
 
@@ -71,60 +70,18 @@ describe("album-phase", () => {
     expect(msUntilReveal(NOW, "besok sore")).toBe(0);
   });
 
-  it("canViewPhotos: pemilik selalu, tamu hanya saat revealed", () => {
-    expect(canViewPhotos("hidden", true)).toBe(true);
-    expect(canViewPhotos("hidden", false)).toBe(false);
-    expect(canViewPhotos("revealed", false)).toBe(true);
+  // Gerbang fail-closed jalur tamu. Akses pemilik TIDAK diwakili di sini —
+  // ia dipisahkan secara struktural (route dashboard terautentikasi tanpa
+  // gerbang fase), bukan lewat flag (AUDIT KUA-6 / DECISIONS #34).
+  it("canGuestViewPhotos: tamu HANYA saat revealed", () => {
+    expect(canGuestViewPhotos("hidden")).toBe(false);
+    expect(canGuestViewPhotos("revealed")).toBe(true);
   });
 
   it("countdownParts membagi hari/jam/menit/detik", () => {
     expect(countdownParts(0)).toEqual({ d: 0, h: 0, m: 0, s: 0 });
     expect(countdownParts(90_061_000)).toEqual({ d: 1, h: 1, m: 1, s: 1 });
     expect(countdownParts(-5000)).toEqual({ d: 0, h: 0, m: 0, s: 0 });
-  });
-});
-
-describe("shot-quota", () => {
-  const base = {
-    quotaTotal: 300,
-    photoCount: 10,
-    quotaPerGuest: 5,
-    deviceCount: 0,
-  };
-
-  it("jalur normal", () => {
-    expect(remainingTotal(base)).toBe(290);
-    expect(remainingForDevice(base)).toBe(5);
-    expect(canCapture(base)).toEqual({ ok: true });
-  });
-
-  it("jatah tamu habis", () => {
-    const s = { ...base, deviceCount: 5 };
-    expect(remainingForDevice(s)).toBe(0);
-    expect(canCapture(s)).toEqual({ ok: false, reason: "guest-quota" });
-  });
-
-  it("album penuh menang atas jatah tamu", () => {
-    const s = { ...base, photoCount: 300, deviceCount: 5 };
-    expect(canCapture(s)).toEqual({ ok: false, reason: "album-full" });
-    expect(remainingForDevice(s)).toBe(0);
-  });
-
-  it("sisa perangkat dibatasi sisa album", () => {
-    const s = { ...base, photoCount: 298 };
-    expect(remainingForDevice(s)).toBe(2);
-  });
-
-  it("nilai liar (negatif/NaN) di-clamp, tidak melempar", () => {
-    const s = {
-      quotaTotal: Number.NaN,
-      photoCount: -3,
-      quotaPerGuest: -1,
-      deviceCount: Number.NaN,
-    };
-    expect(remainingTotal(s)).toBe(0);
-    expect(remainingForDevice(s)).toBe(0);
-    expect(canCapture(s).ok).toBe(false);
   });
 });
 

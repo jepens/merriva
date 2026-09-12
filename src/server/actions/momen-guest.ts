@@ -15,7 +15,7 @@ import {
   signMomenSession,
   verifyMomenSession,
 } from "@/lib/momen/session";
-import { resolveAlbumPhase } from "@/lib/momen/album-phase";
+import { canGuestViewPhotos, resolveAlbumPhase } from "@/lib/momen/album-phase";
 import { momenObjectPaths } from "@/lib/momen/storage-path";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -454,8 +454,8 @@ export async function loadMomenPhotosAction(
   const album = await resolveActiveAlbum(admin, slug);
   if (!album) return { status: "error" };
 
-  // Gerbang fase: foto tak pernah terpancar sebelum reveal.
-  if (resolveAlbumPhase(Date.now(), album.revealAt) !== "revealed") {
+  // Gerbang fase FAIL-CLOSED — satu aturan bersama dengan render awal halaman.
+  if (!canGuestViewPhotos(resolveAlbumPhase(Date.now(), album.revealAt))) {
     return { status: "ok", photos: [], nextCursor: null };
   }
 
