@@ -33,6 +33,7 @@ const clamp255 = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v);
 /**
  * Box blur 1 kanal (Float32Array, nilai 0..1) — dipakai untuk masker halation.
  * Dua pass (horizontal+vertikal), radius piksel bulat. Murni & teruji.
+ * Mengalokasikan buffer baru; jalur panas memakai `boxBlur1Into`.
  */
 export function boxBlur1(
   src: Float32Array,
@@ -40,10 +41,35 @@ export function boxBlur1(
   h: number,
   radius: number,
 ): Float32Array {
-  const r = Math.max(0, Math.floor(radius));
-  if (r === 0) return Float32Array.from(src);
-  const tmp = new Float32Array(src.length);
   const out = new Float32Array(src.length);
+  boxBlur1Into(src, w, h, radius, new Float32Array(src.length), out);
+  return out;
+}
+
+/**
+ * Varian TANPA alokasi dari `boxBlur1`: hasil ditulis ke `out`, `tmp` dipakai
+ * sebagai scratch dan isinya ditimpa penuh. `src`, `tmp`, dan `out` WAJIB tiga
+ * buffer berbeda. `tmp` ditulis seluruhnya pada pass horizontal sebelum dibaca
+ * pass vertikal, jadi satu buffer scratch aman dipakai ulang antar-panggilan.
+ *
+ * Ada karena halation dulu memanggil `boxBlur1(boxBlur1(mask))` → lima buffer
+ * Float32 seukuran foto hidup bersamaan (≈38 MB pada 1600×1200, preset `senja`)
+ * — berisiko crash tab di HP RAM 2 GB. Kini tiga (≈23 MB) dengan hasil
+ * BYTE-IDENTIK, dikunci golden hash (AUDIT-2026-09-04 PER-6).
+ */
+export function boxBlur1Into(
+  src: Float32Array,
+  w: number,
+  h: number,
+  radius: number,
+  tmp: Float32Array,
+  out: Float32Array,
+): void {
+  const r = Math.max(0, Math.floor(radius));
+  if (r === 0) {
+    out.set(src);
+    return;
+  }
   const win = 2 * r + 1;
   // Horizontal
   for (let y = 0; y < h; y++) {
@@ -70,7 +96,6 @@ export function boxBlur1(
       acc += tmp[add * w + x]! - tmp[sub * w + x]!;
     }
   }
-  return out;
 }
 
 export interface RenderOptions {
@@ -105,7 +130,13 @@ export function applyFilmToPixels(
       mask[i] = L > 0.82 ? (L - 0.82) / 0.18 : 0;
     }
     const radius = Math.max(2, Math.round(Math.min(w, h) / 60));
-    glow = boxBlur1(boxBlur1(mask, w, h, radius), w, h, radius);
+    // Dua pass blur memakai ulang buffer: mask → blurred → mask. Tiga buffer,
+    // bukan lima; hasil byte-identik dengan boxBlur1(boxBlur1(mask)).
+    const scratch = new Float32Array(n);
+    const blurred = new Float32Array(n);
+    boxBlur1Into(mask, w, h, radius, scratch, blurred);
+    boxBlur1Into(blurred, w, h, radius, scratch, mask);
+    glow = mask;
   }
 
   // --- Grading per piksel ---

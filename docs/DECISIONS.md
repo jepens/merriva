@@ -332,6 +332,29 @@ Audit menyarankan "sambungkan ke jalur nyata (opsi terbaik) ATAU hapus". Penelus
 
 ---
 
+## #35 — 2026-09-13 · Bake filter Momen di Web Worker (tanpa OffscreenCanvas) + halation hemat memori
+**Konteks:** AUDIT-2026-09-04 PER-6. `getImageData` → `applyFilmToPixels` → `putImageData` berjalan sinkron di main thread: foto 1600×1200 = 1,9 juta piksel × ±40–50 operasi float (60–95 juta operasi) dalam SATU task — tombol rana tampak beku tepat saat tamu memotret. Preset `senja` (satu-satunya ber-halation) memanggil `boxBlur1(boxBlur1(mask))` sehingga lima buffer `Float32Array` seukuran foto hidup bersamaan (≈38 MB pada 1600×1200) — berisiko crash tab di HP RAM 2 GB, bersama ImageBitmap foto aslinya.
+
+**Keputusan:**
+1. **Hanya matematika piksel yang pindah ke Web Worker** (`src/lib/momen/film.worker.ts`). API kanvas (`getImageData`/`putImageData`/`toBlob`) tetap di main thread; buffer piksel DI-TRANSFER (nol salinan) pergi-pulang.
+2. **Satu fungsi pemroses** `runBakeRequest` dipakai worker DAN fallback main thread → kedua jalur mustahil menghasilkan foto berbeda.
+3. **Fallback menyeluruh** (`film-bake.ts`): `Worker` tak tersedia, konstruksi melempar, worker error, diam >20 detik, `postMessage` melempar, atau respons gagal → main thread. Worker yang error/timeout ditandai rusak dan tak dibuat ulang selama sesi.
+4. **Fallback tanpa redraw:** kontrak `read()` boleh dipanggil ulang — kanvas belum diubah sampai `putImageData`, jadi foto kamera TIDAK berganti ke frame video berikutnya saat worker gagal.
+5. **Halation 5 → 3 buffer** via `boxBlur1Into` (tanpa alokasi, scratch dipakai ulang) — ≈38 MB → ≈23 MB pada 1600×1200 (aritmetika), hasil BYTE-IDENTIK.
+
+**Bukti:**
+* **Golden hash** direkam dari implementasi SEBELUM perubahan (6 preset × 2 ukuran, 12 hash unik; pola uji sengaja memuat titik sangat terang agar halation aktif). Jalur main thread & jalur worker sama-sama cocok byte-per-byte (`film-render.golden.test.ts`).
+* **Build:** Turbopack mengemit chunk worker terpisah 4,4 KB (tanpa React); JS `/[slug]/momen` naik ±0,1 KB gz.
+* **Browser nyata** (Chrome, dev server lokal, foto 1064×1600, filter `hangat` bawaan album, `window.Worker` diinstrumentasi): jalur worker — worker dibuat dari chunk `film.worker.ts`, 1 pesan keluar / 1 masuk / 0 error, **0 long task** selama bake+encode+unggah (767 ms total). Pembanding dengan `Worker` dimatikan — fallback bekerja (unggah sukses), **satu long task 110 ms** (525 ms total). Kedua foto tersimpan utuh di DB (1064×1600).
+
+**Batas yang JUJUR:** (a) jalur worker ±240 ms LEBIH LAMBAT secara total pada bake pertama — biaya memuat chunk worker & transfer buffer; yang dihapus adalah PEMBEKUAN UI, bukan waktu tunggu. (b) Angka di atas dari CPU desktop tanpa throttling; di HP menengah-bawah blokir main thread diperkirakan membesar kira-kira sebanding kecepatan CPU — perkiraan, BELUM diukur. (c) Preset `senja` (terberat) belum diukur di browser; penghematan memorinya adalah aritmetika ukuran buffer.
+
+**Ditolak:** `OffscreenCanvas` di worker (baru didukung Safari 16.4, sedangkan tamu banyak membuka lewat WebView WhatsApp iOS lama — dan tak diperlukan: worker cukup menerima `ArrayBuffer`); menurunkan `DISPLAY_MAX` ke 1200 seperti saran audit (melanggar varian 1600px yang didokumentasikan di CLAUDE.md/SPEC — keputusan produk, bukan tambalan performa); menghitung halation pada ½ resolusi (mengubah tampilan preset — golden hash akan berubah).
+
+**Konsekuensi:** kontrak `read()` — kanvas sumber tak boleh diubah sebelum bake selesai. Mengubah tampilan preset secara SENGAJA wajib merekam ulang golden hash dan menyebutnya eksplisit di commit; preset BARU menggagalkan test cakupan golden sampai hash-nya ditambahkan.
+
+---
+
 ## Template entri baru
 
 ```

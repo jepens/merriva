@@ -10,8 +10,8 @@ import {
   resolveAlbumPhase,
   type AlbumPhase,
 } from "@/lib/momen/album-phase";
+import { getDefaultFilmBaker } from "@/lib/momen/film-bake";
 import { FILM_PRESETS, getFilmPreset } from "@/lib/momen/film-presets";
-import { applyFilmToPixels } from "@/lib/momen/film-render";
 import { cn } from "@/lib/utils";
 import {
   loadMomenPhotosAction,
@@ -79,7 +79,11 @@ interface Variants {
   displayUrl: string;
 }
 
-/** Bake filter (pixel pipeline, BUKAN ctx.filter) lalu encode 2 varian. */
+/**
+ * Bake filter (pixel pipeline, BUKAN ctx.filter) lalu encode 2 varian.
+ * Matematika piksel berjalan di Web Worker bila tersedia (AUDIT PER-6); API
+ * kanvas (getImageData/putImageData/encode) tetap di main thread.
+ */
 async function bakeAndEncode(
   draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void,
   sourceW: number,
@@ -97,8 +101,19 @@ async function bakeAndEncode(
   const dctx = display.getContext("2d", { willReadFrequently: true });
   if (!dctx) throw new Error("canvas 2d tak tersedia");
   draw(dctx, dw, dh);
-  const img = dctx.getImageData(0, 0, dw, dh);
-  applyFilmToPixels(img.data, dw, dh, getFilmPreset(filterId).params, { seed });
+  // Bake 1600×1200 = 60–95 juta operasi float; dulu satu task sinkron di main
+  // thread → tombol rana membeku saat tamu memotret. Kini di worker. `read`
+  // boleh dipanggil ulang untuk fallback main thread: kanvas belum diubah
+  // sampai `putImageData` di bawah, jadi foto tak berganti ke frame berikutnya.
+  const baked = await getDefaultFilmBaker().bake({
+    read: () => dctx.getImageData(0, 0, dw, dh).data,
+    width: dw,
+    height: dh,
+    filterId,
+    seed,
+  });
+  const img = dctx.createImageData(dw, dh);
+  img.data.set(baked.data);
   dctx.putImageData(img, 0, 0);
 
   const tscale = Math.min(1, THUMB_MAX / Math.max(dw, dh));
