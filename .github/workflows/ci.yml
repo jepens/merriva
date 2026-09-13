@@ -40,9 +40,32 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Pra-render statis `/`, `/harga`, `/tema` membaca katalog Supabase saat
+      # build (`catalog.ts` sengaja GAGAL-KERAS agar harga kosong tak pernah
+      # ter-cache — SPEC §4.1). Tanpa env ini Build merah sejak 30 Jul 2026 dan
+      # langkah sesudahnya ter-skip diam-diam (DECISIONS #36). URL & anon key
+      # memang publik by design (dilindungi RLS) — BUKAN service role.
+      # Gagal cepat dengan pesan jelas bila secret belum dipasang.
+      - name: Cek secret build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          missing=0
+          for v in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Secret $v belum di-set di GitHub Actions (Settings > Secrets and variables > Actions). Lihat DECISIONS #36."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       # Build tanpa NEXT_PUBLIC_SENTRY_DSN → path config polos ikut teruji,
       # menangkap regresi build standalone sebelum deploy Easypanel.
       - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: pnpm build
 
       # Gerbang anggaran bundle (AUDIT-2026-09-04 PER-14). Sejak Next 16 +

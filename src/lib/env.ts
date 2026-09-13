@@ -2,8 +2,15 @@
  * Akses environment variable terpusat.
  *
  * Getter untuk nilai wajib melempar error hanya saat DIPANGGIL (lazy) — bukan saat
- * modul di-import — supaya build/CI tanpa env tidak gagal. Referensi `process.env.NEXT_PUBLIC_*`
- * ditulis langsung agar di-inline Next.js untuk bundle browser.
+ * modul di-import — sehingga modul yang tak membutuhkan nilai itu tetap bisa
+ * di-import tanpa env. Referensi `process.env.NEXT_PUBLIC_*` ditulis langsung agar
+ * di-inline Next.js untuk bundle browser.
+ *
+ * PENTING: pra-render statis halaman marketing (`/`, `/harga`, `/tema`) MEMANGGIL
+ * getter Supabase saat build, jadi `next build` WAJIB punya
+ * `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY` — di Docker lewat
+ * build-arg, di CI lewat GitHub Actions secret (DECISIONS #36). Anggapan lama
+ * bahwa build CI tanpa env tak akan gagal sudah tidak berlaku sejak M4.3.
  */
 
 function required(name: string, value: string | undefined): string {

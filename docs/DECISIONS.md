@@ -263,6 +263,8 @@ Keduanya harus lolos. Penolakan rate limit kini juga DAPAT DIBEDAKAN dari "tidak
 
 **Konsekuensi:** angka awal `BUDGETS` sengaja ditaruh SEDIKIT di atas kondisi saat ini agar gerbang menangkap pertumbuhan BARU alih-alih langsung merah — nilainya wajib DITURUNKAN seiring perbaikan struktural, kalau tidak ia hanya membekukan keadaan yang buruk. Gerbang ini mengukur byte, bukan waktu: ia tidak menggantikan pengukuran LCP nyata, yang tetap butuh Docker/staging (di Windows lokal server standalone tak bisa bind port).
 
+
+**Ditinjau ulang 13 Sep 2026:** langkah CI `Anggaran bundle` **BELUM PERNAH berjalan** sejak dipasang — ia di-*skip* karena langkah Build di `main` merah sejak `c446101` (30 Jul 2026, M4.3): pra-render statis `/`, `/harga`, `/tema` membaca katalog Supabase lewat `createSupabasePublicClient`, sedangkan CI tak punya `NEXT_PUBLIC_SUPABASE_URL`. Klaim "dipasang sebagai langkah CI" benar secara konfigurasi, tetapi belum efektif. Repo privat pada paket gratis tak mendukung branch protection, jadi CI merah tak memblokir push — itulah sebabnya kegagalan selama 6 minggu tak terlihat. Sampai Build CI hijau, gerbang hanya efektif bila dijalankan lokal (`pnpm build && pnpm bundle:report --check`).
 ---
 
 ## #31 — 2026-09-05 · CSS tema keluar dari graph modul JS → aset statis ber-hash isi
@@ -352,6 +354,21 @@ Audit menyarankan "sambungkan ke jalur nyata (opsi terbaik) ATAU hapus". Penelus
 **Ditolak:** `OffscreenCanvas` di worker (baru didukung Safari 16.4, sedangkan tamu banyak membuka lewat WebView WhatsApp iOS lama — dan tak diperlukan: worker cukup menerima `ArrayBuffer`); menurunkan `DISPLAY_MAX` ke 1200 seperti saran audit (melanggar varian 1600px yang didokumentasikan di CLAUDE.md/SPEC — keputusan produk, bukan tambalan performa); menghitung halation pada ½ resolusi (mengubah tampilan preset — golden hash akan berubah).
 
 **Konsekuensi:** kontrak `read()` — kanvas sumber tak boleh diubah sebelum bake selesai. Mengubah tampilan preset secara SENGAJA wajib merekam ulang golden hash dan menyebutnya eksplisit di commit; preset BARU menggagalkan test cakupan golden sampai hash-nya ditambahkan.
+
+---
+
+## #36 — 2026-09-13 · Build CI memakai secret Supabase publik, bukan katalog kosong
+**Konteks:** CI di `main` merah di langkah **Build** sejak `c446101` (30 Jul 2026, M4.3) — ditemukan 13 Sep 2026, ±56 run kemudian. Pra-render statis `/`, `/harga`, `/tema` memanggil `getActivePackages`/`getActiveThemes` lewat `createSupabasePublicClient`, sedangkan CI tak punya `NEXT_PUBLIC_SUPABASE_URL`. Semua langkah sesudah Build (termasuk gerbang `Anggaran bundle`, #30) ter-*skip* diam-diam. Repo privat paket gratis tak mendukung branch protection, jadi CI merah tak pernah memblokir push.
+
+Dua niat tertulis bertabrakan: `src/server/marketing/catalog.ts` sengaja **gagal-keras** saat query gagal agar katalog/harga kosong tak pernah ter-cache statis (kontrak SPEC §4.1 "harga SELALU dari packages"), sementara komentar `src/lib/env.ts` menyatakan build/CI tanpa env tak akan gagal — anggapan yang patah sejak M4.3.
+
+**Keputusan (dipilih pemilik):** pertahankan gagal-keras `catalog.ts`; beri CI akses baca Supabase lewat GitHub Actions secret `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY`, diteruskan hanya ke langkah Build. Langkah `Cek secret build` gagal cepat dengan pesan yang menunjuk entri ini bila secret belum dipasang. Komentar `env.ts` dikoreksi.
+
+**Alasan:** URL & anon key memang publik by design (ter-inline di setiap bundle browser; akses dibatasi RLS — anon hanya SELECT `packages`/`themes` aktif) — BUKAN service role. Dengan env nyata, build CI setara build produksi Docker (yang juga butuh Supabase terjangkau saat build), sehingga gerbang anggaran mengukur halaman marketing sungguhan, bukan versi kosong.
+
+**Ditolak:** katalog kosong bila `CI` di-set & env tak ada (mengesampingkan keputusan gagal-keras yang ditulis sengaja, dan gerbang anggaran akan mengukur halaman marketing kosong); `continue-on-error` pada Build (menyembunyikan kegagalan — persis penyebab 6 minggu tak terlihat); `force-dynamic` pada halaman marketing (membuang ISR demi CI).
+
+**Konsekuensi:** CI kini bergantung pada project Supabase cloud yang terjangkau — bila cloud down, Build CI merah (sama seperti build deploy). Secret dipasang pemilik di Settings › Secrets and variables › Actions (atau `gh secret set`). Karena branch protection tak tersedia, hasil CI WAJIB dicek setelah push (`gh run list --branch main`); jangan mengklaim "berjalan di CI" tanpa melihat run nyata.
 
 ---
 
