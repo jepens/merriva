@@ -6,8 +6,7 @@ import { ImageResponse } from "next/og";
 import { copy } from "@/lib/copy";
 import { formatDateOnly, formatEventDateTime } from "@/lib/datetime";
 import { parseContentForRender } from "@/lib/invitation-content";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey } from "@/lib/request-ip";
+import { checkClientRateLimit } from "@/lib/request-ip";
 import { isDraftSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { settingsSchema } from "@/lib/validation/content";
@@ -155,7 +154,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   // 1. Rate limit per-IP (boundary "rate limit endpoint publik").
-  const rl = checkRateLimit(await clientRateKey("og"), OG_LIMIT);
+  const rl = await checkClientRateLimit("og", OG_LIMIT);
   if (!rl.ok) {
     return new Response(null, {
       status: 429,

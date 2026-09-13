@@ -5,10 +5,17 @@ import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 
 import {
+  ipAggregateKey,
   ipNetworkKey,
   resolveClientIpDetailed,
   type ClientIpSource,
 } from "@/lib/client-ip";
+import {
+  checkRateLimitAll,
+  type RateLimitCheck,
+  type RateLimitOptions,
+  type RateLimitResult,
+} from "@/lib/rate-limit";
 
 /**
  * IP klien dari header proxy (logika pemilihan murni & teruji di `client-ip.ts`).
@@ -62,29 +69,51 @@ export function staticRateKey(action: string, value: string): string {
 }
 
 /**
- * Kunci rate-limit untuk sebuah aksi, per-JARINGAN klien (bukan per-IP penuh):
- * IPv6 /64, IPv4 /24 (lihat `ipNetworkKey`) → rotasi alamat dalam satu blok tak
- * bisa melewati plafon.
+ * Pengali plafon agregat IPv6 /48 terhadap plafon per-jaringan (/64).
+ *
+ * Membatasi penyalahguna pemilik satu /48 ke 16× plafon (bukan 65.536×). Sengaja
+ * LEBIH longgar dari /24 IPv4: pelanggan operator seluler IPv6 yang berbeda bisa
+ * berbagi satu /48, dan mereka tak boleh saling mengunci (DECISIONS #38).
  */
-export async function clientRateKey(action: string): Promise<string> {
-  const ip = await getClientIp();
-  return staticRateKey(action, ipNetworkKey(ip));
-}
+export const IPV6_AGGREGATE_FACTOR = 16;
 
 /**
- * Kunci rate-limit per-JARINGAN yang DIPERSEMPIT ke satu sumber daya (album,
- * undangan, dst).
+ * Rate limit per-JARINGAN klien untuk `action` — SATU-SATUNYA jalan membentuk
+ * kunci jaringan (DECISIONS #28, #38):
+ *  1) kunci jaringan: IPv4 /24, IPv6 /64 (`ipNetworkKey`), plafon `limit`;
+ *  2) khusus IPv6: kunci agregat /48 (`ipAggregateKey`), plafon
+ *     `limit.max × IPV6_AGGREGATE_FACTOR` — menutup rotasi /64 dalam satu /48.
  *
- * Tanpa `scope`, seluruh lalu lintas satu blok /24 berbagi SATU bucket: di WiFi
- * venue semua tamu tampak sebagai satu alamat publik, sehingga satu resepsi
- * ramai menghabiskan jatah dirinya sendiri — dan jatah acara lain yang kebetulan
- * sejaringan (AUDIT-2026-09-04 PER-3). Men-scope per sumber daya membuat plafon
- * bisa dinaikkan seukuran satu acara tanpa membuka pintu banjir lintas-acara.
+ * `scope` (album, undangan, …) mempersempit KEDUA kunci ke satu sumber daya
+ * (AUDIT-2026-09-04 PER-3): di WiFi venue semua tamu tampak sebagai satu alamat
+ * publik, jadi tanpa scope satu resepsi ramai menghabiskan jatahnya sendiri —
+ * dan jatah acara lain yang kebetulan sejaringan.
+ *
+ * Kedua lapis dicatat SEMUA-ATAU-TIDAK (`checkRateLimitAll`): request yang
+ * ditolak lapis mana pun tak mengubah bucket mana pun. Percobaan yang ditolak
+ * di /64 tak menguras jatah tetangga sah di /48, dan percobaan yang ditolak di
+ * /48 tak memperpanjang penguncian /64 pemanggil sendiri.
  */
-export async function scopedClientRateKey(
+export async function checkClientRateLimit(
   action: string,
-  scope: string,
-): Promise<string> {
+  limit: RateLimitOptions,
+  scope?: string,
+): Promise<RateLimitResult> {
   const ip = await getClientIp();
-  return staticRateKey(action, `${scope}|${ipNetworkKey(ip)}`);
+  const prefix = scope === undefined ? "" : `${scope}|`;
+
+  const checks: RateLimitCheck[] = [
+    { key: staticRateKey(action, `${prefix}${ipNetworkKey(ip)}`), opts: limit },
+  ];
+  const aggregateKey = ipAggregateKey(ip);
+  if (aggregateKey) {
+    checks.push({
+      key: staticRateKey(action, `${prefix}${aggregateKey}`),
+      opts: {
+        max: limit.max * IPV6_AGGREGATE_FACTOR,
+        windowMs: limit.windowMs,
+      },
+    });
+  }
+  return checkRateLimitAll(checks);
 }

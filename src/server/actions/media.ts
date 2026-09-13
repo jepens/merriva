@@ -12,8 +12,7 @@ import {
   thumbPath,
   toMediaView,
 } from "@/lib/media";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey } from "@/lib/request-ip";
+import { checkClientRateLimit } from "@/lib/request-ip";
 import { getStorage } from "@/lib/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { InvitationMediaView } from "@/types/invitation";
@@ -74,10 +73,12 @@ export async function uploadGalleryPhotoAction(
   // Batas paket (maks 20 foto) ditegakkan atomik di DB; ini plafon per-jaringan
   // untuk meredam unggah berulang (retry/abuse) yang membebani storage.
   if (
-    !checkRateLimit(await clientRateKey("media-upload"), {
-      max: 40,
-      windowMs: 60_000,
-    }).ok
+    !(
+      await checkClientRateLimit("media-upload", {
+        max: 40,
+        windowMs: 60_000,
+      })
+    ).ok
   ) {
     return { status: "error", message: copy.auth.rateLimited };
   }
@@ -184,10 +185,12 @@ export async function deleteGalleryPhotoAction(
   if (!isUuid(invitationId) || !isUuid(mediaId)) return { status: "error" };
 
   if (
-    !checkRateLimit(await clientRateKey("media-delete"), {
-      max: 60,
-      windowMs: 60_000,
-    }).ok
+    !(
+      await checkClientRateLimit("media-delete", {
+        max: 60,
+        windowMs: 60_000,
+      })
+    ).ok
   ) {
     return { status: "error", message: copy.auth.rateLimited };
   }

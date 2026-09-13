@@ -82,41 +82,46 @@ export function resolveClientIp(h: {
   return resolveClientIpDetailed(h).ip;
 }
 
-/** Prefix /24 IPv4 (`v4:a.b.c`) dari string IP, atau null bila bukan IPv4. */
-function ipv4Prefix(v: string): string | null {
-  const o = v.split(".");
-  if (o.length !== 4) return null;
-  return `v4:${o[0]}.${o[1]}.${o[2]}`;
+/** `count` hextet pertama alamat IPv6 (heksa kecil, tanpa nol di depan). */
+function hextets(bytes: Uint8Array, count: number): string {
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const hi = bytes[2 * i] ?? 0;
+    const lo = bytes[2 * i + 1] ?? 0;
+    out.push(((hi << 8) | lo).toString(16));
+  }
+  return out.join(":");
 }
 
 /**
  * Kunci JARINGAN dari IP untuk rate-limit: IPv4 → /24 (3 oktet pertama),
  * IPv6 → /64 (4 hextet pertama). Rotasi alamat DALAM satu blok (umum: satu VPS
  * memegang /64 IPv6, atau /24 IPv4) berbagi bucket → plafon per-"IP" tak bisa
- * dilewati dengan berganti-ganti alamat sumber. Bentuk tak dikenal / "unknown"
- * dikembalikan apa adanya (semua berbagi satu bucket). MURNI & teruji.
+ * dilewati dengan berganti-ganti alamat sumber.
+ *
+ * Dibentuk dari BYTE hasil `parseIp`, bukan dari teks: penulisan berbeda untuk
+ * alamat yang sama (`2001:0DB8::1` vs `2001:db8::1`, `::ffff:a.b.c.d`) jatuh ke
+ * bucket yang sama. Nilai yang tak bisa di-parse → `"unknown"` (satu bucket
+ * bersama), sehingga string sampah tak bisa dirotasi menjadi bucket baru.
+ * MURNI & teruji.
  */
 export function ipNetworkKey(ip: string): string {
-  const v = ip.trim().toLowerCase();
-  if (!v || v === "unknown") return "unknown";
-
-  // IPv4-mapped IPv6 (mis. ::ffff:1.2.3.4) → perlakukan sebagai IPv4.
-  if (v.includes(":") && v.includes(".")) {
-    const tail = v.slice(v.lastIndexOf(":") + 1);
-    return ipv4Prefix(tail) ?? "unknown";
+  const p = parseIp(ip);
+  if (!p) return "unknown";
+  if (p.version === 4) {
+    const [a = 0, b = 0, c = 0] = p.bytes;
+    return `v4:${a}.${b}.${c}`;
   }
+  return `v6:${hextets(p.bytes, 4)}`;
+}
 
-  if (v.includes(":")) {
-    // IPv6 → /64: ekspansi "::" menjadi 8 hextet, ambil 4 pertama.
-    const zoneless = v.split("%")[0];
-    const [head, tail] = zoneless.split("::");
-    const headParts = head ? head.split(":").filter(Boolean) : [];
-    const tailParts = tail !== undefined ? tail.split(":").filter(Boolean) : [];
-    const fill = Math.max(0, 8 - headParts.length - tailParts.length);
-    const full = [...headParts, ...Array(fill).fill("0"), ...tailParts];
-    const prefix = full.slice(0, 4).map((h) => h || "0");
-    return `v6:${prefix.join(":")}`;
-  }
-
-  return ipv4Prefix(v) ?? v;
+/**
+ * Kunci AGREGAT IPv6 /48 (`v6/48:a:b:c`) untuk lapis rate limit kedua, atau
+ * `null` untuk IPv4 / nilai tak dikenal (DECISIONS #38). Satu /48 — gratis dari
+ * tunnel broker — berisi 65.536 blok /64; tanpa lapis ini penyalahguna
+ * mendapat 65.536× plafon. IPv4 cukup /24: memiliki banyak /24 itu mahal.
+ */
+export function ipAggregateKey(ip: string): string | null {
+  const p = parseIp(ip);
+  return p?.version === 6 ? `v6/48:${hextets(p.bytes, 3)}` : null;
 }

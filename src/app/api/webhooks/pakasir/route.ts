@@ -2,8 +2,7 @@ import { revalidatePath } from "next/cache";
 
 import { toDbJson } from "@/lib/json";
 import { pakasirWebhookSchema } from "@/lib/payment/webhook";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey } from "@/lib/request-ip";
+import { checkClientRateLimit } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { notifyOrderPaid } from "@/server/email/notify";
 import { verifyAndActivate } from "@/server/payment/reconcile";
@@ -74,10 +73,7 @@ async function readBodyCapped(
 export async function POST(req: Request) {
   // Rate limit endpoint publik (backstop flood; jalur mahal `transactiondetail`
   // sudah tergerbang oleh kecocokan order di DB).
-  const rl = checkRateLimit(
-    await clientRateKey("pakasir-webhook"),
-    WEBHOOK_LIMIT,
-  );
+  const rl = await checkClientRateLimit("pakasir-webhook", WEBHOOK_LIMIT);
   if (!rl.ok) {
     return new Response(null, {
       status: 429,

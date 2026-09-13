@@ -15,9 +15,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: () => ({ ok: true, remaining: 9, retryAfterMs: 0 }),
 }));
+const { checkClientRateLimit } = vi.hoisted(() => ({
+  checkClientRateLimit: vi.fn(() =>
+    Promise.resolve({ ok: true, remaining: 9, retryAfterMs: 0 }),
+  ),
+}));
 vi.mock("@/lib/request-ip", () => ({
-  clientRateKey: () => Promise.resolve("k"),
-  scopedClientRateKey: () => Promise.resolve("k"),
+  checkClientRateLimit,
   staticRateKey: () => "k",
   getClientIp: () => Promise.resolve("1.2.3.4"),
 }));
@@ -227,6 +231,20 @@ describe("loadMomenPhotosAction — gerbang fase tetap fail-closed", () => {
     if (res.status !== "ok") return;
     expect(res.photos).toHaveLength(3);
     expect(res.photos[0]!.url).toContain("https://cdn.test/");
+  });
+
+  it("rem jaringan GALERI di-scope per acara (slug ter-normalisasi)", async () => {
+    // PER-3: tanpa scope, semua acara di WiFi venue yang sama berbagi bucket.
+    adminRef.current = albumAdmin(null) as never;
+    checkClientRateLimit.mockClear();
+
+    await loadMomenPhotosAction(" Andi-Sinta ", null);
+
+    expect(checkClientRateLimit).toHaveBeenCalledWith(
+      "momen-gallery",
+      expect.objectContaining({ max: 600 }),
+      SLUG,
+    );
   });
 
   it("kursor berbentuk liar ditolak (tak menyentuh DB)", async () => {

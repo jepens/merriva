@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { isUuid } from "@/lib/id";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey } from "@/lib/request-ip";
+import { checkClientRateLimit } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notifyOrderPaid } from "@/server/email/notify";
@@ -64,7 +63,7 @@ export async function checkMomenPaymentStatusAction(
   if (!isUuid(invitationId)) return { status: "error" };
 
   // Transien-lembut → `pending` agar klien tetap poll, bukan gagal keras.
-  const rl = checkRateLimit(await clientRateKey("momen-payment"), POLL_LIMIT);
+  const rl = await checkClientRateLimit("momen-payment", POLL_LIMIT);
   if (!rl.ok) return { status: "pending" };
 
   // Kepemilikan: RLS membatasi ke undangan milik pemanggil.

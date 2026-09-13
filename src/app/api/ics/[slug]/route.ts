@@ -2,8 +2,7 @@ import { buildIcs, type CalendarEventInput } from "@/lib/calendar";
 import { copy } from "@/lib/copy";
 import { appUrl } from "@/lib/env";
 import { parseContentForRender } from "@/lib/invitation-content";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey } from "@/lib/request-ip";
+import { checkClientRateLimit } from "@/lib/request-ip";
 import { isDraftSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -39,7 +38,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   // 1. Rate limit per-IP (boundary "rate limit endpoint publik").
-  const rl = checkRateLimit(await clientRateKey("ics"), ICS_LIMIT);
+  const rl = await checkClientRateLimit("ics", ICS_LIMIT);
   if (!rl.ok) {
     return new Response(null, {
       status: 429,

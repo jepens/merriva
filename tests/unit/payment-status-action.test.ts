@@ -13,13 +13,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const { checkRateLimit } = vi.hoisted(() => ({
-  checkRateLimit: vi.fn(() => ({ ok: true, remaining: 9, retryAfterMs: 0 })),
+const { checkClientRateLimit } = vi.hoisted(() => ({
+  checkClientRateLimit: vi.fn(() =>
+    Promise.resolve({ ok: true, remaining: 9, retryAfterMs: 0 }),
+  ),
 }));
-vi.mock("@/lib/rate-limit", () => ({ checkRateLimit }));
-vi.mock("@/lib/request-ip", () => ({
-  clientRateKey: () => Promise.resolve("k"),
-}));
+vi.mock("@/lib/request-ip", () => ({ checkClientRateLimit }));
 
 const { verifyAndActivate, notifyOrderPaid } = vi.hoisted(() => ({
   verifyAndActivate: vi.fn(),
@@ -68,7 +67,11 @@ const PENDING_ORDER = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  checkRateLimit.mockReturnValue({ ok: true, remaining: 9, retryAfterMs: 0 });
+  checkClientRateLimit.mockResolvedValue({
+    ok: true,
+    remaining: 9,
+    retryAfterMs: 0,
+  });
   refs.admin = makeClient({});
 });
 
@@ -130,7 +133,7 @@ describe("checkPaymentStatusAction — kondisi berhenti", () => {
   });
 
   it("rate limit → pending (transien-lembut: klien tetap poll, bukan gagal keras)", async () => {
-    checkRateLimit.mockReturnValue({
+    checkClientRateLimit.mockResolvedValue({
       ok: false,
       remaining: 0,
       retryAfterMs: 1,

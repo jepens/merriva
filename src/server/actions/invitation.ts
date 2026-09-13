@@ -8,8 +8,7 @@ import { localToUtc } from "@/lib/datetime";
 import { draftSlug, isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
 import { mediaObjectPaths } from "@/lib/media";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey } from "@/lib/request-ip";
+import { checkClientRateLimit } from "@/lib/request-ip";
 import { slugSchema } from "@/lib/slug";
 import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -201,7 +200,7 @@ export async function checkSlugAvailabilityAction(
 
   // Rate-limit (M2): batasi probing keberadaan slug lintas-tenant. Ringan —
   // murni UX; keunikan sebenarnya dijamin constraint UNIQUE saat simpan.
-  const rl = checkRateLimit(await clientRateKey("slug-check"), {
+  const rl = await checkClientRateLimit("slug-check", {
     max: 30,
     windowMs: 60_000,
   });
@@ -327,7 +326,7 @@ export async function deleteInvitationAction(
   if (!user) return { status: "error", message: copy.auth.genericAuthError };
   if (!isUuid(invitationId)) return { status: "error" };
 
-  const rl = checkRateLimit(await clientRateKey("invitation-delete"), {
+  const rl = await checkClientRateLimit("invitation-delete", {
     max: 20,
     windowMs: 60_000,
   });

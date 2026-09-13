@@ -19,8 +19,8 @@ import { canGuestViewPhotos, resolveAlbumPhase } from "@/lib/momen/album-phase";
 import { momenObjectPaths } from "@/lib/momen/storage-path";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
+  checkClientRateLimit,
   getClientIp,
-  scopedClientRateKey,
   staticRateKey,
 } from "@/lib/request-ip";
 import { getStorage } from "@/lib/storage";
@@ -180,10 +180,8 @@ export async function startMomenSessionAction(
       staticRateKey("momen-session-device", parsed.data.deviceId),
       SESSION_DEVICE_LIMIT,
     ).ok ||
-    !checkRateLimit(
-      await scopedClientRateKey("momen-session", rateKey),
-      SESSION_VENUE_LIMIT,
-    ).ok
+    !(await checkClientRateLimit("momen-session", SESSION_VENUE_LIMIT, rateKey))
+      .ok
   ) {
     return { status: "error", message: copy.momen.error.rateLimited };
   }
@@ -251,10 +249,8 @@ export async function uploadMomenPhotoAction(
   // jadi banjir tanpa cookie hanya membayar satu verifikasi HMAC lalu ditolak.
   const rateKey = typeof slug === "string" ? slug.trim().toLowerCase() : "";
   if (
-    !checkRateLimit(
-      await scopedClientRateKey("momen-upload", rateKey),
-      UPLOAD_VENUE_LIMIT,
-    ).ok
+    !(await checkClientRateLimit("momen-upload", UPLOAD_VENUE_LIMIT, rateKey))
+      .ok
   ) {
     return { status: "error", message: copy.momen.error.rateLimited };
   }
@@ -435,10 +431,7 @@ export async function loadMomenPhotosAction(
 ): Promise<MomenGalleryState> {
   const rateKey = typeof slug === "string" ? slug.trim().toLowerCase() : "";
   if (
-    !checkRateLimit(
-      await scopedClientRateKey("momen-gallery", rateKey),
-      GALLERY_LIMIT,
-    ).ok
+    !(await checkClientRateLimit("momen-gallery", GALLERY_LIMIT, rateKey)).ok
   ) {
     return { status: "error" };
   }

@@ -1,7 +1,6 @@
 "use server";
 
-import { checkRateLimit } from "@/lib/rate-limit";
-import { scopedClientRateKey } from "@/lib/request-ip";
+import { checkClientRateLimit } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -41,10 +40,7 @@ export async function viewGuestByTokenAction(
     return { status: "none" };
   }
 
-  const rl = checkRateLimit(
-    await scopedClientRateKey("guest-view", cleanSlug),
-    VIEW_LIMIT,
-  );
+  const rl = await checkClientRateLimit("guest-view", VIEW_LIMIT, cleanSlug);
   if (!rl.ok) return { status: "rate" };
 
   const admin = createSupabaseAdminClient();

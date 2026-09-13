@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { isUuid } from "@/lib/id";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey } from "@/lib/request-ip";
+import { checkClientRateLimit } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notifyOrderPaid } from "@/server/email/notify";
@@ -55,7 +54,7 @@ export async function checkPaymentStatusAction(
 
   // Rate limit: transien-lembut → `pending` agar klien tetap poll (backoff via
   // interval-nya sendiri), bukan gagal keras.
-  const rl = checkRateLimit(await clientRateKey("payment-status"), POLL_LIMIT);
+  const rl = await checkClientRateLimit("payment-status", POLL_LIMIT);
   if (!rl.ok) return { status: "pending" };
 
   // Kepemilikan (RLS membatasi ke baris milik pemanggil).

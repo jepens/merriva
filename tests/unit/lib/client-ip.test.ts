@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ipAggregateKey,
   ipNetworkKey,
   resolveClientIp,
   resolveClientIpDetailed,
@@ -185,5 +186,41 @@ describe("ipNetworkKey", () => {
   it("'unknown'/kosong dikembalikan apa adanya", () => {
     expect(ipNetworkKey("unknown")).toBe("unknown");
     expect(ipNetworkKey("  ")).toBe("unknown");
+  });
+
+  it("penulisan berbeda untuk jaringan yang sama → kunci sama (dari byte, bukan teks)", () => {
+    expect(ipNetworkKey("2001:0DB8:ABCD:1234::9")).toBe(
+      "v6:2001:db8:abcd:1234",
+    );
+    expect(ipNetworkKey("2001:db8:abcd:1234:0:0:0:9%eth0")).toBe(
+      "v6:2001:db8:abcd:1234",
+    );
+    expect(ipNetworkKey("::ffff:cb00:7107")).toBe("v4:203.0.113");
+  });
+
+  it("nilai tak dikenali → satu bucket 'unknown' (sampah tak bisa dirotasi)", () => {
+    for (const junk of ["bukan-ip", "1.2.3", "999.1.1.1", "1.2.3.4:80"]) {
+      expect(ipNetworkKey(junk), junk).toBe("unknown");
+    }
+  });
+});
+
+describe("ipAggregateKey", () => {
+  it("IPv6 → /48: seluruh /64 dalam satu /48 berbagi kunci agregat", () => {
+    const a = ipAggregateKey("2001:470:1f00:1::1");
+    expect(a).toBe("v6/48:2001:470:1f00");
+    expect(ipAggregateKey("2001:470:1f00:ffff::1")).toBe(a);
+    expect(ipAggregateKey("2001:470:1f01::1")).not.toBe(a);
+  });
+
+  it("IPv4, IPv4-mapped, dan nilai tak dikenal → null (tanpa lapis agregat)", () => {
+    for (const v of [
+      "203.0.113.7",
+      "::ffff:203.0.113.7",
+      "unknown",
+      "bukan-ip",
+    ]) {
+      expect(ipAggregateKey(v), v).toBeNull();
+    }
   });
 });

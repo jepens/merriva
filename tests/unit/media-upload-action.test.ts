@@ -15,13 +15,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const { checkRateLimit } = vi.hoisted(() => ({
-  checkRateLimit: vi.fn(() => ({ ok: true, remaining: 9, retryAfterMs: 0 })),
+const { checkClientRateLimit } = vi.hoisted(() => ({
+  checkClientRateLimit: vi.fn(() =>
+    Promise.resolve({ ok: true, remaining: 9, retryAfterMs: 0 }),
+  ),
 }));
-vi.mock("@/lib/rate-limit", () => ({ checkRateLimit }));
-vi.mock("@/lib/request-ip", () => ({
-  clientRateKey: () => Promise.resolve("k"),
-}));
+vi.mock("@/lib/request-ip", () => ({ checkClientRateLimit }));
 
 const { storage } = vi.hoisted(() => ({
   storage: {
@@ -99,7 +98,11 @@ function makeClient(opts: ClientOpts = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  checkRateLimit.mockReturnValue({ ok: true, remaining: 9, retryAfterMs: 0 });
+  checkClientRateLimit.mockResolvedValue({
+    ok: true,
+    remaining: 9,
+    retryAfterMs: 0,
+  });
   serverRef.current = makeClient() as never;
 });
 
@@ -163,7 +166,7 @@ describe("uploadGalleryPhotoAction — gerbang sebelum menyentuh storage", () =>
   });
 
   it("rate limit terlampaui → ditolak sebelum unggah", async () => {
-    checkRateLimit.mockReturnValue({
+    checkClientRateLimit.mockResolvedValue({
       ok: false,
       remaining: 0,
       retryAfterMs: 1,

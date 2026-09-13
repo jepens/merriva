@@ -11,16 +11,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *  - identitas yang disimpan diambil dari SESI, bukan dari field form (anti-impersonasi).
  */
 
-const { checkRateLimit } = vi.hoisted(() => ({
+const { checkRateLimit, checkClientRateLimit } = vi.hoisted(() => ({
   checkRateLimit: vi.fn(() => ({ ok: true, remaining: 9, retryAfterMs: 0 })),
+  checkClientRateLimit: vi.fn(() =>
+    Promise.resolve({ ok: true, remaining: 9, retryAfterMs: 0 }),
+  ),
 }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit }));
-// Pembentukan kunci dipalsukan di sini (perilaku aslinya diuji terpisah di
-// `momen-rate-limit.test.ts`); berkas ini fokus pada invarian keamanan unggah.
+// Rate limit dipalsukan di sini (perilaku aslinya diuji terpisah di
+// `momen-rate-limit.test.ts` & `client-rate-limit.test.ts`); berkas ini fokus
+// pada invarian keamanan unggah.
 vi.mock("@/lib/request-ip", () => ({
-  clientRateKey: () => Promise.resolve("k"),
-  scopedClientRateKey: (action: string, scope: string) =>
-    Promise.resolve(`${action}:${scope}`),
+  checkClientRateLimit,
   staticRateKey: (action: string, value: string) => `${action}:${value}`,
   getClientIp: () => Promise.resolve("1.2.3.4"),
 }));
@@ -54,7 +56,10 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 import { signMomenSession } from "@/lib/momen/session";
-import { uploadMomenPhotoAction } from "@/server/actions/momen-guest";
+import {
+  startMomenSessionAction,
+  uploadMomenPhotoAction,
+} from "@/server/actions/momen-guest";
 
 const ALBUM = "11111111-1111-4111-8111-111111111111";
 const OTHER_ALBUM = "99999999-9999-4999-8999-999999999999";
@@ -150,6 +155,11 @@ function signFor(albumId: string, guestName = "Sasa"): string {
 beforeEach(() => {
   process.env.MOMEN_SESSION_SECRET = "test-secret";
   checkRateLimit.mockReturnValue({ ok: true, remaining: 9, retryAfterMs: 0 });
+  checkClientRateLimit.mockResolvedValue({
+    ok: true,
+    remaining: 9,
+    retryAfterMs: 0,
+  });
   storage.upload.mockClear();
   storage.delete.mockClear();
   cookieValue.current = "";
@@ -410,7 +420,56 @@ describe("uploadMomenPhotoAction — jalur sukses", () => {
     expect(storage.delete).not.toHaveBeenCalled();
   });
 
-  it("rate-limit terlampaui → ditolak sebelum apa pun", async () => {
+  it("rate-limit JARINGAN terlampaui → ditolak sebelum apa pun", async () => {
+    cookieValue.current = signFor(ALBUM);
+    const admin = makeAdmin();
+    adminRef.current = admin;
+    checkClientRateLimit.mockResolvedValue({
+      ok: false,
+      remaining: 0,
+      retryAfterMs: 1,
+    });
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(res.status).toBe("error");
+    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(storage.upload).not.toHaveBeenCalled();
+  });
+
+  // PER-3: rem jaringan WAJIB di-scope per acara. Tanpa scope, semua acara di
+  // WiFi venue yang sama berbagi satu bucket — dan suite lain tetap hijau.
+  it("rem jaringan UNGGAH di-scope per acara (slug ter-normalisasi)", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin();
+    checkClientRateLimit.mockClear();
+
+    await uploadMomenPhotoAction(" Andi-Sinta ", form());
+
+    expect(checkClientRateLimit).toHaveBeenCalledWith(
+      "momen-upload",
+      expect.objectContaining({ max: 900 }),
+      SLUG,
+    );
+  });
+
+  it("rem jaringan MULAI SESI di-scope per acara (slug ter-normalisasi)", async () => {
+    adminRef.current = makeAdmin();
+    checkClientRateLimit.mockClear();
+    const fd = new FormData();
+    fd.set("guestName", "Sasa");
+    fd.set("deviceId", DEVICE);
+
+    await startMomenSessionAction(" Andi-Sinta ", fd);
+
+    expect(checkClientRateLimit).toHaveBeenCalledWith(
+      "momen-session",
+      expect.objectContaining({ max: 150 }),
+      SLUG,
+    );
+  });
+
+  it("rate-limit PERANGKAT terlampaui → ditolak sebelum apa pun", async () => {
     cookieValue.current = signFor(ALBUM);
     const admin = makeAdmin();
     adminRef.current = admin;

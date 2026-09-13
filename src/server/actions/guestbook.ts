@@ -1,12 +1,7 @@
 "use server";
 
 import { copy } from "@/lib/copy";
-import { checkRateLimit } from "@/lib/rate-limit";
-import {
-  clientRateKey,
-  getClientIp,
-  scopedClientRateKey,
-} from "@/lib/request-ip";
+import { checkClientRateLimit, getClientIp } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { settingsSchema } from "@/lib/validation/content";
@@ -63,7 +58,7 @@ export async function submitRsvpAction(input: RsvpInput): Promise<RsvpResult> {
   if (d.website) return { status: "success", moderated: false };
 
   // Rate limit per IP (ter-hash; tak menyimpan IP mentah).
-  const rl = checkRateLimit(await clientRateKey("rsvp"), RSVP_LIMIT);
+  const rl = await checkClientRateLimit("rsvp", RSVP_LIMIT);
   if (!rl.ok) {
     return {
       status: "error",
@@ -188,7 +183,7 @@ export async function submitGiftNoteAction(
   // Honeypot: field tersembunyi terisi = bot → pura-pura sukses (silent drop).
   if (d.website) return { status: "success" };
 
-  const rl = checkRateLimit(await clientRateKey("gift"), GIFT_LIMIT);
+  const rl = await checkClientRateLimit("gift", GIFT_LIMIT);
   if (!rl.ok) {
     return {
       status: "error",
@@ -272,10 +267,7 @@ export async function getGuestbookAction(
 
   // Kunci di-scope ke undangan → satu resepsi ramai tak menghabiskan jatah
   // acara lain yang kebetulan sejaringan.
-  const rl = checkRateLimit(
-    await scopedClientRateKey("gb-read", cleanSlug),
-    READ_LIMIT,
-  );
+  const rl = await checkClientRateLimit("gb-read", READ_LIMIT, cleanSlug);
   if (!rl.ok) return { entries: [], hasMore: false, rateLimited: true };
 
   const admin = createSupabaseAdminClient();

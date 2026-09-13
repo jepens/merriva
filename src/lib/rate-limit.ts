@@ -47,39 +47,81 @@ export interface RateLimitResult {
   retryAfterMs: number;
 }
 
+export interface RateLimitCheck {
+  key: string;
+  opts: RateLimitOptions;
+}
+
 /**
- * Catat 1 percobaan untuk `key` dan putuskan boleh/tidak. Jendela geser: hanya
- * timestamp dalam `windowMs` terakhir yang dihitung. Saat penuh → `ok:false`
- * dengan `retryAfterMs` = kapan slot tertua kadaluarsa.
+ * Periksa beberapa bucket sekaligus secara SEMUA-ATAU-TIDAK-SAMA-SEKALI: hit
+ * hanya dicatat bila SETIAP bucket masih punya slot. Request yang ditolak tak
+ * mengubah bucket mana pun dan tak membuat kunci baru, sehingga penolakan di
+ * satu lapis tak menguras lapis lain (DECISIONS #38). Aman tanpa kunci: Node
+ * menjalankannya sinkron dalam satu thread.
+ *
+ * Jendela geser: hanya timestamp dalam `windowMs` terakhir yang dihitung. Hasil
+ * gagal = bucket PERTAMA yang penuh (`retryAfterMs` = kapan slot tertuanya
+ * kadaluarsa); hasil sukses = `remaining` terkecil.
+ */
+export function checkRateLimitAll(
+  checks: readonly RateLimitCheck[],
+  now: number = Date.now(),
+): RateLimitResult {
+  let remaining = Infinity;
+  for (const { key, opts } of checks) {
+    const hits = buckets.get(key);
+    if (hits) {
+      const cutoff = now - opts.windowMs;
+      while (hits.length > 0 && hits[0] <= cutoff) hits.shift();
+    }
+    const count = hits?.length ?? 0;
+    if (count >= opts.max) {
+      const oldest = hits?.[0];
+      const retryAfterMs =
+        oldest === undefined
+          ? opts.windowMs
+          : Math.max(oldest + opts.windowMs - now, 0);
+      return { ok: false, remaining: 0, retryAfterMs };
+    }
+    remaining = Math.min(remaining, opts.max - count - 1);
+  }
+
+  for (const { key, opts } of checks) {
+    if (!buckets.has(key)) {
+      evictIfFull(now, opts.windowMs); // proteksi memori bertahap (bukan reset total)
+      buckets.set(key, []);
+    }
+  }
+  for (const { key } of checks) {
+    let hits = buckets.get(key);
+    if (!hits) {
+      // Sempat terbuang oleh eviksi kunci lain di atas (hanya saat Map penuh).
+      hits = [];
+      buckets.set(key, hits);
+    }
+    hits.push(now);
+  }
+  return { ok: true, remaining, retryAfterMs: 0 };
+}
+
+/**
+ * Catat 1 percobaan untuk `key` dan putuskan boleh/tidak. Saat penuh →
+ * `ok:false` dengan `retryAfterMs` = kapan slot tertua kadaluarsa.
  */
 export function checkRateLimit(
   key: string,
   opts: RateLimitOptions,
   now: number = Date.now(),
 ): RateLimitResult {
-  const { max, windowMs } = opts;
-  const cutoff = now - windowMs;
-
-  let hits = buckets.get(key);
-  if (!hits) {
-    evictIfFull(now, windowMs); // proteksi memori bertahap (bukan reset total)
-    hits = [];
-    buckets.set(key, hits);
-  }
-
-  // Buang timestamp yang sudah keluar jendela.
-  while (hits.length > 0 && hits[0] <= cutoff) hits.shift();
-
-  if (hits.length >= max) {
-    const retryAfterMs = Math.max(hits[0] + windowMs - now, 0);
-    return { ok: false, remaining: 0, retryAfterMs };
-  }
-
-  hits.push(now);
-  return { ok: true, remaining: max - hits.length, retryAfterMs: 0 };
+  return checkRateLimitAll([{ key, opts }], now);
 }
 
 /** Hanya untuk test — kosongkan seluruh state. */
 export function __resetRateLimit(): void {
   buckets.clear();
+}
+
+/** Hanya untuk test — jumlah kunci yang sedang disimpan. */
+export function __rateLimitKeyCount(): number {
+  return buckets.size;
 }

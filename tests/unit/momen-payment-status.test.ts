@@ -13,11 +13,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/rate-limit", () => ({
-  checkRateLimit: () => ({ ok: true, remaining: 9, retryAfterMs: 0 }),
-}));
 vi.mock("@/lib/request-ip", () => ({
-  clientRateKey: () => Promise.resolve("k"),
+  checkClientRateLimit: () =>
+    Promise.resolve({ ok: true, remaining: 9, retryAfterMs: 0 }),
 }));
 
 const { verifyAndActivate, notifyOrderPaid, findLatestMomenOrder } = vi.hoisted(

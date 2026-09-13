@@ -7,7 +7,11 @@ import { copy } from "@/lib/copy";
 import { appUrl } from "@/lib/env";
 import { normalizeIndonesianPhone } from "@/lib/phone";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { clientRateKey, getClientIp, staticRateKey } from "@/lib/request-ip";
+import {
+  checkClientRateLimit,
+  getClientIp,
+  staticRateKey,
+} from "@/lib/request-ip";
 import { safeNextPath } from "@/lib/safe-redirect";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -49,10 +53,12 @@ export async function signUpAction(
 
   // Rate-limit per-jaringan + Turnstile (anti pembuatan akun massal / bot).
   if (
-    !checkRateLimit(await clientRateKey("auth-signup"), {
-      max: 5,
-      windowMs: 60_000,
-    }).ok
+    !(
+      await checkClientRateLimit("auth-signup", {
+        max: 5,
+        windowMs: 60_000,
+      })
+    ).ok
   ) {
     return errorState(copy.auth.rateLimited);
   }
@@ -110,10 +116,12 @@ export async function signInAction(
 
   // Rate-limit per-jaringan (anti brute-force kredensial).
   if (
-    !checkRateLimit(await clientRateKey("auth-signin"), {
-      max: 10,
-      windowMs: 60_000,
-    }).ok
+    !(
+      await checkClientRateLimit("auth-signin", {
+        max: 10,
+        windowMs: 60_000,
+      })
+    ).ok
   ) {
     return errorState(copy.auth.rateLimited);
   }
@@ -169,10 +177,12 @@ export async function requestPasswordResetAction(
   // Rate-limit per-jaringan + per-email (anti email-bombing korban) + Turnstile.
   // SEMUA kegagalan → sukses generik yang DIAM-DIAM tak mengirim, agar tak
   // membocorkan keberadaan email maupun status rate-limit (anti-enumerasi).
-  const ipOk = checkRateLimit(await clientRateKey("auth-reset-ip"), {
-    max: 5,
-    windowMs: 60_000,
-  }).ok;
+  const ipOk = (
+    await checkClientRateLimit("auth-reset-ip", {
+      max: 5,
+      windowMs: 60_000,
+    })
+  ).ok;
   const emailOk = checkRateLimit(
     staticRateKey("auth-reset-email", parsed.data.email.toLowerCase()),
     { max: 3, windowMs: 900_000 },
