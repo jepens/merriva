@@ -375,6 +375,23 @@ Dua niat tertulis bertabrakan: `src/server/marketing/catalog.ts` sengaja **gagal
 
 ---
 
+## #37 — 2026-09-13 · `cf-connecting-ip` hanya dipercaya dari peer Cloudflare yang dicatat Traefik
+**Konteks:** AUDIT-2026-09-04 KEA-1 — `resolveClientIp` mempercayai `cf-connecting-ip` tanpa syarat. Siapa pun yang menemukan IP origin bisa mengirim nilai acak per request → bucket rate limit baru tiap request → brute-force login, banjir sesi/unggah Momen, dan flood lain lolos sekaligus. Konfigurasi edge produksi (Traefik Easypanel, firewall VPS) tidak ada di repo.
+
+**Keputusan:**
+1. Peer = entri **paling kanan** `X-Forwarded-For` saja. Traefik tersambung langsung ke kontainer app dan selalu menambahkan `RemoteAddr`-nya di ujung kanan (`rewriteRequestBuilder`); Next 16 hanya mengisi XFF bila kosong (`base-server.js`, `??=`). Entri di kiri peer tak pernah ditelusuri.
+2. Peer publik di rentang Cloudflare → `cf-connecting-ip`. Peer publik lain → peer itu; `cf-connecting-ip` dan `x-real-ip` diabaikan (`cf-rejected` bila header Cloudflare ikut dikirim).
+3. Peer internal/tak ada/tak dikenali → urutan lama (`cf-connecting-ip` → `x-real-ip` → entri kanan XFF), ditandai `unverified`. Production mencatat `console.warn` `[client-ip]` sekali per proses, tanpa nilai IP.
+4. Parser IP/CIDR sendiri (`src/lib/ip-cidr.ts`, tanpa dependency). Rentang disimpan di `src/lib/cloudflare-ips.json` dan dicocokkan **harian** dengan API resmi oleh workflow terjadwal `.github/workflows/cloudflare-ips.yml`.
+
+**Alasan:** hanya nilai yang ditulis Traefik sendiri (peer) yang tak bisa dipalsukan klien. Mencocokkan peer dengan rentang Cloudflare menyaring akses langsung ke origin dari luar Cloudflare, tetapi BUKAN autentikasi (lihat Konsekuensi). Review adversarial (4 lensa + skeptis, semua menjalankan kode asli) menemukan desain awal — menelusuri XFF dari kanan sambil melewati hop internal — justru membuka celah: bila peer Traefik internal dan Traefik mempercayai header masuk, entri tulisan klien menjadi "peer" (merotasi bucket, meniru /24 korban, menyamar sebagai edge Cloudflare). Parser diuji silang dengan `node:net` (500.267 input, 0 selisih).
+
+**Ditolak:** fail-closed ke satu bucket bersama saat peer tak terverifikasi (salah pasang topologi — mis. port Traefik mode *ingress* Swarm yang menghilangkan IP sumber — akan mengunci SELURUH pengunjung dari login; kondisi itu dibuat terlihat lewat log dan ditutup lewat ops); melewati hop internal (lihat Alasan); env `TRUSTED_PROXY_HOPS` (hanya ada satu proxy; konfigurasi tambahan = cara baru salah pasang); library IP (parser ±150 baris cukup dan teruji); cek rentang di CI push (gangguan API Cloudflare memerahkan push tak berhubungan, dan rentang bisa berubah saat repo sepi); regex atas berkas TS (entri yang dikomentari ikut terbaca).
+
+**Konsekuensi:** kode menolak `cf-connecting-ip` palsu dari luar Cloudflare **bila** Traefik melihat IP sumber publik dan menambahkan XFF. KEA-1 baru **tertutup penuh** dengan Authenticated Origin Pulls per-zona yang ditegakkan Traefik: rentang IP bukan autentikasi — pelanggan Cloudflare mana pun (Worker `connect()`, zona proxied milik mereka) tersambung dari rentang yang sama, menulis `cf-connecting-ip` sendiri, dan lolos sebagai `cloudflare` tanpa log; firewall rentang Cloudflare pun tak menghalanginya (ditemukan re-verifikasi adversarial). Langkah ops lengkap di LAUNCH-CHECKLIST Fase 6: baca langsung konfigurasi Traefik (mode publish port, `forwardedHeaders`, `notAppendXForwardedFor` — log kosong saja bukan bukti), firewall origin, AOP per-zona, dan uji spoof LANGSUNG ke origin (uji lewat domain tak membuktikan apa pun karena Cloudflare menimpa header itu). Daftar basi = pengunjung dari edge baru berbagi bucket per IP edge — begitu workflow terjadwal merah, perbarui `cloudflare-ips.json` DAN allowlist firewall bersamaan. Belum ditangani (terpisah dari KEA-1, sudah ada sebelumnya): lewat Cloudflare yang sah, satu blok IPv6 /48 memberi 65.536 bucket /64.
+
+---
+
 ## Template entri baru
 
 ```

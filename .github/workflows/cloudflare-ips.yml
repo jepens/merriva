@@ -1,0 +1,42 @@
+name: Rentang IP Cloudflare
+
+# `cf-connecting-ip` hanya dipercaya dari rentang IP Cloudflare (AUDIT-2026-09-04
+# KEA-1, DECISIONS #37). Cloudflare bisa menambah rentang kapan saja — termasuk
+# saat repo sepi — jadi cek ini DIJADWALKAN harian, bukan hanya saat push.
+# Terpisah dari CI utama: API Cloudflare yang sedang gangguan tidak boleh
+# memerahkan push yang tak berhubungan. Run terjadwal yang gagal dikirim GitHub
+# lewat email ke pengubah terakhir jadwal ini.
+on:
+  schedule:
+    - cron: "17 3 * * *" # 03:17 UTC = 10:17 WIB
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - src/lib/cloudflare-ips.json
+      - scripts/check-cloudflare-ips.mjs
+      - .github/workflows/cloudflare-ips.yml
+  pull_request:
+    paths:
+      - src/lib/cloudflare-ips.json
+      - scripts/check-cloudflare-ips.mjs
+      - .github/workflows/cloudflare-ips.yml
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Cocokkan dengan API resmi
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Bandingkan rentang IP Cloudflare
+        run: node scripts/check-cloudflare-ips.mjs

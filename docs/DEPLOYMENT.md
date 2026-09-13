@@ -86,6 +86,7 @@ Menyusul: `PAKASIR_*` (M3), `RESEND_API_KEY` (M3), `TURNSTILE_*` (M2), `R2_*` (M
 1. Arahkan nameserver domain ke Cloudflare.
 2. Tambah record `A`/`CNAME` `merriva.id` → IP/host VPS, **proxy ON (oranye)**.
 3. Tambah redirect `www.merriva.id` → `merriva.id`.
+4. **Kunci origin ke Cloudflare** — port Traefik mode host, firewall origin ke rentang Cloudflare, Authenticated Origin Pulls. Tanpa ini IP klien untuk rate limit dapat dipalsukan (AUDIT KEA-1). Langkah & verifikasinya: [LAUNCH-CHECKLIST](LAUNCH-CHECKLIST.md) Fase 6, alasannya: [DECISIONS #37](DECISIONS.md).
 
 ## 7. Monitoring
 

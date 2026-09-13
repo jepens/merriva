@@ -4,20 +4,52 @@ import { createHash } from "node:crypto";
 
 import { headers } from "next/headers";
 
-import { ipNetworkKey, resolveClientIp } from "@/lib/client-ip";
+import {
+  ipNetworkKey,
+  resolveClientIpDetailed,
+  type ClientIpSource,
+} from "@/lib/client-ip";
 
 /**
  * IP klien dari header proxy (logika pemilihan murni & teruji di `client-ip.ts`).
- * Memprioritaskan `cf-connecting-ip` (otoritatif di balik Cloudflare) — TIDAK
- * memakai entri kiri `x-forwarded-for` yang dapat dipalsukan klien.
+ * `cf-connecting-ip` hanya dipercaya bila peer yang ditambahkan Traefik ada di
+ * rentang IP Cloudflare (AUDIT-2026-09-04 KEA-1, DECISIONS #37).
  */
 export async function getClientIp(): Promise<string> {
   const h = await headers();
-  return resolveClientIp({
+  const { ip, source } = resolveClientIpDetailed({
     cfConnectingIp: h.get("cf-connecting-ip"),
     xRealIp: h.get("x-real-ip"),
     xForwardedFor: h.get("x-forwarded-for"),
   });
+  if (process.env.NODE_ENV === "production") warnTopologyOnce(source);
+  return ip;
+}
+
+const warned = new Set<ClientIpSource>();
+
+/**
+ * Sinyal topologi di production — sekali per proses dan TANPA nilai IP (UU PDP):
+ * - `unverified`: peer tak terlihat atau internal → app tak bisa membuktikan
+ *   request lewat Cloudflare. KEA-1 hanya benar-benar tertutup bila Traefik
+ *   melihat IP sumber publik dan origin di-firewall ke rentang Cloudflare
+ *   (LAUNCH-CHECKLIST Fase 6). Log ini seharusnya TIDAK PERNAH muncul.
+ * - `cf-rejected`: `cf-connecting-ip` datang dari peer publik non-Cloudflare —
+ *   percobaan langsung ke origin, atau daftar rentang Cloudflare basi.
+ */
+function warnTopologyOnce(source: ClientIpSource): void {
+  if (warned.has(source)) return;
+  if (source === "unverified") {
+    warned.add(source);
+    console.warn(
+      "[client-ip] asal request tak bisa diverifikasi (peer X-Forwarded-For internal/tak ada) — cek mode publish port & forwardedHeaders Traefik (DECISIONS #37)",
+    );
+  } else if (source === "cf-rejected") {
+    warned.add(source);
+    console.warn(
+      "[client-ip] cf-connecting-ip diabaikan: peer bukan Cloudflare — akses langsung ke origin, atau rentang di cloudflare-ips.json basi (DECISIONS #37)",
+    );
+  }
 }
 
 /**
