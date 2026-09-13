@@ -264,7 +264,8 @@ Keduanya harus lolos. Penolakan rate limit kini juga DAPAT DIBEDAKAN dari "tidak
 **Konsekuensi:** angka awal `BUDGETS` sengaja ditaruh SEDIKIT di atas kondisi saat ini agar gerbang menangkap pertumbuhan BARU alih-alih langsung merah — nilainya wajib DITURUNKAN seiring perbaikan struktural, kalau tidak ia hanya membekukan keadaan yang buruk. Gerbang ini mengukur byte, bukan waktu: ia tidak menggantikan pengukuran LCP nyata, yang tetap butuh Docker/staging (di Windows lokal server standalone tak bisa bind port).
 
 
-**Ditinjau ulang 13 Sep 2026:** langkah CI `Anggaran bundle` **BELUM PERNAH berjalan** sejak dipasang — ia di-*skip* karena langkah Build di `main` merah sejak `c446101` (30 Jul 2026, M4.3): pra-render statis `/`, `/harga`, `/tema` membaca katalog Supabase lewat `createSupabasePublicClient`, sedangkan CI tak punya `NEXT_PUBLIC_SUPABASE_URL`. Klaim "dipasang sebagai langkah CI" benar secara konfigurasi, tetapi belum efektif. Repo privat pada paket gratis tak mendukung branch protection, jadi CI merah tak memblokir push — itulah sebabnya kegagalan selama 6 minggu tak terlihat. Sampai Build CI hijau, gerbang hanya efektif bila dijalankan lokal (`pnpm build && pnpm bundle:report --check`).
+**Ditinjau ulang 13 Sep 2026:** langkah CI `Anggaran bundle` **BELUM PERNAH berjalan** sejak dipasang — ia di-*skip* karena langkah Build di `main` merah sejak `c446101` (30 Jul 2026, M4.3): pra-render statis `/`, `/harga`, `/tema` membaca katalog Supabase lewat `createSupabasePublicClient`, sedangkan CI tak punya `NEXT_PUBLIC_SUPABASE_URL`. Klaim "dipasang sebagai langkah CI" benar secara konfigurasi, tetapi belum efektif. Repo privat pada paket gratis tak mendukung branch protection, jadi CI merah tak memblokir push — itulah sebabnya kegagalan selama 6 minggu tak terlihat. **Diselesaikan #36:** sejak run `34734389665` (percobaan 3, commit `bf8fdef`, 13 Sep 2026) Build CI hijau dan gerbang benar-benar berjalan — 37 route diukur, "Semua route dalam anggaran". Karena CI merah tetap tak memblokir push, hasil run wajib dicek setelah push.
+
 ---
 
 ## #31 — 2026-09-05 · CSS tema keluar dari graph modul JS → aset statis ber-hash isi
@@ -369,6 +370,8 @@ Dua niat tertulis bertabrakan: `src/server/marketing/catalog.ts` sengaja **gagal
 **Ditolak:** katalog kosong bila `CI` di-set & env tak ada (mengesampingkan keputusan gagal-keras yang ditulis sengaja, dan gerbang anggaran akan mengukur halaman marketing kosong); `continue-on-error` pada Build (menyembunyikan kegagalan — persis penyebab 6 minggu tak terlihat); `force-dynamic` pada halaman marketing (membuang ISR demi CI).
 
 **Konsekuensi:** CI kini bergantung pada project Supabase cloud yang terjangkau — bila cloud down, Build CI merah (sama seperti build deploy). Secret dipasang pemilik di Settings › Secrets and variables › Actions (atau `gh secret set`). Karena branch protection tak tersedia, hasil CI WAJIB dicek setelah push (`gh run list --branch main`); jangan mengklaim "berjalan di CI" tanpa melihat run nyata.
+
+**Terverifikasi 13 Sep 2026:** run `34734389665` percobaan 3 (`bf8fdef`) hijau di semua langkah — 539 test lulus, 26/26 halaman ter-pra-render dengan katalog nyata (`/harga`, `/tema` statis, revalidate 1 jam), dan gerbang `Anggaran bundle` mengukur 37 route tanpa pelanggaran. Percobaan 1–2 gagal di `Cek secret build` karena secret belum lengkap — langkah itu bekerja sesuai niat.
 
 ---
 
