@@ -46,6 +46,10 @@ const { storage } = vi.hoisted(() => ({
     getPublicUrl: (p: string) => `https://cdn.test/${p}`,
   },
 }));
+const { verifyTurnstile } = vi.hoisted(() => ({
+  verifyTurnstile: vi.fn(() => Promise.resolve(true)),
+}));
+vi.mock("@/lib/turnstile", () => ({ verifyTurnstile }));
 vi.mock("@/lib/storage", () => ({ getStorage: () => storage }));
 
 const { adminRef } = vi.hoisted(() => ({
@@ -160,6 +164,7 @@ beforeEach(() => {
     remaining: 9,
     retryAfterMs: 0,
   });
+  verifyTurnstile.mockResolvedValue(true);
   storage.upload.mockClear();
   storage.delete.mockClear();
   cookieValue.current = "";
@@ -467,6 +472,41 @@ describe("uploadMomenPhotoAction — jalur sukses", () => {
       expect.objectContaining({ max: 150 }),
       SLUG,
     );
+  });
+
+  // DECISIONS #39: `deviceId` mulai sesi masih dari form. Bila lapis perangkat
+  // dihitung sebelum Turnstile, deviceId acak membuat kunci limiter tanpa batas.
+  it("lapis perangkat MULAI SESI tak disentuh bila Turnstile gagal", async () => {
+    adminRef.current = makeAdmin();
+    checkRateLimit.mockClear();
+    verifyTurnstile.mockResolvedValueOnce(false);
+    const fd = new FormData();
+    fd.set("guestName", "Sasa");
+    fd.set("deviceId", DEVICE);
+
+    const res = await startMomenSessionAction(SLUG, fd);
+
+    expect(res.status).toBe("error");
+    expect(checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("lapis perangkat MULAI SESI tetap menolak sesudah Turnstile, sebelum DB", async () => {
+    const admin = makeAdmin();
+    adminRef.current = admin;
+    checkRateLimit.mockReturnValue({
+      ok: false,
+      remaining: 0,
+      retryAfterMs: 1,
+    });
+    const fd = new FormData();
+    fd.set("guestName", "Sasa");
+    fd.set("deviceId", DEVICE);
+
+    const res = await startMomenSessionAction(SLUG, fd);
+
+    expect(res.status).toBe("error");
+    expect(verifyTurnstile).toHaveBeenCalled();
+    expect(admin.from).not.toHaveBeenCalled();
   });
 
   it("rate-limit PERANGKAT terlampaui → ditolak sebelum apa pun", async () => {

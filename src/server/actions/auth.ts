@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import { copy } from "@/lib/copy";
 import { appUrl } from "@/lib/env";
 import { normalizeIndonesianPhone } from "@/lib/phone";
-import { checkRateLimit } from "@/lib/rate-limit";
 import {
   checkClientRateLimit,
   getClientIp,
@@ -174,26 +173,38 @@ export async function requestPasswordResetAction(
     return fieldErrorState(parsed.error.flatten().fieldErrors);
   }
 
-  // Rate-limit per-jaringan + per-email (anti email-bombing korban) + Turnstile.
-  // SEMUA kegagalan → sukses generik yang DIAM-DIAM tak mengirim, agar tak
-  // membocorkan keberadaan email maupun status rate-limit (anti-enumerasi).
-  const ipOk = (
-    await checkClientRateLimit("auth-reset-ip", {
-      max: 5,
-      windowMs: 60_000,
-    })
-  ).ok;
-  const emailOk = checkRateLimit(
-    staticRateKey("auth-reset-email", parsed.data.email.toLowerCase()),
-    { max: 3, windowMs: 900_000 },
-  ).ok;
+  // Turnstile DULU, baru rate-limit per-jaringan + per-email (anti email-bombing
+  // korban) dalam SATU keputusan semua-atau-tidak. SEMUA kegagalan → sukses
+  // generik yang DIAM-DIAM tak mengirim, agar tak membocorkan keberadaan email
+  // maupun status rate-limit (anti-enumerasi). Turnstile didahulukan supaya
+  // request tanpa token sah tak membuat kunci limiter apa pun: email acak tak
+  // bisa dipakai mengisi memori limiter lalu mendesak penghitung lain — termasuk
+  // plafon email korban — keluar (DECISIONS #39).
   const clientIp = await getClientIp();
   const human = await verifyTurnstile(
     formData.get("turnstile")?.toString(),
     clientIp,
   );
+  const limitOk =
+    human &&
+    (
+      await checkClientRateLimit(
+        "auth-reset-ip",
+        { max: 5, windowMs: 60_000 },
+        undefined,
+        [
+          {
+            key: staticRateKey(
+              "auth-reset-email",
+              parsed.data.email.toLowerCase(),
+            ),
+            opts: { max: 3, windowMs: 900_000 },
+          },
+        ],
+      )
+    ).ok;
 
-  if (ipOk && emailOk && human) {
+  if (limitOk) {
     const supabase = await createSupabaseServerClient();
     await supabase.auth.resetPasswordForEmail(parsed.data.email, {
       redirectTo: `${appUrl}/auth/confirm?next=/reset-password/ubah`,

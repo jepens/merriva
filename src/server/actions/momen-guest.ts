@@ -58,8 +58,8 @@ const COOKIE_NAME = "momen_sess";
  * Keduanya harus lolos. Untuk unggah, identitas perangkat diambil dari cookie
  * ber-TANDA-TANGAN (HMAC terverifikasi) → tepercaya. Untuk mulai sesi, cookie
  * belum ada sehingga `deviceId` masih dari form (bisa dirotasi): di sana lapis
- * perangkat hanya meredam loop naif, dan gerbang bot sesungguhnya tetap
- * Turnstile. Rotasi deviceId untuk menguras kuota PESERTA adalah temuan
+ * perangkat diperiksa SESUDAH Turnstile agar deviceId acak tak membanjiri memori
+ * limiter (DECISIONS #39), dan gerbang bot sesungguhnya tetap Turnstile. Rotasi deviceId untuk menguras kuota PESERTA adalah temuan
  * terpisah (KEA-4) yang belum ditangani di sini.
  */
 
@@ -157,10 +157,10 @@ function denyMessage(result: string): string {
  * cookie ber-tanda-tangan. Mengembalikan sisa jatah perangkat agar UI menampilkan
  * pips.
  *
- * Urutan sengaja: Zod dulu (murni, tanpa I/O) agar `deviceId` tersedia untuk
- * lapis perangkat, lalu kedua lapis rate-limit, BARU Turnstile & DB — penolakan
- * termurah didahulukan. Cakupan jaringan memakai `slug` (bukan `albumId`) supaya
- * tak perlu query untuk membentuk kunci.
+ * Urutan sengaja: Zod dulu (murni, tanpa I/O), rem jaringan (murah), Turnstile,
+ * BARU lapis perangkat & DB. Lapis perangkat sengaja di belakang Turnstile
+ * karena `deviceId` masih dari form (DECISIONS #39). Cakupan jaringan memakai
+ * `slug` (bukan `albumId`) supaya tak perlu query untuk membentuk kunci.
  */
 export async function startMomenSessionAction(
   slug: string,
@@ -176,10 +176,6 @@ export async function startMomenSessionAction(
 
   const rateKey = typeof slug === "string" ? slug.trim().toLowerCase() : "";
   if (
-    !checkRateLimit(
-      staticRateKey("momen-session-device", parsed.data.deviceId),
-      SESSION_DEVICE_LIMIT,
-    ).ok ||
     !(await checkClientRateLimit("momen-session", SESSION_VENUE_LIMIT, rateKey))
       .ok
   ) {
@@ -192,6 +188,18 @@ export async function startMomenSessionAction(
     await getClientIp(),
   );
   if (!okBot) return { status: "error", message: copy.momen.error.turnstile };
+
+  // Lapis perangkat SESUDAH Turnstile: `deviceId` di sini masih dari form, jadi
+  // bila dihitung sebelum gerbang bot, deviceId acak per request membuat kunci
+  // limiter tanpa batas dan mendesak penghitung lain keluar dari memori (#39).
+  if (
+    !checkRateLimit(
+      staticRateKey("momen-session-device", parsed.data.deviceId),
+      SESSION_DEVICE_LIMIT,
+    ).ok
+  ) {
+    return { status: "error", message: copy.momen.error.rateLimited };
+  }
 
   const admin = createSupabaseAdminClient();
   const album = await resolveActiveAlbum(admin, slug);

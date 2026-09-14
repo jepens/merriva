@@ -89,6 +89,11 @@ export const IPV6_AGGREGATE_FACTOR = 16;
  * publik, jadi tanpa scope satu resepsi ramai menghabiskan jatahnya sendiri —
  * dan jatah acara lain yang kebetulan sejaringan.
  *
+ * `identity` = kunci identitas tambahan (email, perangkat, …) yang ikut dicatat
+ * dalam satu keputusan dengan lapis jaringan: kunci pilihan pemanggil hanya
+ * tercipta bila batas jaringan lolos, sehingga tak bisa dibanjiri untuk
+ * mendesak penghitung lain keluar dari memori limiter (DECISIONS #39).
+ *
  * Kedua lapis dicatat SEMUA-ATAU-TIDAK (`checkRateLimitAll`): request yang
  * ditolak lapis mana pun tak mengubah bucket mana pun. Percobaan yang ditolak
  * di /64 tak menguras jatah tetangga sah di /48, dan percobaan yang ditolak di
@@ -98,6 +103,7 @@ export async function checkClientRateLimit(
   action: string,
   limit: RateLimitOptions,
   scope?: string,
+  identity: readonly RateLimitCheck[] = [],
 ): Promise<RateLimitResult> {
   const ip = await getClientIp();
   const prefix = scope === undefined ? "" : `${scope}|`;
@@ -115,5 +121,5 @@ export async function checkClientRateLimit(
       },
     });
   }
-  return checkRateLimitAll(checks);
+  return checkRateLimitAll([...checks, ...identity]);
 }

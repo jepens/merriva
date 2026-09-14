@@ -63,6 +63,117 @@ describe("checkRateLimit", () => {
     // dengan eviksi bertahap, count terjaga → remaining = 5 - 3 = 2.
     expect(checkRateLimit("victim", opts, now1).remaining).toBe(2);
   });
+
+  it("eviksi membuang bucket berasio isi TERENDAH dulu — penghitung yang sedang membatasi bertahan", () => {
+    const t0 = 9_000_000;
+    // Korban dibuat PALING AWAL dan sedang terkunci (3/3).
+    const hot = { max: 3, windowMs: 60_000 };
+    for (let i = 0; i < 3; i += 1) checkRateLimit("hot", hot, t0);
+    expect(checkRateLimit("hot", hot, t0).ok).toBe(false);
+
+    // Banjir kunci sampah AKTIF melampaui MAX_KEYS. Tiap kunci diisi 5 hit —
+    // LEBIH banyak dari korban (3), tetapi rasio isinya jauh lebih rendah
+    // (5/600): yang diukur rasio, bukan jumlah hit mentah.
+    const junk = { max: 600, windowMs: 60_000 };
+    for (let i = 0; i < 21_000; i += 1) {
+      for (let j = 0; j < 5; j += 1) checkRateLimit(`junk-${i}`, junk, t0 + 1);
+    }
+
+    expect(__rateLimitKeyCount()).toBeLessThanOrEqual(20_000);
+    // Dulu kunci TERTUA dibuang lebih dulu → korban ter-reset dan lolos lagi.
+    expect(checkRateLimit("hot", hot, t0 + 2).ok).toBe(false);
+  });
+
+  it("sapu kedaluwarsa memakai jendela bucket MASING-MASING, bukan jendela pemicu", () => {
+    const t0 = 10_000_000;
+    const long = { max: 3, windowMs: 900_000 }; // mis. auth-reset-email
+    for (let i = 0; i < 3; i += 1) checkRateLimit("long", long, t0);
+    const short = { max: 5, windowMs: 1000 };
+    for (let i = 0; i < 19_999; i += 1) checkRateLimit(`short-${i}`, short, t0);
+
+    // 2 dtk kemudian: kunci berjendela 1 dtk kedaluwarsa, "long" BELUM. Dulu
+    // pemicu berjendela 1 dtk ikut membuang "long" → email bisa dibom lagi.
+    checkRateLimit("trigger", short, t0 + 2000);
+    expect(checkRateLimit("long", long, t0 + 2000).ok).toBe(false);
+  });
+
+  it("bucket berjendela panjang yang penuh tak terbuang oleh sapu berjendela pendek", () => {
+    const t0 = 14_000_000;
+    const long = { max: 3, windowMs: 900_000 };
+    for (let i = 0; i < 3; i += 1) checkRateLimit("long", long, t0);
+
+    // 2 menit kemudian: banjir kunci AKTIF berjendela 60 dtk.
+    const junk = { max: 600, windowMs: 60_000 };
+    for (let i = 0; i < 20_500; i += 1) {
+      checkRateLimit(`junk-${i}`, junk, t0 + 120_000);
+    }
+
+    expect(checkRateLimit("long", long, t0 + 120_000).ok).toBe(false);
+  });
+
+  it("bucket kedaluwarsa dibuang dulu walau 'penuh' — penghitung aktif yang baru terisi sebagian tetap utuh", () => {
+    const t0 = 13_000_000;
+    const live = { max: 3, windowMs: 900_000 };
+    checkRateLimit("live", live, t0);
+    checkRateLimit("live", live, t0);
+    const short = { max: 1, windowMs: 1000 };
+    for (let i = 0; i < 19_999; i += 1) checkRateLimit(`stale-${i}`, short, t0);
+
+    checkRateLimit("pemicu", short, t0 + 5000);
+
+    // Hit ke-3 masih boleh, ke-4 ditolak. Bila "live" (rasio 0,67) dibuang di
+    // antara bucket basi yang tampak "penuh", penghitungnya ter-reset.
+    expect(checkRateLimit("live", live, t0 + 5000).ok).toBe(true);
+    expect(checkRateLimit("live", live, t0 + 5000).ok).toBe(false);
+  });
+
+  it("seri rasio isi: yang paling lama tak DIPERIKSA dibuang dulu — penghitung yang terus menolak dianggap aktif", () => {
+    const t0 = 12_000_000;
+    const one = { max: 1, windowMs: 60_000 };
+    checkRateLimit("blocker", one, t0); // penuh sejak t0, dibuat PALING AWAL
+    for (let i = 0; i < 19_998; i += 1)
+      checkRateLimit(`full-${i}`, one, t0 + 1);
+
+    // Penyalahguna terus mencoba: ditolak, tetapi tercatat sebagai aktivitas.
+    expect(checkRateLimit("blocker", one, t0 + 5).ok).toBe(false);
+    checkRateLimit("x1", one, t0 + 6);
+    checkRateLimit("x2", one, t0 + 6); // memicu eviksi
+
+    expect(checkRateLimit("blocker", one, t0 + 7).ok).toBe(false);
+  });
+
+  it("kunci milik request yang sedang diproses tidak ikut dibuang", () => {
+    const t0 = 11_000_000;
+    const self = { max: 10, windowMs: 60_000 };
+    for (let i = 0; i < 5; i += 1) checkRateLimit("self", self, t0);
+    const one = { max: 1, windowMs: 60_000 };
+    for (let i = 0; i < 19_999; i += 1)
+      checkRateLimit(`full-${i}`, one, t0 + 1);
+
+    expect(
+      checkRateLimitAll(
+        [
+          { key: "self", opts: self },
+          { key: "baru", opts: one },
+        ],
+        t0 + 2,
+      ).ok,
+    ).toBe(true);
+
+    // 5 + 1 hit → sisa 10 - 6 - 1 = 3. Bila "self" (rasio 0,5 — terendah) ikut
+    // dibuang lalu dibuat ulang, sisanya menjadi 8.
+    expect(checkRateLimit("self", self, t0 + 3).remaining).toBe(3);
+  });
+
+  it("eviksi menyisakan ruang ≥10% — sapu O(n) tak berjalan pada setiap kunci baru saat banjir", () => {
+    const one = { max: 1, windowMs: 60_000 };
+    for (let i = 0; i < 20_001; i += 1) {
+      checkRateLimit(`k-${i}`, one, 15_000_000);
+    }
+    // Tanpa ruang sisa, Map berhenti tepat di 20.000 dan kunci baru berikutnya
+    // memicu sapu + pengurutan ±20 ribu bucket SETIAP kali.
+    expect(__rateLimitKeyCount()).toBeLessThanOrEqual(18_000);
+  });
 });
 
 describe("checkRateLimitAll — semua-atau-tidak-sama-sekali", () => {
@@ -112,11 +223,11 @@ describe("checkRateLimitAll — semua-atau-tidak-sama-sekali", () => {
     expect(__rateLimitKeyCount()).toBe(1);
   });
 
-  it("dua kunci BARU saat Map hampir penuh: keduanya tetap tercatat meski eviksi membuang salah satunya", () => {
+  it("dua kunci BARU saat Map hampir penuh: keduanya tetap tercatat (dilindungi dari eviksi)", () => {
     const t0 = 8_000_000;
     const opts = { max: 1, windowMs: 1000 };
-    // 19.999 kunci AKTIF: eviksi fase 1 hanya bisa membuang bucket kosong —
-    // yakni kunci `a` yang baru saja dibuat untuk request ini.
+    // 19.999 kunci AKTIF & penuh: dua kunci baru request ini dilindungi dan
+    // dihitung sebagai `incoming`, jadi eviksi membuang kunci `live-*` lain.
     for (let i = 0; i < 19_999; i += 1) checkRateLimit(`live-${i}`, opts, t0);
 
     expect(
