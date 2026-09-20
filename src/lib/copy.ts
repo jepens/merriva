@@ -534,6 +534,15 @@ export const copy = {
     nav: {
       prev: "Sebelumnya",
       next: "Berikutnya",
+      // Langkah terakhir: menutup wizard dan membuka pratinjau.
+      finish: "Selesai",
+      finishing: "Menyimpan…",
+      finishFailed:
+        "Perubahan terakhir belum tersimpan, jadi halaman tidak dipindah. Periksa koneksi Anda lalu tekan Selesai lagi.",
+      // Ditolak server: mengirim ulang isi yang sama tak akan pernah berhasil,
+      // jadi pemilik diarahkan memperbaiki isian — bukan memeriksa koneksi.
+      finishRejected:
+        "Ada isian yang ditolak server, biasanya karena teksnya terlalu panjang. Perbaiki isian yang terakhir Anda ubah, lalu tekan Selesai lagi.",
     },
   },
   preview: {
@@ -546,6 +555,13 @@ export const copy = {
     themeUnavailable: "Tema undangan ini belum tersedia untuk pratinjau.",
     backToDashboard: "Kembali ke dashboard",
     frameTitle: "Pratinjau undangan di layar ponsel",
+    // CTA aktivasi di bar pratinjau pemilik. Lebih pendek daripada teks kartu
+    // dashboard (`dashboard.cardPay` dsb.) karena bar tetap harus muat di 360px.
+    activateCta: {
+      activate: "Aktifkan",
+      pay: "Bayar",
+      renew: "Perpanjang",
+    },
     // Showcase tema publik (/preview/tema/{slug}).
     useThisTheme: "Gunakan tema ini",
     showcaseNote:

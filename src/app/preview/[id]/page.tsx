@@ -10,6 +10,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
+import { activationCtaFor } from "@/lib/invitation-status";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildInvitationData, resolveMusic } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
@@ -39,11 +40,33 @@ export default async function PreviewPage({
 
   const editHref = `/dashboard/undangan/${id}/edit`;
 
-  // Shell: cukup bingkai + iframe. Data dirakit saat request `?embed=1` (isi
-  // iframe) → hindari fetch DB ganda.
+  // Shell: cukup bingkai + iframe. Data undangan dirakit saat request
+  // `?embed=1` (isi iframe) → hindari fetch DB ganda. Satu kolom tetap dibaca
+  // di sini, `status`: bar pratinjau harus tahu aksi aktivasi mana yang berlaku
+  // (baca PK, ringan). Sekalian menutup celah lama — id milik orang lain kini
+  // `notFound()`, bukan bingkai kosong yang iframe-nya baru gagal belakangan.
   if (!embed) {
+    const supabaseShell = await createSupabaseServerClient();
+    const { data: shellInv } = await supabaseShell
+      .from("invitations")
+      .select("status, purged_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (!shellInv) notFound();
+    const cta = activationCtaFor(shellInv.status, shellInv.purged_at);
     return (
-      <PreviewFrame embedSrc={`/preview/${id}?embed=1`} editHref={editHref} />
+      <PreviewFrame
+        embedSrc={`/preview/${id}?embed=1`}
+        editHref={editHref}
+        activate={
+          cta
+            ? {
+                href: `/dashboard/undangan/${id}/aktifkan`,
+                label: copy.preview.activateCta[cta],
+              }
+            : undefined
+        }
+      />
     );
   }
 

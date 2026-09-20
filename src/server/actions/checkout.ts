@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { copy } from "@/lib/copy";
+import { PAYABLE_STATUSES } from "@/lib/invitation-status";
 import { appUrl } from "@/lib/env";
 import { isUuid } from "@/lib/id";
 import { generateOrderCode } from "@/lib/order";
@@ -17,11 +18,6 @@ import { packageCodeSchema } from "@/lib/validation/checkout";
  */
 export type CheckoutState =
   { status: "redirect"; url: string } | { status: "error"; message?: string };
-
-// Status undangan yang boleh memulai pembayaran: draft (aktivasi pertama),
-// expired (perpanjangan), atau pending_payment (ulangi bayar). Bukan `active`
-// (sudah dibayar) / `suspended` (masalah konten → tak bisa self-service).
-const PAYABLE_STATUSES = new Set(["draft", "expired", "pending_payment"]);
 
 const ORDER_CODE_RETRIES = 5;
 
@@ -55,10 +51,17 @@ export async function createCheckoutAction(
   // Kepemilikan + status (RLS membatasi ke baris milik pemanggil).
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status, slug")
+    .select("id, status, slug, purged_at")
     .eq("id", invitationId)
     .maybeSingle();
   if (!inv) return { status: "error" };
+  // Kerangka pasca-retensi: foto/tamu/ucapan SUDAH dihapus permanen dan tak
+  // bisa dikembalikan. Baris begini disembunyikan dari dashboard, tetapi URL
+  // aktivasinya masih bisa dibuka dari tautan lama — jangan biarkan pemilik
+  // membayar perpanjangan untuk undangan yang isinya sudah tiada.
+  if (inv.purged_at) {
+    return { status: "error", message: copy.checkout.notPayable };
+  }
   if (!PAYABLE_STATUSES.has(inv.status)) {
     return { status: "error", message: copy.checkout.notPayable };
   }

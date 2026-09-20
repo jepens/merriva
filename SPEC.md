@@ -80,7 +80,7 @@ Posisi harga: di atas pemain perang-harga (Rp39–49rb) karena target kualitas p
 3. Pilih kategori acara (pernikahan / corporate / keluarga) → pilih tema → sistem membuat undangan berstatus `draft`.
 4. Mengisi **form multi-step** (lihat §4.4), draft tersimpan otomatis tiap step; tombol preview menampilkan hasil nyata dalam frame HP.
 5. Menentukan **slug** (alamat undangan, mis. `merriva.id/rina-dan-bima`) — dicek ketersediaannya real-time.
-6. Klik "Aktifkan" → pilih paket → diarahkan ke halaman pembayaran Pakasir → bayar QRIS/VA.
+6. Klik "Aktifkan" (dari kartu dashboard atau bar pratinjau pemilik) → pilih paket → diarahkan ke halaman pembayaran Pakasir → bayar QRIS/VA.
 7. Webhook pembayaran diterima, diverifikasi ulang ke API Pakasir → status `active`, email kuitansi + link undangan terkirim, klien kembali ke dashboard via `redirect`.
 8. Klien masuk menu **Tamu**: menambah/mengimpor daftar tamu → menyalin/mengirim pesan WA personal per tamu.
 
@@ -136,9 +136,9 @@ Form terstruktur per bagian; skema field **berbeda per kategori acara** namun di
 | 6. Amplop digital | Multi-rekening (bank, no., a.n.) + e-wallet + alamat kirim kado — toggle on/off | Opsional (mis. donasi) | Sama dengan pernikahan |
 | 7. Pengaturan | Pilih tema & varian warna, ucapan pembuka/penutup, kutipan ayat/quote, toggle tampil/sembunyi per section, moderasi ucapan on/off | Sama | Sama |
 
-Perilaku form: autosave per step (debounce) · indikator step selesai · upload foto dikompres di sisi klien menjadi **2 varian WebP** (thumbnail 400px + display maks 1600px, ±100–200KB) lalu diunggah lewat lapisan `lib/storage/` — bukan langsung ke vendor (lihat §6.4) · musik dipilih dari **library royalty-free bawaan platform** (±20 lagu instrumental) — tidak menerima upload MP3 bebas di MVP untuk menghindari masalah hak cipta · tombol "Preview" membuka undangan dalam mode draft (hanya bisa diakses pemilik).
+Perilaku form: autosave per step (debounce) · indikator step selesai · upload foto dikompres di sisi klien menjadi **2 varian WebP** (thumbnail 400px + display maks 1600px, ±100–200KB) lalu diunggah lewat lapisan `lib/storage/` — bukan langsung ke vendor (lihat §6.4) · musik dipilih dari **library royalty-free bawaan platform** (±20 lagu instrumental) — tidak menerima upload MP3 bebas di MVP untuk menghindari masalah hak cipta · tombol "Preview" membuka undangan dalam mode draft (hanya bisa diakses pemilik) · **step terakhir ditutup tombol "Selesai"** yang menuntaskan simpanan tertunda lebih dulu lalu membuka pratinjau pemilik; bila simpanan gagal, halaman TIDAK dipindah dan pesan gagal muncul · bar pratinjau pemilik menyediakan jalan lanjut ke aktivasi sesuai status undangan ("Aktifkan"/"Bayar"/"Perpanjang"; tidak ada untuk `active` & `suspended`) — ajakan ini tidak pernah tampil di pratinjau tema publik.
 
-**Kriteria terima:** klien bisa berpindah step tanpa kehilangan isian → refresh browser tidak menghilangkan data → foto 10MB dari kamera HP berhasil terkompres & terunggah di koneksi 4G → limit paket ditegakkan di server (bukan hanya di UI) → undangan `draft` tidak bisa diakses publik → validasi menampilkan pesan error bahasa Indonesia yang jelas per field.
+**Kriteria terima:** klien bisa berpindah step tanpa kehilangan isian → mengetik lalu LANGSUNG menekan "Selesai" tetap menyimpan ketikan terakhir sebelum pindah ke pratinjau → refresh browser tidak menghilangkan data → foto 10MB dari kamera HP berhasil terkompres & terunggah di koneksi 4G → limit paket ditegakkan di server (bukan hanya di UI) → undangan `draft` tidak bisa diakses publik → validasi menampilkan pesan error bahasa Indonesia yang jelas per field.
 
 ### 4.5 Halaman undangan publik (produk yang dilihat tamu — kualitas tertinggi)
 
@@ -170,6 +170,7 @@ Distribusi: halaman "Sebar Undangan" berisi template pesan yang bisa diedit deng
 
 **Alur integrasi (payment link — cara paling sederhana, dipakai MVP):**
 
+0. Gerbang sebelum checkout: undangan harus berstatus dapat-dibayar (`draft`/`pending_payment`/`expired`), sudah punya alamat (bukan slug `draft-…`), dan **belum di-purge** — baris ber-`purged_at` (foto/tamu/ucapan sudah dihapus permanen oleh retensi) tak bisa dibayar, supaya klien tak membeli perpanjangan untuk undangan yang isinya sudah tiada.
 1. Klien pilih paket → server membuat `order` (`pending`, `order_id` unik, `amount` integer).
 2. Redirect ke `https://app.pakasir.com/pay/{project_slug}/{amount}?order_id={order_id}&redirect={URL_dashboard_sukses}` (opsi `qris_only=1` bila ingin QRIS saja).
 3. Pakasir mengirim **webhook POST** ke URL yang dikonfigurasi, payload: `{amount, order_id, project, status, payment_method, completed_at}`.

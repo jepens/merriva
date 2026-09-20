@@ -433,6 +433,32 @@ Dua niat tertulis bertabrakan: `src/server/marketing/catalog.ts` sengaja **gagal
 
 ---
 
+## #40 — 2026-09-20 · Step terakhir editor: "Selesai" → pratinjau → aktivasi, dengan autosave yang ditunggu
+
+**Konteks:** tombol kanan wizard editor di-disable mati di step terakhir (`disabled={step === steps.length - 1}`). Pemilik yang sudah mengisi semua step menyangka formnya rusak — tidak ada apa pun yang menunjukkan langkah berikutnya, dan tidak ada satu pun tautan ke `/preview/{id}` di seluruh dasbor. Sekaligus ada bug yang tak terlihat: autosave men-debounce 800 ms dan cleanup `useEffect` membuang timer yang tertunda, jadi berpindah halaman tepat setelah mengetik menelan ketikan terakhir tanpa jejak.
+
+**Keputusan:**
+1. Di step terakhir tombol kanan menjadi "Selesai" → `/preview/{invitationId}`. Navigasi DITUNDA sampai `flush()` autosave selesai; simpan gagal → tetap di editor, pesan `role="alert"`, tombol hidup lagi.
+2. `useDraftAutosave` mengembalikan `{ status, flush }`. Semua simpan diserialisasi lewat satu rantai promise dan snapshot `form.getValues()` diambil saat gilirannya tiba, jadi request lama tak pernah menimpa yang baru. Saat unmount, timer yang tertunda tidak dibuang: simpanannya tetap dikirim (best-effort). `flush()` menguras perubahan berulang (maks 5 putaran) supaya ketikan yang masuk selagi simpan berjalan ikut terkirim.
+2b. **Penolakan server dibedakan dari gangguan transport** (temuan review, severity tinggi): `ActionState` ber-`fieldErrors` = skema server menolak isi (mis. narasi melebihi 2.000 karakter — Textarea editor tak punya `maxLength`), dan payload yang sama persis pasti ditolak lagi. Kasus itu TIDAK diantre ulang dan memakai pesan sendiri yang menyuruh pemilik memperbaiki isian, bukan "periksa koneksi". Tanpa pemisahan ini satu penolakan membuat `dirty` macet selamanya: tombol Selesai jadi jalan buntu permanen DAN setiap ketikan sesudahnya gagal tersimpan dalam senyap.
+2c. Indikator hanya menulis "Tersimpan" bila benar-benar tak ada perubahan tertunda; pesan kegagalan diletakkan di ATAS baris tombol lalu digulirkan ke layar (di ponsel baris tombol sering sudah di batas bawah viewport), dan hilang sendiri begitu simpanan berikutnya berhasil.
+3. Bar pratinjau pemilik mendapat CTA aktivasi per status dari `lib/invitation-status.ts` — satu sumber kebenaran yang dipakai bersama kartu dashboard. `active` & `suspended` tak punya CTA. Undangan ber-`purged_at` juga tidak: datanya sudah dihapus permanen, jadi menawarkan perpanjangan berarti menjual undangan kosong. Gerbangnya ditutup di SERVER juga (`createCheckoutAction` menolak, halaman `/aktifkan` `notFound()`), bukan hanya di UI — dashboard menyembunyikan baris purged, tetapi URL aktivasinya masih bisa dibuka dari tautan lama.
+4. Props chrome pratinjau menjadi union terdiskriminasi `PreviewChrome`: kombinasi "demo + CTA pemilik" tak bisa ditulis, jadi kebocoran CTA ke showcase tema publik adalah galat kompilasi.
+
+**Alasan:** tombol mati adalah jalan buntu di titik paling bernilai dalam corong (tepat sebelum bayar). Pratinjau dipilih sebagai perantara — bukan langsung ke checkout — karena pemilik memang perlu melihat hasilnya sebelum memutuskan membayar, dan bar pratinjau sudah punya jalan pulang ke editor. Menunggu flush adalah syarat, bukan hiasan: tanpa itu fitur baru ini justru MENAMBAH peluang kehilangan data, karena ia mendorong pemilik berpindah halaman persis setelah mengetik.
+
+**Ditolak:** `<Link>` bergaya tombol (href asli & bisa buka tab baru, tetapi navigasi harus menunggu simpan — anchor yang di-`preventDefault` lalu `router.push` hanya menambah jalur yang bisa salah); memblokir "Selesai" bila ada step belum lengkap (draft memang boleh belum lengkap, dan gerbang slug/paket sudah ada di halaman aktivasi); menurunkan `PAYABLE_STATUSES` dari peta CTA (label UI tak boleh melebarkan gerbang uang — keduanya dijaga selaras oleh test); `beforeunload`/`visibilitychange` untuk menyimpan saat tab ditutup (mematikan bfcache; jalur kehilangan utama sudah ditutup flush + simpan-saat-unmount); `AbortController` untuk membatalkan simpan in-flight (request yang sudah tiba di server tetap menulis — pembatalan sisi klien hanya menyembunyikan kegagalan).
+
+**Konsekuensi:**
+- Kontrak `useDraftAutosave` berubah dari `SaveStatus` menjadi `{ status, flush }`; hanya `EditorShell` yang memakainya.
+- Shell `/preview/[id]` kini membaca satu kolom `status` (lookup PK) untuk menentukan CTA. Efek samping yang diinginkan: id milik orang lain langsung `notFound()`, bukan bingkai kosong yang iframe-nya gagal belakangan.
+- Simpan saat unmount bersifat best-effort dan SENYAP bila gagal (komponen sudah lepas) — tetap lebih baik daripada perilaku lama yang pasti membuang. Menutup tab di tengah jendela debounce masih bisa kehilangan ketikan terakhir; itu risiko yang diterima sadar.
+- CTA memakai label lebih pendek daripada kartu dashboard ("Bayar" vs "Lanjutkan pembayaran") karena bar pratinjau tetap harus muat di layar 360px (bar butuh 241px, diukur di browser).
+- Sumber penolakan validasi belum ditutup di hulu: input editor masih boleh melebihi batas skema draft (`narrative` 2.000 karakter, story `.max(20)`, sesi jadwal `.max(10)`) karena tak ada `maxLength`/pembatas tombol "Tambah". Perubahan ini membuat kegagalannya jujur dan bisa dipulihkan, tetapi pencegahannya (batas di klien) masih pekerjaan terbuka.
+- Uji mutasi 12 varian (tombol kembali di-disable, navigasi tanpa menunggu flush, hasil flush diabaikan, label bocor ke langkah lain, alert tak dirender, penolakan diantre ulang, penolakan disamakan dengan transport, flush satu putaran, indikator berbohong, simpan-saat-unmount dibuang, gerbang `!demo` dicabut, `purged_at` diabaikan) — seluruhnya merah di test baru.
+
+---
+
 ## Template entri baru
 
 ```

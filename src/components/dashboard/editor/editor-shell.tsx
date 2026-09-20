@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
+  useCallback,
   useState,
   type Dispatch,
   type ReactNode,
@@ -20,7 +22,11 @@ import { cn } from "@/lib/utils";
 import type { InvitationMediaView } from "@/types/invitation";
 
 import type { EditorValues, SongOption } from "./types";
-import { useDraftAutosave, type SaveStatus } from "./use-autosave";
+import {
+  useDraftAutosave,
+  type FlushResult,
+  type SaveStatus,
+} from "./use-autosave";
 
 /** Konteks yang diberikan ke tiap step (form + helper galeri + identitas). */
 export interface EditorStepContext {
@@ -87,7 +93,39 @@ export function EditorShell({
   });
   const [step, setStep] = useState(0);
   const [media, setMedia] = useState<InvitationMediaView[]>(initialMedia);
-  const saveStatus = useDraftAutosave(form, invitationId);
+  const { status: saveStatus, flush } = useDraftAutosave(form, invitationId);
+  const router = useRouter();
+  const [finishing, setFinishing] = useState(false);
+  const [finishProblem, setFinishProblem] = useState<Exclude<
+    FlushResult,
+    "ok"
+  > | null>(null);
+  const isLast = step === steps.length - 1;
+  // Keluhan diturunkan, bukan disimpan: begitu ada simpanan yang berhasil ia
+  // hilang sendiri — tak perlu efek yang menyetel state (dan memicu render
+  // berantai), dan mustahil tertinggal basi di layar.
+  const masalahTampak = finishProblem !== null && saveStatus !== "saved";
+
+  /**
+   * Langkah terakhir → pratinjau (SPEC §4.4). Autosave di-debounce 800 ms, jadi
+   * navigasi harus MENUNGGU simpanan tertunda: tanpa ini ketikan terakhir ikut
+   * hilang saat editor ter-unmount. Simpan gagal → tetap di halaman, pemilik
+   * diberi tahu dan bisa menekan tombolnya lagi.
+   */
+  const handleFinish = useCallback(async () => {
+    if (finishing) return;
+    setFinishing(true);
+    setFinishProblem(null);
+    const hasil = await flush();
+    if (hasil !== "ok") {
+      setFinishProblem(hasil);
+      setFinishing(false);
+      return;
+    }
+    // `finishing` sengaja dibiarkan true: tombol tetap terkunci sampai halaman
+    // pratinjau menggantikan editor (tak ada navigasi ganda).
+    router.push(`/preview/${invitationId}`);
+  }, [finishing, flush, invitationId, router]);
 
   const ctx: EditorStepContext = {
     form,
@@ -121,19 +159,45 @@ export function EditorShell({
         <CardContent className="py-6">{steps[step].render(ctx)}</CardContent>
       </Card>
 
+      {masalahTampak ? (
+        <p
+          role="alert"
+          // Di ponsel baris tombol sering sudah di batas bawah layar: pesan
+          // ditaruh DI ATASnya dan digulirkan, supaya kegagalan tak terasa
+          // seperti tombol yang diam saja.
+          ref={(el) => {
+            el?.scrollIntoView({ block: "nearest" });
+          }}
+          className="text-destructive text-sm"
+        >
+          {finishProblem === "rejected"
+            ? copy.editor.nav.finishRejected
+            : copy.editor.nav.finishFailed}
+        </p>
+      ) : null}
+
       <div className="flex items-center justify-between">
         <Button
           variant="outline"
-          disabled={step === 0}
+          disabled={step === 0 || finishing}
           onClick={() => setStep((s) => Math.max(0, s - 1))}
         >
           {copy.editor.nav.prev}
         </Button>
         <Button
-          disabled={step === steps.length - 1}
-          onClick={() => setStep((s) => Math.min(steps.length - 1, s + 1))}
+          disabled={finishing}
+          aria-busy={finishing}
+          onClick={
+            isLast
+              ? () => void handleFinish()
+              : () => setStep((s) => Math.min(steps.length - 1, s + 1))
+          }
         >
-          {copy.editor.nav.next}
+          {isLast
+            ? finishing
+              ? copy.editor.nav.finishing
+              : copy.editor.nav.finish
+            : copy.editor.nav.next}
         </Button>
       </div>
     </div>
@@ -150,6 +214,7 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
         : copy.editor.save.saved;
   return (
     <span
+      role="status"
       className={cn(
         "text-xs",
         status === "error" ? "text-destructive" : "text-muted-foreground",

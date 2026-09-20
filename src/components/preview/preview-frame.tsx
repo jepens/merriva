@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { copy } from "@/lib/copy";
 
-import { PreviewBanner } from "./preview-banner";
+import { PreviewBanner, type PreviewChrome } from "./preview-banner";
 
 /**
  * Bingkai ponsel untuk pratinjau tema. Halaman undangan dibuka mayoritas di
@@ -16,19 +16,16 @@ import { PreviewBanner } from "./preview-banner";
  */
 export function PreviewFrame({
   embedSrc,
-  demo = false,
-  editHref,
   footer,
+  ...chrome
 }: {
   embedSrc: string;
-  demo?: boolean;
-  editHref?: string;
   /** Baris di bawah bingkai (mis. atribusi Pexels) — disembunyikan saat layar penuh ponsel. */
   footer?: ReactNode;
-}) {
+} & PreviewChrome) {
   return (
     <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-gradient-to-b from-neutral-50 to-neutral-200 px-4 pt-14 pb-8 max-[430px]:p-0 max-[430px]:pt-9">
-      <PreviewBanner demo={demo} editHref={editHref} />
+      <PreviewBanner {...chrome} />
       <div className="relative flex h-[min(880px,calc(100dvh-6.5rem))] w-[392px] max-w-full flex-col rounded-[2.75rem] bg-neutral-900 p-[11px] shadow-[0_35px_70px_-20px_rgba(0,0,0,0.4)] ring-1 ring-black/10 max-[430px]:h-[calc(100dvh-2.25rem)] max-[430px]:w-full max-[430px]:rounded-none max-[430px]:p-0 max-[430px]:shadow-none max-[430px]:ring-0">
         {/* Speaker — di dalam bezel atas (tak menutup konten); sembunyi saat layar penuh */}
         <span

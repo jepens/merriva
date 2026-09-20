@@ -34,10 +34,13 @@ export default async function ActivateInvitationPage({
   const supabase = await createSupabaseServerClient();
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status, slug")
+    .select("id, status, slug, purged_at")
     .eq("id", id)
     .maybeSingle();
   if (!inv) notFound();
+  // Data pribadi sudah dihapus permanen (retensi) → dashboard menyembunyikannya;
+  // halaman aktivasi pun tak boleh jadi pintu belakang untuk membayarnya.
+  if (inv.purged_at) notFound();
   if (inv.status === "active") redirect("/dashboard");
   if (inv.status === "suspended") notFound();
 
