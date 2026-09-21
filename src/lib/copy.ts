@@ -457,6 +457,10 @@ export const copy = {
       bankEmpty: "Belum ada rekening.",
       ewalletEmpty: "Belum ada e-wallet.",
       storyEmpty: "Belum ada cerita.",
+      // Tombol "Tambah" dinonaktifkan saat daftar penuh — alasannya WAJIB
+      // terlihat (tombol mati tanpa penjelasan terasa seperti form rusak).
+      full: (n: number) =>
+        `Maksimal ${n.toLocaleString("id-ID")} entri. Hapus salah satu untuk menambah yang baru.`,
     },
     sections: {
       countdown: "Hitung mundur",
@@ -541,9 +545,25 @@ export const copy = {
         "Perubahan terakhir belum tersimpan, jadi halaman tidak dipindah. Periksa koneksi Anda lalu tekan Selesai lagi.",
       // Ditolak server: mengirim ulang isi yang sama tak akan pernah berhasil,
       // jadi pemilik diarahkan memperbaiki isian — bukan memeriksa koneksi.
-      finishRejected:
-        "Ada isian yang ditolak server, biasanya karena teksnya terlalu panjang. Perbaiki isian yang terakhir Anda ubah, lalu tekan Selesai lagi.",
+      finishRejected: (langkah: string) =>
+        `Ada isian yang perlu diperbaiki di langkah ${langkah}. Perbaiki isian bertanda merah, lalu tekan Selesai lagi.`,
+      // Penolakan yang path-nya tak dikenali langkah mana pun.
+      finishRejectedUnknown:
+        "Ada isian yang ditolak server. Periksa isian bertanda merah, lalu tekan Selesai lagi.",
     },
+    // Pesan per isian saat skema draft menolak (DECISIONS #41) — pengganti
+    // pesan bawaan Zod yang berbahasa Inggris.
+    validation: {
+      tooLong: (n: number) => `Maksimal ${n.toLocaleString("id-ID")} karakter.`,
+      tooMany: (n: number) => `Maksimal ${n.toLocaleString("id-ID")} entri.`,
+      required: "Wajib diisi.",
+      invalid: "Isian ini belum valid.",
+    },
+    // Penghitung karakter isian panjang (mis. "1.850/2.000 karakter").
+    counter: (len: number, max: number) =>
+      `${len.toLocaleString("id-ID")}/${max.toLocaleString("id-ID")} karakter`,
+    // Teks pembaca layar pada langkah yang berisi isian bermasalah.
+    stepNeedsFix: "perlu diperbaiki",
   },
   preview: {
     badge: "Pratinjau",

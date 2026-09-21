@@ -165,6 +165,23 @@ describe("createCheckoutAction — gerbang sebelum order dibuat", () => {
     },
   );
 
+  it("undangan yang datanya sudah di-purge TIDAK bisa dibayar (DECISIONS #40)", async () => {
+    // Kerangka pasca-retensi: foto/tamu/ucapan sudah dihapus permanen. Dashboard
+    // menyembunyikannya, tetapi URL aktivasi lama masih bisa dibuka.
+    setup({
+      id: INV,
+      status: "expired",
+      slug: "andi-sinta",
+      purged_at: "2026-01-05T00:00:00.000Z",
+    });
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res.status).toBe("error");
+    expect(orders()).toHaveLength(0);
+    expect(createPaymentLink).not.toHaveBeenCalled();
+  });
+
   it("slug masih `draft-…` → diblokir SEBELUM order (alamat terkunci saat aktif)", async () => {
     setup({ id: INV, status: "draft", slug: "draft-a1b2c3" });
 

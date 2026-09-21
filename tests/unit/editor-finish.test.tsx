@@ -276,7 +276,7 @@ describe("ketikan terakhir sebelum berpindah halaman", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(
-        copy.editor.nav.finishRejected,
+        copy.editor.nav.finishRejectedUnknown,
       ),
     );
     expect(push).not.toHaveBeenCalled();
@@ -286,7 +286,7 @@ describe("ketikan terakhir sebelum berpindah halaman", () => {
     await user.click(tombolKanan());
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(
-        copy.editor.nav.finishRejected,
+        copy.editor.nav.finishRejectedUnknown,
       ),
     );
     expect(saveDraft).toHaveBeenCalledTimes(sesudahTolakan);

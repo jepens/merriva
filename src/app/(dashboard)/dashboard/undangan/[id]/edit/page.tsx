@@ -15,8 +15,7 @@ import { getStorage } from "@/lib/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   DEFAULT_SETTINGS,
-  draftContentSchema,
-  emptyContent,
+  editableContent,
   settingsSchema,
 } from "@/lib/validation/content";
 import { requireUser } from "@/server/guards/auth";
@@ -44,10 +43,9 @@ export default async function EditInvitationPage({
 
   if (!inv) notFound();
 
-  const parsedContent = draftContentSchema.safeParse(inv.content);
-  const content = parsedContent.success
-    ? parsedContent.data
-    : draftContentSchema.parse(emptyContent(inv.category));
+  // Isi yang tak lolos skema draft tetap ditampilkan (bukan diganti kosong lalu
+  // tertimpa autosave) — lihat `editableContent`.
+  const content = editableContent(inv.content, inv.category);
 
   const parsedSettings = settingsSchema.safeParse(inv.settings);
   const settings = parsedSettings.success

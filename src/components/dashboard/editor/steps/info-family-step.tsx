@@ -5,6 +5,7 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy";
+import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 import { slugify, slugSchema } from "@/lib/slug";
 
 import { Field } from "../field";
@@ -39,6 +40,7 @@ export function InfoFamilyStep({
       <Field label={copy.editor.fields.eventName} htmlFor="eventName">
         <Input
           id="eventName"
+          maxLength={L.family.eventName}
           placeholder={copy.editor.fields.eventNamePlaceholder}
           {...register("content.eventName")}
         />
@@ -46,6 +48,7 @@ export function InfoFamilyStep({
       <Field label={copy.editor.fields.celebrant} htmlFor="celebrant">
         <Input
           id="celebrant"
+          maxLength={L.family.celebrant}
           placeholder={copy.editor.fields.celebrantPlaceholder}
           {...register("content.celebrant")}
         />
@@ -53,12 +56,18 @@ export function InfoFamilyStep({
       <Field label={copy.editor.fields.parents} htmlFor="parents">
         <Input
           id="parents"
+          maxLength={L.family.parents}
           placeholder={copy.editor.fields.parentsPlaceholder}
           {...register("content.parents")}
         />
       </Field>
       <Field label={copy.editor.fields.eventDate} htmlFor="eventDate">
-        <Input id="eventDate" type="date" {...register("eventDate")} />
+        <Input
+          id="eventDate"
+          type="date"
+          max="9999-12-31"
+          {...register("eventDate")}
+        />
       </Field>
     </div>
   );

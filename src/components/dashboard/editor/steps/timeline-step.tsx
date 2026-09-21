@@ -9,15 +9,24 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { copy } from "@/lib/copy";
+import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
 import { Field } from "../field";
+import { AddButton } from "../add-button";
+import { LimitedTextarea } from "../limited-textarea";
 import type { EditorValues } from "../types";
 
 /** Path array linimasa per kategori (love story / agenda / doa & harapan). */
 export type TimelinePath =
   "content.story" | "content.agenda" | "content.wishes";
+
+/** Batas jumlah entri per daftar linimasa — sama dengan skema server. */
+const TIMELINE_MAX: Record<TimelinePath, number> = {
+  "content.story": L.wedding.story,
+  "content.agenda": L.corporate.agenda,
+  "content.wishes": L.family.wishes,
+};
 
 export interface TimelineLabels {
   add: string;
@@ -70,27 +79,35 @@ export function TimelineStep({
             </Button>
           </div>
           <Field label={labels.title}>
-            <Input {...register(path(i, "title"))} />
+            <Input
+              maxLength={L.storyEntry.title}
+              {...register(path(i, "title"))}
+            />
           </Field>
           <Field label={labels.date}>
             <Input
               placeholder={labels.datePlaceholder}
+              maxLength={L.storyEntry.date}
               {...register(path(i, "date"))}
             />
           </Field>
           <Field label={labels.narrative}>
-            <Textarea {...register(path(i, "narrative"))} />
+            <LimitedTextarea
+              form={form}
+              name={path(i, "narrative")}
+              max={L.storyEntry.narrative}
+            />
           </Field>
         </div>
       ))}
 
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => append({ title: "", date: "", narrative: "" })}
+      <AddButton
+        count={fields.length}
+        max={TIMELINE_MAX[name]}
+        onAdd={() => append({ title: "", date: "", narrative: "" })}
       >
         {labels.add}
-      </Button>
+      </AddButton>
     </div>
   );
 }

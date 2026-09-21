@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { httpsUrlSchema } from "./shared";
+import { FIELD_LIMITS as L } from "./field-limits";
 
 /**
  * Input satu sesi acara → baris `invitation_events` (SPEC §4.4 step 3;
@@ -21,19 +22,22 @@ const localDateTime = z
 // selaras livestreamUrl). Kosong/null → undefined (opsional).
 const optionalUrl = z.preprocess(
   (v) => (v === "" || v == null ? undefined : v),
-  httpsUrlSchema(500, "Tautan peta harus URL https yang valid").optional(),
+  httpsUrlSchema(
+    L.event.mapsUrl,
+    "Tautan peta harus URL https yang valid",
+  ).optional(),
 );
 
 export const eventInputSchema = z
   .object({
-    name: z.string().trim().min(1, "Nama sesi wajib diisi").max(80),
+    name: z.string().trim().min(1, "Nama sesi wajib diisi").max(L.event.name),
     startAt: localDateTime,
     endAt: z.preprocess(
       (v) => (v === "" || v == null ? undefined : v),
       localDateTime.optional(),
     ),
-    venueName: z.string().trim().max(160).optional(),
-    address: z.string().trim().max(400).optional(),
+    venueName: z.string().trim().max(L.event.venueName).optional(),
+    address: z.string().trim().max(L.event.address).optional(),
     mapsUrl: optionalUrl,
   })
   .refine((e) => !e.endAt || Date.parse(e.endAt) >= Date.parse(e.startAt), {
@@ -42,7 +46,7 @@ export const eventInputSchema = z
   });
 
 /** Daftar sesi acara (minimal 1 saat aktivasi; kosong diperbolehkan saat draft). */
-export const eventListSchema = z.array(eventInputSchema).max(10);
+export const eventListSchema = z.array(eventInputSchema).max(L.event.sessions);
 
 export type EventInput = z.infer<typeof eventInputSchema>;
 
@@ -53,17 +57,17 @@ export type EventInput = z.infer<typeof eventInputSchema>;
  * `startAt`/`endAt` = waktu-lokal (`YYYY-MM-DDTHH:mm`) di `settings.timezone`.
  */
 export const eventDraftSchema = z.object({
-  name: z.string().trim().max(80).optional(),
+  name: z.string().trim().max(L.event.name).optional(),
   startAt: z.string().trim().max(40).optional(),
   endAt: z.string().trim().max(40).optional(),
-  venueName: z.string().trim().max(160).optional(),
-  address: z.string().trim().max(400).optional(),
-  mapsUrl: z.string().trim().max(500).optional(),
+  venueName: z.string().trim().max(L.event.venueName).optional(),
+  address: z.string().trim().max(L.event.address).optional(),
+  mapsUrl: z.string().trim().max(L.event.mapsUrl).optional(),
 });
 
 export const eventDraftListSchema = z
   .array(eventDraftSchema)
-  .max(10)
+  .max(L.event.sessions)
   .default([]);
 
 export type EventDraft = z.infer<typeof eventDraftSchema>;

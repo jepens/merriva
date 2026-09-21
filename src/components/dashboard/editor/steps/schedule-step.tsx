@@ -4,10 +4,12 @@ import { useFieldArray, type UseFormReturn } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { copy } from "@/lib/copy";
+import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
 import { Field } from "../field";
+import { AddButton } from "../add-button";
+import { LimitedTextarea } from "../limited-textarea";
 import type { EditorValues } from "../types";
 
 export function ScheduleStep({ form }: { form: UseFormReturn<EditorValues> }) {
@@ -39,6 +41,7 @@ export function ScheduleStep({ form }: { form: UseFormReturn<EditorValues> }) {
           <Field label={copy.editor.schedule.name}>
             <Input
               placeholder={copy.editor.schedule.namePlaceholder}
+              maxLength={L.event.name}
               {...register(`events.${i}.name`)}
             />
           </Field>
@@ -46,32 +49,45 @@ export function ScheduleStep({ form }: { form: UseFormReturn<EditorValues> }) {
             <Field label={copy.editor.schedule.start}>
               <Input
                 type="datetime-local"
+                max="9999-12-31T23:59"
                 {...register(`events.${i}.startAt`)}
               />
             </Field>
             <Field label={copy.editor.schedule.end}>
-              <Input type="datetime-local" {...register(`events.${i}.endAt`)} />
+              <Input
+                type="datetime-local"
+                max="9999-12-31T23:59"
+                {...register(`events.${i}.endAt`)}
+              />
             </Field>
           </div>
           <Field label={copy.editor.schedule.venue}>
-            <Input {...register(`events.${i}.venueName`)} />
+            <Input
+              maxLength={L.event.venueName}
+              {...register(`events.${i}.venueName`)}
+            />
           </Field>
           <Field label={copy.editor.schedule.address}>
-            <Textarea {...register(`events.${i}.address`)} />
+            <LimitedTextarea
+              form={form}
+              name={`events.${i}.address`}
+              max={L.event.address}
+            />
           </Field>
           <Field label={copy.editor.schedule.mapsUrl}>
             <Input
               placeholder="https://maps.google.com/…"
+              maxLength={L.event.mapsUrl}
               {...register(`events.${i}.mapsUrl`)}
             />
           </Field>
         </div>
       ))}
 
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() =>
+      <AddButton
+        count={fields.length}
+        max={L.event.sessions}
+        onAdd={() =>
           append({
             name: "",
             startAt: "",
@@ -83,7 +99,7 @@ export function ScheduleStep({ form }: { form: UseFormReturn<EditorValues> }) {
         }
       >
         {copy.editor.schedule.add}
-      </Button>
+      </AddButton>
     </div>
   );
 }

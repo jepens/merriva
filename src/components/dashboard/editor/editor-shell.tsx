@@ -21,6 +21,8 @@ import { copy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import type { InvitationMediaView } from "@/types/invitation";
 
+import { EditorErrorsContext } from "./editor-errors";
+import { stepForPath } from "./step-fields";
 import type { EditorValues, SongOption } from "./types";
 import {
   useDraftAutosave,
@@ -93,7 +95,11 @@ export function EditorShell({
   });
   const [step, setStep] = useState(0);
   const [media, setMedia] = useState<InvitationMediaView[]>(initialMedia);
-  const { status: saveStatus, flush } = useDraftAutosave(form, invitationId);
+  const {
+    status: saveStatus,
+    flush,
+    rejected,
+  } = useDraftAutosave(form, invitationId);
   const router = useRouter();
   const [finishing, setFinishing] = useState(false);
   const [finishProblem, setFinishProblem] = useState<Exclude<
@@ -105,6 +111,20 @@ export function EditorShell({
   // hilang sendiri — tak perlu efek yang menyetel state (dan memicu render
   // berantai), dan mustahil tertinggal basi di layar.
   const masalahTampak = finishProblem !== null && saveStatus !== "saved";
+
+  // Langkah yang berisi isian yang ditolak autosave terakhir — pemilik sering
+  // sudah pindah langkah saat penolakan datang, jadi penanda di navigasi dan
+  // nama langkah di pesan adalah satu-satunya jalan menemukan isiannya.
+  const stepKeys = steps.map((s) => s.key);
+  const invalidSteps = new Set(
+    Object.keys(rejected ?? {})
+      .map((path) => stepForPath(path, stepKeys))
+      .filter((key): key is string => key !== null),
+  );
+  const invalidStepLabels = steps
+    .filter((s) => invalidSteps.has(s.key))
+    .map((s) => s.label)
+    .join(", ");
 
   /**
    * Langkah terakhir → pratinjau (SPEC §4.4). Autosave di-debounce 800 ms, jadi
@@ -153,10 +173,15 @@ export function EditorShell({
         current={step}
         onSelect={setStep}
         mediaCount={media.length}
+        invalid={invalidSteps}
       />
 
       <Card>
-        <CardContent className="py-6">{steps[step].render(ctx)}</CardContent>
+        <CardContent className="py-6">
+          <EditorErrorsContext.Provider value={rejected}>
+            {steps[step].render(ctx)}
+          </EditorErrorsContext.Provider>
+        </CardContent>
       </Card>
 
       {masalahTampak ? (
@@ -170,9 +195,11 @@ export function EditorShell({
           }}
           className="text-destructive text-sm"
         >
-          {finishProblem === "rejected"
-            ? copy.editor.nav.finishRejected
-            : copy.editor.nav.finishFailed}
+          {finishProblem !== "rejected"
+            ? copy.editor.nav.finishFailed
+            : invalidStepLabels
+              ? copy.editor.nav.finishRejected(invalidStepLabels)
+              : copy.editor.nav.finishRejectedUnknown}
         </p>
       ) : null}
 
@@ -231,12 +258,15 @@ function StepNav({
   current,
   onSelect,
   mediaCount,
+  invalid,
 }: {
   control: Control<EditorValues>;
   steps: EditorStep[];
   current: number;
   onSelect: (index: number) => void;
   mediaCount: number;
+  /** Kunci langkah yang berisi isian yang ditolak autosave. */
+  invalid: ReadonlySet<string>;
 }) {
   const content = useWatch({ control, name: "content" });
   const eventDate = useWatch({ control, name: "eventDate" });
@@ -260,6 +290,7 @@ function StepNav({
               type="button"
               onClick={() => onSelect(i)}
               aria-current={active ? "step" : undefined}
+              data-step-key={s.key}
               className={cn(
                 "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
                 active
@@ -280,6 +311,15 @@ function StepNav({
                 {done ? "✓" : i + 1}
               </span>
               {s.label}
+              {invalid.has(s.key) ? (
+                <>
+                  <span
+                    aria-hidden
+                    className="bg-destructive size-1.5 rounded-full"
+                  />
+                  <span className="sr-only">{copy.editor.stepNeedsFix}</span>
+                </>
+              ) : null}
             </button>
           </li>
         );

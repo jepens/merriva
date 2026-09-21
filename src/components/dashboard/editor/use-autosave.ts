@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FieldValues, UseFormReturn } from "react-hook-form";
 
 import { saveInvitationDraftAction } from "@/server/actions/invitation";
+import type { FieldErrors } from "@/server/actions/types";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -24,6 +25,11 @@ export interface DraftAutosave {
    * selain itu pemanggil WAJIB tetap di halaman.
    */
   flush: () => Promise<FlushResult>;
+  /**
+   * Galat per isian dari penolakan TERAKHIR (kunci = path lengkap, sama
+   * dengan `name` isian); `null` begitu ada simpanan yang diterima.
+   */
+  rejected: FieldErrors | null;
 }
 
 /**
@@ -46,6 +52,7 @@ export function useDraftAutosave<T extends FieldValues>(
   delay = 800,
 ): DraftAutosave {
   const [status, setStatus] = useState<SaveStatus>("idle");
+  const [rejected, setRejected] = useState<FieldErrors | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Ekor rantai: simpan berjalan SATU per satu (request lama tak menimpa baru). */
   const chain = useRef<Promise<void>>(Promise.resolve());
@@ -87,6 +94,12 @@ export function useDraftAutosave<T extends FieldValues>(
             : res.fieldErrors
               ? "rejected"
               : "failed";
+        // Tandai isian yang ditolak; simpanan sukses menghapus tandanya.
+        // Gangguan transport tak mengubah tanda: isinya belum dinilai ulang.
+        if (mounted.current) {
+          if (res.status !== "error") setRejected(null);
+          else if (res.fieldErrors) setRejected(res.fieldErrors);
+        }
       } catch {
         failure.current = "failed";
       }
@@ -134,5 +147,5 @@ export function useDraftAutosave<T extends FieldValues>(
     };
   }, [form, delay, mark, save]);
 
-  return { status, flush };
+  return { status, flush, rejected };
 }

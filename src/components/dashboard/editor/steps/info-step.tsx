@@ -5,6 +5,7 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy";
+import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 import { slugify, slugSchema } from "@/lib/slug";
 
 import { Field } from "../field";
@@ -46,20 +47,34 @@ export function InfoStep({
       <Field label={copy.editor.fields.title} htmlFor="title">
         <Input
           id="title"
+          maxLength={L.wedding.title}
           placeholder={copy.editor.fields.titlePlaceholder}
           {...register("content.title")}
         />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={copy.editor.fields.groomNickname} htmlFor="groomNick">
-          <Input id="groomNick" {...register("content.groom.nickname")} />
+          <Input
+            id="groomNick"
+            maxLength={L.person.nickname}
+            {...register("content.groom.nickname")}
+          />
         </Field>
         <Field label={copy.editor.fields.brideNickname} htmlFor="brideNick">
-          <Input id="brideNick" {...register("content.bride.nickname")} />
+          <Input
+            id="brideNick"
+            maxLength={L.person.nickname}
+            {...register("content.bride.nickname")}
+          />
         </Field>
       </div>
       <Field label={copy.editor.fields.eventDate} htmlFor="eventDate">
-        <Input id="eventDate" type="date" {...register("eventDate")} />
+        <Input
+          id="eventDate"
+          type="date"
+          max="9999-12-31"
+          {...register("eventDate")}
+        />
       </Field>
     </div>
   );

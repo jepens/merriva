@@ -459,6 +459,50 @@ Dua niat tertulis bertabrakan: `src/server/marketing/catalog.ts` sengaja **gagal
 
 ---
 
+## #41 — 2026-09-22 · Batas isian editor = batas skema server; penolakan tampil per isian
+
+**Konteks:** review #40 membuktikan autosave bisa ditolak dari UI biasa. Telaah lanjutan menemukan hal yang lebih parah:
+- Tak satu pun dari 71 isian teks editor memakai `maxLength`, dan tak satu pun dari 6 tombol "Tambah" dibatasi.
+- **Amplop tidak dilonggarkan di skema draft.** Menekan "Tambah rekening" langsung membuat autosave ditolak ("Nama bank wajib diisi"). Karena payload = seluruh form, SEMUA perubahan di langkah lain ikut gagal tersimpan sampai baris itu terisi lengkap.
+- Server mengembalikan `error.flatten().fieldErrors`, jadi path diratakan ke `content`. Pesan bawaan Zod berbahasa Inggris. Kriteria terima SPEC §4.4 ("pesan error bahasa Indonesia yang jelas per field") tidak mungkin dipenuhi.
+- **Halaman edit mengganti isi yang tak lolos skema draft dengan konten KOSONG**, lalu autosave pertama menimpa isi asli di DB. Belum terpicu hari ini, tetapi pasti terjadi begitu satu batas diturunkan.
+
+**Keputusan:**
+1. `lib/validation/content/field-limits.ts` (`FIELD_LIMITS`, tanpa impor) menjadi satu-satunya sumber angka. Skema strict, skema draft, dan UI semuanya membacanya; 20 pasang literal ganda strict↔draft hilang.
+2. Setiap isian teks ber-`maxLength`. Textarea memakai `LimitedTextarea` dengan penghitung karakter, supaya pemotongan saat menempel teks tak terjadi diam-diam. Tombol daftar memakai `AddButton`, yang nonaktif di batas dan menampilkan alasannya. Isian tanggal diberi `max` tahun 9999 (Chrome mengizinkan tahun 5–6 digit dan `Date.parse` menerimanya).
+3. Skema draft melonggarkan baris rekening/e-wallet. Skema strict tetap mewajibkan isi lengkap, dan render (`coerceEnvelope`) membuang baris yang belum lengkap.
+4. `saveInvitationDraftAction` memvalidasi dengan peta pesan per-parse (`draftErrorMap`) dan mengembalikan galat per PATH LENGKAP (`draftFieldErrors`). Pesan kustom di skema tetap menang.
+5. Editor menampilkan pesan di isian yang ditolak (`Field` membaca `name` dari anaknya, jadi path tak bisa berbeda dari yang di-register). Pesan itu **terhubung secara terprogram**: label menunjuk id kontrol, kontrol diberi `aria-invalid` dan `aria-describedby` ke pesannya (digabung dengan penghitung karakter, tidak saling menimpa), dan pesan muncul sebagai `role="status"`. Tanpa ini pembaca layar hanya mendengar "Gagal menyimpan" tanpa tahu isian mana. Langkah yang berisi isian bermasalah ditandai di navigasi (`STEP_FIELDS`, awalan terpanjang menang), dan pesan "Selesai" menyebut nama langkahnya.
+6. `editableContent`: isi tersimpan yang tak lolos skema draft ditampilkan APA ADANYA. Server menolak isian yang melanggar dengan pesan per isian, pemilik memperbaikinya, dan tak ada yang hilang. Hanya baris rusak (bukan objek / kategori lain) yang jatuh ke konten kosong.
+
+**Alasan:** pencegahan (batas di UI) dan pemulihan (pesan per isian) sama-sama dibutuhkan. Pencegahan saja tidak cukup: data lama, versi bundle lama setelah deploy, dan input IME di batas tetap bisa lolos. Pemulihan saja membuat pemilik terus-menerus bertemu penolakan. Satu modul angka membuat UI dan server tak mungkin berbeda pendapat, dan modul itu tanpa impor sehingga editor tak menyeret Zod & graf skema ke bundle klien.
+
+**Ditolak:**
+- Membaca batas lewat introspeksi Zod: `ZodArray` tak punya getter publik untuk batasnya, dan `z.toJSONSchema` menyeret seluruh skema + generator ke klien.
+- Literal di UI: salinan ketiga yang pasti menyimpang. Proyek ini sudah punya contohnya, `momen-camera.tsx` `maxLength={40}` di samping `MOMEN_LIMITS`.
+- `z.config(z.locales.id())` global: pesannya teknis, dan diam-diam mengubah pesan belasan aksi lain.
+- Validasi klien lewat `zodResolver`/`safeParse` di browser: skema ikut terbundel, dan validasi berjalan tiap ketikan. Server tetap sumber kebenaran, termasuk untuk klien lama setelah deploy.
+- Batas lunak (boleh melebihi lalu diperingatkan): satu isian kepanjangan menggagalkan simpan untuk SEMUA isian lain.
+
+**Konsekuensi:**
+- **Menurunkan angka di `FIELD_LIMITS` kini aman terhadap kehilangan data.** Editor menampilkan data lama, server menolak dengan pesan per isian, dan pemilik memendekkannya. Tetap periksa data production dulu, karena setiap pemilik yang terdampak harus memperbaiki manual.
+- `tests/unit/editor-limits-sweep.test.tsx` merender ketiga editor asli dan memeriksa SETIAP isian yang muncul:
+  - `maxLength` ada;
+  - skema server menerima tepat N dan menolak N+1 di path yang sama;
+  - isian terpetakan ke langkahnya.
+  Isian baru yang lupa diberi batas otomatis memerah. `tests/unit/lib/field-limits.test.ts` mengunci angkanya secara harfiah.
+- Pembuktian:
+  - Review adversarial: 18 agen menemukan 6 temuan terbukti dan 8 dibantah. Lima di antaranya soal mutu test dan satu soal aksesibilitas pesan galat; semuanya ditutup.
+  - Test baru memanggil `saveInvitationDraftAction` ASLI (bukan tiruan) untuk mengunci kontrak galat per path. Gerbang `purged_at` di `createCheckoutAction` dari #40, yang ternyata belum punya test, kini teruji.
+  - Uji mutasi: 35 varian, seluruhnya merah. Mencakup maxLength dicabut, amplop draft kembali ketat, aksi kembali `flatten()`, peta pesan dicabut, `editableContent` kembali mengosongkan, kunci langkah menyimpang, semua langkah ditandai, penghitung selalu 0, `aria-invalid` hilang, dan batas URL/email strict menyimpang.
+- Yang BELUM ditutup, sengaja dicatat:
+  - Skema strict (format https/YouTube, email PIC, isian wajib) tidak dijalankan sebagai gerbang aktivasi; nilai tak valid diterima diam-diam lalu disaring saat render.
+  - Sesi jadwal tanpa `startAt` dibuang server walau indikator bilang "Tersimpan".
+  - Isian kutipan (`content.quote`) ada di skema tetapi belum di editor (SPEC §4.4 langkah 7).
+  - Perilaku `maxLength` dengan IME Android/iOS dan hitungan baris baru belum diuji di perangkat nyata.
+
+---
+
 ## Template entri baru
 
 ```

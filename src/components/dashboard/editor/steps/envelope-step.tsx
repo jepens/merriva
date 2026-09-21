@@ -5,10 +5,12 @@ import { useFieldArray, type UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { copy } from "@/lib/copy";
+import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
 import { Field } from "../field";
+import { AddButton } from "../add-button";
+import { LimitedTextarea } from "../limited-textarea";
 import type { EditorValues } from "../types";
 
 export function EnvelopeStep({ form }: { form: UseFormReturn<EditorValues> }) {
@@ -40,14 +42,17 @@ export function EnvelopeStep({ form }: { form: UseFormReturn<EditorValues> }) {
           >
             <Input
               placeholder={copy.editor.fields.bank}
+              maxLength={L.bank.bank}
               {...register(`content.envelope.banks.${i}.bank`)}
             />
             <Input
               placeholder={copy.editor.fields.accountNumber}
+              maxLength={L.bank.number}
               {...register(`content.envelope.banks.${i}.number`)}
             />
             <Input
               placeholder={copy.editor.fields.accountHolder}
+              maxLength={L.bank.holder}
               {...register(`content.envelope.banks.${i}.holder`)}
             />
             <Button variant="ghost" size="sm" onClick={() => banks.remove(i)}>
@@ -55,13 +60,13 @@ export function EnvelopeStep({ form }: { form: UseFormReturn<EditorValues> }) {
             </Button>
           </div>
         ))}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => banks.append({ bank: "", number: "", holder: "" })}
+        <AddButton
+          count={banks.fields.length}
+          max={L.envelope.banks}
+          onAdd={() => banks.append({ bank: "", number: "", holder: "" })}
         >
           {copy.editor.list.addBank}
-        </Button>
+        </AddButton>
       </div>
 
       <div className="space-y-3">
@@ -77,10 +82,12 @@ export function EnvelopeStep({ form }: { form: UseFormReturn<EditorValues> }) {
           <div key={f.id} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
             <Input
               placeholder={copy.editor.fields.ewalletProvider}
+              maxLength={L.ewallet.provider}
               {...register(`content.envelope.ewallets.${i}.provider`)}
             />
             <Input
               placeholder={copy.editor.fields.ewalletNumber}
+              maxLength={L.ewallet.number}
               {...register(`content.envelope.ewallets.${i}.number`)}
             />
             <Button
@@ -92,17 +99,21 @@ export function EnvelopeStep({ form }: { form: UseFormReturn<EditorValues> }) {
             </Button>
           </div>
         ))}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => ewallets.append({ provider: "", number: "" })}
+        <AddButton
+          count={ewallets.fields.length}
+          max={L.envelope.ewallets}
+          onAdd={() => ewallets.append({ provider: "", number: "" })}
         >
           {copy.editor.list.addEwallet}
-        </Button>
+        </AddButton>
       </div>
 
       <Field label={copy.editor.fields.giftAddress}>
-        <Textarea {...register("content.envelope.giftAddress")} />
+        <LimitedTextarea
+          form={form}
+          name="content.envelope.giftAddress"
+          max={L.envelope.giftAddress}
+        />
       </Field>
     </div>
   );

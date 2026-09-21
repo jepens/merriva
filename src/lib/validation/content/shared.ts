@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { FIELD_LIMITS as L } from "./field-limits";
+
 /**
  * Sub-skema bersama untuk `invitations.content` (SPEC §4.4). Dipakai lintas
  * kategori (wedding/corporate/family). Semua teks di-`trim`; batas panjang
@@ -75,7 +77,7 @@ const YOUTUBE_HOSTS = new Set([
 export const youtubeUrlSchema = z
   .string()
   .trim()
-  .max(200)
+  .max(L.common.youtubeUrl)
   .refine((u) => {
     try {
       const url = new URL(u);
@@ -102,40 +104,48 @@ export function optionalFormat<T extends z.ZodType>(schema: T) {
 
 /** Kutipan / ayat pembuka. */
 export const quoteSchema = z.object({
-  text: z.string().trim().max(500),
-  source: z.string().trim().max(120).optional(),
+  text: z.string().trim().max(L.quote.text),
+  source: z.string().trim().max(L.quote.source).optional(),
 });
 
 /** Pihak (mempelai / tokoh): nama, panggilan, orang tua, urutan anak, foto. */
 export const personSchema = z.object({
-  name: z.string().trim().min(1, "Nama wajib diisi").max(120),
-  nickname: z.string().trim().max(60).optional(),
-  fatherName: z.string().trim().max(120).optional(),
-  motherName: z.string().trim().max(120).optional(),
-  childOrder: z.string().trim().max(160).optional(),
+  name: z.string().trim().min(1, "Nama wajib diisi").max(L.person.name),
+  nickname: z.string().trim().max(L.person.nickname).optional(),
+  fatherName: z.string().trim().max(L.person.fatherName).optional(),
+  motherName: z.string().trim().max(L.person.motherName).optional(),
+  childOrder: z.string().trim().max(L.person.childOrder).optional(),
   photo: storagePathSchema.optional(),
 });
 
 /** Rekening bank untuk amplop digital. */
 export const bankAccountSchema = z.object({
-  bank: z.string().trim().min(1, "Nama bank wajib diisi").max(60),
-  number: z.string().trim().min(1, "Nomor rekening wajib diisi").max(40),
-  holder: z.string().trim().min(1, "Atas nama wajib diisi").max(120),
+  bank: z.string().trim().min(1, "Nama bank wajib diisi").max(L.bank.bank),
+  number: z
+    .string()
+    .trim()
+    .min(1, "Nomor rekening wajib diisi")
+    .max(L.bank.number),
+  holder: z.string().trim().min(1, "Atas nama wajib diisi").max(L.bank.holder),
 });
 
 /** E-wallet (GoPay/OVO/Dana/ShopeePay, dll). */
 export const ewalletSchema = z.object({
-  provider: z.string().trim().min(1, "Nama e-wallet wajib diisi").max(40),
-  number: z.string().trim().min(1, "Nomor wajib diisi").max(40),
-  holder: z.string().trim().max(120).optional(),
+  provider: z
+    .string()
+    .trim()
+    .min(1, "Nama e-wallet wajib diisi")
+    .max(L.ewallet.provider),
+  number: z.string().trim().min(1, "Nomor wajib diisi").max(L.ewallet.number),
+  holder: z.string().trim().max(L.ewallet.holder).optional(),
 });
 
 /** Amplop digital (SPEC §4.6): multi-rekening + e-wallet + alamat kado, toggle. */
 export const envelopeSchema = z.object({
   enabled: z.boolean().default(false),
-  banks: z.array(bankAccountSchema).max(6).default([]),
-  ewallets: z.array(ewalletSchema).max(6).default([]),
-  giftAddress: z.string().trim().max(300).optional(),
+  banks: z.array(bankAccountSchema).max(L.envelope.banks).default([]),
+  ewallets: z.array(ewalletSchema).max(L.envelope.ewallets).default([]),
+  giftAddress: z.string().trim().max(L.envelope.giftAddress).optional(),
 });
 
 /** Default amplop (nonaktif, tanpa entri). */
@@ -147,9 +157,13 @@ export const EMPTY_ENVELOPE: z.infer<typeof envelopeSchema> = {
 
 /** Entri cerita/timeline (love story / agenda / doa) — judul, tanggal, narasi. */
 export const storyEntrySchema = z.object({
-  title: z.string().trim().min(1, "Judul wajib diisi").max(120),
-  date: z.string().trim().max(60).optional(),
-  narrative: z.string().trim().min(1, "Narasi wajib diisi").max(2000),
+  title: z.string().trim().min(1, "Judul wajib diisi").max(L.storyEntry.title),
+  date: z.string().trim().max(L.storyEntry.date).optional(),
+  narrative: z
+    .string()
+    .trim()
+    .min(1, "Narasi wajib diisi")
+    .max(L.storyEntry.narrative),
 });
 
 /**
@@ -159,14 +173,17 @@ export const storyEntrySchema = z.object({
  */
 export const commonContentFields = {
   coverPhoto: storagePathSchema.optional(),
-  greetingOpen: z.string().trim().max(1000).optional(),
-  greetingClose: z.string().trim().max(1000).optional(),
+  greetingOpen: z.string().trim().max(L.common.greeting).optional(),
+  greetingClose: z.string().trim().max(L.common.greeting).optional(),
   quote: quoteSchema.optional(),
   /** Embed YouTube (fitur Premium; tier ditegakkan di server). */
   youtubeUrl: optionalFormat(youtubeUrlSchema),
   /** Tautan live streaming (fitur Premium — SPEC §2). WAJIB https. */
   livestreamUrl: optionalFormat(
-    httpsUrlSchema(500, "Tautan live harus URL https yang valid"),
+    httpsUrlSchema(
+      L.common.livestreamUrl,
+      "Tautan live harus URL https yang valid",
+    ),
   ),
   // Factory default: setiap parse dapat array `banks`/`ewallets` SEGAR.
   // `.default(objek)` akan meng-alias referensi array antar-parse (Zod v4

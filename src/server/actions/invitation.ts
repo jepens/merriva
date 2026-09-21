@@ -23,6 +23,7 @@ import {
   saveDraftSchema,
   type CreateInvitationInput,
 } from "@/lib/validation/invitation";
+import { draftErrorMap, draftFieldErrors } from "@/lib/validation/draft-errors";
 
 import { errorState, fieldErrorState, type ActionState } from "./types";
 
@@ -94,9 +95,11 @@ export async function saveInvitationDraftAction(
   if (!user) return errorState(copy.auth.genericAuthError);
   if (!isUuid(id)) return errorState(copy.common.error);
 
-  const parsed = saveDraftSchema.safeParse(patch);
+  // Galat per PATH lengkap + pesan Indonesia → editor bisa menandai isian yang
+  // tepat (SPEC §4.4). `flatten()` dulu meratakan semuanya ke `content`.
+  const parsed = saveDraftSchema.safeParse(patch, { error: draftErrorMap });
   if (!parsed.success) {
-    return fieldErrorState(parsed.error.flatten().fieldErrors);
+    return fieldErrorState(draftFieldErrors(parsed.error));
   }
   const { content, settings, eventDate, events } = parsed.data;
 

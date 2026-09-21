@@ -6,6 +6,7 @@ import {
   type InvitationContent,
   type WeddingContent,
 } from "./categories";
+import { draftContentSchema, type DraftContent } from "./draft";
 import type { Envelope } from "./shared";
 
 export * from "./shared";
@@ -59,4 +60,29 @@ export function emptyContent(category: InvitationCategory): InvitationContent {
       return exhaustive;
     }
   }
+}
+
+/**
+ * Konten yang dimuat ke editor dari baris `invitations.content`.
+ *
+ * Isi tersimpan yang TIDAK lolos skema draft — mis. narasi yang melebihi batas
+ * yang kelak diturunkan — dulu diganti konten KOSONG, lalu autosave pertama
+ * menimpa isi asli di database tanpa jejak (DECISIONS #41). Kini isi apa adanya
+ * dibiarkan tampil: server menolak isian yang melanggar dengan pesan per isian,
+ * pemilik memperbaikinya, dan tak ada yang hilang. Hanya isi yang bukan objek
+ * atau berkategori lain (baris rusak) yang jatuh ke konten kosong.
+ */
+export function editableContent(
+  raw: unknown,
+  category: InvitationCategory,
+): DraftContent {
+  const parsed = draftContentSchema.safeParse(raw);
+  if (parsed.success) return parsed.data;
+  const sameCategory =
+    typeof raw === "object" &&
+    raw !== null &&
+    (raw as { category?: unknown }).category === category;
+  return sameCategory
+    ? (raw as DraftContent)
+    : draftContentSchema.parse(emptyContent(category));
 }

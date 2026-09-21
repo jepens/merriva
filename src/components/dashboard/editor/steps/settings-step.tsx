@@ -5,10 +5,11 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { copy } from "@/lib/copy";
+import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
 import { Field } from "../field";
+import { LimitedTextarea } from "../limited-textarea";
 import type { EditorValues, SongOption } from "../types";
 
 /**
@@ -99,19 +100,31 @@ export function SettingsStep({
       </fieldset>
 
       <Field label={copy.editor.fields.greetingOpen}>
-        <Textarea {...register("content.greetingOpen")} />
+        <LimitedTextarea
+          form={form}
+          name="content.greetingOpen"
+          max={L.common.greeting}
+        />
       </Field>
       <Field label={copy.editor.fields.greetingClose}>
-        <Textarea {...register("content.greetingClose")} />
+        <LimitedTextarea
+          form={form}
+          name="content.greetingClose"
+          max={L.common.greeting}
+        />
       </Field>
       <Field label={copy.editor.fields.youtubeUrl}>
         <Input
           placeholder="https://youtu.be/…"
+          maxLength={L.common.youtubeUrl}
           {...register("content.youtubeUrl")}
         />
       </Field>
       <Field label={copy.editor.fields.livestreamUrl}>
-        <Input {...register("content.livestreamUrl")} />
+        <Input
+          maxLength={L.common.livestreamUrl}
+          {...register("content.livestreamUrl")}
+        />
       </Field>
     </div>
   );

@@ -5,7 +5,13 @@ import {
   familyContentSchema,
   weddingContentSchema,
 } from "./categories";
-import { noDangerousUrlScheme, personSchema, storyEntrySchema } from "./shared";
+import { FIELD_LIMITS as L } from "./field-limits";
+import {
+  envelopeSchema,
+  noDangerousUrlScheme,
+  personSchema,
+  storyEntrySchema,
+} from "./shared";
 
 /**
  * Skema DRAFT (longgar) — dipakai saat autosave. Field wajib direlaksasi menjadi
@@ -16,12 +22,12 @@ import { noDangerousUrlScheme, personSchema, storyEntrySchema } from "./shared";
  */
 
 const personDraftSchema = personSchema.extend({
-  name: z.string().trim().max(120).optional(),
+  name: z.string().trim().max(L.person.name).optional(),
 });
 
 const storyDraftSchema = storyEntrySchema.extend({
-  title: z.string().trim().max(120).optional(),
-  narrative: z.string().trim().max(2000).optional(),
+  title: z.string().trim().max(L.storyEntry.title).optional(),
+  narrative: z.string().trim().max(L.storyEntry.narrative).optional(),
 });
 
 /**
@@ -32,11 +38,36 @@ const storyDraftSchema = storyEntrySchema.extend({
  */
 const picDraftSchema = z
   .object({
-    name: z.string().trim().max(120).optional(),
-    phone: z.string().trim().max(40).optional(),
-    email: z.string().trim().max(160).optional(),
+    name: z.string().trim().max(L.pic.name).optional(),
+    phone: z.string().trim().max(L.pic.phone).optional(),
+    email: z.string().trim().max(L.pic.email).optional(),
   })
   .optional();
+
+/**
+ * Amplop draft: baris rekening/e-wallet boleh SETENGAH JADI. Tombol "Tambah
+ * rekening" menambah baris kosong, dan skema strict (`bankAccountSchema`
+ * min(1)) menolaknya — dulu itu membuat SELURUH autosave ditolak sampai ketiga
+ * kolomnya terisi, sehingga perubahan di langkah lain ikut tak tersimpan
+ * (DECISIONS #41). Aman untuk tamu: render (`coerceEnvelope`) membuang baris
+ * yang belum lengkap. Batas panjang & jumlah baris tetap ditegakkan.
+ */
+const bankDraftSchema = z.object({
+  bank: z.string().trim().max(L.bank.bank).optional(),
+  number: z.string().trim().max(L.bank.number).optional(),
+  holder: z.string().trim().max(L.bank.holder).optional(),
+});
+
+const ewalletDraftSchema = z.object({
+  provider: z.string().trim().max(L.ewallet.provider).optional(),
+  number: z.string().trim().max(L.ewallet.number).optional(),
+  holder: z.string().trim().max(L.ewallet.holder).optional(),
+});
+
+const envelopeDraftSchema = envelopeSchema.extend({
+  banks: z.array(bankDraftSchema).max(L.envelope.banks).default([]),
+  ewallets: z.array(ewalletDraftSchema).max(L.envelope.ewallets).default([]),
+});
 
 /**
  * Field format-ketat direlaksasi saat draft agar autosave tidak gagal saat
@@ -46,8 +77,8 @@ const picDraftSchema = z
 const draftCommonFields = {
   quote: z
     .object({
-      text: z.string().trim().max(500).optional(),
-      source: z.string().trim().max(120).optional(),
+      text: z.string().trim().max(L.quote.text).optional(),
+      source: z.string().trim().max(L.quote.source).optional(),
     })
     .optional(),
   // Draft longgar (autosave saat mengetik) TAPI skema berbahaya tetap ditolak
@@ -55,34 +86,40 @@ const draftCommonFields = {
   youtubeUrl: z
     .string()
     .trim()
-    .max(200)
+    .max(L.common.youtubeUrl)
     .refine(noDangerousUrlScheme, "Tautan tidak valid")
     .optional(),
   livestreamUrl: z
     .string()
     .trim()
-    .max(500)
+    .max(L.common.livestreamUrl)
     .refine(noDangerousUrlScheme, "Tautan tidak valid")
     .optional(),
+  // Factory default: tiap parse mendapat array SEGAR (lihat `commonContentFields`).
+  envelope: envelopeDraftSchema.default(() => ({
+    enabled: false,
+    banks: [],
+    ewallets: [],
+  })),
 };
 
 export const weddingDraftSchema = weddingContentSchema.extend({
   groom: personDraftSchema,
   bride: personDraftSchema,
-  story: z.array(storyDraftSchema).max(20).default([]),
+  story: z.array(storyDraftSchema).max(L.wedding.story).default([]),
   ...draftCommonFields,
 });
 
 export const corporateDraftSchema = corporateContentSchema.extend({
-  eventName: z.string().trim().max(160).optional(),
+  eventName: z.string().trim().max(L.corporate.eventName).optional(),
   pic: picDraftSchema,
-  agenda: z.array(storyDraftSchema).max(30).default([]),
+  agenda: z.array(storyDraftSchema).max(L.corporate.agenda).default([]),
   ...draftCommonFields,
 });
 
 export const familyDraftSchema = familyContentSchema.extend({
-  eventName: z.string().trim().max(160).optional(),
-  wishes: z.array(storyDraftSchema).max(20).default([]),
+  eventName: z.string().trim().max(L.family.eventName).optional(),
+  wishes: z.array(storyDraftSchema).max(L.family.wishes).default([]),
   ...draftCommonFields,
 });
 

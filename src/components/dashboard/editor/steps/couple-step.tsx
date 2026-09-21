@@ -4,6 +4,7 @@ import type { UseFormReturn } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy";
+import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
 import { Field } from "../field";
 import type { EditorValues } from "../types";
@@ -22,17 +23,27 @@ function PersonFields({
     <div className="space-y-3">
       <h3 className="font-medium">{title}</h3>
       <Field label={copy.editor.fields.fullName}>
-        <Input {...register(`content.${side}.name`)} />
+        <Input
+          maxLength={L.person.name}
+          {...register(`content.${side}.name`)}
+        />
       </Field>
       <Field label={copy.editor.fields.fatherName}>
-        <Input {...register(`content.${side}.fatherName`)} />
+        <Input
+          maxLength={L.person.fatherName}
+          {...register(`content.${side}.fatherName`)}
+        />
       </Field>
       <Field label={copy.editor.fields.motherName}>
-        <Input {...register(`content.${side}.motherName`)} />
+        <Input
+          maxLength={L.person.motherName}
+          {...register(`content.${side}.motherName`)}
+        />
       </Field>
       <Field label={copy.editor.fields.childOrder}>
         <Input
           placeholder={copy.editor.fields.childOrderPlaceholder}
+          maxLength={L.person.childOrder}
           {...register(`content.${side}.childOrder`)}
         />
       </Field>
