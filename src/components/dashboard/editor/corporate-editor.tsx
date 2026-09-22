@@ -97,6 +97,7 @@ export function CorporateEditor(props: {
   initialMedia: InvitationMediaView[];
   maxPhotos: number;
   songs: SongOption[];
+  initialStep?: string;
 }) {
   return <EditorShell {...props} steps={STEPS} />;
 }

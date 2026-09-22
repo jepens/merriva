@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { copy } from "@/lib/copy";
 import { localToStoredUtc } from "@/lib/datetime";
-import { isBlankEventDraft } from "@/lib/event-draft";
+import { isBlankEventDraft, isCompleteLocalDateTime } from "@/lib/event-draft";
 import { draftSlug, isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
 import { mediaObjectPaths } from "@/lib/media";
@@ -154,7 +154,20 @@ export async function saveInvitationDraftAction(
   const tz = settings.timezone;
   const seenIds = new Set<string>();
   const eventRows = events.flatMap((e, i) => {
-    if (isBlankEventDraft(e)) return [];
+    // Kosong dinilai SETELAH normalisasi (#44): jam yang tak lengkap/tak sah
+    // tersimpan NULL, jadi kartu yang isinya HANYA itu (mis. tahun setengah
+    // jadi "0002-…" saat Chrome mengetik ulang tahun) dulu menjadi baris
+    // hantu — kosong di editor, tetapi disebut "Sesi N belum tampil" di
+    // halaman aktivasi. Kartu dengan isian lain tetap tersimpan (#42).
+    if (
+      isBlankEventDraft({
+        ...e,
+        startAt: isCompleteLocalDateTime(e.startAt) ? e.startAt : "",
+        endAt: isCompleteLocalDateTime(e.endAt) ? e.endAt : "",
+      })
+    ) {
+      return [];
+    }
     const id = e.id && !seenIds.has(e.id) ? e.id : null;
     if (id) seenIds.add(id);
     return [

@@ -3,15 +3,21 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import {
+  ActivationBlockers,
+  UnscheduledNote,
+} from "@/components/dashboard/activation-blockers";
+import {
   PackageChooser,
   type CheckoutPackage,
 } from "@/components/dashboard/package-chooser";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  activationReadiness,
+  fetchReadinessEvents,
+} from "@/lib/activation-readiness";
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import { resolveLimits } from "@/lib/limits";
-import { isDraftSlug } from "@/lib/slug";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser } from "@/server/guards/auth";
 
@@ -44,10 +50,21 @@ export default async function ActivateInvitationPage({
   if (inv.status === "active") redirect("/dashboard");
   if (inv.status === "suspended") notFound();
 
-  // Slug masih `draft-…`: alamat publik 404 & terkunci setelah aktif → arahkan
-  // pemilik mengatur alamat di editor dulu (sebelum bayar). Backstop juga di
-  // createCheckoutAction.
-  if (isDraftSlug(inv.slug)) {
+  // Syarat bayar yang bisa diperbaiki pemilik (SPEC §4.8 langkah 0, #44): alamat
+  // masih `draft-…` (404 & terkunci setelah aktif) dan belum ada sesi berjam
+  // (tamu tak tahu kapan acaranya). SEMUA ditampilkan sekaligus; penahan yang
+  // sama di createCheckoutAction. Galat query jadwal → halaman tak mengklaim
+  // "jadwal kosong" yang tak bisa dipastikan; penahan server gagal-tertutup.
+  const { data: eventRows, error: eventsError } = await fetchReadinessEvents(
+    supabase,
+    inv.id,
+  );
+  const readiness = activationReadiness(inv, eventRows ?? []);
+  const blockers = eventsError
+    ? readiness.blockers.filter((b) => b !== "schedule")
+    : readiness.blockers;
+
+  if (blockers.length > 0) {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <div className="space-y-1">
@@ -55,22 +72,7 @@ export default async function ActivateInvitationPage({
             {copy.checkout.title}
           </h1>
         </div>
-        <Card>
-          <CardContent className="space-y-4 py-8 text-center">
-            <h2 className="text-lg font-medium">
-              {copy.checkout.setSlugTitle}
-            </h2>
-            <p className="text-muted-foreground mx-auto max-w-md text-sm">
-              {copy.checkout.setSlugBody}
-            </p>
-            <Link
-              href={`/dashboard/undangan/${id}/edit`}
-              className={buttonVariants()}
-            >
-              {copy.checkout.setSlugCta}
-            </Link>
-          </CardContent>
-        </Card>
+        <ActivationBlockers invitationId={inv.id} blockers={blockers} />
         <Link
           href="/dashboard"
           className={buttonVariants({ variant: "ghost", size: "sm" })}
@@ -106,6 +108,8 @@ export default async function ActivateInvitationPage({
           {copy.checkout.subtitle}
         </p>
       </div>
+
+      <UnscheduledNote invitationId={inv.id} names={readiness.unscheduled} />
 
       <PackageChooser invitationId={id} packages={packages} />
 

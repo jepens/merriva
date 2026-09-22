@@ -6,7 +6,7 @@ Verifikasi jalur bayar end-to-end (SPEC §4.8): **checkout → pembayaran simula
 
 - **Project SANDBOX Pakasir**: `PAKASIR_PROJECT_SLUG` + `PAKASIR_API_KEY` sandbox.
 - **Akun uji** terverifikasi di DB target (email + kata sandi) → `E2E_EMAIL`, `E2E_PASSWORD`.
-- **Undangan uji** milik akun itu, status `draft`/`expired`, dengan **slug asli** (bukan `draft-…`) → `E2E_INVITATION_ID`. Checkout MENOLAK slug `draft-…` (alamat terkunci setelah aktif → wajib diatur dulu). Reset undangan ke `draft` sebelum menjalankan ulang.
+- **Undangan uji** milik akun itu, status `draft`/`expired`, dengan **slug asli** (bukan `draft-…`) dan **minimal satu sesi jadwal yang tanggal & jam mulainya lengkap** → `E2E_INVITATION_ID`. Checkout MENOLAK slug `draft-…` (alamat terkunci setelah aktif → wajib diatur dulu) dan undangan tanpa sesi berjam (tamu tak tahu kapan acaranya — DECISIONS #44); halaman aktivasi lalu menampilkan daftar syarat, bukan pemilih paket. Reset undangan ke `draft` sebelum menjalankan ulang.
 - DB target (Supabase staging/lokal) sudah dimigrasi (`supabase db push`).
 - Untuk uji **webhook** sungguhan (Pakasir → kita), app harus punya **URL publik** (staging) yang di-set sebagai webhook di dashboard Pakasir. Uji **jalur poll** (`/bayar`) tak butuh URL publik — `transactiondetail` dipanggil OUTBOUND dari server kita.
 
@@ -16,7 +16,7 @@ PAKASIR_PROJECT_SLUG=<sandbox-slug>
 PAKASIR_API_KEY=<sandbox-key>
 E2E_EMAIL=<akun-uji>
 E2E_PASSWORD=<kata-sandi>
-E2E_INVITATION_ID=<uuid-undangan-draft-dengan-slug-asli>
+E2E_INVITATION_ID=<uuid-undangan-draft-dengan-slug-asli-dan-sesi-berjam>
 # Opsional untuk uji kuitansi nyata:
 RESEND_API_KEY=<key>   EMAIL_FROM="Merriva <noreply@domain-terverifikasi>"
 ```
@@ -40,7 +40,7 @@ mengarah ke slug asli (bukan `draft-…`).
 `paymentsimulation` hanya menandai lunas tanpa memilih metode. Untuk memenuhi
 kriteria "QRIS dan minimal 1 VA", bayar lewat **UI sandbox** Pakasir:
 
-1. Login → buat/siapkan undangan `draft` → **Aktifkan** → pilih paket.
+1. Login → buat/siapkan undangan `draft` (atur alamat + isi minimal satu sesi jadwal berjam) → **Aktifkan** → pilih paket.
 2. Di halaman bayar Pakasir sandbox, selesaikan sebagai **QRIS** (ulangi untuk **VA**, undangan lain).
 3. Amati: webhook masuk (log `/api/webhooks/pakasir`) **dan/atau** poller `/bayar` → `active`.
 4. Cek **kuitansi** terkirim (< 1 menit) ke email akun uji; tautan undangan benar.

@@ -16,8 +16,10 @@ import { PakasirGateway } from "../../src/lib/payment/pakasir";
  *   PAKASIR_PROJECT_SLUG, PAKASIR_API_KEY  → project SANDBOX Pakasir
  *   E2E_EMAIL, E2E_PASSWORD                → akun terverifikasi di DB target
  *   E2E_INVITATION_ID                      → undangan milik akun itu, status
- *     `draft`/`expired`, dengan **slug asli** (BUKAN `draft-…`). Reset ke draft
- *     sebelum menjalankan ulang (aktivasi membuatnya `active` = tak bisa dibayar lagi).
+ *     `draft`/`expired`, dengan **slug asli** (BUKAN `draft-…`) dan **minimal satu
+ *     sesi jadwal bertanggal-jam mulai lengkap** (syarat bayar, DECISIONS #44).
+ *     Reset ke draft sebelum menjalankan ulang (aktivasi membuatnya `active` =
+ *     tak bisa dibayar lagi).
  */
 
 const SANDBOX =
@@ -30,7 +32,7 @@ const SANDBOX =
 test.describe("Pembayaran end-to-end (paymentsimulation)", () => {
   test.skip(
     !SANDBOX,
-    "Butuh kredensial sandbox Pakasir + akun uji + E2E_INVITATION_ID (undangan draft dgn slug asli).",
+    "Butuh kredensial sandbox Pakasir + akun uji + E2E_INVITATION_ID (undangan draft dgn slug asli + sesi berjam).",
   );
 
   test("checkout Basic → simulasi bayar → undangan aktif + kuitansi", async ({
@@ -49,8 +51,15 @@ test.describe("Pembayaran end-to-end (paymentsimulation)", () => {
     await page.waitForURL("**/dashboard");
 
     // 2) Aktifkan → pilih paket Basic (kartu termurah/pertama). Undangan uji WAJIB
-    //    sudah punya slug asli (guard checkout menolak slug `draft-…`).
+    //    sudah punya slug asli dan sesi berjam (syarat checkout, DECISIONS #44).
     await page.goto(`/dashboard/undangan/${invitationId}/aktifkan`);
+    // Gagal-cepat dengan sebab yang jelas: bila undangan uji belum memenuhi
+    // syarat bayar, halaman menampilkan daftar syarat, bukan pemilih paket
+    // (DECISIONS #44) — tanpa ini klik di bawah menunggu sampai timeout.
+    await expect(
+      page.getByRole("button", { name: "Pilih paket ini" }).first(),
+      "Undangan uji belum siap dibayar: wajib slug asli + minimal 1 sesi jadwal berjam (lihat docs/PAYMENT-E2E.md)",
+    ).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Pilih paket ini" }).first().click();
 
     // 3) Redirect ke halaman bayar Pakasir → ambil order_id + amount dari URL.

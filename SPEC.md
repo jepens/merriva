@@ -170,7 +170,12 @@ Distribusi: halaman "Sebar Undangan" berisi template pesan yang bisa diedit deng
 
 **Alur integrasi (payment link — cara paling sederhana, dipakai MVP):**
 
-0. Gerbang sebelum checkout: undangan harus berstatus dapat-dibayar (`draft`/`pending_payment`/`expired`), sudah punya alamat (bukan slug `draft-…`), dan **belum di-purge** — baris ber-`purged_at` (foto/tamu/ucapan sudah dihapus permanen oleh retensi) tak bisa dibayar, supaya klien tak membeli perpanjangan untuk undangan yang isinya sudah tiada.
+0. Gerbang sebelum checkout: undangan harus berstatus dapat-dibayar (`draft`/`pending_payment`/`expired`), sudah punya alamat (bukan slug `draft-…`), **punya minimal satu sesi jadwal yang tanggal-jam mulainya lengkap** (sesi tanpa jam tak pernah tampil ke tamu — §4.4), dan **belum di-purge** — baris ber-`purged_at` (foto/tamu/ucapan sudah dihapus permanen oleh retensi) tak bisa dibayar, supaya klien tak membeli perpanjangan untuk undangan yang isinya sudah tiada.
+   - Syarat alamat & jadwal berlaku untuk SEMUA pembayaran: aktivasi pertama, bayar ulang, dan perpanjangan.
+   - Halaman aktivasi menampilkan SEMUA syarat yang belum terpenuhi sekaligus, masing-masing dengan tombol ke tempat memperbaikinya; tombol jadwal langsung membuka langkah Jadwal di editor. Pemilih paket baru tampil setelah semua syarat terpenuhi — kecuali bila jadwal tak bisa dibaca: halaman tak mengklaim "jadwal kosong" yang tak bisa dipastikan (syarat alamat tetap tampil), dan server yang menahan.
+   - Sesi berisi yang belum berjam TIDAK menahan pembayaran (cukup satu sesi berjam), tetapi halaman aktivasi menyebut namanya karena sesi itu tak akan tampil ke tamu.
+   - Server memeriksa syarat yang SAMA (fungsi & query yang sama dengan halaman) dan menolak checkout dengan pesan untuk syarat pertama yang belum terpenuhi bila halaman aktivasi dilewati atau sudah basi (mis. jadwal dikosongkan di tab lain) — halaman lalu dimuat ulang sehingga daftar syaratnya tampil. Server juga menolak (gagal-tertutup) bila jadwal tak bisa dibaca.
+   - Aktivasi SESUDAH pembayaran (webhook/poller) dan aktivasi manual admin tidak memeriksa syarat ini — uang yang sudah masuk tak boleh tertahan.
 1. Klien pilih paket → server membuat `order` (`pending`, `order_id` unik, `amount` integer).
 2. Redirect ke `https://app.pakasir.com/pay/{project_slug}/{amount}?order_id={order_id}&redirect={URL_dashboard_sukses}` (opsi `qris_only=1` bila ingin QRIS saja).
 3. Pakasir mengirim **webhook POST** ke URL yang dikonfigurasi, payload: `{amount, order_id, project, status, payment_method, completed_at}`.
@@ -179,7 +184,7 @@ Distribusi: halaman "Sebar Undangan" berisi template pesan yang bisa diedit deng
 
 Halaman "cek status pembayaran" di dashboard mem-poll `transactiondetail` — untuk klien yang kembali sebelum webhook tiba. Order `pending` > 24 jam di-expire oleh cron + `POST /api/transactioncancel`. Testing memakai `POST /api/paymentsimulation` (mode sandbox Pakasir) untuk memicu webhook.
 
-**Kriteria terima:** pembayaran simulasi end-to-end berhasil untuk QRIS dan minimal 1 VA → webhook palsu (order tidak ada / amount tidak cocok / `transactiondetail` tidak mengonfirmasi) **tidak** mengaktifkan undangan → notifikasi duplikat tidak menggandakan aktivasi (idempotent) → order `pending` kedaluwarsa otomatis dalam 24 jam dan dibatalkan ke Pakasir → semua nominal dicatat dalam IDR integer (tanpa float) → `api_key` tidak pernah terkirim ke browser → admin bisa melihat raw notification untuk rekonsiliasi.
+**Kriteria terima:** pembayaran simulasi end-to-end berhasil untuk QRIS dan minimal 1 VA → webhook palsu (order tidak ada / amount tidak cocok / `transactiondetail` tidak mengonfirmasi) **tidak** mengaktifkan undangan → notifikasi duplikat tidak menggandakan aktivasi (idempotent) → order `pending` kedaluwarsa otomatis dalam 24 jam dan dibatalkan ke Pakasir → semua nominal dicatat dalam IDR integer (tanpa float) → `api_key` tidak pernah terkirim ke browser → admin bisa melihat raw notification untuk rekonsiliasi → undangan tanpa alamat atau tanpa satu pun sesi berjam tidak bisa memulai pembayaran, dan halaman aktivasi menyebut semua syarat yang kurang beserta jalan memperbaikinya.
 
 ### 4.9 Panel admin
 

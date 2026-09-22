@@ -18,7 +18,9 @@ import { PakasirGateway } from "../../src/lib/payment/pakasir";
  *   PAKASIR_PROJECT_SLUG, PAKASIR_API_KEY   → project SANDBOX Pakasir
  *   E2E_EMAIL, E2E_PASSWORD                 → akun terverifikasi di DB target
  *   E2E_INVITATION_ID_WEBHOOK               → undangan milik akun itu, status
- *     `draft`/`expired`, dengan **slug asli**. Reset ke draft sebelum run ulang.
+ *     `draft`/`expired`, dengan **slug asli** dan **minimal satu sesi jadwal
+ *     bertanggal-jam mulai lengkap** (syarat bayar, DECISIONS #44). Reset ke
+ *     draft sebelum run ulang.
  */
 
 const SANDBOX =
@@ -31,7 +33,7 @@ const SANDBOX =
 test.describe("Pembayaran end-to-end (jalur webhook)", () => {
   test.skip(
     !SANDBOX,
-    "Butuh kredensial sandbox Pakasir + akun uji + E2E_INVITATION_ID_WEBHOOK (undangan draft terpisah, slug asli).",
+    "Butuh kredensial sandbox Pakasir + akun uji + E2E_INVITATION_ID_WEBHOOK (undangan draft terpisah, slug asli + sesi berjam).",
   );
 
   test("checkout → simulasi bayar → POST webhook mengaktifkan + idempoten", async ({
@@ -51,6 +53,13 @@ test.describe("Pembayaran end-to-end (jalur webhook)", () => {
 
     // 2) Aktifkan → pilih paket Basic (kartu pertama).
     await page.goto(`/dashboard/undangan/${invitationId}/aktifkan`);
+    // Gagal-cepat dengan sebab yang jelas: bila undangan uji belum memenuhi
+    // syarat bayar, halaman menampilkan daftar syarat, bukan pemilih paket
+    // (DECISIONS #44) — tanpa ini klik di bawah menunggu sampai timeout.
+    await expect(
+      page.getByRole("button", { name: "Pilih paket ini" }).first(),
+      "Undangan uji belum siap dibayar: wajib slug asli + minimal 1 sesi jadwal berjam (lihat docs/PAYMENT-E2E.md)",
+    ).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Pilih paket ini" }).first().click();
 
     // 3) Redirect ke halaman bayar Pakasir → ambil order_id + amount.

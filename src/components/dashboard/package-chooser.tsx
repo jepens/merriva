@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function PackageChooser({
 }) {
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   async function onChoose(code: string) {
     setError(null);
@@ -48,6 +50,11 @@ export function PackageChooser({
       }
       setError(res.message ?? copy.checkout.error);
       setPending(null);
+      // Syarat bayar belum terpenuhi (#44): halaman ini basi — mis. jadwal
+      // dikosongkan di tab lain. Muat ulang dari server agar daftar syarat
+      // beserta tautan perbaikannya menggantikan pemilih paket; pesan di bawah
+      // tetap tampil selama pemuatan.
+      if (res.reason === "readiness") router.refresh();
     } catch {
       setError(copy.checkout.error);
       setPending(null);
@@ -115,7 +122,16 @@ export function PackageChooser({
       </div>
 
       {error ? (
-        <p className="text-destructive text-sm" role="alert">
+        <p
+          // Di ponsel kartu paket bertumpuk, jadi pesan di bawah kisi bisa jatuh
+          // di luar layar dan tombolnya terasa diam saja — gulirkan ke pandangan
+          // (pola yang sama dengan pesan "Selesai" di editor).
+          ref={(el) => {
+            el?.scrollIntoView({ block: "nearest" });
+          }}
+          className="text-destructive text-sm"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}

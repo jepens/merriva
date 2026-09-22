@@ -81,6 +81,7 @@ export function EditorShell({
   maxPhotos,
   songs,
   steps,
+  initialStep,
 }: {
   invitationId: string;
   slug: string;
@@ -89,11 +90,18 @@ export function EditorShell({
   maxPhotos: number;
   songs: SongOption[];
   steps: EditorStep[];
+  /** Kunci langkah yang dibuka pertama (`?langkah=`, #44); tak dikenal → 0. */
+  initialStep?: string;
 }) {
   const form = useForm<EditorValues>({
     defaultValues: withSectionDefaults(defaultValues),
   });
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() =>
+    Math.max(
+      0,
+      steps.findIndex((s) => s.key === initialStep),
+    ),
+  );
   const [media, setMedia] = useState<InvitationMediaView[]>(initialMedia);
   const {
     status: saveStatus,

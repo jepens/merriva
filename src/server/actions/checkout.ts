@@ -2,13 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 
+import {
+  activationReadiness,
+  fetchReadinessEvents,
+} from "@/lib/activation-readiness";
 import { copy } from "@/lib/copy";
 import { PAYABLE_STATUSES } from "@/lib/invitation-status";
 import { appUrl } from "@/lib/env";
 import { isUuid } from "@/lib/id";
 import { generateOrderCode } from "@/lib/order";
 import { getPaymentGateway } from "@/lib/payment";
-import { isDraftSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { packageCodeSchema } from "@/lib/validation/checkout";
@@ -17,7 +20,18 @@ import { packageCodeSchema } from "@/lib/validation/checkout";
  * Hasil checkout: URL Pakasir untuk di-redirect klien, atau error ter-lokalisasi.
  */
 export type CheckoutState =
-  { status: "redirect"; url: string } | { status: "error"; message?: string };
+  | { status: "redirect"; url: string }
+  | {
+      status: "error";
+      message?: string;
+      /**
+       * `readiness` = syarat yang bisa diperbaiki pemilik belum terpenuhi (#44).
+       * Halaman aktivasi yang terbuka sudah basi (mis. jadwal dikosongkan di tab
+       * lain), jadi klien me-refresh-nya agar daftar syarat + tautan perbaikan
+       * tampil menggantikan pemilih paket.
+       */
+      reason?: "readiness";
+    };
 
 const ORDER_CODE_RETRIES = 5;
 
@@ -65,10 +79,35 @@ export async function createCheckoutAction(
   if (!PAYABLE_STATUSES.has(inv.status)) {
     return { status: "error", message: copy.checkout.notPayable };
   }
-  // Slug masih placeholder `draft-…` → alamat publik akan 404 & TERKUNCI setelah
-  // aktif (saveSlug hanya saat `draft`). Wajib atur alamat dulu (backstop server).
-  if (isDraftSlug(inv.slug)) {
-    return { status: "error", message: copy.checkout.setSlugFirst };
+  // Syarat yang bisa diperbaiki pemilik (SPEC §4.8 langkah 0, DECISIONS #44) —
+  // fungsi yang SAMA dengan daftar syarat di halaman aktivasi, jadi penahan ini
+  // hanya bekerja bila halaman itu dilewati (tautan lama, klien dirakit ulang):
+  //  - slug masih `draft-…` → alamat publik 404 & TERKUNCI setelah aktif;
+  //  - belum ada sesi berjam → tamu tak tahu kapan acaranya (#42: sesi tanpa
+  //    jam tak pernah tampil).
+  // Berlaku untuk SEMUA pembayaran (aktivasi, bayar ulang, perpanjangan). Galat
+  // query jadwal → gagal-tertutup: jangan buka pembayaran yang tak terverifikasi.
+  // Aktivasi SESUDAH bayar (webhook/poller) & aktivasi manual admin tak memeriksa
+  // ini — uang yang sudah masuk tak boleh tertahan.
+  const { data: eventRows, error: eventsError } = await fetchReadinessEvents(
+    supabase,
+    inv.id,
+  );
+  if (eventsError) return { status: "error", message: copy.common.error };
+  const [blocker] = activationReadiness(inv, eventRows ?? []).blockers;
+  if (blocker === "slug") {
+    return {
+      status: "error",
+      message: copy.checkout.setSlugFirst,
+      reason: "readiness",
+    };
+  }
+  if (blocker === "schedule") {
+    return {
+      status: "error",
+      message: copy.checkout.scheduleFirst,
+      reason: "readiness",
+    };
   }
 
   // Harga otoritatif dari DB (jangan percaya nominal klien).

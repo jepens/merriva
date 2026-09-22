@@ -273,14 +273,37 @@ export const copy = {
       "Paket Album Momen tidak tersedia. Silakan coba lagi.",
     momenOrderPending:
       "Masih ada pembayaran Album Momen yang belum selesai. Tunggu sampai terverifikasi — album akan aktif sendiri.",
-    // Guard: slug masih `draft-…` (belum diatur). Alamat terkunci setelah aktif,
-    // jadi wajib diatur SEBELUM bayar agar halaman publik tak 404 permanen.
-    setSlugTitle: "Atur alamat undangan dulu",
-    setSlugBody:
-      "Undangan belum punya alamat (link). Alamat tidak bisa diubah setelah undangan aktif — atur dulu di editor sebelum membayar.",
-    setSlugCta: "Atur alamat di editor",
+    // Syarat sebelum bayar (SPEC §4.8 langkah 0, DECISIONS #44). Halaman
+    // aktivasi menampilkan SEMUA syarat yang belum terpenuhi sekaligus, masing-
+    // masing dengan tombol ke tempat memperbaikinya.
+    readinessTitle: "Lengkapi dulu sebelum membayar",
+    readinessIntro:
+      "Selesaikan hal berikut di editor. Setelah itu, kembali ke halaman ini untuk memilih paket.",
+    readiness: {
+      // Alamat terkunci setelah aktif → wajib diatur SEBELUM bayar agar halaman
+      // publik tak 404 permanen.
+      slug: {
+        title: "Alamat undangan belum diatur",
+        body: "Alamat (link) tidak bisa diubah setelah undangan aktif, jadi atur dulu sebelum membayar.",
+        cta: "Atur alamat di editor",
+      },
+      // Sesi tanpa jam mulai tak pernah tampil ke tamu (#42).
+      schedule: {
+        title: "Belum ada sesi jadwal yang lengkap",
+        body: "Tanpa tanggal & jam mulai, tamu tidak tahu kapan acaranya. Isi minimal satu sesi.",
+        cta: "Lengkapi jadwal",
+      },
+    },
+    // Penahan server bila halaman aktivasi dilewati.
     setSlugFirst:
       "Atur alamat undangan (link) di editor dulu sebelum membayar — alamat terkunci setelah aktif.",
+    scheduleFirst:
+      "Isi tanggal & jam mulai minimal satu sesi jadwal di editor dulu sebelum membayar — tanpa itu tamu tak tahu kapan acaranya.",
+    // Sesi berisi yang belum berjam: TIDAK menghalangi bayar, tetapi tak tampil
+    // ke tamu — disebut di halaman aktivasi agar pemilik tak kaget.
+    unscheduledNote: (names: readonly string[]) =>
+      `Belum tampil ke tamu karena tanggal & jam mulainya belum lengkap: ${names.join(", ")}.`,
+    unscheduledCta: "Lengkapi jadwal",
     error: "Gagal memulai pembayaran. Silakan coba lagi.",
     // Fitur paket (dari packages.limits) untuk daftar centang.
     feat: {

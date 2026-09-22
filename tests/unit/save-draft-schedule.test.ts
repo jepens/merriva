@@ -158,6 +158,24 @@ describe("sesi jadwal tanpa jam mulai ikut tersimpan", () => {
     expect(rows[0]).toMatchObject({ start_at: "2026-08-14T23:00:00.000Z" });
   });
 
+  it.each<Record<string, string>>([
+    { startAt: "0002-12-20T11:00" }, // Chrome: tahun setengah jadi saat diketik ulang
+    { startAt: "1899-12-20T11:00" },
+    { startAt: "2026-08-15" },
+    { endAt: "2026-02-30T10:00" },
+    { startAt: "0002-12-20T11:00", endAt: "0003-01-01T00:00" },
+  ])(
+    "kartu yang isinya HANYA jam tak lengkap/tak sah (%j) TIDAK disimpan — dulu menjadi baris hantu (#44)",
+    async (isi) => {
+      const { res, rows } = await simpan([
+        { name: "Akad", startAt: "2026-08-15T08:00" },
+        isi,
+      ]);
+      expect(res.status).toBe("success");
+      expect(rows).toEqual([expect.objectContaining({ name: "Akad" })]);
+    },
+  );
+
   it("kartu kosong total TIDAK disimpan, dan sort_order tetap indeks form", async () => {
     const { rows } = await simpan([
       {},

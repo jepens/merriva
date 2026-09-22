@@ -11,6 +11,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *    (`active` = sudah dibayar, `suspended` = masalah konten → bukan self-service);
  *  - slug masih `draft-…` diblokir SEBELUM order dibuat (alamat publik terkunci
  *    setelah aktif, jadi salah urutan = 404 permanen);
+ *  - belum ada sesi jadwal BERJAM diblokir SEBELUM order, di semua status yang
+ *    boleh bayar (DECISIONS #44) — tamu tak tahu kapan acaranya;
  *  - kode paket add-on tak bisa dipakai di checkout undangan;
  *  - undangan TIDAK diaktifkan di sini — hanya `draft` → `pending_payment`, dan
  *    transisinya ber-guard `.eq("status","draft")`;
@@ -36,6 +38,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => refs.admin,
 }));
 
+import { copy } from "@/lib/copy";
 import { createCheckoutAction } from "@/server/actions/checkout";
 
 const INV = "44444444-4444-4444-8444-444444444444";
@@ -55,19 +58,29 @@ interface Call {
 function makeClient(
   data: Record<string, unknown>,
   calls: Call[],
-  opts: { insertErrors?: ({ code: string } | null)[]; user?: boolean } = {},
+  opts: {
+    insertErrors?: ({ code: string } | null)[];
+    user?: boolean;
+    /** Galat query baca per tabel (mis. jadwal tak bisa dibaca). */
+    errors?: Record<string, unknown>;
+  } = {},
 ) {
   const insertErrors = opts.insertErrors ?? [];
+  const errors = opts.errors ?? {};
   let insertAttempt = 0;
 
   const from = (table: string) => {
     const filters: Record<string, unknown> = {};
     const chain: Record<string, unknown> = {};
-    chain.select = () => chain;
+    chain.select = () => {
+      calls.push({ table, op: "select", filters });
+      return chain;
+    };
     chain.eq = (col: string, val: unknown) => {
       filters[col] = val;
       return chain;
     };
+    chain.order = () => chain;
     chain.insert = (payload: unknown) => {
       const error = insertErrors[insertAttempt] ?? null;
       insertAttempt += 1;
@@ -81,10 +94,10 @@ function makeClient(
     chain.maybeSingle = () =>
       Promise.resolve({ data: data[table] ?? null, error: null });
     chain.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) =>
-      Promise.resolve({ data: data[table] ?? null, error: null }).then(
-        res,
-        rej,
-      );
+      Promise.resolve({
+        data: data[table] ?? null,
+        error: errors[table] ?? null,
+      }).then(res, rej);
     return chain;
   };
 
@@ -100,6 +113,8 @@ function makeClient(
 }
 
 const PKG = { id: "pkg-premium", price_idr: 299000 };
+/** Satu sesi berjam — syarat jadwal terpenuhi (DECISIONS #44). */
+const BERJAM = { name: "Akad", start_at: "2026-08-15T01:00:00Z" };
 
 let calls: Call[];
 
@@ -108,13 +123,25 @@ beforeEach(() => {
   createPaymentLink.mockClear();
 });
 
-/** Setel undangan + paket; `admin` merekam order & transisi status. */
+/**
+ * Setel undangan + paket + jadwal (bawaan: satu sesi berjam); `admin` merekam
+ * order & transisi status.
+ */
 function setup(
   inv: unknown,
   pkg: unknown = PKG,
   adminOpts: { insertErrors?: ({ code: string } | null)[] } = {},
+  server: { events?: unknown; errors?: Record<string, unknown> } = {},
 ) {
-  refs.server = makeClient({ invitations: inv, packages: pkg }, calls);
+  refs.server = makeClient(
+    {
+      invitations: inv,
+      packages: pkg,
+      invitation_events: "events" in server ? server.events : [BERJAM],
+    },
+    calls,
+    { errors: server.errors },
+  );
   refs.admin = makeClient({}, calls, adminOpts);
 }
 
@@ -211,6 +238,114 @@ describe("createCheckoutAction — gerbang sebelum order dibuat", () => {
 
     expect(res.status).toBe("error");
     expect(orders()).toHaveLength(0);
+  });
+});
+
+describe("createCheckoutAction — syarat jadwal (DECISIONS #44)", () => {
+  const tolakJadwal = async (
+    res: Awaited<ReturnType<typeof createCheckoutAction>>,
+  ) => {
+    expect(res).toEqual({
+      status: "error",
+      message: copy.checkout.scheduleFirst,
+      // Penanda agar klien me-refresh halaman aktivasi yang basi (#44).
+      reason: "readiness",
+    });
+    expect(orders()).toHaveLength(0);
+    expect(createPaymentLink).not.toHaveBeenCalled();
+    // Tak ada transisi status: undangan tetap seperti semula.
+    expect(
+      calls.some((c) => c.table === "invitations" && c.op === "update"),
+    ).toBe(false);
+  };
+
+  it.each(["draft", "expired", "pending_payment"])(
+    "status %s tanpa sesi sama sekali → ditolak SEBELUM order (berlaku untuk SEMUA pembayaran)",
+    async (status) => {
+      setup({ id: INV, status, slug: "andi-sinta" }, PKG, {}, { events: [] });
+      await tolakJadwal(await createCheckoutAction(INV, "premium"));
+    },
+  );
+
+  it("hanya sesi TANPA jam → ditolak (sesi itu tak pernah tampil ke tamu)", async () => {
+    setup(
+      { id: INV, status: "draft", slug: "andi-sinta" },
+      PKG,
+      {},
+      {
+        events: [{ name: "Resepsi", start_at: null }],
+      },
+    );
+    await tolakJadwal(await createCheckoutAction(INV, "premium"));
+  });
+
+  it("jadwal kosong (null dari DB) → ditolak", async () => {
+    setup(
+      { id: INV, status: "draft", slug: "andi-sinta" },
+      PKG,
+      {},
+      { events: null },
+    );
+    await tolakJadwal(await createCheckoutAction(INV, "premium"));
+  });
+
+  it("SATU sesi berjam cukup: sesi lain yang belum berjam tak menahan bayar", async () => {
+    setup(
+      { id: INV, status: "draft", slug: "andi-sinta" },
+      PKG,
+      {},
+      {
+        events: [BERJAM, { name: "Resepsi", start_at: null }],
+      },
+    );
+    const res = await createCheckoutAction(INV, "premium");
+    expect(res.status).toBe("redirect");
+    expect(orders()).toHaveLength(1);
+  });
+
+  it("alamat placeholder DAN jadwal kosong → pesan alamat lebih dulu (urutan halaman aktivasi)", async () => {
+    setup(
+      { id: INV, status: "draft", slug: "draft-a1b2c3" },
+      PKG,
+      {},
+      { events: [] },
+    );
+    const res = await createCheckoutAction(INV, "premium");
+    expect(res).toEqual({
+      status: "error",
+      message: copy.checkout.setSlugFirst,
+      // Penanda agar klien me-refresh halaman aktivasi yang basi (#44).
+      reason: "readiness",
+    });
+    expect(orders()).toHaveLength(0);
+  });
+
+  it("jadwal tak bisa dibaca → GAGAL-TERTUTUP: tak ada order maupun link bayar", async () => {
+    setup(
+      { id: INV, status: "draft", slug: "andi-sinta" },
+      PKG,
+      {},
+      {
+        errors: { invitation_events: { message: "timeout" } },
+      },
+    );
+    const res = await createCheckoutAction(INV, "premium");
+    expect(res).toEqual({ status: "error", message: copy.common.error });
+    expect(orders()).toHaveLength(0);
+    expect(createPaymentLink).not.toHaveBeenCalled();
+  });
+
+  it("jadwal dibaca dari undangan INI, lewat klien pengguna (RLS), bukan service_role", async () => {
+    setup({ id: INV, status: "draft", slug: "andi-sinta" });
+    await createCheckoutAction(INV, "premium");
+    const baca = calls.filter((c) => c.table === "invitation_events");
+    expect(baca).toHaveLength(1);
+    expect(baca[0].filters.invitation_id).toBe(INV);
+    expect(
+      (
+        refs.admin as { from: { mock: { calls: unknown[][] } } }
+      ).from.mock.calls.some(([t]) => t === "invitation_events"),
+    ).toBe(false);
   });
 });
 

@@ -541,7 +541,7 @@ Pemicunya sangat biasa. `input type=datetime-local` bernilai "" selama SALAH SAT
   - Migrasi diterapkan ke cloud 2026-09-22 setelah pra-cek (0 sesi, 0 undangan). Versi di `schema_migrations` disamakan dengan nama berkas.
 - **Yang BELUM ditutup, sengaja dicatat:**
   - ~~**Churn id sesi.**~~ Ditutup oleh #43. Setiap autosave — dari langkah mana pun, karena payload = seluruh form — menghapus lalu menyisipkan ulang semua sesi, jadi id berganti tiap simpan. Ini mematahkan UID ICS "stabil" (`lib/calendar.ts`), tautan `/api/ics/{slug}?e={id}` di HTML ISR/tab terbuka (→ 404), dan kesiapan FK check-in Fase 2 (cascade akan menghapus riwayat check-in tiap autosave). Ditutup oleh #43 dengan upsert per id. Versi pada tautan ICS DITOLAK di #43 (butuh perubahan kontrak props 10 tema) dan diganti cache `.ics` 5 menit.
-  - Checkout belum mensyaratkan ≥1 sesi berjam — pemilik bisa membayar undangan berjadwal kosong. Mengubah alur bayar, jadi butuh keputusan SPEC tersendiri.
+  - ~~Checkout belum mensyaratkan ≥1 sesi berjam — pemilik bisa membayar undangan berjadwal kosong.~~ Ditutup oleh #44: gerbang checkout (SPEC §4.8 langkah 0) kini mensyaratkan minimal satu sesi berjam.
   - OG hanya dilindungi saringan query, belum ada test (render gambar berat di jsdom).
   - Galat query jadwal di `/[slug]` & `/api/ics` masih ditelan.
 
@@ -590,6 +590,68 @@ Dicatat sebagai "wajib sebelum Fase 2" di #42; dikerjakan atas rekomendasi yang 
     - `invitation_id` ikut di-SET — ekuivalen, karena WHERE konflik menjamin nilainya sama.
 
     Putaran pertama pgTAP meloloskan dua mutan lain: hapus-semua lalu sisip ulang dengan id yang sama (id saja tak membedakannya), dan kolom `address` tak diperbarui saat konflik. Keduanya kini merah setelah pgTAP ditambah asersi baris anak ber-FK dan pemeriksaan seluruh kolom.
+
+## #44 — 2026-09-22 · Syarat bayar: minimal satu sesi jadwal berjam, semua syarat tampil sekaligus
+
+**Konteks:** pemilik bisa membayar undangan yang jadwalnya kosong, atau yang semua sesinya belum berjam. Sejak #42, sesi tanpa jam mulai tersimpan tetapi tak pernah tampil ke tamu, jadi undangan seperti itu tersebar tanpa keterangan kapan dan di mana acaranya — dan uang sudah terlanjur dibayar. Dicatat sebagai butir terbuka di #42.
+
+Gerbang yang ada hanya menahan alamat `draft-…`, dengan satu kartu untuk satu syarat. Bila alamat dan jadwal sama-sama kurang, pemilik baru mengetahui syarat kedua setelah menyelesaikan yang pertama.
+
+**Keputusan** (disetujui pemilik 2026-09-22, ketiganya opsi rekomendasi):
+1. **Syarat jadwal = minimal SATU sesi berjam.** "Berjam" memakai predikat tunggal `scheduledEvents` (#42) — sama dengan yang dipakai halaman publik, jadi "berjam" di gerbang = "tampil ke tamu". Sesi berisi lain yang belum berjam TIDAK menahan bayar, tetapi halaman aktivasi menyebut namanya (atau "Sesi N", sesuai nomor kartu di editor).
+2. **Berlaku untuk SEMUA pembayaran** — aktivasi pertama, bayar ulang (`pending_payment`), perpanjangan (`expired`) — sama persis dengan syarat alamat.
+3. **Satu sumber syarat DAN satu query:** `lib/activation-readiness.ts` — `fetchReadinessEvents` (baca jadwal lewat klien pengguna/RLS, urut `sort_order`) dan `activationReadiness` — dipakai halaman aktivasi DAN `createCheckoutAction`. Versi pertama berbagi fungsi tetapi menyalin query di dua tempat, dan filter query halaman tak teruji (ditemukan review); kini keduanya tak bisa berbeda pendapat karena konstruksi. Urutan syarat: alamat lalu jadwal; aksi membalas pesan syarat pertama dengan `reason: "readiness"`.
+4. **Halaman aktivasi menampilkan SEMUA syarat sekaligus** (`ActivationBlockers`), masing-masing dengan tombol ke tempat perbaikannya. Menggantikan kartu alamat tunggal.
+5. **Tautan langsung ke langkah editor:** `?langkah=jadwal` (`lib/editor-links.ts`; nama langkah berbahasa Indonesia seperti rute dashboard lain). `EditorShell` membuka langkah itu lebih dulu; nilai tak dikenal atau berupa array → langkah pertama.
+6. **Galat saat membaca jadwal:**
+   - aksi GAGAL-TERTUTUP: tak ada order, tak ada tautan bayar;
+   - halaman tak mengklaim "jadwal kosong" yang tak bisa dipastikan: syarat jadwal dilewati, syarat alamat tetap tampil. Pemilih paket yang muncul tetap ditahan aksi.
+
+   Galat di tempat lain dulu ditelan (catatan #42); di sini tidak.
+7. **Tidak memeriksa syarat ini:** aktivasi SESUDAH pembayaran (webhook/poller) dan aktivasi manual admin. Uang yang sudah masuk tak boleh tertahan, dan admin adalah override yang disengaja.
+8. **Halaman aktivasi yang basi** (jadwal dikosongkan di tab lain setelah halaman dimuat): aksi membalas `reason: "readiness"`, lalu `PackageChooser` memanggil `router.refresh()`, sehingga daftar syarat beserta tautan perbaikannya menggantikan pemilih paket. Galat lain digulir ke pandangan. Dulu pesannya jatuh di bawah kartu Premium — di luar layar ponsel — tanpa tautan perbaikan (ditemukan review).
+9. **Baris sesi "hantu" ditutup di akarnya.** Aksi simpan kini menilai kekosongan kartu SETELAH normalisasi: jam yang tak lengkap/tak sah tersimpan NULL, jadi kartu yang isinya HANYA itu tidak disimpan. Contohnya tahun setengah jadi `0002-…` yang dipancarkan Chrome saat tahun diketik ulang, atau tahun < 1900.
+   - Dulu kartu itu menjadi baris kosong: di editor tampil sebagai kartu kosong tanpa catatan dan langkah Jadwal bercentang, tetapi halaman aktivasi menyebutnya "Sesi N belum tampil" (ditemukan review).
+   - `activationReadiness` juga tak menyebut baris kosong total yang mungkin tersisa dari sebelum perbaikan.
+   - Kartu dengan isian lain tetap tersimpan (#42).
+
+**Ditolak:**
+- **Semua sesi berisi wajib berjam:** menahan pemilik yang sengaja menyimpan sesi cadangan. Cukup disebut namanya.
+- **Hanya aktivasi pertama:** tak selaras dengan syarat alamat, dan membuat perpanjangan undangan tanpa jadwal lolos.
+- **Satu kartu per syarat (seperti dulu):** pemilik menemukan syarat berikutnya hanya setelah memperbaiki yang sebelumnya.
+- **Menahan di webhook/aktivasi:** pembayaran lunas tetapi undangan tak aktif = uang tertahan, dan harus diurus admin manual.
+
+**Konsekuensi:**
+- Gerbang ini mencegah kekeliruan jujur, BUKAN batas keamanan. Pemilik masih bisa mengosongkan jadwal sesudah order dibuat (pembayaran tetap mengaktifkan) atau sesudah aktif (halaman publik tak menampilkan sesi). Tak ada data yang terekspos.
+- Kunci teks `setSlugTitle/Body/Cta` diganti `readiness.*`; `setSlugFirst` tetap untuk penahan server.
+- Test:
+  - `activationReadiness` & `editorHref`/`stepKeyFromParam` (termasuk nilai array dan kunci prototipe seperti `toString`);
+  - aksi ASLI: ketiga status ditolak tanpa sesi berjam, sesi tanpa jam saja ditolak, satu sesi berjam cukup, alamat didahulukan, galat jadwal gagal-tertutup, jadwal dibaca lewat klien pengguna (RLS);
+  - halaman aktivasi ASLI dirender: dua syarat sekaligus berurutan dengan tautannya, ketiga status, pemilih paket hanya saat siap, catatan sesi belum berjam, galat jadwal;
+  - deep link: komponen ketiga editor DAN halaman edit asli yang dirender dengan `?langkah=` (termasuk nilai tak dikenal & array);
+  - `fetchReadinessEvents`: tabel, kolom, filter `invitation_id`, urutan `sort_order` menaik;
+  - `PackageChooser`: penolakan syarat → refresh; galat lain → tanpa refresh, pesan digulir ke pandangan;
+  - aksi simpan ASLI: kartu yang isinya hanya jam tak lengkap/tak sah tidak disimpan;
+  - prasyarat E2E pembayaran (runbook, `.env.example`, kedua spec) kini menyebut sesi berjam; spec gagal-cepat dengan sebabnya alih-alih timeout 120 dtk.
+- Pembuktian:
+  - **Browser sungguhan, lebar ponsel 390 px:**
+    - kedua syarat tampil sekaligus;
+    - "Lengkapi jadwal" membuka langkah Jadwal;
+    - sesi tanpa jam tetap ditahan;
+    - keadaan siap menampilkan catatan "Rapat Umum" + pemilih paket;
+    - halaman basi (sesi berjam dihapus setelah halaman dimuat) → klik paket → halaman ter-refresh menjadi daftar syarat, 0 order, status tetap `draft`;
+    - konsol bersih; data uji dipulihkan.
+  - **Review adversarial:** 15 agen (5 lensa: jalur uang, UX & aksesibilitas, semantik syarat, regresi, test & dokumen; skeptis per temuan; kritik kelengkapan). 9 temuan, sebagian ganda — semuanya rendah, tak ada yang terbantah, seluruhnya ditangani:
+    - prasyarat E2E;
+    - halaman basi / pesan di luar layar (#8);
+    - baris hantu (#9);
+    - query ganda yang filternya tak teruji (#3);
+    - penerusan `?langkah=` dari halaman edit yang tak teruji;
+    - dua kalimat SPEC yang tak persis sesuai kode;
+    - coretan #42 yang masih berkala kini.
+
+    Jalur uang sendiri tak bercacat: hanya `createCheckoutAction` yang membuat tautan bayar undangan, dan tak ada efek samping sebelum syarat diperiksa.
+  - **Uji mutasi:** 32 mutan (urutan & isi syarat, predikat berjam, penahan & gagal-tertutup di aksi, penanda `readiness`, klien RLS, filter & urutan query, baris hantu, refresh & gulir, cabang halaman, tautan perbaikan, deep link) — semuanya merah oleh test.
 
 ---
 

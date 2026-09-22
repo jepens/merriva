@@ -8,6 +8,7 @@ import { CorporateEditor } from "@/components/dashboard/editor/corporate-editor"
 import { FamilyEditor } from "@/components/dashboard/editor/family-editor";
 import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
 import { copy } from "@/lib/copy";
+import { stepKeyFromParam } from "@/lib/editor-links";
 import { isUuid } from "@/lib/id";
 import { photoLimitFromPackage, toMediaView } from "@/lib/media";
 import { toEventDraft } from "@/lib/schedule";
@@ -24,10 +25,15 @@ export const metadata: Metadata = { title: copy.editor.title };
 
 export default async function EditInvitationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ langkah?: string | string[] }>;
 }) {
   const { id } = await params;
+  // `?langkah=jadwal` (mis. dari daftar syarat di halaman aktivasi, #44) →
+  // editor langsung membuka langkah itu; nilai tak dikenal → langkah pertama.
+  const initialStep = stepKeyFromParam((await searchParams).langkah);
   await requireUser();
   if (!isUuid(id)) notFound();
 
@@ -123,6 +129,7 @@ export default async function EditInvitationPage({
           initialMedia={media}
           maxPhotos={maxPhotos}
           songs={songs}
+          initialStep={initialStep}
         />
       ) : content.category === "corporate" ? (
         <CorporateEditor
@@ -132,6 +139,7 @@ export default async function EditInvitationPage({
           initialMedia={media}
           maxPhotos={maxPhotos}
           songs={songs}
+          initialStep={initialStep}
         />
       ) : (
         <FamilyEditor
@@ -141,6 +149,7 @@ export default async function EditInvitationPage({
           initialMedia={media}
           maxPhotos={maxPhotos}
           songs={songs}
+          initialStep={initialStep}
         />
       )}
     </div>
