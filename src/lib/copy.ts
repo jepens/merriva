@@ -702,9 +702,10 @@ export const copy = {
   },
 
   public: {
-    // Undangan gagal dimuat karena DB terganggu (DECISIONS #45) — boundary
-    // `app/[slug]/error.tsx`: Album Momen (dinamis) & navigasi sisi klien. Render
-    // ISR `/{slug}` yang gagal disajikan lewat `common.loadError` (global-error).
+    // Gagal dimuat karena DB terganggu (DECISIONS #45) — boundary Album Momen
+    // `app/[slug]/momen/error.tsx`. Halaman undangan `/{slug}` sengaja TANPA
+    // boundary segmen (anggaran bundle JS tamu), jadi galatnya disajikan lewat
+    // versi baik terakhir / halaman 500 statis bawaan Next.
     loadError: {
       title: "Undangan belum bisa dimuat",
       body: "Sambungan ke server sedang terganggu. Coba lagi sebentar lagi.",

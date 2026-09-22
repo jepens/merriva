@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import InvitationDashboardError from "@/app/(dashboard)/dashboard/undangan/[id]/error";
-import InvitationLoadError from "@/app/[slug]/error";
+import MomenLoadError from "@/app/[slug]/momen/error";
 import GlobalError from "@/app/global-error";
 import PreviewLoadError from "@/app/preview/[id]/error";
 import { copy } from "@/lib/copy";
@@ -17,7 +17,7 @@ import { copy } from "@/lib/copy";
 afterEach(cleanup);
 
 describe.each([
-  ["undangan tamu", InvitationLoadError, copy.public.loadError],
+  ["Album Momen (tamu)", MomenLoadError, copy.public.loadError],
   ["pratinjau pemilik", PreviewLoadError, copy.preview.loadError],
   ["dashboard undangan", InvitationDashboardError, copy.common.loadError],
 ] as const)("layar galat %s", (_nama, Boundary, text) => {
@@ -61,11 +61,18 @@ describe("halaman galat global (boundary runtime halaman dinamis)", () => {
   it("berbahasa Indonesia, bukan halaman 500 bawaan Next yang berbahasa Inggris", () => {
     expect(el.props.lang).toBe("id");
     render(el.props.children.props.children);
-    const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent(copy.common.loadError.title);
-    expect(alert).toHaveTextContent(copy.common.loadError.body);
+    expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: copy.common.loadError.retry }),
     ).toBeInTheDocument();
+  });
+
+  it("teksnya TETAP sama dengan copy.common.loadError", () => {
+    // Berkas itu sengaja tak mengimpor `copy` (masuk graf klien SETIAP route →
+    // bundel halaman tamu melewati anggaran). Test ini penggantinya.
+    render(el.props.children.props.children);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(copy.common.loadError.title);
+    expect(alert).toHaveTextContent(copy.common.loadError.body);
   });
 });
