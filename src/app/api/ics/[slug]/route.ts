@@ -3,6 +3,7 @@ import { copy } from "@/lib/copy";
 import { appUrl } from "@/lib/env";
 import { parseContentForRender } from "@/lib/invitation-content";
 import { checkClientRateLimit } from "@/lib/request-ip";
+import { scheduledEvents } from "@/lib/schedule";
 import { isDraftSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -68,13 +69,16 @@ export async function GET(
   let query = admin
     .from("invitation_events")
     .select("id, name, start_at, end_at, venue_name, address")
-    .eq("invitation_id", inv.id);
+    .eq("invitation_id", inv.id)
+    // Sesi draft tanpa jam (DECISIONS #42) tak punya tempat di kalender tamu.
+    .not("start_at", "is", null);
   if (eventId) query = query.eq("id", eventId);
   const { data: rows } = await query
     .order("sort_order", { ascending: true })
     .order("start_at", { ascending: true });
 
-  if (!rows || rows.length === 0) {
+  const scheduled = scheduledEvents(rows ?? []);
+  if (scheduled.length === 0) {
     return new Response(null, { status: 404 });
   }
 
@@ -87,9 +91,9 @@ export async function GET(
       ? `${c.weddingKicker} ${content.groom.nickname || content.groom.name || c.groomFallback} & ${content.bride.nickname || content.bride.name || c.brideFallback}\n${link}`
       : link;
 
-  const events: CalendarEventInput[] = rows.map((e) => ({
+  const events: CalendarEventInput[] = scheduled.map((e) => ({
     id: e.id,
-    title: e.name,
+    title: e.name.trim() || copy.public.eventFallbackName,
     startAt: e.start_at,
     endAt: e.end_at,
     venueName: e.venue_name,

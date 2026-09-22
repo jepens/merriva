@@ -1,6 +1,7 @@
 "use client";
 
 import { copy } from "@/lib/copy";
+import { isScheduleComplete } from "@/lib/event-draft";
 import type { InvitationMediaView } from "@/types/invitation";
 
 import { EditorShell, type EditorStep } from "./editor-shell";
@@ -31,7 +32,7 @@ const STEPS: EditorStep[] = [
     key: "schedule",
     label: copy.editor.steps.schedule,
     render: (c) => <ScheduleStep form={c.form} />,
-    complete: (v) => v.events.some((e) => Boolean(e.startAt)),
+    complete: (v) => isScheduleComplete(v.events),
   },
   {
     key: "gallery",

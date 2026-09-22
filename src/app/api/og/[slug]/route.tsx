@@ -127,6 +127,9 @@ async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
     .from("invitation_events")
     .select("start_at")
     .eq("invitation_id", inv.id)
+    // Urut `sort_order` + limit 1: tanpa saringan ini sesi draft tanpa jam di
+    // urutan pertama menutupi sesi berjam sesudahnya (DECISIONS #42).
+    .not("start_at", "is", null)
     .order("sort_order", { ascending: true })
     .order("start_at", { ascending: true })
     .limit(1)

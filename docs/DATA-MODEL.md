@@ -16,7 +16,7 @@ Prinsip: konten undangan yang fleksibel per kategori disimpan sebagai JSONB terv
 
 **invitations** — inti. `id`, `user_id → profiles`, `theme_id → themes`, `package_id → packages null` (terisi saat order paid), `slug unique` (lowercase, regex `[a-z0-9-]{3,60}`, blocklist kata terlarang, ganti maks 1× setelah aktif), `category` `'wedding'|'corporate'|'family'`, `status` `'draft'|'pending_payment'|'active'|'expired'|'suspended'`, `content jsonb` (data form — skema Zod per kategori), `settings jsonb` (tema varian warna, toggle section, moderasi ucapan on/off), `event_date date` (acara utama, untuk sorting/retensi), `active_until timestamptz null`, `published_at`, `purged_at timestamptz null` (waktu data pribadi dihapus permanen — retensi §5; NULL = belum), `created_at`, `updated_at`.
 
-**invitation_events** — jadwal per undangan (akad/resepsi/sesi). `id`, `invitation_id FK cascade`, `name`, `start_at timestamptz`, `end_at timestamptz null`, `venue_name`, `address`, `maps_url`, `sort_order`. *(Fase 2: FK target check-in per sesi.)*
+**invitation_events** — jadwal per undangan (akad/resepsi/sesi). `id`, `invitation_id FK cascade`, `name`, `start_at timestamptz null` (NULL = sesi draft yang jam mulainya belum diisi: tersimpan agar isian tak hilang, TIDAK PERNAH tampil di halaman publik/pratinjau/.ics/OG — DECISIONS #42), `end_at timestamptz null`, `venue_name`, `address`, `maps_url`, `sort_order`. *(Fase 2: FK target check-in per sesi — hanya sesi `start_at is not null`.)*
 
 **media** — file per undangan. `id`, `invitation_id FK cascade`, `type` `'photo'` (Fase 1), `storage_path` (relatif, immutable hash — **tanpa URL vendor**), `width`, `height`, `sort_order`. Limit `max_photos` ditegakkan di server action, bukan UI.
 

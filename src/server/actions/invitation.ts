@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { copy } from "@/lib/copy";
-import { localToUtc } from "@/lib/datetime";
+import { localToStoredUtc } from "@/lib/datetime";
+import { isBlankEventDraft } from "@/lib/event-draft";
 import { draftSlug, isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
 import { mediaObjectPaths } from "@/lib/media";
@@ -137,22 +138,29 @@ export async function saveInvitationDraftAction(
 
   // Jadwal: konversi waktu-lokal (settings.timezone) → UTC, ganti sesi atomik
   // via RPC (SECURITY INVOKER → RLS membatasi ke undangan sendiri).
+  //
+  // SETIAP sesi yang berisi ikut tersimpan (DECISIONS #42). Dulu sesi tanpa jam
+  // mulai lengkap DIBUANG di sini sementara aksi membalas "success", sehingga
+  // setelah muat ulang sesi itu hilang beserta gedung/alamat/peta yang sudah
+  // diketik. Kini jam yang belum lengkap disimpan NULL (tak pernah tampil ke
+  // tamu — `lib/schedule.ts`); hanya kartu yang kosong total yang dilewati.
+  // `sort_order` = indeks form, supaya urutan pemilik terjaga apa adanya.
   const tz = settings.timezone;
-  const eventRows = events
-    .map((e, i) => {
-      const startUtc = e.startAt ? localToUtc(e.startAt, tz) : null;
-      if (!startUtc) return null;
-      return {
-        name: e.name ?? "",
-        start_at: startUtc,
-        end_at: e.endAt ? localToUtc(e.endAt, tz) : null,
-        venue_name: e.venueName ?? null,
-        address: e.address ?? null,
-        maps_url: e.mapsUrl ?? null,
-        sort_order: i,
-      };
-    })
-    .filter((r): r is NonNullable<typeof r> => r !== null);
+  const eventRows = events.flatMap((e, i) =>
+    isBlankEventDraft(e)
+      ? []
+      : [
+          {
+            name: e.name ?? "",
+            start_at: localToStoredUtc(e.startAt, tz),
+            end_at: localToStoredUtc(e.endAt, tz),
+            venue_name: e.venueName ?? null,
+            address: e.address ?? null,
+            maps_url: e.mapsUrl ?? null,
+            sort_order: i,
+          },
+        ],
+  );
 
   const { error: evError } = await supabase.rpc("replace_invitation_events", {
     inv_id: id,

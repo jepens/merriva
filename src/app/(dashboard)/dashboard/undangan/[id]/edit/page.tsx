@@ -8,9 +8,9 @@ import { CorporateEditor } from "@/components/dashboard/editor/corporate-editor"
 import { FamilyEditor } from "@/components/dashboard/editor/family-editor";
 import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
 import { copy } from "@/lib/copy";
-import { utcToLocal } from "@/lib/datetime";
 import { isUuid } from "@/lib/id";
 import { photoLimitFromPackage, toMediaView } from "@/lib/media";
+import { toEventDraft } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -58,14 +58,10 @@ export default async function EditInvitationPage({
     .select("name, start_at, end_at, venue_name, address, maps_url")
     .eq("invitation_id", inv.id)
     .order("sort_order", { ascending: true });
-  const events = (eventRows ?? []).map((e) => ({
-    name: e.name,
-    startAt: utcToLocal(e.start_at, settings.timezone),
-    endAt: e.end_at ? utcToLocal(e.end_at, settings.timezone) : "",
-    venueName: e.venue_name ?? "",
-    address: e.address ?? "",
-    mapsUrl: e.maps_url ?? "",
-  }));
+  // Sesi tanpa jam mulai (start_at NULL) kembali UTUH dengan isian Mulai kosong.
+  const events = (eventRows ?? []).map((e) =>
+    toEventDraft(e, settings.timezone),
+  );
 
   // Galeri: baris `media` → view (URL domain sendiri) + batas foto paket.
   const { data: mediaRows } = await supabase

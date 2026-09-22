@@ -2,8 +2,10 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { copy } from "@/lib/copy";
 import { parseContentForRender } from "@/lib/invitation-content";
 import { toMediaView } from "@/lib/media";
+import { scheduledEvents } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
 import { DEFAULT_SETTINGS, settingsSchema } from "@/lib/validation/content";
 import type { InvitationCategory } from "@/types";
@@ -25,7 +27,7 @@ import type {
 interface EventRow {
   id: string;
   name: string;
-  start_at: string;
+  start_at: string | null;
   end_at: string | null;
   venue_name: string | null;
   address: string | null;
@@ -79,15 +81,22 @@ export function buildInvitationData(args: {
     : DEFAULT_SETTINGS;
   const content = parseContentForRender(args.content, args.category);
 
-  const events: InvitationEventView[] = args.eventRows.map((e) => ({
-    id: e.id,
-    name: e.name,
-    startAt: e.start_at,
-    endAt: e.end_at,
-    venueName: e.venue_name,
-    address: e.address,
-    mapsUrl: e.maps_url,
-  }));
+  // Hanya sesi BERJAM yang sampai ke tema (DECISIONS #42): sesi draft tanpa jam
+  // tersimpan agar isian pemilik tak hilang, tetapi tak pernah tampil ke tamu.
+  // Disaring di sini — satu titik untuk halaman publik & pratinjau — sehingga
+  // kontrak tema tak berubah dan `events[0]` selalu sesi terjadwal pertama
+  // (label tanggal hero & hitung mundur di ke-10 tema).
+  const events: InvitationEventView[] = scheduledEvents(args.eventRows).map(
+    (e) => ({
+      id: e.id,
+      name: e.name.trim() || copy.public.eventFallbackName,
+      startAt: e.start_at,
+      endAt: e.end_at,
+      venueName: e.venue_name,
+      address: e.address,
+      mapsUrl: e.maps_url,
+    }),
+  );
 
   const storage = getStorage();
   const media: InvitationMediaView[] = args.mediaRows.map((r) =>

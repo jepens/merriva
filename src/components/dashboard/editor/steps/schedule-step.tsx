@@ -1,10 +1,17 @@
 "use client";
 
-import { useFieldArray, type UseFormReturn } from "react-hook-form";
+import { useState, type FocusEvent, type ChangeEvent } from "react";
+import { useFieldArray, useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy";
+import {
+  EVENT_LOCAL_MAX,
+  EVENT_LOCAL_MIN,
+  isBlankEventDraft,
+  isCompleteLocalDateTime,
+} from "@/lib/event-draft";
 import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
 import { Field } from "../field";
@@ -46,17 +53,12 @@ export function ScheduleStep({ form }: { form: UseFormReturn<EditorValues> }) {
             />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={copy.editor.schedule.start}>
-              <Input
-                type="datetime-local"
-                max="9999-12-31T23:59"
-                {...register(`events.${i}.startAt`)}
-              />
-            </Field>
+            <StartField form={form} index={i} />
             <Field label={copy.editor.schedule.end}>
               <Input
                 type="datetime-local"
-                max="9999-12-31T23:59"
+                min={EVENT_LOCAL_MIN}
+                max={EVENT_LOCAL_MAX}
                 {...register(`events.${i}.endAt`)}
               />
             </Field>
@@ -101,5 +103,85 @@ export function ScheduleStep({ form }: { form: UseFormReturn<EditorValues> }) {
         {copy.editor.schedule.add}
       </AddButton>
     </div>
+  );
+}
+
+/**
+ * Isian "Mulai" satu sesi (DECISIONS #42).
+ *
+ * - Sesi berisi yang jamnya belum lengkap tetap TERSIMPAN, tetapi belum tampil
+ *   ke tamu — catatan kuning memberitahu pemilik alih-alih diam.
+ * - Pengaman: selama pemilik MENYUNTING jam sesi yang sudah berjam, nilai
+ *   antara yang belum lengkap TIDAK menimpa jam tersimpan. `datetime-local`
+ *   melapor "" selama salah satu segmennya kosong, dan Chrome desktop
+ *   memancarkan tahun setengah jadi saat tahun diketik ulang ("0002-…",
+ *   "0020-…", "0202-…" sebelum "2027-…"). Dulu hanya "" yang ditahan, sehingga
+ *   tahun antara lolos, tersimpan tanpa jam, dan sesi hilang dari undangan
+ *   aktif. Kini SETIAP nilai yang tak lolos aturan bersama (`lib/event-draft`)
+ *   ditahan sampai isiannya lengkap kembali; untuk membuang sesi, "Hapus".
+ *   `onBlur` ikut dijaga karena react-hook-form membaca ulang nilai DOM saat blur.
+ */
+function StartField({
+  form,
+  index,
+}: {
+  form: UseFormReturn<EditorValues>;
+  index: number;
+}) {
+  const path = `events.${index}.startAt` as const;
+  const reg = form.register(path);
+  const value = useWatch({ control: form.control, name: path });
+  const session = useWatch({ control: form.control, name: `events.${index}` });
+  const [kept, setKept] = useState(false);
+
+  function guard<
+    E extends ChangeEvent<HTMLInputElement> | FocusEvent<HTMLInputElement>,
+  >(handler: (event: E) => unknown) {
+    return (event: E) => {
+      if (
+        !isCompleteLocalDateTime(event.target.value) &&
+        isCompleteLocalDateTime(form.getValues(path))
+      ) {
+        setKept(true);
+        return;
+      }
+      setKept(false);
+      return handler(event);
+    };
+  }
+
+  // "Jam sebelumnya masih tersimpan" hanya boleh diucapkan bila memang benar.
+  const keptValid = kept && isCompleteLocalDateTime(value);
+  const missing =
+    !keptValid &&
+    !isBlankEventDraft(session ?? {}) &&
+    !isCompleteLocalDateTime(value);
+  const hint = keptValid
+    ? copy.editor.schedule.startKept
+    : missing
+      ? copy.editor.schedule.startMissing
+      : undefined;
+
+  return (
+    <>
+      <Field label={copy.editor.schedule.start} hint={hint} hintTone="warning">
+        <Input
+          type="datetime-local"
+          min={EVENT_LOCAL_MIN}
+          max={EVENT_LOCAL_MAX}
+          {...reg}
+          onChange={guard(reg.onChange)}
+          onBlur={guard(reg.onBlur)}
+        />
+      </Field>
+      {/* Region status yang SELALU ada (WCAG 4.1.3): catatan yang muncul saat
+        isian sedang difokus tak diumumkan bila hanya lewat aria-describedby,
+        dan region yang baru disisipkan bersama teksnya sering diabaikan
+        pembaca layar. Di luar Field: Field menghubungkan label ke SATU anak.
+        sr-only = diposisikan absolut, jadi tak memakan sel grid. */}
+      <span role="status" className="sr-only">
+        {hint ?? ""}
+      </span>
+    </>
   );
 }

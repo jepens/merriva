@@ -518,6 +518,12 @@ export const copy = {
       error: "Gagal mengunggah foto. Coba lagi.",
     },
     schedule: {
+      // Sesi berisi yang jam mulainya belum lengkap (DECISIONS #42).
+      startMissing:
+        "Sesi ini belum tampil di undangan sampai tanggal & jam mulai diisi lengkap.",
+      // Isian Mulai dikosongkan pada sesi yang sudah berjam: jam lama dipertahankan.
+      startKept:
+        "Tanggal & jam belum lengkap. Yang tersimpan masih jam sebelumnya sampai isian ini lengkap.",
       tzHint: "Waktu mengikuti zona yang dipilih di langkah Pengaturan.",
       empty: "Belum ada sesi. Tambahkan akad, resepsi, dan sesi lainnya.",
       session: "Sesi",
@@ -659,6 +665,9 @@ export const copy = {
   },
 
   public: {
+    // Nama cadangan sesi yang namanya dikosongkan pemilik (tamu tetap melihat
+    // label, editor tetap memuat isian kosong apa adanya — DECISIONS #42).
+    eventFallbackName: "Acara",
     // Label lightbox galeri (dipakai komponen bersama `_shared/lightbox`).
     gallery: {
       enlarge: "Perbesar foto",

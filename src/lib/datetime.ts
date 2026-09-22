@@ -1,3 +1,4 @@
+import { isCompleteLocalDateTime } from "@/lib/event-draft";
 import { TIMEZONES, type TimezoneId } from "@/lib/validation/content";
 
 /**
@@ -27,6 +28,21 @@ export function localToUtc(local: string, tz: TimezoneId): string | null {
   const asUtc = Date.parse(`${withSeconds}Z`);
   if (Number.isNaN(asUtc)) return null;
   return new Date(asUtc - OFFSET_MINUTES[tz] * 60000).toISOString();
+}
+
+/**
+ * Waktu-lokal dari editor → UTC yang AMAN disimpan di `invitation_events`
+ * (DECISIONS #42). Nilai belum lengkap/tak sah (mis. "2026-02-30T10:00", tahun
+ * 0001, sisa ketikan) → `null` = sesi draft belum berjam, alih-alih tanggal
+ * yang digeser diam-diam atau galat Postgres yang menggagalkan autosave.
+ */
+export function localToStoredUtc(
+  local: string | null | undefined,
+  tz: TimezoneId,
+): string | null {
+  return isCompleteLocalDateTime(local)
+    ? localToUtc((local as string).trim(), tz)
+    : null;
 }
 
 /**

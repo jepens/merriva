@@ -497,9 +497,53 @@ Dua niat tertulis bertabrakan: `src/server/marketing/catalog.ts` sengaja **gagal
   - Uji mutasi: 35 varian, seluruhnya merah. Mencakup maxLength dicabut, amplop draft kembali ketat, aksi kembali `flatten()`, peta pesan dicabut, `editableContent` kembali mengosongkan, kunci langkah menyimpang, semua langkah ditandai, penghitung selalu 0, `aria-invalid` hilang, dan batas URL/email strict menyimpang.
 - Yang BELUM ditutup, sengaja dicatat:
   - Skema strict (format https/YouTube, email PIC, isian wajib) tidak dijalankan sebagai gerbang aktivasi; nilai tak valid diterima diam-diam lalu disaring saat render.
-  - Sesi jadwal tanpa `startAt` dibuang server walau indikator bilang "Tersimpan".
+  - ~~Sesi jadwal tanpa `startAt` dibuang server walau indikator bilang "Tersimpan".~~ Ditutup oleh #42.
   - Isian kutipan (`content.quote`) ada di skema tetapi belum di editor (SPEC §4.4 langkah 7).
   - Perilaku `maxLength` dengan IME Android/iOS dan hitungan baris baru belum diuji di perangkat nyata.
+
+---
+
+## #42 — 2026-09-22 · Sesi jadwal tanpa jam mulai tersimpan (`start_at` boleh NULL)
+
+**Konteks:** sesi jadwal yang tanggal-jam mulainya belum lengkap DIBUANG di dua lapis yang sama-sama diam: filter di `saveInvitationDraftAction` dan `where start_at is not null` di RPC `replace_invitation_events`. Aksi tetap membalas "success" dan indikator menulis "Tersimpan". Editor masih memegang sesi itu di memori, sehingga pemilik mengira tersimpan. Setelah halaman dimuat ulang, sesi hilang beserta nama, gedung, alamat, dan peta yang sudah diketik. Hal yang sama terjadi lewat jalur resmi "Selesai → Pratinjau → Edit" dan lewat "Kustomisasi Tampilan". Ini melanggar SPEC §4.4 "refresh browser tidak menghilangkan data".
+
+Pemicunya sangat biasa. `input type=datetime-local` bernilai "" selama SALAH SATU segmennya kosong, misalnya tanggal sudah diisi tetapi jam belum, atau pemilik mengisi gedung dulu. Pada undangan AKTIF lebih parah: menghapus satu segmen jam saat hendak mengganti tanggal langsung menghapus sesi dari halaman tamu.
+
+**Keputusan** (disetujui pemilik 2026-09-22):
+1. Migrasi `20260922120000_events_nullable_start.sql` melonggarkan `invitation_events.start_at` menjadi NULLABLE. NULL = sesi draft belum berjam. RPC menyimpan semua sesi yang dikirim aplikasi. Nama kosong tetap kosong — dulu diganti diam-diam menjadi "Acara", sehingga editor memuat nama yang tak pernah diketik pemilik. Hak eksekusi `PUBLIC`/`anon` dicabut; RPC tetap SECURITY INVOKER dengan RLS.
+2. Predikat tunggal "sesi terjadwal" (`lib/schedule.ts` `scheduledEvents`) dipakai di builder data (halaman publik + pratinjau) dan di route ICS. OG menyaring di query. Kontrak tema `InvitationEventView.startAt: string` TIDAK berubah, jadi ke-10 tema tak disentuh. `events[0]` kini selalu sesi terjadwal pertama, sehingga label tanggal hero & hitung mundur benar.
+3. Satu aturan tanggal-jam dipakai bersama editor & server (`lib/event-draft.ts`, tanpa impor): format lengkap, tahun 1900–9999, tanggal kalender nyata. `2026-02-30` menjadi NULL alih-alih digeser diam-diam ke 2 Maret. Tahun 0001 dulu menghasilkan tahun 0000 setelah konversi zona, sehingga Postgres menolak dan SELURUH autosave gagal dengan pesan "periksa koneksi"; kini juga NULL.
+4. Editor: isian "Mulai" pada sesi berisi yang belum berjam memberi catatan (bukan galat) yang terhubung ke isiannya dan diumumkan lewat region status yang selalu ada. **Pengaman:** selama pemilik menyunting jam sesi yang sudah berjam, SETIAP nilai yang belum lengkap menurut aturan bersama tidak menimpa jam tersimpan sampai isiannya lengkap kembali. Versi pertama hanya menahan "" — review membuktikan di Chrome sungguhan bahwa mengetik ulang tahun memancarkan nilai antara `0002-…`, `0020-…`, `0202-…` yang lolos, tersimpan tanpa jam, dan menghapus sesi dari undangan aktif. `onBlur` ikut dijaga karena react-hook-form membaca ulang nilai DOM saat blur. Untuk membuang sesi, pakai "Hapus". Kartu kosong total tidak disimpan. Langkah Jadwal bercentang hanya bila semua sesi berisi sudah berjam — dulu cukup satu.
+
+**Alasan:** hanya menyimpan sesi di tempat semestinya (tabel ternormalisasi, SPEC prinsip & DATA-MODEL §1) yang memenuhi kriteria "refresh tidak menghilangkan data". Menyaring di satu titik membuat pembaca publik tak mungkin lupa, dan kontrak tema tetap utuh.
+
+**Ditolak:**
+- Peringatan + tombol Selesai menahan, tanpa migrasi: sesi tetap hilang saat tab ditutup, pindah perangkat, atau navigasi lain; `beforeunload` tak bisa diandalkan di WebView/iOS dan tak terpicu navigasi Next. Tidak memenuhi SPEC.
+- Penyangga JSON (`settings.pendingEvents`) untuk sesi setengah jadi: dua sumber kebenaran untuk satu jadwal, dan `settings` dibaca halaman publik sehingga butuh pengecualian khusus.
+- Menolak seluruh simpanan bila ada sesi tanpa jam: mengulang masalah amplop #41 — satu kartu menggagalkan simpanan semua langkah.
+
+**Konsekuensi:**
+- **Urutan deploy.** Bila aplikasi sudah ter-deploy, deploy APLIKASI dulu, lalu migrasi:
+  - aplikasi baru di atas RPC lama: sesi tanpa jam masih dibuang SQL (sama seperti sebelum #42), nama kosong masih menjadi "Acara", dan catatan editor tetap jujur karena tak mengklaim "sudah tersimpan";
+  - urutan sebaliknya punya jeda buruk: RPC baru menyimpan nama kosong apa adanya, sedangkan builder & ICS lama tak punya label cadangan, sehingga judul sesi tampil kosong ke tamu.
+  - Pada 2026-09-22 belum ada aplikasi ter-deploy (Easypanel belum disiapkan) dan cloud berisi 0 undangan, jadi migrasi diterapkan langsung.
+  - Setelah ada baris `start_at` NULL atau nama kosong, **rollback aplikasi ke commit sebelum #42 TIDAK aman** (pembaca lama tak menyaring). Rollback RPC saja aman. Rollback PENUH ke NOT NULL wajib menghapus sesi tanpa jam — destruktif, butuh persetujuan pemilik.
+- Fase 2: target check-in hanya sesi `start_at is not null`.
+- Test: aksi ASLI (isi RPC yang dikirim), builder data, route ICS, kontrak migrasi statis, aturan tanggal-jam, dan perilaku isian "Mulai" di editor asli — termasuk urutan nilai antara yang dipancarkan Chrome saat tahun diketik ulang.
+- Pembuktian:
+  - Browser sungguhan: sesi tanpa jam tetap "Tersimpan", kembali utuh setelah muat ulang, dan tidak muncul di pratinjau.
+  - Database: RPC diuji di bawah RLS (pemilik menyimpan NULL, pengguna lain ditolak, `anon` tak bisa mengeksekusi).
+  - Review adversarial: 23 agen, 11 temuan terbukti — semuanya ditutup. Yang terberat: pengaman versi pertama hanya menahan "".
+  - Uji mutasi: 26 varian. 23 merah. Tiga lolos dengan alasan yang diketahui:
+    - catatan "jam sebelumnya" tanpa cek keabsahan — ekuivalen, karena pengaman hanya menahan bila jam tersimpan sah;
+    - saringan aplikasi di ICS dicabut — ekuivalen, karena query sudah `.not(start_at is null)` dan `buildIcs` melewati sesi tanpa jam;
+    - saringan OG dicabut — celah test yang diakui di bawah.
+  - Migrasi diterapkan ke cloud 2026-09-22 setelah pra-cek (0 sesi, 0 undangan). Versi di `schema_migrations` disamakan dengan nama berkas.
+- **Yang BELUM ditutup, sengaja dicatat:**
+  - **Churn id sesi.** Setiap autosave — dari langkah mana pun, karena payload = seluruh form — menghapus lalu menyisipkan ulang semua sesi, jadi id berganti tiap simpan. Ini mematahkan UID ICS "stabil" (`lib/calendar.ts`), tautan `/api/ics/{slug}?e={id}` di HTML ISR/tab terbuka (→ 404), dan kesiapan FK check-in Fase 2 (cascade akan menghapus riwayat check-in tiap autosave). **Wajib diselesaikan sebelum Fase 2**: upsert per id + versi pada tautan ICS.
+  - Checkout belum mensyaratkan ≥1 sesi berjam — pemilik bisa membayar undangan berjadwal kosong. Mengubah alur bayar, jadi butuh keputusan SPEC tersendiri.
+  - OG hanya dilindungi saringan query, belum ada test (render gambar berat di jsdom).
+  - Galat query jadwal di `/[slug]` & `/api/ics` masih ditelan.
 
 ---
 

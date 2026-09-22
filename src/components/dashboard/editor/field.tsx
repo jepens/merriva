@@ -33,14 +33,18 @@ export function Field({
   label,
   htmlFor,
   hint,
+  hintTone = "muted",
   children,
 }: {
   label: string;
   htmlFor?: string;
   hint?: string;
+  /** `warning` untuk petunjuk yang menuntut tindakan (bukan galat). */
+  hintTone?: "muted" | "warning";
   children: ReactNode;
 }) {
   const autoId = useId();
+  const hintId = useId();
   const errorId = useId();
   const control = isValidElement<ControlProps>(children)
     ? (children as ReactElement<ControlProps>)
@@ -51,7 +55,11 @@ export function Field({
   const controlId = control?.props.id ?? htmlFor ?? autoId;
 
   const describedBy =
-    [control?.props["aria-describedby"], error ? errorId : undefined]
+    [
+      control?.props["aria-describedby"],
+      hint ? hintId : undefined,
+      error ? errorId : undefined,
+    ]
       .filter(Boolean)
       .join(" ") || undefined;
 
@@ -65,7 +73,18 @@ export function Field({
             "aria-describedby": describedBy,
           } as Partial<ControlProps> & { "aria-invalid"?: boolean })
         : children}
-      {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
+      {hint ? (
+        <p
+          id={hintId}
+          className={
+            hintTone === "warning"
+              ? "text-xs text-amber-700 dark:text-amber-400"
+              : "text-muted-foreground text-xs"
+          }
+        >
+          {hint}
+        </p>
+      ) : null}
       {error ? (
         <p id={errorId} role="status" className="text-destructive text-xs">
           {error}

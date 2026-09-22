@@ -1,0 +1,112 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * Route `/api/ics/[slug]` — berkas kalender tamu hanya memuat sesi BERJAM
+ * (DECISIONS #42). Klien palsu sengaja MENGABAIKAN `.not(...)` supaya yang
+ * teruji adalah saringan aplikasi, bukan kebetulan query.
+ */
+
+vi.mock("@/lib/request-ip", () => ({
+  checkClientRateLimit: vi.fn(async () => ({ ok: true })),
+}));
+
+const { refs } = vi.hoisted(() => ({
+  refs: { events: [] as Record<string, unknown>[] },
+}));
+
+vi.mock("@/lib/supabase/admin", async () => {
+  const { emptyContent } = await import("@/lib/validation/content");
+  return {
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        const filters: Record<string, unknown> = {};
+        const chain: Record<string, unknown> = {};
+        chain.select = () => chain;
+        chain.eq = (col: string, val: unknown) => {
+          filters[col] = val;
+          return chain;
+        };
+        chain.not = () => chain;
+        chain.order = () => chain;
+        chain.maybeSingle = () =>
+          Promise.resolve({
+            data: {
+              id: "inv-1",
+              slug: "andi-sinta",
+              category: "wedding",
+              content: emptyContent("wedding"),
+              status: "active",
+            },
+            error: null,
+          });
+        chain.then = (
+          ok: (v: unknown) => unknown,
+          fail: (e: unknown) => unknown,
+        ) =>
+          Promise.resolve({
+            data:
+              table === "invitation_events"
+                ? refs.events.filter((e) => !filters.id || e.id === filters.id)
+                : null,
+            error: null,
+          }).then(ok, fail);
+        return chain;
+      },
+    }),
+  };
+});
+
+import { GET } from "@/app/api/ics/[slug]/route";
+
+const DRAFT_ID = "11111111-1111-4111-8111-111111111111";
+const AKAD_ID = "22222222-2222-4222-8222-222222222222";
+
+function panggil(query = "") {
+  return GET(new Request(`http://localhost/api/ics/andi-sinta${query}`), {
+    params: Promise.resolve({ slug: "andi-sinta" }),
+  });
+}
+
+beforeEach(() => {
+  refs.events = [
+    {
+      id: DRAFT_ID,
+      name: "Resepsi",
+      start_at: null,
+      end_at: null,
+      venue_name: "Gedung Mawar",
+      address: null,
+    },
+    {
+      id: AKAD_ID,
+      name: "Akad",
+      start_at: "2026-08-15T01:00:00Z",
+      end_at: null,
+      venue_name: null,
+      address: null,
+    },
+  ];
+});
+
+describe("GET /api/ics/[slug]", () => {
+  it("hanya sesi berjam yang masuk kalender", async () => {
+    const res = await panggil();
+    expect(res.status).toBe(200);
+    const ics = await res.text();
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+    expect(ics).toContain(AKAD_ID);
+    expect(ics).not.toContain(DRAFT_ID);
+    expect(ics).not.toContain("Resepsi");
+  });
+
+  it("tautan ?e= ke sesi yang belum berjam → 404, bukan berkas rusak", async () => {
+    const res = await panggil(`?e=${DRAFT_ID}`);
+    expect(res.status).toBe(404);
+  });
+
+  it("nama sesi kosong memakai label cadangan", async () => {
+    refs.events = [{ ...refs.events[1], name: "" }];
+    const ics = await (await panggil()).text();
+    expect(ics).toMatch(/SUMMARY:Acara/);
+  });
+});

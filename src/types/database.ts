@@ -177,7 +177,7 @@ export type Database = {
           maps_url: string | null;
           name: string;
           sort_order: number;
-          start_at: string;
+          start_at: string | null;
           venue_name: string | null;
         };
         Insert: {
@@ -188,7 +188,7 @@ export type Database = {
           maps_url?: string | null;
           name: string;
           sort_order?: number;
-          start_at: string;
+          start_at?: string | null;
           venue_name?: string | null;
         };
         Update: {
@@ -199,7 +199,7 @@ export type Database = {
           maps_url?: string | null;
           name?: string;
           sort_order?: number;
-          start_at?: string;
+          start_at?: string | null;
           venue_name?: string | null;
         };
         Relationships: [
