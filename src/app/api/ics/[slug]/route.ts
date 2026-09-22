@@ -20,10 +20,14 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
  * Perlindungan beban (endpoint publik → boundary "rate limit endpoint publik"):
  *   1. Rate limit per-IP.
  *   2. Cheap-reject: slug reserved/draft/tak-aktif/tak-ada → 404 (tanpa rakit).
- *   3. Cache-Control agar CDN menyerap unduhan berulang. Biaya per hit rendah
- *      (1 query + perakitan string; tanpa render gambar), jadi tak sekritis OG —
- *      Cloudflare Cache Rule opsional (bila dipasang, cache key WAJIB menyertakan
- *      query `e` karena berkas berbeda per sesi).
+ *   3. Cache-Control PENDEK (5 menit): URL per sesi stabil lintas suntingan
+ *      (DECISIONS #43), jadi cache tak boleh lebih lama dari yang wajar untuk
+ *      jam yang baru diubah. Biaya per hit rendah (1 query + perakitan string;
+ *      tanpa render gambar), jadi tak sekritis OG — Cloudflare Cache Rule
+ *      opsional (bila dipasang: cache key WAJIB menyertakan query `e` karena
+ *      berkas berbeda per sesi, Edge TTL tetap pendek, dan Browser TTL WAJIB
+ *      "Respect origin" — bawaan zona 4 jam menimpa max-age origin yang lebih
+ *      kecil). 404/429 memancarkan `no-store` eksplisit (lihat `noFile`).
  *
  * `?e=<eventId>` → hanya sesi tersebut; tanpa `?e` → seluruh sesi dalam satu
  * VCALENDAR. Runtime Node (admin client + hashing IP).
@@ -34,6 +38,19 @@ export const dynamic = "force-dynamic";
 
 const ICS_LIMIT = { max: 60, windowMs: 60_000 };
 
+/**
+ * Respons tanpa berkas (404/429) dengan `no-store` EKSPLISIT: tanpa header,
+ * CDN/peramban memakai TTL bawaannya (Cloudflare: Browser Cache TTL zona, 4 jam)
+ * — 404 sesaat (mis. pemilik mengosongkan jam sesi sebentar, #42) bisa tertahan
+ * di peramban tamu berjam-jam setelah jamnya diisi lagi.
+ */
+function noFile(status: 404 | 429, headers: Record<string, string> = {}) {
+  return new Response(null, {
+    status,
+    headers: { "Cache-Control": "no-store", ...headers },
+  });
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ slug: string }> },
@@ -41,15 +58,12 @@ export async function GET(
   // 1. Rate limit per-IP (boundary "rate limit endpoint publik").
   const rl = await checkClientRateLimit("ics", ICS_LIMIT);
   if (!rl.ok) {
-    return new Response(null, {
-      status: 429,
-      headers: { "Retry-After": "60" },
-    });
+    return noFile(429, { "Retry-After": "60" });
   }
 
   const slug = (await params).slug.trim().toLowerCase();
   if (!slug || isReservedSlug(slug) || isDraftSlug(slug)) {
-    return new Response(null, { status: 404 });
+    return noFile(404);
   }
 
   // 2. Cheap-reject: hanya undangan AKTIF yang punya berkas kalender.
@@ -60,7 +74,7 @@ export async function GET(
     .eq("slug", slug)
     .maybeSingle();
   if (!inv || inv.status !== "active") {
-    return new Response(null, { status: 404 });
+    return noFile(404);
   }
 
   const url = new URL(req.url);
@@ -79,7 +93,7 @@ export async function GET(
 
   const scheduled = scheduledEvents(rows ?? []);
   if (scheduled.length === 0) {
-    return new Response(null, { status: 404 });
+    return noFile(404);
   }
 
   // Deskripsi umum: nama mempelai (bila wedding) + tautan undangan.
@@ -102,7 +116,7 @@ export async function GET(
   }));
 
   const ics = buildIcs(events);
-  if (!ics) return new Response(null, { status: 404 });
+  if (!ics) return noFile(404);
 
   return new Response(ics, {
     status: 200,
@@ -110,9 +124,12 @@ export async function GET(
       "Content-Type": "text/calendar; charset=utf-8",
       // Nama berkas ASCII-aman (slug = [a-z0-9-]); iOS/Android mengenali .ics.
       "Content-Disposition": `attachment; filename="${inv.slug}.ics"`,
-      // Path tanpa ekstensi → Cloudflare tak meng-cache default (lihat catatan
-      // modul); origin murah + rate limit membatasi biaya tanpa Cache Rule.
-      "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      // URL per sesi kini STABIL lintas suntingan (DECISIONS #43), jadi cache
+      // panjang akan menyajikan jam LAMA setelah pemilik mengubah jadwal. Dulu
+      // 1 jam (peramban) / 1 hari (CDN); kini 5 menit di keduanya. Path tanpa
+      // ekstensi → Cloudflare tak meng-cache default; origin murah + rate limit
+      // membatasi biaya tanpa Cache Rule.
+      "Cache-Control": "public, max-age=300, s-maxage=300",
     },
   });
 }

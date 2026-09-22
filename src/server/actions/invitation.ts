@@ -145,22 +145,31 @@ export async function saveInvitationDraftAction(
   // diketik. Kini jam yang belum lengkap disimpan NULL (tak pernah tampil ke
   // tamu — `lib/schedule.ts`); hanya kartu yang kosong total yang dilewati.
   // `sort_order` = indeks form, supaya urutan pemilik terjaga apa adanya.
+  //
+  // Id sesi dikirim agar RPC memperbarui baris yang sama (DECISIONS #43): dulu
+  // id berganti tiap autosave dan tautan kalender `?e=` di halaman yang sudah
+  // terbuka menjadi 404. Id GANDA dalam satu kiriman (hanya dari klien yang
+  // dirakit ulang) memakai id baru untuk kemunculan berikutnya — upsert Postgres
+  // menolak satu baris disentuh dua kali, dan autosave tak boleh macet karenanya.
   const tz = settings.timezone;
-  const eventRows = events.flatMap((e, i) =>
-    isBlankEventDraft(e)
-      ? []
-      : [
-          {
-            name: e.name ?? "",
-            start_at: localToStoredUtc(e.startAt, tz),
-            end_at: localToStoredUtc(e.endAt, tz),
-            venue_name: e.venueName ?? null,
-            address: e.address ?? null,
-            maps_url: e.mapsUrl ?? null,
-            sort_order: i,
-          },
-        ],
-  );
+  const seenIds = new Set<string>();
+  const eventRows = events.flatMap((e, i) => {
+    if (isBlankEventDraft(e)) return [];
+    const id = e.id && !seenIds.has(e.id) ? e.id : null;
+    if (id) seenIds.add(id);
+    return [
+      {
+        id,
+        name: e.name ?? "",
+        start_at: localToStoredUtc(e.startAt, tz),
+        end_at: localToStoredUtc(e.endAt, tz),
+        venue_name: e.venueName ?? null,
+        address: e.address ?? null,
+        maps_url: e.mapsUrl ?? null,
+        sort_order: i,
+      },
+    ];
+  });
 
   const { error: evError } = await supabase.rpc("replace_invitation_events", {
     inv_id: id,

@@ -32,6 +32,8 @@ export function isCompleteLocalDateTime(
 }
 
 export interface EventDraftFields {
+  /** Id sesi (DECISIONS #43) — BUKAN isian: tak membuat kartu dianggap berisi. */
+  id?: string;
   name?: string;
   startAt?: string;
   endAt?: string;
@@ -66,4 +68,26 @@ export function isScheduleComplete(
       (e) => isCompleteLocalDateTime(e.startAt) || isBlankEventDraft(e),
     )
   );
+}
+
+/**
+ * Id untuk kartu sesi BARU (DECISIONS #43). Dibuat editor saat kartu ditambah,
+ * sehingga simpanan berulang (termasuk percobaan ulang setelah jaringan putus)
+ * memperbarui baris yang sama alih-alih menyisipkan sesi ganda.
+ *
+ * `randomUUID` hanya ada di konteks aman (https/localhost); dasbor yang dibuka
+ * lewat http biasa jatuh ke `getRandomValues`, yang ada di semua peramban
+ * modern, dengan bit versi-4 & varian RFC 4122 dipasang manual.
+ */
+export function newEventId(
+  source: Pick<Crypto, "getRandomValues"> & {
+    randomUUID?: () => string;
+  } = globalThis.crypto,
+): string {
+  if (typeof source.randomUUID === "function") return source.randomUUID();
+  const b = source.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }

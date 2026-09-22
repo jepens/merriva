@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isUuid } from "@/lib/id";
+
 import { httpsUrlSchema } from "./shared";
 import { FIELD_LIMITS as L } from "./field-limits";
 
@@ -52,11 +54,20 @@ export type EventInput = z.infer<typeof eventInputSchema>;
 
 /**
  * Skema sesi DRAFT (longgar) untuk autosave — semua field opsional & format
- * tidak dipaksa (pengguna masih mengetik). Server hanya menyimpan sesi yang
- * punya `startAt` valid; validasi penuh saat aktivasi memakai `eventInputSchema`.
+ * tidak dipaksa (pengguna masih mengetik). Server menyimpan setiap sesi yang
+ * berisi; jam yang belum lengkap disimpan NULL (DECISIONS #42).
  * `startAt`/`endAt` = waktu-lokal (`YYYY-MM-DDTHH:mm`) di `settings.timezone`.
  */
 export const eventDraftSchema = z.object({
+  // Id sesi STABIL lintas simpan (DECISIONS #43): baris tersimpan membawa id
+  // DB-nya, kartu baru diberi id oleh editor. Id tak berbentuk UUID DIBUANG
+  // (sesi diperlakukan baru), bukan menolak simpanan — satu kartu tak boleh
+  // menggagalkan autosave semua langkah (#41). Huruf kecil agar deduplikasi di
+  // aksi simpan membandingkan bentuk yang sama.
+  id: z.preprocess(
+    (v) => (typeof v === "string" && isUuid(v) ? v.toLowerCase() : undefined),
+    z.string().optional(),
+  ),
   name: z.string().trim().max(L.event.name).optional(),
   startAt: z.string().trim().max(40).optional(),
   endAt: z.string().trim().max(40).optional(),

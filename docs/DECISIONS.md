@@ -540,10 +540,56 @@ Pemicunya sangat biasa. `input type=datetime-local` bernilai "" selama SALAH SAT
     - saringan OG dicabut — celah test yang diakui di bawah.
   - Migrasi diterapkan ke cloud 2026-09-22 setelah pra-cek (0 sesi, 0 undangan). Versi di `schema_migrations` disamakan dengan nama berkas.
 - **Yang BELUM ditutup, sengaja dicatat:**
-  - **Churn id sesi.** Setiap autosave — dari langkah mana pun, karena payload = seluruh form — menghapus lalu menyisipkan ulang semua sesi, jadi id berganti tiap simpan. Ini mematahkan UID ICS "stabil" (`lib/calendar.ts`), tautan `/api/ics/{slug}?e={id}` di HTML ISR/tab terbuka (→ 404), dan kesiapan FK check-in Fase 2 (cascade akan menghapus riwayat check-in tiap autosave). **Wajib diselesaikan sebelum Fase 2**: upsert per id + versi pada tautan ICS.
+  - ~~**Churn id sesi.**~~ Ditutup oleh #43. Setiap autosave — dari langkah mana pun, karena payload = seluruh form — menghapus lalu menyisipkan ulang semua sesi, jadi id berganti tiap simpan. Ini mematahkan UID ICS "stabil" (`lib/calendar.ts`), tautan `/api/ics/{slug}?e={id}` di HTML ISR/tab terbuka (→ 404), dan kesiapan FK check-in Fase 2 (cascade akan menghapus riwayat check-in tiap autosave). Ditutup oleh #43 dengan upsert per id. Versi pada tautan ICS DITOLAK di #43 (butuh perubahan kontrak props 10 tema) dan diganti cache `.ics` 5 menit.
   - Checkout belum mensyaratkan ≥1 sesi berjam — pemilik bisa membayar undangan berjadwal kosong. Mengubah alur bayar, jadi butuh keputusan SPEC tersendiri.
   - OG hanya dilindungi saringan query, belum ada test (render gambar berat di jsdom).
   - Galat query jadwal di `/[slug]` & `/api/ics` masih ditelan.
+
+## #43 — 2026-09-22 · Id sesi jadwal stabil: upsert per id, bukan hapus-semua
+
+**Konteks:** RPC `replace_invitation_events` menghapus SEMUA sesi lalu menyisipkan ulang, jadi id setiap sesi berganti pada SETIAP autosave. Payload autosave = seluruh form, sehingga ini terjadi dari langkah mana pun, bukan hanya langkah Jadwal. Akibatnya:
+- tautan `/api/ics/{slug}?e={id}` di HTML ISR maupun tab tamu yang sudah terbuka menjadi 404;
+- UID kalender `{id}@merriva.id` (`lib/calendar.ts`) berganti, sehingga tamu yang menambah ulang sesi mendapat entri GANDA alih-alih pembaruan — padahal UID stabil adalah niat awal modul itu;
+- FK check-in Fase 2 ke sesi akan ikut terhapus (cascade) tiap autosave.
+
+Dicatat sebagai "wajib sebelum Fase 2" di #42; dikerjakan atas rekomendasi yang disetujui pemilik 2026-09-22.
+
+**Keputusan:**
+1. **Editor membuat id untuk kartu sesi baru** saat kartu ditambah (`newEventId`, `lib/event-draft.ts`: `crypto.randomUUID`, jatuh ke `getRandomValues` di konteks http biasa). Sesi yang dimuat membawa id DB-nya (`toEventDraft`). Karena id sudah ada sebelum simpanan pertama, simpanan berulang — termasuk percobaan ulang setelah jaringan putus — memperbarui baris yang sama, tak pernah menggandakan.
+2. **RPC meng-upsert per id** (migrasi `20260922130000_events_stable_ids.sql`): sesi undangan ini yang tak dikirim lagi dihapus; yang dikirim diperbarui di tempat (`on conflict (id) do update`); yang tanpa id disisipkan ber-id baru. `invitation_id` tak pernah ikut di-SET. Id milik undangan LAIN yang disusupkan dilewati oleh WHERE konflik tanpa galat. RLS (SECURITY INVOKER) tetap lapis kedua: sesi baru untuk undangan orang lain ditolak.
+3. **Aksi simpan menormalkan id:** id tak berbentuk UUID dibuang (sesi diperlakukan baru) alih-alih menolak simpanan — pelajaran #41: satu kartu tak boleh menggagalkan autosave semua langkah. Id GANDA dalam satu kiriman: kemunculan pertama memegang id, sisanya menjadi sesi baru. Postgres menolak upsert yang menyentuh satu baris dua kali, dan autosave tak boleh macet karenanya.
+4. **Cache `.ics` dipendekkan** dari 1 jam (peramban) / 1 hari (CDN) menjadi 5 menit di keduanya. URL per sesi kini stabil lintas suntingan, jadi cache panjang akan menyajikan jam LAMA setelah pemilik mengubah jadwal. Dulu URL "segar" hanya karena id berganti — dengan harga tautan 404. Respons 404/429 kini memancarkan `Cache-Control: no-store` eksplisit: tanpa header, CDN/peramban memakai TTL bawaannya (Cloudflare: Browser Cache TTL zona 4 jam), sehingga 404 sesaat — mis. pemilik mengosongkan jam sesi sebentar (#42) — bisa tertahan di peramban tamu berjam-jam. Bila Cache Rule `/api/ics/*` kelak dipasang, Browser TTL WAJIB "Respect origin"; bawaan 4 jam menimpa `max-age` origin yang lebih kecil (ARCHITECTURE §3).
+5. Kunci render `useFieldArray` diganti `keyName: "key"`. Dengan bawaan `id`, `fields[i].id` (kunci RHF) dan id sesi DB berbeda nilai tetapi bernama sama. Nilai form sendiri tak tertimpa (diperiksa di sumber RHF 7.82); ini soal kejelasan, bukan perbaikan bug.
+6. **RPC diserialkan per undangan** dengan `pg_advisory_xact_lock(hashtextextended('replace_invitation_events:' || inv_id::text, 0))` di awal badan fungsi. Ditemukan review: dua simpanan bersamaan (dua tab/perangkat) dengan jadwal bersilang — tab 1 membuang sesi y, tab 2 membuang sesi x — saling mengunci baris dalam urutan terbalik (DELETE lalu upsert), dan Postgres membatalkan salah satunya dengan `deadlock detected`. RPC lama tak mengalaminya karena kedua transaksi mengantre pada baris pertama pindaian. Dengan kunci, simpanan kedua menunggu lalu berjalan di atas snapshot baru (READ COMMITTED): bersih "penulis terakhir menang". Kuncinya ber-namespace agar tak saling menunggu dengan kunci galeri & tamu per undangan (`hashtextextended(inv_id::text, 0|1)`). Pengguna lain yang memanggil RPC untuk undangan yang sama hanya ikut mengantre sepanjang satu transaksi singkat; RLS tetap menolak tulisannya.
+
+**Ditolak:**
+- **Id dibuat server lalu dikembalikan ke klien:** butuh jalur balik ke form, dan balasan yang hilang di jaringan membuat percobaan ulang menyisipkan sesi ganda.
+- **`?v=` pada tautan ICS** (seperti OG `?v=updated_at`): tema merakit URL ICS sendiri dari `slug` + `e.id`, jadi versi butuh field baru di `InvitationEventView` — mengubah kontrak props 10 tema (wajib tanya dulu). Manfaatnya kecil: Cloudflare tak meng-cache `/api/ics/*` tanpa Cache Rule (opsional, tak ada di LAUNCH-CHECKLIST), dan TTL 5 menit sudah membatasi basi di peramban.
+- **`SEQUENCE` iCalendar:** `DTSTAMP` sudah berubah tiap unduhan dan UID kini stabil. Tak ada bukti klien sasaran menolak pembaruan tanpa `SEQUENCE`; ditunda sampai ada.
+- **Soft-delete sesi yang dihapus pemilik:** urusan desain check-in Fase 2 (riwayat check-in sesi yang dibuang), bukan churn.
+
+**Konsekuensi:**
+- **Kompatibel dua arah; urutan deploy bebas.** Aplikasi baru di atas RPC lama: id diabaikan, perilaku sama seperti sebelum #43. Aplikasi lama di atas RPC baru: tanpa id, semua sesi lama terhapus lalu disisipkan ulang ber-id baru — persis perilaku lama. Rollback aplikasi maupun RPC aman, tak destruktif.
+- Fase 2: FK check-in → `invitation_events.id` kini aman dari autosave. Menghapus sesi lewat "Hapus" tetap meng-cascade; putuskan saat mendesain check-in.
+- Klien yang dirakit ulang bisa memilih id sendiri. Dampaknya hanya pada undangannya sendiri: baris undangan lain tak tersentuh (WHERE konflik + RLS), dan UUID v4 editor tak bisa ditebak sebelum tersimpan.
+- Test:
+  - aksi ASLI: id diteruskan, dinormalkan, dibuang bila tak sah, id ganda, kartu kosong;
+  - editor asli: kartu baru ber-id, id sama antar-simpanan, id DB dipertahankan, hapus lalu tambah tak memakai ulang id;
+  - `newEventId`: v4, fallback tanpa `randomUUID`;
+  - kontrak migrasi statis (teks SQL): predikat DELETE dikunci UTUH, kunci per undangan sebelum DELETE, upsert per id, `invitation_id` tak di-SET, WHERE konflik. Versi pertama hanya mencocokkan potongan predikat, sehingga `and`→`or` (admin menghapus SELURUH tabel) dan saringan id NULL yang dibuang (satu id NULL membuat `<> all` bernilai NULL → tak ada yang terhapus) lolos — ditemukan review;
+  - **test DB pgTAP** `supabase/tests/database/replace_invitation_events.test.sql` (`pnpm test:db`, 27 asersi, mandiri: fixture dibuat & di-ROLLBACK di dalam test): upsert per id yang memperbarui SEMUA kolom di tempat, baris anak ber-FK cascade (calon check-in Fase 2) selamat melewati simpanan, sesi dibuang terhapus, id undangan lain & undangan lain milik sendiri dilewati, RPC untuk undangan orang lain ditolak RLS, id ganda ditolak, payload lama tanpa id & `events` bukan array berperilaku seperti RPC lama, `anon`/PUBLIC tak bisa mengeksekusi, SECURITY INVOKER. Butuh stack Supabase lokal, jadi BELUM masuk CI (CI tak punya DB); DoD `pnpm lint && pnpm typecheck && pnpm test` tak berubah. Konkurensi (kunci #6) tak bisa diuji satu koneksi — dibuktikan manual di bawah;
+  - route `.ics`: TTL ≤ 300 dtk di 200, `no-store` di 404 & 429.
+- Pembuktian:
+  - **Database lokal di bawah RLS**, dengan pengguna non-admin sungguhan: id lama dipertahankan dan sesi tanpa id mendapat id baru; sesi yang tak dikirim terhapus; id milik undangan orang lain dilewati tanpa galat dan barisnya utuh; RPC untuk undangan orang lain tak menghapus apa pun dan sesi barunya ditolak RLS; id ganda ditolak Postgres (alasan normalisasi di aksi); `anon` tak bisa mengeksekusi.
+  - **Tautan kalender:** sesi `andi-sinta-demo` disunting sebagai pemiliknya lewat RPC; tautan `?e=` yang SAMA tetap 200, UID sama, dan jam serta gedung barunya ikut terbaca. Data demo dipulihkan dan dicek identik.
+  - **Browser sungguhan:** sesi baru disimpan, lalu disunting dua kali — sekali setelah muat ulang. Id di DB tetap sama di ketiga simpanan; "Hapus" menghapus barisnya; konsol bersih.
+  - **Review adversarial:** 10 agen (5 lensa: SQL/RLS/konkurensi, editor klien, aksi & validasi, pembaca publik & cache, test & dokumen; satu skeptis per temuan; satu kritik kelengkapan). 4 temuan, 3 bertahan — semuanya rendah — dan keempatnya ditangani: deadlock dua tab (#6), 404/429 tanpa `Cache-Control` + syarat Browser TTL (#4), catatan #42 yang masih mewajibkan versi tautan ICS. Temuan keempat (test kontrak hanya mencocokkan potongan DELETE) dinilai skeptis bukan cacat kode saat ini, tetapi benar sebagai celah test: predikat kini dikunci utuh dan perilakunya diuji pgTAP.
+  - **Deadlock:** jadwal bersilang tiga koneksi psql paralel (semua ROLLBACK) — sebelum kunci: `deadlock detected`; sesudah kunci: simpanan kedua menunggu lalu berhasil, data utuh.
+  - **Uji mutasi:** 23 mutan (8 SQL, 15 aplikasi), semuanya merah — 22 oleh vitest, 1 oleh typecheck (halaman edit tak memilih kolom `id`). Ke-8 mutan SQL juga diterapkan ke DB lokal lalu diuji pgTAP: 6 merah, 2 lolos dengan alasan yang diketahui:
+    - kunci per undangan dicabut — konkurensi tak teruji dengan satu koneksi; dijaga test kontrak dan bukti deadlock manual;
+    - `invitation_id` ikut di-SET — ekuivalen, karena WHERE konflik menjamin nilainya sama.
+
+    Putaran pertama pgTAP meloloskan dua mutan lain: hapus-semua lalu sisip ulang dengan id yang sama (id saja tak membedakannya), dan kolom `address` tak diperbarui saat konflik. Keduanya kini merah setelah pgTAP ditambah asersi baris anak ber-FK dan pemeriksaan seluruh kolom.
 
 ---
 

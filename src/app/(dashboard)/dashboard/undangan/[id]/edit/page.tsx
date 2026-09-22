@@ -55,7 +55,7 @@ export default async function EditInvitationPage({
 
   const { data: eventRows } = await supabase
     .from("invitation_events")
-    .select("name, start_at, end_at, venue_name, address, maps_url")
+    .select("id, name, start_at, end_at, venue_name, address, maps_url")
     .eq("invitation_id", inv.id)
     .order("sort_order", { ascending: true });
   // Sesi tanpa jam mulai (start_at NULL) kembali UTUH dengan isian Mulai kosong.

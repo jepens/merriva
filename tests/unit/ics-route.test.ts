@@ -57,6 +57,7 @@ vi.mock("@/lib/supabase/admin", async () => {
 });
 
 import { GET } from "@/app/api/ics/[slug]/route";
+import { checkClientRateLimit } from "@/lib/request-ip";
 
 const DRAFT_ID = "11111111-1111-4111-8111-111111111111";
 const AKAD_ID = "22222222-2222-4222-8222-222222222222";
@@ -108,5 +109,31 @@ describe("GET /api/ics/[slug]", () => {
     refs.events = [{ ...refs.events[1], name: "" }];
     const ics = await (await panggil()).text();
     expect(ics).toMatch(/SUMMARY:Acara/);
+  });
+
+  it("cache PENDEK: URL ?e= stabil lintas suntingan, jam lama tak boleh tersaji lama (DECISIONS #43)", async () => {
+    const cc = (await panggil(`?e=${AKAD_ID}`)).headers.get("Cache-Control");
+    const detik = (nama: string) =>
+      Number(new RegExp(`(?:^|[ ,])${nama}=(\\d+)`).exec(cc ?? "")?.[1]);
+    expect(detik("max-age")).toBeLessThanOrEqual(300);
+    expect(detik("s-maxage")).toBeLessThanOrEqual(300);
+  });
+
+  it("404 memancarkan no-store: tanpa header, CDN/peramban memakai TTL bawaan (Cloudflare 4 jam)", async () => {
+    const res = await panggil(`?e=${DRAFT_ID}`);
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("429 juga no-store (dan tetap membawa Retry-After)", async () => {
+    vi.mocked(checkClientRateLimit).mockResolvedValueOnce({
+      ok: false,
+      remaining: 0,
+      retryAfterMs: 60_000,
+    });
+    const res = await panggil();
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("Retry-After")).toBe("60");
   });
 });

@@ -224,7 +224,8 @@ invitations       id, user_id→profiles, theme_id→themes, package_id→packag
 invitation_events id, invitation_id, name, start_at (null = sesi draft belum berjam,
                   tak pernah tampil publik), end_at, venue_name, address,
                   maps_url, sort_order            -- ternormalisasi: dipakai check-in Fase 2
-                                                     (target check-in hanya sesi berjam)
+                                                     (target check-in hanya sesi berjam;
+                                                     id stabil lintas simpan — DECISIONS #43)
 media             id, invitation_id, type('photo'), storage_path, width, height, sort_order
 guests            id, invitation_id, name, phone, group_label, pax_allocated int,
                   token unique, wa_clicked_at, first_viewed_at, notes, created_at

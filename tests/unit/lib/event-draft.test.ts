@@ -5,7 +5,9 @@ import {
   isBlankEventDraft,
   isCompleteLocalDateTime,
   isScheduleComplete,
+  newEventId,
 } from "@/lib/event-draft";
+import { isUuid } from "@/lib/id";
 import { scheduledEvents, toEventDraft } from "@/lib/schedule";
 
 describe("isCompleteLocalDateTime — satu aturan untuk editor & server (DECISIONS #42)", () => {
@@ -116,6 +118,7 @@ describe("scheduledEvents & toEventDraft", () => {
     expect(
       toEventDraft(
         {
+          id: "11111111-1111-4111-8111-111111111111",
           name: "Resepsi",
           start_at: null,
           end_at: null,
@@ -126,6 +129,7 @@ describe("scheduledEvents & toEventDraft", () => {
         "Asia/Jakarta",
       ),
     ).toEqual({
+      id: "11111111-1111-4111-8111-111111111111",
       name: "Resepsi",
       startAt: "",
       endAt: "",
@@ -138,6 +142,7 @@ describe("scheduledEvents & toEventDraft", () => {
   it("baris berjam dikonversi ke waktu-lokal zona undangan", () => {
     const d = toEventDraft(
       {
+        id: "11111111-1111-4111-8111-111111111111",
         name: "Akad",
         start_at: "2026-08-15T01:00:00Z",
         end_at: null,
@@ -149,6 +154,7 @@ describe("scheduledEvents & toEventDraft", () => {
     );
     // Objek penuh: jam Selesai yang tak pernah diisi tetap kosong (tak dikarang).
     expect(d).toEqual({
+      id: "11111111-1111-4111-8111-111111111111",
       name: "Akad",
       startAt: "2026-08-15T08:00",
       endAt: "",
@@ -156,5 +162,40 @@ describe("scheduledEvents & toEventDraft", () => {
       address: "",
       mapsUrl: "",
     });
+  });
+});
+
+describe("id sesi (DECISIONS #43)", () => {
+  const V4 =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  it("id saja tak membuat kartu dianggap berisi (kartu baru tetap tak disimpan)", () => {
+    expect(isBlankEventDraft({ id: newEventId() })).toBe(true);
+    expect(isScheduleComplete([{ id: newEventId() }])).toBe(false);
+  });
+
+  it("id baru = UUID v4, lolos pemeriksa server, dan tak pernah berulang", () => {
+    const ids = Array.from({ length: 500 }, () => newEventId());
+    for (const id of ids) {
+      expect(id).toMatch(V4);
+      expect(isUuid(id)).toBe(true);
+    }
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("tanpa randomUUID (http non-localhost) jatuh ke getRandomValues dengan bit v4/varian benar", () => {
+    const polos = {
+      getRandomValues: <T extends ArrayBufferView | null>(a: T) => {
+        // Semua bit menyala: membuktikan bit versi & varian DIPAKSA, bukan kebetulan.
+        if (a instanceof Uint8Array) a.fill(0xff);
+        return a;
+      },
+    };
+    expect(newEventId(polos)).toBe("ffffffff-ffff-4fff-bfff-ffffffffffff");
+
+    const nol = {
+      getRandomValues: <T extends ArrayBufferView | null>(a: T) => a,
+    };
+    expect(newEventId(nol)).toBe("00000000-0000-4000-8000-000000000000");
   });
 });

@@ -90,6 +90,7 @@ describe("sesi jadwal tanpa jam mulai ikut tersimpan", () => {
     expect(res.status).toBe("success");
     expect(rows).toEqual([
       {
+        id: null,
         name: "Resepsi",
         start_at: null,
         end_at: null,
@@ -99,6 +100,7 @@ describe("sesi jadwal tanpa jam mulai ikut tersimpan", () => {
         sort_order: 0,
       },
       {
+        id: null,
         name: "Akad",
         start_at: "2026-08-15T01:00:00.000Z",
         end_at: null,
@@ -164,5 +166,64 @@ describe("sesi jadwal tanpa jam mulai ikut tersimpan", () => {
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ name: "Akad", sort_order: 1 });
+  });
+});
+
+describe("id sesi stabil lintas simpan (DECISIONS #43)", () => {
+  const A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+  it("id tiap sesi dikirim ke RPC apa adanya → baris yang sama diperbarui, bukan diganti", async () => {
+    const { res, rows } = await simpan([
+      { id: A, name: "Akad", startAt: "2026-08-15T08:00" },
+      { id: B, name: "Resepsi" },
+    ]);
+    expect(res.status).toBe("success");
+    expect(rows.map((r) => r.id)).toEqual([A, B]);
+  });
+
+  it("simpanan ULANG dengan isi sama mengirim id yang sama (idempoten)", async () => {
+    const isi = [{ id: A, name: "Akad", startAt: "2026-08-15T08:00" }];
+    const pertama = (await simpan(isi)).rows;
+    refs.rpc = [];
+    const kedua = (await simpan(isi)).rows;
+    expect(kedua).toEqual(pertama);
+  });
+
+  it("id huruf besar dinormalkan ke huruf kecil", async () => {
+    const { rows } = await simpan([{ id: A.toUpperCase(), name: "Akad" }]);
+    expect(rows[0].id).toBe(A);
+  });
+
+  it.each(["bukan-uuid", "' or 1=1 --", "aaaaaaaa-aaaa-4aaa-8aaa"])(
+    "id tak berbentuk UUID (%j) dibuang → sesi baru, simpanan TETAP sukses",
+    async (id) => {
+      const { res, rows } = await simpan([{ id, name: "Akad" }]);
+      expect(res.status).toBe("success");
+      expect(rows).toEqual([
+        expect.objectContaining({ id: null, name: "Akad" }),
+      ]);
+    },
+  );
+
+  it("id GANDA: kemunculan pertama memegang id, berikutnya menjadi sesi baru (upsert tak macet)", async () => {
+    const { res, rows } = await simpan([
+      { id: A, name: "Akad" },
+      { id: A.toUpperCase(), name: "Resepsi" },
+      { id: A, name: "Ngunduh" },
+    ]);
+    expect(res.status).toBe("success");
+    expect(rows.map((r) => [r.name, r.id])).toEqual([
+      ["Akad", A],
+      ["Resepsi", null],
+      ["Ngunduh", null],
+    ]);
+  });
+
+  it("kartu kosong ber-id tetap TIDAK disimpan, dan tak memakan id sesi lain", async () => {
+    const { rows } = await simpan([{ id: A }, { id: A, name: "Akad" }]);
+    expect(rows).toEqual([
+      expect.objectContaining({ id: A, name: "Akad", sort_order: 1 }),
+    ]);
   });
 });

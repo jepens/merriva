@@ -37,6 +37,7 @@ pnpm lint                 # ESLint + Prettier check
 pnpm typecheck            # tsc --noEmit
 pnpm test                 # unit test (Vitest)
 pnpm test:e2e             # Playwright (butuh env staging)
+pnpm test:db              # pgTAP supabase/tests/ (butuh stack lokal `supabase start`; belum di CI)
 supabase migration new <nama>   # migrasi baru (folder supabase/migrations)
 supabase db push          # terapkan migrasi ke project cloud yang ter-link
 docker build -t merriva . # verifikasi image sebelum push (deploy = git push → Easypanel)

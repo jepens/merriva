@@ -11,6 +11,7 @@ import {
   EVENT_LOCAL_MIN,
   isBlankEventDraft,
   isCompleteLocalDateTime,
+  newEventId,
 } from "@/lib/event-draft";
 import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
@@ -21,7 +22,13 @@ import type { EditorValues } from "../types";
 
 export function ScheduleStep({ form }: { form: UseFormReturn<EditorValues> }) {
   const { register, control } = form;
-  const { fields, append, remove } = useFieldArray({ control, name: "events" });
+  // `keyName: "key"`: kunci render RHF TIDAK boleh bernama `id`, karena `id`
+  // adalah id sesi di DB (DECISIONS #43) — dua pengenal berbeda di satu objek.
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "events",
+    keyName: "key",
+  });
 
   return (
     <div className="space-y-4">
@@ -36,7 +43,7 @@ export function ScheduleStep({ form }: { form: UseFormReturn<EditorValues> }) {
       ) : null}
 
       {fields.map((field, i) => (
-        <div key={field.id} className="space-y-3 rounded-lg border p-4">
+        <div key={field.key} className="space-y-3 rounded-lg border p-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">
               {copy.editor.schedule.session} {i + 1}
@@ -91,6 +98,7 @@ export function ScheduleStep({ form }: { form: UseFormReturn<EditorValues> }) {
         max={L.event.sessions}
         onAdd={() =>
           append({
+            id: newEventId(),
             name: "",
             startAt: "",
             endAt: "",

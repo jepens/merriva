@@ -20,6 +20,7 @@ export function scheduledEvents<T extends { start_at: string | null }>(
 }
 
 interface StoredEventRow {
+  id: string;
   name: string;
   start_at: string | null;
   end_at: string | null;
@@ -28,9 +29,14 @@ interface StoredEventRow {
   maps_url: string | null;
 }
 
-/** Baris tersimpan → nilai form editor. Sesi tanpa jam kembali UTUH, Mulai kosong. */
+/**
+ * Baris tersimpan → nilai form editor. Sesi tanpa jam kembali UTUH, Mulai kosong.
+ * Id DB ikut dibawa agar simpanan berikutnya memperbarui baris yang sama
+ * (DECISIONS #43) — tanpa itu tautan kalender `?e=` patah tiap autosave.
+ */
 export function toEventDraft(row: StoredEventRow, tz: TimezoneId): EventDraft {
   return {
+    id: row.id,
     name: row.name,
     startAt: row.start_at ? utcToLocal(row.start_at, tz) : "",
     endAt: row.end_at ? utcToLocal(row.end_at, tz) : "",
