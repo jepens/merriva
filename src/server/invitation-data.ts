@@ -7,6 +7,7 @@ import { parseContentForRender } from "@/lib/invitation-content";
 import { toMediaView } from "@/lib/media";
 import { scheduledEvents } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { DEFAULT_SETTINGS, settingsSchema } from "@/lib/validation/content";
 import type { InvitationCategory } from "@/types";
 import type { Database } from "@/types/database";
@@ -52,11 +53,16 @@ export async function resolveMusic(
   songId: string | null | undefined,
 ): Promise<InvitationData["music"]> {
   if (!songId) return null;
-  const { data } = await client
-    .from("songs")
-    .select("title, storage_path, is_active")
-    .eq("id", songId)
-    .maybeSingle();
+  // Galat DB DILEMPAR (DECISIONS #45): lagu yang tak ada/nonaktif = tanpa musik,
+  // tetapi kedipan DB tak boleh di-cache ISR sebagai undangan tanpa musik.
+  const data = dataOrThrow(
+    await client
+      .from("songs")
+      .select("title, storage_path, is_active")
+      .eq("id", songId)
+      .maybeSingle(),
+    "songs",
+  );
   if (!data || !data.is_active || !data.storage_path) return null;
   return {
     url: getStorage().getPublicUrl(data.storage_path),

@@ -7,8 +7,9 @@ import { GuestPersonalizationProvider } from "@/components/public/guest-personal
 import { MomenFab } from "@/components/public/momen/momen-fab";
 import { copy } from "@/lib/copy";
 import { parseContentForRender } from "@/lib/invitation-content";
-import { isDraftSlug, isReservedSlug } from "@/lib/slug";
+import { isDraftSlug, isPlausibleSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { settingsSchema } from "@/lib/validation/content";
 import { buildInvitationData, resolveMusic } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
@@ -50,13 +51,14 @@ const getInvitationBySlug = cache(async (slug: string) => {
     .eq("slug", slug)
     .maybeSingle();
   // JANGAN menelan error DB jadi `notFound()` yang ter-cache. Halaman ini ISR
-  // (`force-static` + revalidate). Satu kedipan DB saat revalidasi latar → data
-  // null → notFound() → 404 DI-CACHE menggantikan undangan-baik hingga revalidasi
-  // berikutnya (bisa ~1 jam = undangan 404 bagi tamu di hari-H). Melempar membuat
-  // Next mempertahankan render statis terakhir yang baik (pola sama: catalog.ts).
+  // (`force-static` + revalidate). Satu kedipan DB saat revalidasi → data null →
+  // notFound() → 404 DI-CACHE menggantikan undangan-baik (pola sama: catalog.ts).
+  // Melempar = render tak pernah di-cache: pada revalidasi berbasis waktu Next
+  // tetap menyajikan versi baik terakhir; sesudah `revalidatePath` (pemilik
+  // menyimpan) render blocking yang gagal menjadi halaman 500 sementara
+  // (`app/global-error.tsx`) yang pulih pada permintaan berikutnya (#45).
   // notFound() (di pemanggil) hanya untuk data null TANPA error = benar-benar tak ada.
-  if (error) throw error;
-  return data;
+  return dataOrThrow({ data, error }, "invitations");
 });
 
 function coupleNames(content: InvitationContent) {
@@ -76,7 +78,8 @@ export async function generateMetadata({
   // Slug tersimpan selalu lowercase → normalkan URL agar `/Budi-Siti` tak 404
   // (kartu cetak / iOS meng-kapital huruf pertama).
   const slug = (await params).slug.toLowerCase();
-  if (isReservedSlug(slug) || isDraftSlug(slug)) return {};
+  if (!isPlausibleSlug(slug) || isReservedSlug(slug) || isDraftSlug(slug))
+    return {};
   const inv = await getInvitationBySlug(slug);
   if (!inv || inv.status !== "active") return {};
 
@@ -135,7 +138,9 @@ export default async function PublicInvitationPage({
   params: Promise<{ slug: string }>;
 }) {
   const slug = (await params).slug.toLowerCase();
-  if (isReservedSlug(slug) || isDraftSlug(slug)) notFound();
+  // Slug mustahil (bentuk di luar CHECK DB) → 404 tanpa query (DECISIONS #45).
+  if (!isPlausibleSlug(slug) || isReservedSlug(slug) || isDraftSlug(slug))
+    notFound();
 
   const inv = await getInvitationBySlug(slug);
   if (!inv) notFound();
@@ -143,12 +148,7 @@ export default async function PublicInvitationPage({
   if (inv.status !== "active") notFound(); // draft/pending/suspended = tak publik
 
   const admin = createSupabaseAdminClient();
-  const [
-    { data: theme },
-    { data: eventRows },
-    { data: mediaRows },
-    { data: momenAlbum },
-  ] = await Promise.all([
+  const [themeRes, eventsRes, mediaRes, momenRes] = await Promise.all([
     admin.from("themes").select("slug").eq("id", inv.theme_id).maybeSingle(),
     admin
       .from("invitation_events")
@@ -170,6 +170,16 @@ export default async function PublicInvitationPage({
       .eq("status", "active")
       .maybeSingle(),
   ]);
+  // Setiap bacaan WAJIB berhasil (DECISIONS #45) — prinsip yang sama dengan
+  // `getInvitationBySlug` di atas. Dulu galat di sini ditelan: kedipan DB saat
+  // revalidasi meng-cache undangan TANPA jadwal/galeri/tombol Momen, atau 404
+  // (tema null → notFound), bagi SEMUA tamu sampai simpanan berikutnya. Kini
+  // render melempar dan tak pernah di-cache (lihat `getInvitationBySlug`); batas
+  // paket & musik (`getEffectiveLimits`, `resolveMusic`) melempar dengan cara sama.
+  const theme = dataOrThrow(themeRes, "themes");
+  const eventRows = dataOrThrow(eventsRes, "invitation_events");
+  const mediaRows = dataOrThrow(mediaRes, "media");
+  const momenAlbum = dataOrThrow(momenRes, "momen_albums");
 
   const limits = await getEffectiveLimits(admin, inv.package_id);
   const songId = settingsSchema.safeParse(inv.settings).data?.songId;

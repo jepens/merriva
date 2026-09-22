@@ -6,6 +6,7 @@ import { copy } from "@/lib/copy";
 import { parseAppearanceInput } from "@/lib/customizer/parse-appearance";
 import { isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
+import { reportHandledError } from "@/lib/observability";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DEFAULT_SETTINGS, settingsSchema } from "@/lib/validation/content";
 import { getEffectiveLimits } from "@/server/limits";
@@ -44,18 +45,33 @@ export async function updateInvitationAppearanceAction(
     .maybeSingle();
   if (!inv) return errorState(copy.common.error);
 
-  const { data: theme } = await supabase
+  const { data: theme, error: themeError } = await supabase
     .from("themes")
     .select("slug")
     .eq("id", inv.theme_id)
     .maybeSingle();
+  // Galat DB ≠ "tema tak mendukung kustomisasi" (DECISIONS #45): dulu kedipan DB
+  // dijawab pesan permanen yang keliru.
+  if (themeError) {
+    reportHandledError(themeError, "appearance.theme", { id });
+    return errorState(copy.common.error);
+  }
   const themeSlug = theme?.slug ?? null;
   if (!themeSlug || !getThemeOptions(themeSlug)) {
     return errorState(copy.appearance.unsupported);
   }
 
-  const premium = !(await getEffectiveLimits(supabase, inv.package_id))
-    .watermark;
+  // `getEffectiveLimits` MELEMPAR galat DB (DECISIONS #45) alih-alih pura-pura
+  // Basic. Aksi membalas galat biasa — bukan menolak kustomisasi Premium milik
+  // pemilik Premium hanya karena kedipan DB, dan bukan melempar ke klien.
+  let premium: boolean;
+  try {
+    premium = !(await getEffectiveLimits(supabase, inv.package_id)).watermark;
+  } catch (err) {
+    // Ditangani → tak sampai `onRequestError`; laporkan sendiri.
+    reportHandledError(err, "appearance.limits", { id });
+    return errorState(copy.common.error);
+  }
   const parsed = parseAppearanceInput(themeSlug, premium, input);
   if (!parsed.ok) {
     if (parsed.reason === "unsupported") {

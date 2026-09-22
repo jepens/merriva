@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import { activationCtaFor } from "@/lib/invitation-status";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildInvitationData, resolveMusic } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
@@ -47,11 +48,16 @@ export default async function PreviewPage({
   // `notFound()`, bukan bingkai kosong yang iframe-nya baru gagal belakangan.
   if (!embed) {
     const supabaseShell = await createSupabaseServerClient();
-    const { data: shellInv } = await supabaseShell
-      .from("invitations")
-      .select("status, purged_at")
-      .eq("id", id)
-      .maybeSingle();
+    // Galat DB DILEMPAR, bukan 404 (DECISIONS #45): pemilik tak boleh diberi
+    // tahu undangannya "tak ada" hanya karena kedipan DB.
+    const shellInv = dataOrThrow(
+      await supabaseShell
+        .from("invitations")
+        .select("status, purged_at")
+        .eq("id", id)
+        .maybeSingle(),
+      "invitations (bingkai)",
+    );
     if (!shellInv) notFound();
     const cta = activationCtaFor(shellInv.status, shellInv.purged_at);
     return (
@@ -71,35 +77,39 @@ export default async function PreviewPage({
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: inv } = await supabase
-    .from("invitations")
-    .select(
-      "id, slug, category, content, settings, event_date, package_id, theme_id",
-    )
-    .eq("id", id)
-    .maybeSingle();
+  const inv = dataOrThrow(
+    await supabase
+      .from("invitations")
+      .select(
+        "id, slug, category, content, settings, event_date, package_id, theme_id",
+      )
+      .eq("id", id)
+      .maybeSingle(),
+    "invitations",
+  );
   if (!inv) notFound();
 
-  const [{ data: theme }, { data: eventRows }, { data: mediaRows }] =
-    await Promise.all([
-      supabase
-        .from("themes")
-        .select("slug")
-        .eq("id", inv.theme_id)
-        .maybeSingle(),
-      supabase
-        .from("invitation_events")
-        .select("id, name, start_at, end_at, venue_name, address, maps_url")
-        .eq("invitation_id", inv.id)
-        .order("sort_order", { ascending: true })
-        .order("start_at", { ascending: true }),
-      supabase
-        .from("media")
-        .select("id, storage_path, width, height")
-        .eq("invitation_id", inv.id)
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true }),
-    ]);
+  const [themeRes, eventsRes, mediaRes] = await Promise.all([
+    supabase.from("themes").select("slug").eq("id", inv.theme_id).maybeSingle(),
+    supabase
+      .from("invitation_events")
+      .select("id, name, start_at, end_at, venue_name, address, maps_url")
+      .eq("invitation_id", inv.id)
+      .order("sort_order", { ascending: true })
+      .order("start_at", { ascending: true }),
+    supabase
+      .from("media")
+      .select("id, storage_path, width, height")
+      .eq("invitation_id", inv.id)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+  ]);
+  // Setiap bacaan WAJIB berhasil (DECISIONS #45): pratinjau tanpa jadwal/galeri
+  // karena kedipan DB membuat pemilik mengira isiannya hilang — lalu mengetik
+  // ulang, atau lebih buruk, membayar undangan yang dikiranya kosong.
+  const theme = dataOrThrow(themeRes, "themes");
+  const eventRows = dataOrThrow(eventsRes, "invitation_events");
+  const mediaRows = dataOrThrow(mediaRes, "media");
 
   // Batas paket efektif (satu sumber kebenaran) → watermark. Draft → Basic.
   const limits = await getEffectiveLimits(supabase, inv.package_id);

@@ -9,8 +9,9 @@ import "@/components/public/momen/momen.css";
 import { copy } from "@/lib/copy";
 import { parseContentForRender } from "@/lib/invitation-content";
 import { canGuestViewPhotos, resolveAlbumPhase } from "@/lib/momen/album-phase";
-import { isDraftSlug, isReservedSlug } from "@/lib/slug";
+import { isDraftSlug, isPlausibleSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { fetchMomenAlbumStats, fetchMomenPhotos } from "@/server/momen/photos";
 import type { InvitationCategory } from "@/types";
 import type { Json } from "@/types/database";
@@ -76,23 +77,33 @@ export default async function MomenGuestPage({
   params: Promise<{ slug: string }>;
 }) {
   const slug = (await params).slug.toLowerCase();
-  if (isReservedSlug(slug) || isDraftSlug(slug)) notFound();
+  if (!isPlausibleSlug(slug) || isReservedSlug(slug) || isDraftSlug(slug))
+    notFound();
 
   const admin = createSupabaseAdminClient();
-  const { data: inv } = await admin
-    .from("invitations")
-    .select("id, category, content, event_date, status")
-    .eq("slug", slug)
-    .maybeSingle();
+  // Galat DB DILEMPAR (DECISIONS #45) → halaman "belum bisa dimuat" + tombol
+  // coba lagi (`../error.tsx`). Dulu ditelan: tamu di hari-H diberi 404 atau
+  // "Album belum aktif" hanya karena kedipan DB, lalu berhenti mencoba.
+  const inv = dataOrThrow(
+    await admin
+      .from("invitations")
+      .select("id, category, content, event_date, status")
+      .eq("slug", slug)
+      .maybeSingle(),
+    "invitations",
+  );
   if (!inv || inv.status !== "active") notFound();
 
-  const { data: album } = await admin
-    .from("momen_albums")
-    .select(
-      "id, status, quota_per_guest, default_filter, allow_library_upload, reveal_at",
-    )
-    .eq("invitation_id", inv.id)
-    .maybeSingle();
+  const album = dataOrThrow(
+    await admin
+      .from("momen_albums")
+      .select(
+        "id, status, quota_per_guest, default_filter, allow_library_upload, reveal_at",
+      )
+      .eq("invitation_id", inv.id)
+      .maybeSingle(),
+    "momen_albums",
+  );
 
   // Belum beli/aktivasi add-on → halaman ramah "belum aktif".
   if (!album || album.status !== "active") return <Inactive />;

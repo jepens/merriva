@@ -17,6 +17,14 @@ export const copy = {
   common: {
     loading: "Memuat…",
     error: "Terjadi kesalahan. Silakan coba lagi.",
+    // Halaman gagal dimuat (DECISIONS #45): boundary runtime halaman dinamis
+    // (`app/global-error.tsx`) & dashboard. Halaman 500 STATIS Next tak bisa
+    // diganti, jadi render ISR `/{slug}` yang gagal tak memakai teks ini.
+    loadError: {
+      title: "Halaman belum bisa dimuat",
+      body: "Terjadi gangguan saat memuat halaman ini. Coba lagi sebentar lagi.",
+      retry: "Coba lagi",
+    },
     save: "Simpan",
     cancel: "Batal",
   },
@@ -595,6 +603,12 @@ export const copy = {
     stepNeedsFix: "perlu diperbaiki",
   },
   preview: {
+    // Pratinjau gagal dimuat (DECISIONS #45) — gagal membaca TIDAK mengubah isian.
+    loadError: {
+      title: "Pratinjau belum bisa dimuat",
+      body: "Sambungan ke server sedang terganggu. Isian yang sudah tersimpan tidak terpengaruh — coba lagi sebentar lagi.",
+      retry: "Coba lagi",
+    },
     badge: "Pratinjau",
     note: "Hanya Anda yang melihat ini.",
     demoBadge: "Contoh Tema",
@@ -688,6 +702,14 @@ export const copy = {
   },
 
   public: {
+    // Undangan gagal dimuat karena DB terganggu (DECISIONS #45) — boundary
+    // `app/[slug]/error.tsx`: Album Momen (dinamis) & navigasi sisi klien. Render
+    // ISR `/{slug}` yang gagal disajikan lewat `common.loadError` (global-error).
+    loadError: {
+      title: "Undangan belum bisa dimuat",
+      body: "Sambungan ke server sedang terganggu. Coba lagi sebentar lagi.",
+      retry: "Coba lagi",
+    },
     // Nama cadangan sesi yang namanya dikosongkan pemilik (tamu tetap melihat
     // label, editor tetap memuat isian kosong apa adanya — DECISIONS #42).
     eventFallbackName: "Acara",

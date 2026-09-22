@@ -10,9 +10,17 @@ vi.mock("@/lib/request-ip", () => ({
   checkClientRateLimit: vi.fn(async () => ({ ok: true })),
 }));
 
-const { refs } = vi.hoisted(() => ({
-  refs: { events: [] as Record<string, unknown>[] },
+const { refs, reportHandledError } = vi.hoisted(() => ({
+  refs: {
+    events: [] as Record<string, unknown>[],
+    invError: null as unknown,
+    eventsError: null as unknown,
+    eventsQueried: 0,
+  },
+  reportHandledError: vi.fn(),
 }));
+
+vi.mock("@/lib/observability", () => ({ reportHandledError }));
 
 vi.mock("@/lib/supabase/admin", async () => {
   const { emptyContent } = await import("@/lib/validation/content");
@@ -37,19 +45,21 @@ vi.mock("@/lib/supabase/admin", async () => {
               content: emptyContent("wedding"),
               status: "active",
             },
-            error: null,
+            error: refs.invError,
           });
         chain.then = (
           ok: (v: unknown) => unknown,
           fail: (e: unknown) => unknown,
-        ) =>
-          Promise.resolve({
+        ) => {
+          if (table === "invitation_events") refs.eventsQueried += 1;
+          return Promise.resolve({
             data:
               table === "invitation_events"
                 ? refs.events.filter((e) => !filters.id || e.id === filters.id)
                 : null,
-            error: null,
+            error: table === "invitation_events" ? refs.eventsError : null,
           }).then(ok, fail);
+        };
         return chain;
       },
     }),
@@ -69,6 +79,10 @@ function panggil(query = "") {
 }
 
 beforeEach(() => {
+  refs.invError = null;
+  refs.eventsError = null;
+  refs.eventsQueried = 0;
+  reportHandledError.mockClear();
   refs.events = [
     {
       id: DRAFT_ID,
@@ -135,5 +149,61 @@ describe("GET /api/ics/[slug]", () => {
     expect(res.status).toBe(429);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Retry-After")).toBe("60");
+  });
+
+  it("?e= kosong → seluruh kalender, seperti sebelumnya (bukan 404)", async () => {
+    const res = await panggil("?e=");
+    expect(res.status).toBe(200);
+    expect((await res.text()).match(/BEGIN:VEVENT/g)).toHaveLength(1);
+  });
+
+  describe("galat DB (DECISIONS #45)", () => {
+    const BOOM = Object.assign(new Error("koneksi DB terputus"), {
+      code: "08006",
+    });
+
+    const sementara = (res: Response) => {
+      expect(res.status).toBe(503);
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+      expect(res.headers.get("Retry-After")).toBe("30");
+    };
+
+    it("membaca undangan gagal → 503 + Retry-After, BUKAN 404 'tak ada'; dilaporkan", async () => {
+      refs.invError = BOOM;
+      sementara(await panggil());
+      expect(reportHandledError).toHaveBeenCalledWith(BOOM, "ics.invitation", {
+        slug: "andi-sinta",
+      });
+    });
+
+    it("membaca jadwal gagal → 503 + Retry-After, BUKAN 404 'tak ada sesi'; dilaporkan", async () => {
+      refs.eventsError = BOOM;
+      sementara(await panggil(`?e=${AKAD_ID}`));
+      expect(reportHandledError).toHaveBeenCalledWith(BOOM, "ics.events", {
+        slug: "andi-sinta",
+      });
+    });
+
+    it.each(["a".repeat(61), "a".repeat(9000), "andi_sinta"])(
+      "slug mustahil → 404 TANPA query & tanpa laporan (dulu 414 gateway → 503 + Sentry per hit)",
+      async (slug) => {
+        const res = await GET(new Request(`http://localhost/api/ics/${slug}`), {
+          params: Promise.resolve({ slug }),
+        });
+        expect(res.status).toBe(404);
+        expect(refs.eventsQueried).toBe(0);
+        expect(reportHandledError).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["bukan-uuid", "' or 1=1 --"])(
+      "?e=%j tak berbentuk UUID → 404 SEBELUM query (bukan 503 dari galat cast Postgres)",
+      async (e) => {
+        const res = await panggil(`?e=${encodeURIComponent(e)}`);
+        expect(res.status).toBe(404);
+        expect(refs.eventsQueried).toBe(0);
+        expect(reportHandledError).not.toHaveBeenCalled();
+      },
+    );
   });
 });

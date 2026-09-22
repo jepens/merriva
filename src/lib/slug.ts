@@ -106,6 +106,21 @@ export function isDraftSlug(slug: string): boolean {
   return slug.startsWith("draft-");
 }
 
+const SLUG_CHARS = /^[a-z0-9-]+$/;
+
+/**
+ * Bentuk yang MUNGKIN ada di DB — sama dengan CHECK `^[a-z0-9-]{3,60}$`. Jalur
+ * publik menolak slug mustahil SEBELUM query (DECISIONS #45): slug ribuan
+ * karakter membuat URL PostgREST melampaui batas gateway (414), dan galat itu
+ * kini dijawab 503 "coba lagi" + laporan Sentry per hit — padahal slug-nya
+ * pasti tak ada (dulu ditelan jadi 404/gambar default).
+ */
+export function isPlausibleSlug(slug: string): boolean {
+  return (
+    slug.length >= SLUG_MIN && slug.length <= SLUG_MAX && SLUG_CHARS.test(slug)
+  );
+}
+
 /**
  * Skema slug: input di-normalisasi (trim + lowercase) lalu divalidasi. Dipakai
  * di klien (umpan balik format instan) dan server (validasi ulang) — `.data`

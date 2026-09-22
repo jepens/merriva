@@ -281,7 +281,11 @@ momen_photos      id, album_id→momen_albums, guest_name, device_id uuid, filte
    Auth, Storage     + webhook
 ```
 
-Halaman undangan publik dilayani dengan **ISR** (cache di server, di-revalidate saat pemilik menyimpan) sehingga beban hari-H — ratusan tamu membuka bersamaan — dilayani dari cache, bukan query database per kunjungan.
+Halaman undangan publik dilayani dengan **ISR** (cache di server, di-revalidate saat pemilik menyimpan) sehingga beban hari-H — ratusan tamu membuka bersamaan — dilayani dari cache, bukan query database per kunjungan. **Galat database tidak pernah di-cache sebagai isi undangan** (DECISIONS #45): bila salah satu bacaan gagal, render itu digugurkan — bukan disimpan sebagai undangan tanpa jadwal, galeri kosong, watermark di undangan Premium, atau 404.
+  - Saat cache kedaluwarsa karena waktu, tamu tetap melihat versi terakhir yang baik.
+  - Segera setelah pemilik menyimpan (cache ditandai kedaluwarsa), render berikutnya tak punya versi untuk disajikan: tamu mendapat halaman galat 500 bawaan framework (tidak di-cache, berbahasa Inggris — halaman 500 statis App Router tak bisa diganti di Next 16.2.11), dan permintaan berikutnya mencoba lagi. Sama untuk undangan yang belum pernah dibuka. Halaman "belum bisa dimuat" + tombol Coba lagi berbahasa Indonesia berlaku untuk halaman DINAMIS: Album Momen, pratinjau pemilik, dan dashboard.
+  - Pratinjau pemilik, halaman Album Momen, berkas `.ics`, dan gambar pratinjau tautan (OG) mengikuti prinsip yang sama: kegagalan membaca dijawab sebagai gangguan sementara yang bisa dicoba lagi, bukan "tidak ada" atau data kosong. Galeri foto Album Momen adalah pengecualian yang disengaja (tetap tampil dengan foto yang berhasil dimuat, galatnya dilaporkan).
+  - Alamat undangan yang bentuknya mustahil ditolak tanpa menyentuh database.
 
 ### 6.2 Stack
 

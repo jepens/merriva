@@ -6,9 +6,11 @@ import { ImageResponse } from "next/og";
 import { copy } from "@/lib/copy";
 import { formatDateOnly, formatEventDateTime } from "@/lib/datetime";
 import { parseContentForRender } from "@/lib/invitation-content";
+import { reportHandledError } from "@/lib/observability";
 import { checkClientRateLimit } from "@/lib/request-ip";
-import { isDraftSlug, isReservedSlug } from "@/lib/slug";
+import { isDraftSlug, isPlausibleSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { settingsSchema } from "@/lib/validation/content";
 
 /**
@@ -91,14 +93,23 @@ function nameFontSize(title: string, script: boolean): number {
  * reserved/draft/tak-aktif/tak-ada → pemanggil pakai gambar default statis. */
 async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
   const slug = rawSlug.trim().toLowerCase();
-  if (!slug || isReservedSlug(slug) || isDraftSlug(slug)) return null;
+  // Slug mustahil → gambar default (boleh di-cache: slug itu pasti tak ada),
+  // bukan query yang gagal 414 lalu 503 + laporan Sentry per hit (#45).
+  if (!isPlausibleSlug(slug) || isReservedSlug(slug) || isDraftSlug(slug))
+    return null;
 
   const admin = createSupabaseAdminClient();
-  const { data: inv } = await admin
-    .from("invitations")
-    .select("id, category, content, settings, event_date, status")
-    .eq("slug", slug)
-    .maybeSingle();
+  // Galat DB DILEMPAR (DECISIONS #45) → GET menjawab 503 no-store. Dulu ditelan
+  // menjadi "tak aktif" → gambar default ber-`s-maxage=86400` di bawah Cache
+  // Rule path-only: satu kedipan DB = pratinjau WhatsApp default selama sehari.
+  const inv = dataOrThrow(
+    await admin
+      .from("invitations")
+      .select("id, category, content, settings, event_date, status")
+      .eq("slug", slug)
+      .maybeSingle(),
+    "invitations",
+  );
   if (!inv || inv.status !== "active") return null;
 
   const content = parseContentForRender(inv.content, inv.category);
@@ -123,17 +134,22 @@ async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
 
   const tz =
     settingsSchema.safeParse(inv.settings).data?.timezone ?? "Asia/Jakarta";
-  const { data: firstEvent } = await admin
-    .from("invitation_events")
-    .select("start_at")
-    .eq("invitation_id", inv.id)
-    // Urut `sort_order` + limit 1: tanpa saringan ini sesi draft tanpa jam di
-    // urutan pertama menutupi sesi berjam sesudahnya (DECISIONS #42).
-    .not("start_at", "is", null)
-    .order("sort_order", { ascending: true })
-    .order("start_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  // Galat DB dilempar juga: dulu jatuh ke tanggal `event_date` (atau tanpa
+  // tanggal), dan gambar SALAH itu di-cache CDN hingga 1 hari + 7 hari SWR.
+  const firstEvent = dataOrThrow(
+    await admin
+      .from("invitation_events")
+      .select("start_at")
+      .eq("invitation_id", inv.id)
+      // Urut `sort_order` + limit 1: tanpa saringan ini sesi draft tanpa jam di
+      // urutan pertama menutupi sesi berjam sesudahnya (DECISIONS #42).
+      .not("start_at", "is", null)
+      .order("sort_order", { ascending: true })
+      .order("start_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    "invitation_events",
+  );
 
   let dateLabel: string | null = null;
   if (firstEvent?.start_at) {
@@ -152,6 +168,23 @@ async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
   };
 }
 
+/**
+ * Respons tanpa gambar dengan `no-store` EKSPLISIT (DECISIONS #45). Tanpa
+ * `Cache-Control`, Cloudflare hanya meng-cache status 200/206/301/302/303/404/410
+ * dengan TTL bawaan — jadi 429/5xx kemungkinan besar tak ter-cache walau di bawah
+ * Cache Rule `/api/og/*`. `no-store` tetap dipasang agar jawaban sesaat tak
+ * bergantung pada perilaku bawaan CDN/perantara (defensif).
+ */
+function noImage(
+  status: 429 | 500 | 503,
+  headers: Record<string, string> = {},
+) {
+  return new Response(null, {
+    status,
+    headers: { "Cache-Control": "no-store", ...headers },
+  });
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ slug: string }> },
@@ -159,14 +192,18 @@ export async function GET(
   // 1. Rate limit per-IP (boundary "rate limit endpoint publik").
   const rl = await checkClientRateLimit("og", OG_LIMIT);
   if (!rl.ok) {
-    return new Response(null, {
-      status: 429,
-      headers: { "Retry-After": "60" },
-    });
+    return noImage(429, { "Retry-After": "60" });
   }
 
   const { slug } = await params;
-  const fields = await resolveOgFields(slug);
+  let fields: OgFields | null;
+  try {
+    fields = await resolveOgFields(slug);
+  } catch (err) {
+    // Ditangani → tak sampai `onRequestError`; laporkan sendiri.
+    reportHandledError(err, "og.load", { slug });
+    return noImage(503, { "Retry-After": "30" });
+  }
 
   // 2. Cheap-reject: non-aktif/tak-ada → gambar default STATIS (tanpa render).
   if (!fields) {
@@ -181,7 +218,7 @@ export async function GET(
 
   // 3. Font (hanya untuk render undangan aktif).
   const fonts = await fontsPromise;
-  if (!fonts) return new Response("OG image unavailable", { status: 500 });
+  if (!fonts) return noImage(500);
   const [serif, greatVibes] = fonts;
 
   const title = fields.names

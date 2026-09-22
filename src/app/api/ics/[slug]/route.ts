@@ -1,10 +1,12 @@
 import { buildIcs, type CalendarEventInput } from "@/lib/calendar";
 import { copy } from "@/lib/copy";
 import { appUrl } from "@/lib/env";
+import { isUuid } from "@/lib/id";
 import { parseContentForRender } from "@/lib/invitation-content";
+import { reportHandledError } from "@/lib/observability";
 import { checkClientRateLimit } from "@/lib/request-ip";
 import { scheduledEvents } from "@/lib/schedule";
-import { isDraftSlug, isReservedSlug } from "@/lib/slug";
+import { isDraftSlug, isPlausibleSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -27,7 +29,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
  *      opsional (bila dipasang: cache key WAJIB menyertakan query `e` karena
  *      berkas berbeda per sesi, Edge TTL tetap pendek, dan Browser TTL WAJIB
  *      "Respect origin" — bawaan zona 4 jam menimpa max-age origin yang lebih
- *      kecil). 404/429 memancarkan `no-store` eksplisit (lihat `noFile`).
+ *      kecil). 404/429/503 memancarkan `no-store` eksplisit (lihat `noFile`).
+ *   4. Galat DB → 503 + Retry-After, bukan 404 (DECISIONS #45).
  *
  * `?e=<eventId>` → hanya sesi tersebut; tanpa `?e` → seluruh sesi dalam satu
  * VCALENDAR. Runtime Node (admin client + hashing IP).
@@ -44,11 +47,22 @@ const ICS_LIMIT = { max: 60, windowMs: 60_000 };
  * — 404 sesaat (mis. pemilik mengosongkan jam sesi sebentar, #42) bisa tertahan
  * di peramban tamu berjam-jam setelah jamnya diisi lagi.
  */
-function noFile(status: 404 | 429, headers: Record<string, string> = {}) {
+function noFile(status: 404 | 429 | 503, headers: Record<string, string> = {}) {
   return new Response(null, {
     status,
     headers: { "Cache-Control": "no-store", ...headers },
   });
+}
+
+/**
+ * Galat DB → 503 + `Retry-After`, BUKAN 404 (DECISIONS #45): "sesi ini tak ada"
+ * dan "server sedang terganggu" berbeda bagi tamu & aplikasi kalender — dulu
+ * kedipan DB dijawab 404 seolah undangannya tak punya jadwal. Dilaporkan ke
+ * Sentry karena respons ini ditangani (tak sampai `onRequestError`).
+ */
+function unavailable(err: unknown, where: string, slug: string) {
+  reportHandledError(err, `ics.${where}`, { slug });
+  return noFile(503, { "Retry-After": "30" });
 }
 
 export async function GET(
@@ -62,23 +76,30 @@ export async function GET(
   }
 
   const slug = (await params).slug.trim().toLowerCase();
-  if (!slug || isReservedSlug(slug) || isDraftSlug(slug)) {
+  // Slug mustahil → 404 TANPA query: dijawab 503 (galat 414 gateway) +
+  // laporan Sentry per hit, padahal pasti tak ada (DECISIONS #45).
+  if (!isPlausibleSlug(slug) || isReservedSlug(slug) || isDraftSlug(slug)) {
     return noFile(404);
   }
 
   // 2. Cheap-reject: hanya undangan AKTIF yang punya berkas kalender.
   const admin = createSupabaseAdminClient();
-  const { data: inv } = await admin
+  const { data: inv, error: invError } = await admin
     .from("invitations")
     .select("id, slug, category, content, status")
     .eq("slug", slug)
     .maybeSingle();
+  if (invError) return unavailable(invError, "invitation", slug);
   if (!inv || inv.status !== "active") {
     return noFile(404);
   }
 
   const url = new URL(req.url);
   const eventId = url.searchParams.get("e");
+  // `?e` bukan UUID = tautan rusak dari klien → 404. Tanpa saringan ini Postgres
+  // menolak cast-nya (22P02) dan galat itu akan dijawab 503 "coba lagi".
+  // `?e=` kosong = tanpa saringan (seluruh kalender), seperti sebelumnya.
+  if (eventId && !isUuid(eventId)) return noFile(404);
 
   let query = admin
     .from("invitation_events")
@@ -87,9 +108,10 @@ export async function GET(
     // Sesi draft tanpa jam (DECISIONS #42) tak punya tempat di kalender tamu.
     .not("start_at", "is", null);
   if (eventId) query = query.eq("id", eventId);
-  const { data: rows } = await query
+  const { data: rows, error: rowsError } = await query
     .order("sort_order", { ascending: true })
     .order("start_at", { ascending: true });
+  if (rowsError) return unavailable(rowsError, "events", slug);
 
   const scheduled = scheduledEvents(rows ?? []);
   if (scheduled.length === 0) {

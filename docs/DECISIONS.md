@@ -542,8 +542,8 @@ Pemicunya sangat biasa. `input type=datetime-local` bernilai "" selama SALAH SAT
 - **Yang BELUM ditutup, sengaja dicatat:**
   - ~~**Churn id sesi.**~~ Ditutup oleh #43. Setiap autosave — dari langkah mana pun, karena payload = seluruh form — menghapus lalu menyisipkan ulang semua sesi, jadi id berganti tiap simpan. Ini mematahkan UID ICS "stabil" (`lib/calendar.ts`), tautan `/api/ics/{slug}?e={id}` di HTML ISR/tab terbuka (→ 404), dan kesiapan FK check-in Fase 2 (cascade akan menghapus riwayat check-in tiap autosave). Ditutup oleh #43 dengan upsert per id. Versi pada tautan ICS DITOLAK di #43 (butuh perubahan kontrak props 10 tema) dan diganti cache `.ics` 5 menit.
   - ~~Checkout belum mensyaratkan ≥1 sesi berjam — pemilik bisa membayar undangan berjadwal kosong.~~ Ditutup oleh #44: gerbang checkout (SPEC §4.8 langkah 0) kini mensyaratkan minimal satu sesi berjam.
-  - OG hanya dilindungi saringan query, belum ada test (render gambar berat di jsdom).
-  - Galat query jadwal di `/[slug]` & `/api/ics` masih ditelan.
+  - ~~OG hanya dilindungi saringan query, belum ada test~~ Sebagian ditutup oleh #45: cabang galat, tak-aktif, dan 429 route OG kini teruji; render gambar (satori) tetap tak diuji di jsdom.
+  - ~~Galat query jadwal di `/[slug]` & `/api/ics` masih ditelan.~~ Ditutup oleh #45 (seluruh bacaan halaman publik, pratinjau, Album Momen, `.ics`, dan OG).
 
 ## #43 — 2026-09-22 · Id sesi jadwal stabil: upsert per id, bukan hapus-semua
 
@@ -652,6 +652,69 @@ Gerbang yang ada hanya menahan alamat `draft-…`, dengan satu kartu untuk satu 
 
     Jalur uang sendiri tak bercacat: hanya `createCheckoutAction` yang membuat tautan bayar undangan, dan tak ada efek samping sebelum syarat diperiksa.
   - **Uji mutasi:** 32 mutan (urutan & isi syarat, predikat berjam, penahan & gagal-tertutup di aksi, penanda `readiness`, klien RLS, filter & urutan query, baris hantu, refresh & gulir, cabang halaman, tautan perbaikan, deep link) — semuanya merah oleh test.
+
+## #45 — 2026-09-23 · Galat bacaan di jalur publik dilempar, tak pernah di-cache sebagai isi undangan
+
+**Konteks:** halaman undangan `/{slug}` adalah ISR (`force-static` + revalidasi on-demand saat pemilik menyimpan + jaring 1 jam). Query undangan utamanya sudah melempar galat. Enam bacaan sesudahnya menelan galat: tema, jadwal, galeri, Album Momen, batas paket, dan musik.
+- Satu kedipan DB saat revalidasi meng-cache undangan tanpa jadwal, galeri kosong, tanpa tombol Momen, Premium ber-watermark (`getEffectiveLimits` jatuh ke lantai Basic), tanpa musik, atau 404 (tema null → `notFound()`).
+- Cache itu bertahan bagi SEMUA tamu sampai simpanan berikutnya, padahal tamu justru membuka undangan pada hari-H.
+- Dicatat sebagai butir terbuka di #42; dikerjakan atas rekomendasi yang disetujui pemilik 2026-09-23.
+
+Pemetaan menemukan kelas yang sama di tempat lain:
+- **OG** — jalur terberat. Galat → "tak aktif" → gambar default ber-`s-maxage=86400`. Di bawah Cache Rule `/api/og/*` yang diwajibkan LAUNCH-CHECKLIST (kunci = path saja), satu kedipan DB = pratinjau WhatsApp default selama sehari. Galat jadwal jatuh ke tanggal `event_date`, dan gambar SALAH itu di-cache 1 hari + 7 hari SWR.
+- **`.ics`:** galat dijawab 404 "tak ada".
+- **Pratinjau:** tanpa jadwal/galeri, sehingga pemilik mengira isiannya hilang; galat membaca status dijawab 404.
+- **Album Momen:** tamu di hari-H diberi 404 atau "album belum aktif".
+
+**Keputusan:**
+1. **`dataOrThrow(result, label)` (`lib/supabase/result.ts`)**: data, atau lempar `SupabaseReadError` berlabel bacaan.
+   - Render yang melempar TIDAK PERNAH di-cache. Yang tersaji bergantung jalurnya (diperiksa di sumber Next 16.2.11, dan ditinjau ulang oleh review karena versi pertama ADR ini menjanjikan terlalu banyak):
+     - **basi karena waktu** (jaring 1 jam): entri basi disajikan lebih dulu, revalidasi latar yang gagal hanya dicatat → tamu melihat versi terakhir yang baik (`response-cache`, `handle-isr-error`);
+     - **sesudah `revalidatePath`** (pemilik menyimpan — jalur revalidasi utama halaman ini): tag ditandai *expired*, `FileSystemCache.get` mengembalikan null, jadi render blocking; bila gagal, tamu mendapat halaman 500 (tak di-cache) dan permintaan berikutnya mencoba lagi. Versi lama TIDAK disajikan. Semantik SWR untuk jalur simpan (mis. profil cacheLife) ditunda: menukar jaminan itu dengan pemilik yang melihat versi lama sesaat sesudah menyimpan;
+     - **render pertama** (belum pernah ada cache): sama seperti di atas.
+   - postgrest-js tanpa `.throwOnError()` mengembalikan galat sebagai OBJEK POLOS. Melemparnya apa adanya membuat Next membungkusnya menjadi `Error(JSON)` bertumpukan internal — ketujuh bacaan tak terbedakan di Sentry (ditemukan review). `SupabaseReadError` dibuat di titik panggil, pesannya `"<label>: <pesan asli>"`, galat asli di `cause`.
+   - Galat render dilaporkan ke Sentry lewat `onRequestError`.
+2. **Dipakai di setiap bacaan** `/{slug}`, pratinjau (bingkai & isi iframe), dan halaman Album Momen (undangan & album). **Data yang memang TAK ADA tanpa galat tetap diperlakukan seperti dulu** (tema tak ada → 404, album belum dibeli → "belum aktif", paket tak terlihat → Basic, lagu nonaktif → tanpa musik).
+3. **`getEffectiveLimits` & `resolveMusic` melempar galat DB** alih-alih menganggapnya "tak ada". Aksi kustomisasi tampilan menangkapnya dan membalas galat biasa, supaya tak menolak Premium palsu dan tak melempar ke editor. Halaman dashboard yang memakainya kini menampilkan galat alih-alih batas palsu.
+4. **`.ics`:** galat DB → 503 + `Retry-After: 30` + `no-store`, dilaporkan (`reportHandledError`, karena respons yang ditangani tak sampai `onRequestError`). `?e` yang berisi tetapi bukan UUID → 404 SEBELUM query; tanpa saringan ini galat cast Postgres (22P02) akan dijawab "coba lagi". `?e=` kosong tetap berarti seluruh kalender, seperti dulu.
+5. **OG:** galat DB → 503 `no-store` + `Retry-After`, dilaporkan. Tak ada gambar, sehingga tak ada yang di-cache CDN dan scrape berikutnya mencoba lagi. 429 dan 500 (font gagal) kini juga `no-store`: di bawah Cache Rule "Eligible for cache", respons tanpa `Cache-Control` di-cache memakai TTL bawaan per status.
+6. **Layar galat berbahasa Indonesia di tiga tingkat** — `LoadErrorScreen` + `unstable_retry` (prop Next 16.2.11: `router.refresh()` + reset; bukan `reset` saja, yang merender ulang tanpa data baru):
+   - `app/global-error.tsx` — boundary runtime untuk halaman DINAMIS yang tak punya boundary lebih dekat (auth, admin, marketing dinamis);
+   - `app/[slug]/error.tsx` (menaungi `/{slug}/momen`) & `app/preview/[id]/error.tsx` — untuk render DINAMIS: Album Momen, pratinjau, navigasi sisi klien;
+   - `app/(dashboard)/dashboard/undangan/[id]/error.tsx` — galat `getEffectiveLimits` di halaman tamu/tampilan; tanpa ini pemilik mendapat halaman galat global yang mengganti seluruh dokumen (header & navigasi hilang).
+7. **Halaman 500 statis TIDAK bisa diganti** (dan review keliru soal ini). Saat render ISR `/{slug}` gagal tanpa versi baik, Next melempar ulang galat sebelum boundary segmen sempat dirender (`handleISRError`, `digestErrorsMap`) lalu menyajikan 500.html statis. Review menyarankan `app/global-error.tsx` agar halaman itu berbahasa Indonesia; **dibuktikan salah** untuk Next 16.2.11: 500.html App Router SELALU dirakit dari `next/dist/client/components/builtin/app-error.js` (komentar sumbernya: *"This is the static 500.html page for App Router apps"*; `next-app-loader` memakai `appErrorPath` tetap untuk rute itu). Build lokal memastikannya — `_global-error.html` hasil build memuat UI bawaan, bukan komponen kami, walau komponen kami ikut ter-bundle. `global-error.tsx` tetap dipertahankan karena berlaku sebagai boundary runtime halaman dinamis. Akibat yang diterima: tamu yang membuka undangan TANPA versi ter-cache saat DB terganggu melihat halaman 500 bawaan berbahasa Inggris (tak di-cache, pulih pada permintaan berikutnya).
+8. **Slug yang bentuknya mustahil ditolak sebelum query** (`isPlausibleSlug`, sama dengan CHECK `^[a-z0-9-]{3,60}$`). Slug ribuan karakter membuat URL PostgREST melampaui batas gateway (414); galat itu kini dijawab 503 "coba lagi" + satu event Sentry per hit, padahal slugnya pasti tak ada. Ditemukan & direproduksi review. Dipakai di `/{slug}` (+metadata), Album Momen, `.ics` (404), dan OG (gambar default yang boleh di-cache).
+
+**Ditolak:**
+- **Degradasi jinak per bagian** (render tanpa jadwal + laporkan): halaman ISR akan MENG-CACHE degradasi itu — persis masalahnya.
+- **Semantik SWR pada jalur simpan** (`revalidateTag` dengan profil alih-alih `revalidatePath`): akan mempertahankan versi baik terakhir juga sesudah pemilik menyimpan, tetapi pemilik lalu melihat versi LAMA sesaat setelah menyimpan. Ditunda, dicatat sebagai butir terbuka.
+- **Fallback "stale" buatan sendiri** (menyimpan salinan data terakhir): ISR Next sudah melakukannya dengan benar bila render melempar.
+- **Menjadikan galeri Album Momen melempar:** `fetchMomenPhotos` sengaja "degradasi jinak + lapor" (halaman dinamis, galeri bukan inti); dibiarkan.
+
+**Konsekuensi:**
+- Render pertama tanpa cache (belum pernah dibuka) saat DB terganggu → tamu melihat layar "belum bisa dimuat" + Coba lagi, bukan undangan palsu.
+- Dashboard `tamu`/`tampilan` menampilkan layar "belum bisa dimuat" di dalam layout (header & navigasi tetap) saat DB terganggu — lebih jujur daripada batas paket palsu, dan sementara.
+- **Belum dibuktikan pada server produksi:** `next build` berjalan di Windows (dipakai untuk membuktikan isi 500.html), tetapi servernya tidak (`output: standalone` → `next start` tak didukung; `node .next/standalone/server.js` gagal di Windows karena tata letak symlink pnpm). Perilaku cache per jalur di atas bersandar pada sumber Next 16.2.11 + simulasi memakai modul cache asli Next (review) — perlu dicoba di staging/Docker.
+- **Masih terbuka — kelas yang sama di server action tamu** (tak ter-cache, sudah ada sebelum #45; ditemukan review):
+  - personalisasi `?g=` menelan galat menjadi "token tak dikenal" → nama tamu hilang, RSVP tak tertaut, pax dipotong ke 2, `first_viewed_at` tak tercatat;
+  - `submitRsvpAction`/`submitGiftNoteAction`: galat undangan dijawab "tidak menerima konfirmasi" (terdengar permanen); galat lookup tamu menyisipkan RSVP tak tertaut lalu melapor sukses;
+  - dinding ucapan: galat dijawab daftar kosong tanpa penanda gagal ("Belum ada ucapan") dan tombol "Muat lebih" hilang;
+  - aksi tamu Album Momen: galat dijawab "Album tidak aktif", foto yang baru dijepret dibuang.
+- Test (baru):
+  - `/{slug}` dirender: ketujuh bacaan gagal → melempar galatnya; ketiadaan data tanpa galat → perilaku lama;
+  - pratinjau (bingkai & iframe) dan Album Momen dengan pola yang sama;
+  - `getEffectiveLimits`/`resolveMusic`;
+  - aksi tampilan;
+  - `.ics` (503, `?e` tak sah → 404 tanpa query, `?e=` kosong → seluruh kalender, slug mustahil → 404 tanpa query/laporan);
+  - **test pertama untuk route OG** (503 `no-store`, gambar default untuk tak aktif & slug mustahil, render untuk aktif, 429 & 500-font `no-store`) — cabang render satori tetap tak diuji;
+  - `dataOrThrow` dengan galat berbentuk objek polos (bentuk postgrest-js sungguhan): Error berlabel, `code` & `cause` terjaga;
+  - aksi tampilan: galat paket & galat tema → galat biasa + dilaporkan, tanpa menulis;
+  - layar galat (tamu, pratinjau, dashboard) memanggil `unstable_retry`; halaman galat global berbahasa Indonesia (`lang="id"`), boundary dashboard tanpa `<main>` sendiri.
+- Pembuktian:
+  - **Galat DB nyata di aplikasi yang berjalan** (hak `SELECT` dicabut sementara di DB lokal, lalu dikembalikan identik): halaman tamu menampilkan layar "belum bisa dimuat" + Coba lagi alih-alih undangan tanpa galeri; `.ics` & OG menjawab 503 `no-store` + `Retry-After` (OG tanpa pengalihan ke gambar default); `?e` tak sah tetap 404. Sesudah hak dipulihkan, "Coba lagi" memuat undangan lengkap tanpa muat ulang manual, dan `.ics`/OG kembali 200.
+  - **`next build` lokal:** dipakai untuk membuktikan bahwa 500.html hasil build memuat UI bawaan Next, bukan `global-error.tsx` kami (lihat butir 7). Server produksinya sendiri tak bisa dijalankan di Windows.
+  - **Review adversarial:** 22 agen (5 lensa: semantik ISR Next, kelengkapan bacaan, HTTP & cache route, regresi pemanggil, test & dokumen; skeptis per temuan; kritik kelengkapan). 16 temuan, semuanya rendah, 1 terbantah. Empat mengoreksi klaim ADR/SPEC versi pertama: jaminan "versi baik terakhir" tak berlaku sesudah `revalidatePath`; layar galat kami tak tampil pada render ISR; `dataOrThrow` melempar objek polos; slug mustahil menjadi 503 + spam Sentry. Saran review untuk memperbaiki halaman 500 lewat `global-error.tsx` dibuktikan TIDAK berlaku di Next 16.2.11.
+  - **Uji mutasi:** 50 mutan (menelan galat di tiap titik bacaan, label & `cause` galat, penjaga slug, penjaga `?e`, kode status, `no-store`, `Retry-After`, pelaporan Sentry, layar galat & `unstable_retry`, bahasa halaman galat global) — semuanya merah oleh test.
 
 ---
 
