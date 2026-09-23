@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import { copy } from "@/lib/copy";
 import type { GuestbookEntry } from "@/lib/validation/guestbook";
-import { getGuestbookAction } from "@/server/actions/guestbook";
+import {
+  getGuestbookAction,
+  type GuestbookPage,
+} from "@/server/actions/guestbook";
 
 /**
  * Dinding ucapan (SPEC §4.6): hanya ucapan yang disetujui & tak disembunyikan,
@@ -35,16 +38,25 @@ export function GuestbookWall({
   // sudah true sehingga halaman pertama tampil "memuat" tanpa perlu di-set ulang.
   useEffect(() => {
     let active = true;
-    getGuestbookAction(slug, 0).then((res) => {
-      if (!active) return;
-      setEntries(res.entries);
-      setHasMore(res.hasMore);
-      // Rate limit ATAU galat DB (#46) — keduanya bukan 'belum ada ucapan'.
-      setFailed(res.rateLimited === true || res.failed === true);
-      setPage(0);
-      setLoaded(true);
-      setLoading(false);
-    });
+    getGuestbookAction(slug, 0)
+      .then((res) => {
+        if (!active) return;
+        setEntries(res.entries);
+        setHasMore(res.hasMore);
+        // Rate limit ATAU galat DB (#46) — keduanya bukan 'belum ada ucapan'.
+        setFailed(res.rateLimited === true || res.failed === true);
+        setPage(0);
+        setLoaded(true);
+        setLoading(false);
+      })
+      .catch(() => {
+        // Aksi MELEMPAR (jaringan putus, id aksi basi sesudah deploy) — dulu
+        // dinding tersangkut "Memuat…" selamanya, tanpa jalan mencoba lagi.
+        if (!active) return;
+        setFailed(true);
+        setLoaded(true);
+        setLoading(false);
+      });
     return () => {
       active = false;
     };
@@ -54,7 +66,14 @@ export function GuestbookWall({
   const loadMore = useCallback(async () => {
     setLoading(true);
     const next = page + 1;
-    const res = await getGuestbookAction(slug, next);
+    let res: GuestbookPage;
+    try {
+      res = await getGuestbookAction(slug, next);
+    } catch {
+      setFailed(true);
+      setLoading(false);
+      return;
+    }
     if (res.rateLimited || res.failed) {
       // Jangan menyentuh `hasMore`: tombol "Muat lebih" harus tetap ada agar
       // tamu bisa mencoba lagi (#46) — dulu hilang diam-diam saat galat.

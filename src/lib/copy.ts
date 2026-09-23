@@ -837,6 +837,10 @@ export const copy = {
       // Kirim ulang jepretan yang gagal diunggah (DECISIONS #46) — fotonya
       // disimpan klien, jadi tamu tak perlu (dan sering tak bisa) mengulang.
       retryPhoto: "Kirim ulang foto",
+      // Dipakai saat pesan galat di layar BUKAN milik jepretan yang tertunda
+      // (mis. tamu lalu memilih berkas HEIC): tombol kirim ulang tetap ada,
+      // tetapi harus jelas foto mana yang dimaksud.
+      pendingShot: "Satu jepretan sebelumnya belum terkirim.",
       savedInstant: "Tersimpan ✓",
       permissionHint:
         "Izinkan akses kamera di browser, atau unggah foto dari galeri.",

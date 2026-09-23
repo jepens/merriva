@@ -674,6 +674,28 @@ describe("uploadMomenPhotoAction — penanda `retryable`", () => {
     ).toBe(false);
   });
 
+  it("penolakan gerbang ATOMIK (confirm) → TIDAK retryable", async () => {
+    // Di sinilah kehabisan jatah sesungguhnya muncul saat dua ponsel mengunggah
+    // bersamaan: claim lolos pra-cek, `momen_confirm_photo` yang menolak.
+    for (const result of ["guest-quota", "album-full", "peserta-penuh"]) {
+      cookieValue.current = signFor(ALBUM);
+      adminRef.current = makeAdmin({
+        confirm: { data: [{ result, remaining: 0 }], error: null },
+      });
+      const res = await uploadMomenPhotoAction(SLUG, form());
+      expect(retryable(res)).toBe(false);
+      // Objek yang terlanjur terunggah tetap dibersihkan.
+      expect(storage.delete).toHaveBeenCalledTimes(2);
+      storage.delete.mockClear();
+    }
+  });
+
+  it("sesi milik album LAIN → TIDAK retryable", async () => {
+    cookieValue.current = signFor(OTHER_ALBUM);
+    adminRef.current = makeAdmin({ albumId: ALBUM });
+    expect(retryable(await uploadMomenPhotoAction(SLUG, form()))).toBe(false);
+  });
+
   it("sesi tak sah / kedaluwarsa → TIDAK retryable (tamu harus masuk lagi)", async () => {
     cookieValue.current = "";
     adminRef.current = makeAdmin();

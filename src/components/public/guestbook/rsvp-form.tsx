@@ -37,32 +37,51 @@ export function RsvpForm({
     "idle",
   );
   const [feedback, setFeedback] = useState("");
+  const [tsReset, setTsReset] = useState(0);
 
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const onToken = useCallback((tk: string) => setToken(tk), []);
+
+  /**
+   * Kiriman ditolak → minta tantangan Turnstile baru (DECISIONS #46). Token
+   * lama sudah dipakai server sebelum bacaan DB gagal; tanpa reset, "silakan
+   * coba lagi" selalu berakhir "verifikasi gagal" dan RSVP tamu hilang.
+   */
+  const failSubmit = useCallback((msg: string) => {
+    setStatus("error");
+    setFeedback(msg);
+    setToken("");
+    setTsReset((n) => n + 1);
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (status === "sending") return;
     setStatus("sending");
     setFeedback("");
-    const res = await submitRsvpAction({
-      slug,
-      guestName: name,
-      attendance,
-      pax,
-      message,
-      guestToken,
-      turnstileToken: token,
-      website: honeypotRef.current?.value ?? "",
-    });
-    if (res.status === "success") {
-      setStatus("done");
-      setFeedback(res.moderated ? t.successModerated : t.success);
-      onSubmitted?.();
-    } else {
-      setStatus("error");
-      setFeedback(res.message ?? t.invalid);
+    try {
+      const res = await submitRsvpAction({
+        slug,
+        guestName: name,
+        attendance,
+        pax,
+        message,
+        guestToken,
+        turnstileToken: token,
+        website: honeypotRef.current?.value ?? "",
+      });
+      if (res.status === "success") {
+        setStatus("done");
+        setFeedback(res.moderated ? t.successModerated : t.success);
+        onSubmitted?.();
+        return;
+      }
+      failSubmit(res.message ?? t.invalid);
+    } catch {
+      // Aksi MELEMPAR (jaringan venue putus, id aksi basi sesudah deploy):
+      // tanpa ini `status` tersangkut "sending" selamanya — tombol mati, tanpa
+      // pesan, dan tamu tak bisa mengirim ulang.
+      failSubmit(copy.common.error);
     }
   }
 
@@ -146,7 +165,13 @@ export function RsvpForm({
         />
       </label>
 
-      {siteKey ? <TurnstileWidget siteKey={siteKey} onToken={onToken} /> : null}
+      {siteKey ? (
+        <TurnstileWidget
+          siteKey={siteKey}
+          onToken={onToken}
+          resetKey={tsReset}
+        />
+      ) : null}
 
       {status === "error" ? (
         <p className="gb-error" role="alert">

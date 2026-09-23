@@ -508,6 +508,10 @@
   font-weight: 600;
   cursor: pointer;
 }
+.mn-camerr__note {
+  margin-top: 6px;
+  opacity: 0.9;
+}
 .mn-app .mn-camerr__retry:disabled {
   opacity: 0.6;
   cursor: default;

@@ -24,9 +24,17 @@ const SCRIPT_SRC =
 export function TurnstileWidget({
   siteKey,
   onToken,
+  resetKey = 0,
 }: {
   siteKey: string;
   onToken: (token: string) => void;
+  /**
+   * Naikkan angkanya untuk MEMINTA tantangan baru. Token Turnstile sekali
+   * pakai: sesudah server menolak kiriman (mis. gangguan DB — DECISIONS #46),
+   * token lama sudah hangus di Cloudflare, jadi "silakan coba lagi" mustahil
+   * berhasil sampai widget-nya di-reset.
+   */
+  resetKey?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
@@ -79,6 +87,16 @@ export function TurnstileWidget({
       script?.removeEventListener("load", render);
     };
   }, [siteKey]);
+
+  // Reset hanya saat DIMINTA (bukan saat pasang pertama).
+  const lastReset = useRef(resetKey);
+  useEffect(() => {
+    if (resetKey === lastReset.current) return;
+    lastReset.current = resetKey;
+    if (!widgetId.current) return;
+    window.turnstile?.reset?.(widgetId.current);
+    onTokenRef.current("");
+  }, [resetKey]);
 
   return <div ref={ref} className="gb-turnstile" />;
 }

@@ -144,6 +144,7 @@ export async function submitRsvpAction(input: RsvpInput): Promise<RsvpResult> {
   // bila tabrakan (23505) → UPDATE baris yang ada. Tanpa token: selalu INSERT.
   const { error } = await admin.from("rsvps").insert(row);
   if (error) {
+    // 23505 = kiriman ulang tamu bertoken (jalur normal), bukan kegagalan.
     if (guestId && error.code === "23505") {
       const { error: upErr } = await admin
         .from("rsvps")
@@ -157,8 +158,12 @@ export async function submitRsvpAction(input: RsvpInput): Promise<RsvpResult> {
         })
         .eq("invitation_id", inv.id)
         .eq("guest_id", guestId);
-      if (upErr) return { status: "error", message: copy.common.error };
+      if (upErr) {
+        reportHandledError(upErr, "rsvp.update", { slug: d.slug });
+        return { status: "error", message: copy.common.error };
+      }
     } else {
+      reportHandledError(error, "rsvp.insert", { slug: d.slug });
       return { status: "error", message: copy.common.error };
     }
   }
@@ -261,7 +266,10 @@ export async function submitGiftNoteAction(
     amount: d.amount ?? null,
     note: d.note ?? null,
   });
-  if (error) return { status: "error", message: copy.common.error };
+  if (error) {
+    reportHandledError(error, "gift.insert", { slug: d.slug });
+    return { status: "error", message: copy.common.error };
+  }
 
   return { status: "success" };
 }

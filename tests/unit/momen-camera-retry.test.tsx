@@ -179,6 +179,94 @@ describe("MomenCamera — kirim ulang jepretan", () => {
     );
   });
 
+  it("filter yang DIPANGGANG ikut terkirim, meski tamu mengganti chip filter", async () => {
+    uploadMomenPhotoAction
+      .mockResolvedValueOnce({
+        status: "error",
+        message: c.error.temporary,
+        retryable: true,
+      })
+      .mockResolvedValueOnce({ status: "ok", remaining: 4 });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    const retry = await screen.findByRole("button", {
+      name: c.camera.retryPhoto,
+    });
+
+    // Strip filter tetap hidup di balik panel galat; tamu menyentuh "Mono".
+    fireEvent.click(screen.getByRole("button", { name: "filter Mono" }));
+    fireEvent.click(retry);
+
+    await waitFor(() =>
+      expect(uploadMomenPhotoAction).toHaveBeenCalledTimes(2),
+    );
+    const [, fd1] = uploadMomenPhotoAction.mock.calls[0];
+    const [, fd2] = uploadMomenPhotoAction.mock.calls[1];
+    // Piksel sudah dipanggang dengan filter lama → nama film yang dicatat harus
+    // filter itu, bukan chip yang sedang aktif (kapsi galeri ikut salah).
+    expect(fd2.get("filterId")).toBe(fd1.get("filterId"));
+    expect(fd2.get("filterId")).toBe(props.defaultFilter);
+    expect(fd2.get("source")).toBe(fd1.get("source"));
+  });
+
+  it("kirim ulang ditolak PERMANEN → tombolnya hilang, blob dilepas sekali", async () => {
+    uploadMomenPhotoAction
+      .mockResolvedValueOnce({
+        status: "error",
+        message: c.error.temporary,
+        retryable: true,
+      })
+      // Sementara menunggu, jatahnya habis lewat gerbang kuota atomik.
+      .mockResolvedValueOnce({ status: "error", message: c.error.guestQuota });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    fireEvent.click(
+      await screen.findByRole("button", { name: c.camera.retryPhoto }),
+    );
+
+    await screen.findAllByText(c.error.guestQuota);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: c.camera.retryPhoto }),
+      ).toBeNull(),
+    );
+    expect(revoked.filter((u) => u === "blob:uji")).toHaveLength(1);
+  });
+
+  it("galat LAIN (format tak didukung) tak mencuri tombol jepretan tertunda", async () => {
+    uploadMomenPhotoAction.mockResolvedValue({
+      status: "error",
+      message: c.error.temporary,
+      retryable: true,
+    });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    await screen.findByRole("button", { name: c.camera.retryPhoto });
+
+    // Tamu iPhone memilih HEIC dari galeri → ditolak sebelum diproses.
+    const input = container.querySelector<HTMLInputElement>(
+      'input[accept="image/jpeg,image/png,image/webp"]',
+    )!;
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File([new Uint8Array([1])], "IMG.HEIC", { type: "image/heic" }),
+        ],
+      },
+    });
+
+    await screen.findAllByText(c.error.formatUnsupported);
+    // Jepretan lama TETAP bisa dikirim ulang, dengan keterangan miliknya.
+    expect(
+      screen.getByRole("button", { name: c.camera.retryPhoto }),
+    ).toBeTruthy();
+    expect(screen.getAllByText(c.camera.pendingShot).length).toBeGreaterThan(0);
+    expect(revoked).not.toContain("blob:uji");
+  });
+
   it("penolakan PERMANEN → tanpa tombol kirim ulang, blob dilepas", async () => {
     uploadMomenPhotoAction.mockResolvedValue({
       status: "error",
@@ -193,5 +281,75 @@ describe("MomenCamera — kirim ulang jepretan", () => {
       screen.queryByRole("button", { name: c.camera.retryPhoto }),
     ).toBeNull();
     expect(revoked).toContain("blob:uji");
+  });
+});
+
+describe("MomenCamera — galeri 'muat lebih' gagal", () => {
+  const galleryProps = {
+    ...props,
+    // Sudah lewat → fase "revealed", galeri terbuka.
+    revealAtIso: "2020-01-01T00:00:00Z",
+    initialCursor: "2026-12-20T02:00:00Z",
+    initialPhotos: [
+      {
+        id: "p1",
+        guestName: "Sasa",
+        filterId: "hangat",
+        url: "blob:a",
+        thumbUrl: "blob:a",
+      },
+    ],
+    totalPhotos: 1,
+    photographers: 1,
+  };
+
+  async function bukaGaleri() {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    fireEvent.change(screen.getByLabelText(c.masuk.nameLabel), {
+      target: { value: "Sasa" },
+    });
+    // Tombol "Lihat Album" ada di layar masuk DAN layar habis; yang pertama
+    // (urutan DOM) milik layar masuk.
+    fireEvent.click(
+      screen.getAllByRole("button", { name: c.habis.toGallery })[0]!,
+    );
+    await waitFor(() => expect(startMomenSessionAction).toHaveBeenCalled());
+  }
+
+  it("gagal → pesan di LAYAR GALERI + tombol 'Muat lebih' tetap ada", async () => {
+    loadMomenPhotosAction.mockResolvedValue({ status: "error" });
+    render(<MomenCamera {...galleryProps} />);
+    await bukaGaleri();
+
+    const more = await screen.findByRole("button", {
+      name: c.gallery.loadMore,
+    });
+    fireEvent.click(more);
+
+    // Panel galat & toast hanya hidup di layar kamera — pesannya harus muncul
+    // di sini, tepat di atas tombolnya.
+    await screen.findByText(c.error.temporary);
+    expect(
+      screen.getByRole("button", { name: c.gallery.loadMore }),
+    ).toBeTruthy();
+  });
+
+  it("aksi MELEMPAR → pesan yang sama, tombol tetap hidup", async () => {
+    loadMomenPhotosAction.mockRejectedValue(new Error("Failed to fetch"));
+    render(<MomenCamera {...galleryProps} />);
+    await bukaGaleri();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: c.gallery.loadMore }),
+    );
+
+    await screen.findByText(c.error.temporary);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: c.gallery.loadMore }),
+      ).not.toBeDisabled(),
+    );
   });
 });

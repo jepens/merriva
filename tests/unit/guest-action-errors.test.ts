@@ -37,6 +37,7 @@ const { refs } = vi.hoisted(() => ({
     inserts: [] as { table: string; payload: unknown }[],
     updates: [] as string[],
     updateError: null as unknown,
+    insertError: null as unknown,
   },
 }));
 
@@ -50,7 +51,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       }
       chain.insert = (payload: unknown) => {
         refs.inserts.push({ table, payload });
-        return Promise.resolve({ error: null });
+        return Promise.resolve({ error: refs.insertError });
       };
       chain.update = () => {
         refs.updates.push(table);
@@ -100,6 +101,7 @@ beforeEach(() => {
   refs.inserts = [];
   refs.updates = [];
   refs.updateError = null;
+  refs.insertError = null;
   reportHandledError.mockClear();
 });
 
@@ -269,5 +271,70 @@ describe("getGuestbookAction — dinding ucapan", () => {
     expect(res.entries).toEqual([]);
     expect(res.failed).toBeUndefined();
     expect(reportHandledError).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Galat TULIS juga dilaporkan (DECISIONS #46 butir 7 — koreksi temuan review).
+ * Sebelumnya INSERT/UPDATE yang gagal hanya menjadi "Terjadi kesalahan" tanpa
+ * satu pun sinyal: RSVP tamu hilang di hari-H dan tim tak pernah tahu.
+ */
+describe("galat TULIS ikut dilaporkan", () => {
+  const rsvp = {
+    slug: SLUG,
+    guestName: "Sasa",
+    attendance: "yes" as const,
+    pax: 2,
+    message: "Selamat!",
+    turnstileToken: "tok",
+  };
+
+  it("INSERT rsvps gagal → galat biasa + dilaporkan", async () => {
+    refs.insertError = BOOM;
+    expect(await submitRsvpAction(rsvp)).toEqual({
+      status: "error",
+      message: copy.common.error,
+    });
+    expect(reportHandledError).toHaveBeenCalledWith(BOOM, "rsvp.insert", {
+      slug: SLUG,
+    });
+  });
+
+  it("kiriman ULANG tamu bertoken (23505) → UPDATE; gagal → dilaporkan", async () => {
+    refs.tables.guests = { data: { id: "g-1", pax_allocated: 5 }, error: null };
+    refs.insertError = { ...BOOM, code: "23505" };
+    refs.updateError = BOOM;
+
+    expect(await submitRsvpAction({ ...rsvp, guestToken: TOKEN })).toEqual({
+      status: "error",
+      message: copy.common.error,
+    });
+    expect(refs.updates).toContain("rsvps");
+    expect(reportHandledError).toHaveBeenCalledWith(BOOM, "rsvp.update", {
+      slug: SLUG,
+    });
+  });
+
+  it("23505 tanpa token → tetap galat, TIDAK menimpa RSVP tamu lain", async () => {
+    refs.insertError = { ...BOOM, code: "23505" };
+    expect(await submitRsvpAction(rsvp)).toMatchObject({ status: "error" });
+    expect(refs.updates).not.toContain("rsvps");
+  });
+
+  it("INSERT gift_notes gagal → galat biasa + dilaporkan", async () => {
+    refs.insertError = BOOM;
+    expect(
+      await submitGiftNoteAction({
+        slug: SLUG,
+        guestName: "Sasa",
+        type: "transfer" as const,
+        amount: "150000",
+        note: "Semoga bahagia",
+        turnstileToken: "tok",
+      }),
+    ).toEqual({ status: "error", message: copy.common.error });
+    expect(reportHandledError).toHaveBeenCalledWith(BOOM, "gift.insert", {
+      slug: SLUG,
+    });
   });
 });

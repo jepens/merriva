@@ -33,31 +33,43 @@ export function GiftConfirm({
     "idle",
   );
   const [feedback, setFeedback] = useState("");
+  const [tsReset, setTsReset] = useState(0);
 
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const onToken = useCallback((tk: string) => setToken(tk), []);
+
+  /** Kiriman ditolak → tantangan Turnstile baru (lihat RsvpForm, DECISIONS #46). */
+  const failSubmit = useCallback((msg: string) => {
+    setStatus("error");
+    setFeedback(msg);
+    setToken("");
+    setTsReset((n) => n + 1);
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (status === "sending") return;
     setStatus("sending");
     setFeedback("");
-    const res = await submitGiftNoteAction({
-      slug,
-      guestName: name,
-      type,
-      amount,
-      note,
-      guestToken,
-      turnstileToken: token,
-      website: honeypotRef.current?.value ?? "",
-    });
-    if (res.status === "success") {
-      setStatus("done");
-      setFeedback(t.success);
-    } else {
-      setStatus("error");
-      setFeedback(res.message ?? t.invalid);
+    try {
+      const res = await submitGiftNoteAction({
+        slug,
+        guestName: name,
+        type,
+        amount,
+        note,
+        guestToken,
+        turnstileToken: token,
+        website: honeypotRef.current?.value ?? "",
+      });
+      if (res.status === "success") {
+        setStatus("done");
+        setFeedback(t.success);
+        return;
+      }
+      failSubmit(res.message ?? t.invalid);
+    } catch {
+      failSubmit(copy.common.error);
     }
   }
 
@@ -156,7 +168,13 @@ export function GiftConfirm({
         />
       </label>
 
-      {siteKey ? <TurnstileWidget siteKey={siteKey} onToken={onToken} /> : null}
+      {siteKey ? (
+        <TurnstileWidget
+          siteKey={siteKey}
+          onToken={onToken}
+          resetKey={tsReset}
+        />
+      ) : null}
 
       {status === "error" ? (
         <p className="gb-error" role="alert">

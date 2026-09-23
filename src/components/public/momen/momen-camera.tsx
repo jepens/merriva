@@ -162,6 +162,12 @@ export function MomenCamera(props: MomenCameraProps) {
   const [photos, setPhotos] = useState<MomenPhotoView[]>(initialPhotos);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [loadingMore, setLoadingMore] = useState(false);
+  /**
+   * Galat "muat lebih" punya state SENDIRI: panel galat & toast hanya hidup di
+   * layar kamera, sedangkan tombol ini ada di layar galeri — memakai `error`
+   * berarti tamu tak melihat apa pun saat halaman berikutnya gagal.
+   */
+  const [galleryError, setGalleryError] = useState<string | null>(null);
   // Angka ringkasan berasal dari agregat server; hitungan lokal hanya menambah
   // foto yang BARU saja diunggah tamu ini (galeri tak lagi memuat album penuh).
   const [totalPhotos, setTotalPhotos] = useState(props.totalPhotos);
@@ -175,8 +181,18 @@ export function MomenCamera(props: MomenCameraProps) {
   const [pending, setPending] = useState<{
     v: Variants;
     source: "camera" | "library";
+    /**
+     * Filter yang sudah DIPANGGANG ke piksel. Wajib disimpan: strip filter
+     * tetap hidup di balik panel galat, dan mengirim ulang dengan
+     * `selectedFilter` yang sedang aktif akan mencatat nama film yang salah
+     * pada foto itu (kapsi galeri & lightbox ikut salah).
+     */
+    filterId: string;
+    /** Pesan penolakannya — untuk membedakannya dari galat lain di layar. */
+    message: string;
   } | null>(null);
   const [starting, setStarting] = useState(false);
+  const [tsReset, setTsReset] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [camError, setCamError] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -303,6 +319,10 @@ export function MomenCamera(props: MomenCameraProps) {
       const res = await startMomenSessionAction(slug, fd);
       if (res.status !== "ok") {
         setError(res.message ?? c.error.generic);
+        // Token Turnstile sekali pakai & sudah hangus di server; tanpa reset,
+        // "coba lagi" selalu gagal verifikasi (DECISIONS #46).
+        setTsToken("");
+        setTsReset((n) => n + 1);
         return;
       }
       lsSet(NAME_KEY, trimmed);
@@ -315,15 +335,27 @@ export function MomenCamera(props: MomenCameraProps) {
         // layar "habis" + countdown, bukan kamera dengan shutter mati senyap.
         setScreen(res.remaining <= 0 ? "habis" : "kamera");
       }
+    } catch {
+      // Aksi MELEMPAR (jaringan venue putus) — tanpa ini tamu hanya melihat
+      // tombol kembali aktif tanpa satu pun penjelasan.
+      setError(c.error.generic);
+      setTsToken("");
+      setTsReset((n) => n + 1);
     } finally {
       setStarting(false);
     }
   }
 
-  async function sendPhoto(v: Variants, source: "camera" | "library") {
+  async function sendPhoto(
+    v: Variants,
+    source: "camera" | "library",
+    filterId: string,
+  ) {
     const ext = v.format === "webp" ? "webp" : "jpg";
     const fd = new FormData();
-    fd.set("filterId", selectedFilter);
+    // Filter dari JEPRETANNYA (bukan `selectedFilter` saat ini): tamu bisa
+    // menyentuh strip filter sambil panel galat terbuka.
+    fd.set("filterId", filterId);
     fd.set("format", v.format);
     // Asal foto dideklarasikan agar server bisa menegakkan `allow_library_upload`.
     fd.set("source", source);
@@ -341,7 +373,12 @@ export function MomenCamera(props: MomenCameraProps) {
       // diulang. Penolakan permanen (jatah habis, album nonaktif, format
       // ditolak) tetap membuang blob — tombol di sana hanya harapan palsu.
       if (res.retryable) {
-        setPending({ v, source });
+        setPending({
+          v,
+          source,
+          filterId,
+          message: res.message ?? c.error.generic,
+        });
       } else {
         // Termasuk saat percobaan ULANG ditolak permanen (mis. jatah baru saja
         // habis): tombolnya harus hilang, bukan menunjuk blob yang sudah lepas.
@@ -365,7 +402,7 @@ export function MomenCamera(props: MomenCameraProps) {
         {
           id: `local-${Date.now()}`,
           guestName: name.trim() || "Tamu",
-          filterId: selectedFilter,
+          filterId,
           url: v.displayUrl,
           thumbUrl: v.displayUrl,
         },
@@ -388,7 +425,7 @@ export function MomenCamera(props: MomenCameraProps) {
     setError(null);
     setBusy(true);
     try {
-      await sendPhoto(pending.v, pending.source);
+      await sendPhoto(pending.v, pending.source, pending.filterId);
     } catch {
       fail(c.error.generic);
     } finally {
@@ -410,7 +447,7 @@ export function MomenCamera(props: MomenCameraProps) {
         selectedFilter,
         taken + 1,
       );
-      await sendPhoto(v, "camera");
+      await sendPhoto(v, "camera", selectedFilter);
     } catch {
       fail(c.error.generic);
     } finally {
@@ -444,7 +481,7 @@ export function MomenCamera(props: MomenCameraProps) {
         taken + 1,
       );
       bmp.close?.();
-      await sendPhoto(v, source);
+      await sendPhoto(v, source, selectedFilter);
     } catch {
       fail(c.error.generic);
     } finally {
@@ -466,14 +503,22 @@ export function MomenCamera(props: MomenCameraProps) {
   async function loadMore() {
     if (loadingMore || !cursor) return;
     setLoadingMore(true);
+    setGalleryError(null);
     try {
       const res = await loadMomenPhotosAction(slug, cursor);
-      if (res.status !== "ok") return;
+      if (res.status !== "ok") {
+        // Kursor & tombol dipertahankan (#46); tamu diberi tahu, tak dibiarkan
+        // mengira album memang habis sampai di situ.
+        setGalleryError(c.error.temporary);
+        return;
+      }
       setPhotos((prev) => {
         const seen = new Set(prev.map((p) => p.id));
         return [...prev, ...res.photos.filter((p) => !seen.has(p.id))];
       });
       setCursor(res.nextCursor);
+    } catch {
+      setGalleryError(c.error.temporary);
     } finally {
       setLoadingMore(false);
     }
@@ -539,6 +584,7 @@ export function MomenCamera(props: MomenCameraProps) {
                 <TurnstileWidget
                   siteKey={turnstileSiteKey}
                   onToken={setTsToken}
+                  resetKey={tsReset}
                 />
               </div>
             ) : null}
@@ -603,18 +649,25 @@ export function MomenCamera(props: MomenCameraProps) {
               {c.camera.uploading}
             </div>
           ) : null}
-          {error ? (
+          {error || pending ? (
             <div className="mn-camerr" role="alert">
               {error}
               {pending ? (
-                <button
-                  type="button"
-                  className="mn-camerr__retry"
-                  onClick={() => void retryPending()}
-                  disabled={busy}
-                >
-                  {c.camera.retryPhoto}
-                </button>
+                <>
+                  {error && error !== pending.message ? (
+                    <div className="mn-camerr__note">
+                      {c.camera.pendingShot}
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="mn-camerr__retry"
+                    onClick={() => void retryPending()}
+                    disabled={busy}
+                  >
+                    {c.camera.retryPhoto}
+                  </button>
+                </>
               ) : null}
             </div>
           ) : null}
@@ -794,6 +847,11 @@ export function MomenCamera(props: MomenCameraProps) {
         )}
         {cursor ? (
           <div className="mn-more">
+            {galleryError ? (
+              <div className="mn-err" role="alert">
+                {galleryError}
+              </div>
+            ) : null}
             <button
               type="button"
               className="mn-ghost"
