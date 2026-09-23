@@ -81,7 +81,18 @@ export type MomenSessionState =
   | { status: "error"; message?: string };
 
 export type MomenUploadState =
-  { status: "ok"; remaining: number } | { status: "error"; message?: string };
+  | { status: "ok"; remaining: number }
+  | {
+      status: "error";
+      message?: string;
+      /**
+       * Benar bila MENGIRIM ULANG foto yang sama masih bisa berhasil: gangguan
+       * DB/storage atau rate-limit (DECISIONS #46). Penolakan PERMANEN (jatah
+       * habis, album tidak aktif, format ditolak, sesi kedaluwarsa) sengaja
+       * tidak ditandai — klien tak boleh menawarkan "Kirim ulang" di sana.
+       */
+      retryable?: boolean;
+    };
 
 interface ActiveAlbum {
   albumId: string;
@@ -93,45 +104,79 @@ interface ActiveAlbum {
 /**
  * Resolusi album AKTIF dari slug undangan (service_role; tamu anon tak punya
  * akses RLS). Fail-closed: undangan tak `active` / tanpa album / album non-aktif
- * → null.
+ * → `inactive`.
+ *
+ * Galat DB DIBEDAKAN (`error`, DECISIONS #46): dulu ikut menjadi `null` dan
+ * tamu di hari-H diberi "Album tidak aktif." — pesan permanen yang membuatnya
+ * berhenti memotret, padahal gangguannya sesaat.
  */
+type AlbumLookup =
+  { kind: "ok"; album: ActiveAlbum } | { kind: "inactive" } | { kind: "error" };
+
 async function resolveActiveAlbum(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   slug: string,
-): Promise<ActiveAlbum | null> {
-  const { data: inv } = await admin
+): Promise<AlbumLookup> {
+  const { data: inv, error: invError } = await admin
     .from("invitations")
     .select("id, status")
     .eq("slug", slug)
     .maybeSingle();
-  if (!inv || inv.status !== "active") return null;
+  if (invError) {
+    reportHandledError(invError, "momen.guest.invitation", { slug });
+    return { kind: "error" };
+  }
+  if (!inv || inv.status !== "active") return { kind: "inactive" };
 
-  const { data: album } = await admin
+  const { data: album, error: albumError } = await admin
     .from("momen_albums")
     .select("id, status, quota_per_guest, allow_library_upload, reveal_at")
     .eq("invitation_id", inv.id)
     .maybeSingle();
-  if (!album || album.status !== "active") return null;
+  if (albumError) {
+    reportHandledError(albumError, "momen.guest.album", { slug });
+    return { kind: "error" };
+  }
+  if (!album || album.status !== "active") return { kind: "inactive" };
 
   return {
-    albumId: album.id,
-    quotaPerGuest: album.quota_per_guest,
-    allowLibraryUpload: album.allow_library_upload,
-    revealAt: album.reveal_at,
+    kind: "ok",
+    album: {
+      albumId: album.id,
+      quotaPerGuest: album.quota_per_guest,
+      allowLibraryUpload: album.allow_library_upload,
+      revealAt: album.reveal_at,
+    },
   };
 }
 
-/** Berapa foto yang sudah diambil perangkat ini di album (dasar sisa jatah). */
+/** Pesan untuk hasil lookup yang bukan `ok`. */
+function albumProblem(lookup: AlbumLookup): string {
+  return lookup.kind === "error"
+    ? copy.momen.error.temporary
+    : copy.momen.error.notActive;
+}
+
+/**
+ * Berapa foto yang sudah diambil perangkat ini di album (dasar sisa jatah).
+ * `null` = gagal dibaca (DECISIONS #46): dulu jatuh ke 0, sehingga tamu yang
+ * jatahnya habis dibawa ke layar kamera dengan jatah penuh — lalu ditolak
+ * gerbang kuota atomik saat menjepret.
+ */
 async function deviceShotCount(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   albumId: string,
   deviceId: string,
-): Promise<number> {
-  const { count } = await admin
+): Promise<number | null> {
+  const { count, error } = await admin
     .from("momen_photos")
     .select("id", { count: "exact", head: true })
     .eq("album_id", albumId)
     .eq("device_id", deviceId);
+  if (error) {
+    reportHandledError(error, "momen.guest.shotCount", { albumId });
+    return null;
+  }
   return count ?? 0;
 }
 
@@ -202,14 +247,20 @@ export async function startMomenSessionAction(
   }
 
   const admin = createSupabaseAdminClient();
-  const album = await resolveActiveAlbum(admin, slug);
-  if (!album) return { status: "error", message: copy.momen.error.notActive };
+  const lookup = await resolveActiveAlbum(admin, slug);
+  if (lookup.kind !== "ok") {
+    return { status: "error", message: albumProblem(lookup) };
+  }
+  const album = lookup.album;
 
   const deviceCount = await deviceShotCount(
     admin,
     album.albumId,
     parsed.data.deviceId,
   );
+  if (deviceCount === null) {
+    return { status: "error", message: copy.momen.error.temporary };
+  }
 
   const cookie = signMomenSession({
     albumId: album.albumId,
@@ -260,7 +311,11 @@ export async function uploadMomenPhotoAction(
     !(await checkClientRateLimit("momen-upload", UPLOAD_VENUE_LIMIT, rateKey))
       .ok
   ) {
-    return { status: "error", message: copy.momen.error.rateLimited };
+    return {
+      status: "error",
+      message: copy.momen.error.rateLimited,
+      retryable: true,
+    };
   }
 
   // Sesi ter-tanda-tangan → identitas tepercaya.
@@ -277,13 +332,27 @@ export async function uploadMomenPhotoAction(
       UPLOAD_DEVICE_LIMIT,
     ).ok
   ) {
-    return { status: "error", message: copy.momen.error.rateLimited };
+    return {
+      status: "error",
+      message: copy.momen.error.rateLimited,
+      retryable: true,
+    };
   }
 
   const admin = createSupabaseAdminClient();
-  const album = await resolveActiveAlbum(admin, slug);
+  const lookup = await resolveActiveAlbum(admin, slug);
   // Sesi harus untuk album yang SAMA dengan slug ini (cegah pakai-ulang lintas).
-  if (!album || album.albumId !== session.albumId) {
+  // Galat DB dibedakan (#46): jepretan tamu dibuang klien begitu aksi menolak,
+  // jadi "Album tidak aktif." yang keliru = foto hilang untuk selamanya.
+  if (lookup.kind !== "ok") {
+    return {
+      status: "error",
+      message: albumProblem(lookup),
+      retryable: lookup.kind === "error",
+    };
+  }
+  const album = lookup.album;
+  if (album.albumId !== session.albumId) {
     return { status: "error", message: copy.momen.error.notActive };
   }
 
@@ -336,7 +405,11 @@ export async function uploadMomenPhotoAction(
   );
   if (claimErr) {
     reportHandledError(claimErr, "momen.claim", { albumId: album.albumId });
-    return { status: "error", message: copy.momen.error.generic };
+    return {
+      status: "error",
+      message: copy.momen.error.generic,
+      retryable: true,
+    };
   }
   const claim = claimRows?.[0];
   if (!claim || claim.result !== "ok" || !claim.photo_id) {
@@ -375,7 +448,11 @@ export async function uploadMomenPhotoAction(
     // memicu alarm, bukan hanya toast "Gagal menyimpan foto".
     reportHandledError(err, "momen.storage", { albumId: album.albumId });
     await cleanup();
-    return { status: "error", message: copy.momen.error.generic };
+    return {
+      status: "error",
+      message: copy.momen.error.generic,
+      retryable: true,
+    };
   }
 
   // Confirm = gerbang ATOMIK (advisory lock): cek ulang kuota lalu sisip baris +
@@ -398,7 +475,11 @@ export async function uploadMomenPhotoAction(
   if (confirmErr) {
     reportHandledError(confirmErr, "momen.confirm", { albumId: album.albumId });
     await cleanup();
-    return { status: "error", message: copy.momen.error.generic };
+    return {
+      status: "error",
+      message: copy.momen.error.generic,
+      retryable: true,
+    };
   }
   const confirm = confirmRows?.[0];
   if (!confirm || confirm.result !== "ok") {
@@ -452,8 +533,9 @@ export async function loadMomenPhotosAction(
   if (cursor !== null && safeCursor === null) return { status: "error" };
 
   const admin = createSupabaseAdminClient();
-  const album = await resolveActiveAlbum(admin, slug);
-  if (!album) return { status: "error" };
+  const lookup = await resolveActiveAlbum(admin, slug);
+  if (lookup.kind !== "ok") return { status: "error" };
+  const album = lookup.album;
 
   // Gerbang fase FAIL-CLOSED — satu aturan bersama dengan render awal halaman.
   if (!canGuestViewPhotos(resolveAlbumPhase(Date.now(), album.revealAt))) {
@@ -463,6 +545,9 @@ export async function loadMomenPhotosAction(
   const page = await fetchMomenPhotos(admin, album.albumId, {
     cursor: safeCursor,
   });
+  // Bacaan gagal → status galat, BUKAN halaman kosong (#46): UI mempertahankan
+  // kursor & tombol "Muat lebih" agar tamu bisa mencoba lagi.
+  if (page.failed) return { status: "error" };
   return {
     status: "ok",
     photos: page.photos.map((p) => ({

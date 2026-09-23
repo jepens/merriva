@@ -36,6 +36,12 @@ export interface MomenPhotoPage {
   photos: MomenPhotoRecord[];
   /** `created_at` untuk permintaan berikutnya; null = halaman terakhir. */
   nextCursor: string | null;
+  /**
+   * Benar bila bacaannya GAGAL (bukan album kosong) — DECISIONS #46. Render
+   * awal halaman tetap degradasi jinak (#45), tetapi "muat lebih" memakai ini
+   * untuk mempertahankan kursor & tombolnya, bukan diam-diam menghabiskannya.
+   */
+  failed?: boolean;
 }
 
 /** Ringkasan album — biaya konstan, dari RPC agregat (bukan dari daftar). */
@@ -85,6 +91,7 @@ export async function fetchMomenPhotos(
   // tetap degradasi jinak agar halaman tak ikut tumbang.
   if (error) {
     reportHandledError(error, "momen.photos.fetch", { albumId });
+    return { photos: [], nextCursor: opts.cursor ?? null, failed: true };
   }
   const rows = data ?? [];
   const hasMore = rows.length > limit;

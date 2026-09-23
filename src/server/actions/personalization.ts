@@ -1,5 +1,6 @@
 "use server";
 
+import { reportHandledError } from "@/lib/observability";
 import { checkClientRateLimit } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -28,7 +29,15 @@ const VIEW_LIMIT = { max: 300, windowMs: 60_000 };
  * tamu sah kehilangan namanya secara permanen di pemuatan itu.
  */
 export type GuestViewResult =
-  { status: "ok"; name: string } | { status: "rate" } | { status: "none" };
+  | { status: "ok"; name: string }
+  | { status: "rate" }
+  /**
+   * Galat DB — DIBEDAKAN dari `none` (DECISIONS #46). Dulu keduanya `none`:
+   * kedipan DB membuang token tamu, sehingga sapaan hilang DAN RSVP-nya tak
+   * tertaut ke tamu (pax dipotong ke 2, ekspor menandainya "belum RSVP").
+   */
+  | { status: "error" }
+  | { status: "none" };
 
 export async function viewGuestByTokenAction(
   slug: string,
@@ -44,28 +53,48 @@ export async function viewGuestByTokenAction(
   if (!rl.ok) return { status: "rate" };
 
   const admin = createSupabaseAdminClient();
-  const { data: inv } = await admin
+  const { data: inv, error: invError } = await admin
     .from("invitations")
     .select("id, status")
     .eq("slug", cleanSlug)
     .maybeSingle();
+  if (invError) {
+    reportHandledError(invError, "personalization.invitation", {
+      slug: cleanSlug,
+    });
+    return { status: "error" };
+  }
   if (!inv || inv.status !== "active") return { status: "none" };
 
-  const { data: guest } = await admin
+  const { data: guest, error: guestError } = await admin
     .from("guests")
     .select("id, name, first_viewed_at")
     .eq("invitation_id", inv.id)
     .eq("token", cleanToken)
     .maybeSingle();
+  if (guestError) {
+    // Token TIDAK dilaporkan (identitas tamu, SPEC §11).
+    reportHandledError(guestError, "personalization.guest", {
+      slug: cleanSlug,
+    });
+    return { status: "error" };
+  }
   if (!guest) return { status: "none" };
 
   // Catat akses pertama (idempotent — hanya bila belum pernah dibuka).
   if (!guest.first_viewed_at) {
-    await admin
+    const { error: seenError } = await admin
       .from("guests")
       .update({ first_viewed_at: new Date().toISOString() })
       .eq("id", guest.id)
       .is("first_viewed_at", null);
+    // Sapaan tak boleh gagal karena penanda ini; cukup dilaporkan (dashboard
+    // pemilik akan menandai tamu "belum dibuka" → kirim ulang WA sia-sia).
+    if (seenError) {
+      reportHandledError(seenError, "personalization.firstViewed", {
+        slug: cleanSlug,
+      });
+    }
   }
 
   return { status: "ok", name: guest.name };

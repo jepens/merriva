@@ -834,6 +834,9 @@ export const copy = {
       fromGallery: "Unggah dari galeri",
       uploading: "Menyimpan…",
       savedHidden: "Tersimpan ✓ — tersembunyi sampai reveal",
+      // Kirim ulang jepretan yang gagal diunggah (DECISIONS #46) — fotonya
+      // disimpan klien, jadi tamu tak perlu (dan sering tak bisa) mengulang.
+      retryPhoto: "Kirim ulang foto",
       savedInstant: "Tersimpan ✓",
       permissionHint:
         "Izinkan akses kamera di browser, atau unggah foto dari galeri.",
@@ -992,6 +995,9 @@ export const copy = {
       guestQuota: "Jatah jepretanmu sudah habis.",
       pesertaFull: "Kuota peserta album sudah penuh.",
       notActive: "Album tidak aktif.",
+      // Gangguan sesaat (galat DB) — DIBEDAKAN dari `notActive` yang terdengar
+      // permanen dan membuat tamu berhenti memotret (DECISIONS #46).
+      temporary: "Sedang ada gangguan. Coba lagi sebentar lagi.",
     },
   },
   // Email transaksional (Resend — M3.5). Teks terpusat; markup dirakit di

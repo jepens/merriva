@@ -695,7 +695,7 @@ Pemetaan menemukan kelas yang sama di tempat lain:
 - Render pertama tanpa cache (belum pernah dibuka) saat DB terganggu → tamu melihat layar "belum bisa dimuat" + Coba lagi, bukan undangan palsu.
 - Dashboard `tamu`/`tampilan` menampilkan layar "belum bisa dimuat" di dalam layout (header & navigasi tetap) saat DB terganggu — lebih jujur daripada batas paket palsu, dan sementara.
 - **Belum dibuktikan pada server produksi:** `next build` berjalan di Windows (dipakai untuk membuktikan isi 500.html), tetapi servernya tidak (`output: standalone` → `next start` tak didukung; `node .next/standalone/server.js` gagal di Windows karena tata letak symlink pnpm). Perilaku cache per jalur di atas bersandar pada sumber Next 16.2.11 + simulasi memakai modul cache asli Next (review) — perlu dicoba di staging/Docker.
-- **Masih terbuka — kelas yang sama di server action tamu** (tak ter-cache, sudah ada sebelum #45; ditemukan review):
+- ~~**Masih terbuka — kelas yang sama di server action tamu**~~ → **ditutup di #46** (tak ter-cache, sudah ada sebelum #45; ditemukan review):
   - personalisasi `?g=` menelan galat menjadi "token tak dikenal" → nama tamu hilang, RSVP tak tertaut, pax dipotong ke 2, `first_viewed_at` tak tercatat;
   - `submitRsvpAction`/`submitGiftNoteAction`: galat undangan dijawab "tidak menerima konfirmasi" (terdengar permanen); galat lookup tamu menyisipkan RSVP tak tertaut lalu melapor sukses;
   - dinding ucapan: galat dijawab daftar kosong tanpa penanda gagal ("Belum ada ucapan") dan tombol "Muat lebih" hilang;
@@ -715,6 +715,44 @@ Pemetaan menemukan kelas yang sama di tempat lain:
   - **`next build` lokal:** dipakai untuk membuktikan bahwa 500.html hasil build memuat UI bawaan Next, bukan `global-error.tsx` kami (lihat butir 7). Server produksinya sendiri tak bisa dijalankan di Windows.
   - **Review adversarial:** 22 agen (5 lensa: semantik ISR Next, kelengkapan bacaan, HTTP & cache route, regresi pemanggil, test & dokumen; skeptis per temuan; kritik kelengkapan). 16 temuan, semuanya rendah, 1 terbantah. Empat mengoreksi klaim ADR/SPEC versi pertama: jaminan "versi baik terakhir" tak berlaku sesudah `revalidatePath`; layar galat kami tak tampil pada render ISR; `dataOrThrow` melempar objek polos; slug mustahil menjadi 503 + spam Sentry. Saran review untuk memperbaiki halaman 500 lewat `global-error.tsx` dibuktikan TIDAK berlaku di Next 16.2.11.
   - **Uji mutasi:** 50 mutan (menelan galat di tiap titik bacaan, label & `cause` galat, penjaga slug, penjaga `?e`, kode status, `no-store`, `Retry-After`, pelaporan Sentry, layar galat & `unstable_retry`, bahasa halaman galat global) — semuanya merah oleh test.
+
+## #46 — 2026-09-23 · Aksi tamu: galat DB dijawab apa adanya, jepretan yang gagal bisa dikirim ulang
+
+**Konteks:** #45 menutup jalur RENDER publik (halaman ISR, `.ics`, OG). Butir terbukanya adalah kelas yang sama di **server action tamu** — tak ter-cache, tetapi jawabannya menyesatkan, dan tiga di antaranya merusak data atau menghilangkan kiriman tamu. Semua ditemukan review #45, dikerjakan atas rekomendasi yang disetujui pemilik 2026-09-23.
+
+Empat celah, diurutkan dari yang paling mahal:
+
+1. **RSVP** (`submitRsvpAction`) — galat mencari tamu bertoken membuat `guestId` tetap null dan `paxCap` jatuh ke 2, lalu RSVP **tetap disimpan** dan tamu diberi tahu "berhasil". Akibatnya: konfirmasi tak tertaut, rombongan 6 orang tercatat 2, ekspor tamu menandainya "belum RSVP", dan kiriman ulang bertoken membuat baris KEDUA (unique index parsial hanya berlaku saat `guest_id` tak null) sehingga total pax ganda. Galat membaca undangan dijawab "Undangan ini sedang tidak menerima konfirmasi" — terdengar permanen, jadi tamu tak mencoba lagi.
+2. **Personalisasi `?g=`** — galat dijawab sama dengan "token tak dikenal", dan klien lalu **membuang tokennya**. Sapaan hilang, dan RSVP berikutnya jatuh ke kasus (1) meski DB sudah pulih.
+3. **Album Momen** — galat dijawab "Album tidak aktif." (permanen) padahal gangguannya sesaat; tamu berhenti memotret di hari-H. Lebih buruk: klien membuang blob jepretan begitu aksi menolak. Hitungan jepretan perangkat yang gagal jatuh ke 0, sehingga tamu yang jatahnya habis dibawa ke layar kamera dengan jatah penuh lalu ditolak gerbang kuota atomik. Galeri "muat lebih" yang gagal menghabiskan kursornya → tombolnya hilang diam-diam.
+4. **Dinding ucapan** — galat dijawab daftar kosong: "Belum ada ucapan. Jadilah yang pertama…" padahal ada puluhan.
+
+**Keputusan:**
+1. **Setiap bacaan aksi tamu memeriksa `error` dan membedakannya dari "tidak ada".** Ketiadaan data tanpa galat tetap berperilaku seperti dulu (token tak dikenal → `none`, undangan tak aktif → pesan ditutup, album belum dibeli → "tidak aktif", dinding kosong → "belum ada ucapan").
+2. **RSVP fail-closed:** galat membaca undangan ATAU galat mencari tamu → `copy.common.error` tanpa menulis apa pun. Lebih baik tamu mencoba lagi daripada RSVP tersimpan salah dan tak bisa dikoreksi tamu.
+   **Amplop fail-open pada nama:** `gift_notes` tak menyimpan `guest_id`, jadi galat lookup nama hanya dilaporkan dan catatan tetap tersimpan dengan nama dari form — tak ada data yang salah tertaut.
+3. **Personalisasi:** status baru `error` (dibedakan dari `rate` dan `none`). Klien mencoba ulang sekali (jitter yang sudah ada untuk rate limit, sekarang juga untuk galat), dan bila tetap gagal **tetap memegang token** — nama kosong, tetapi RSVP/amplop berikutnya tetap tertaut dan jatah pax-nya utuh (server memvalidasi ulang token). `first_viewed_at` yang gagal ditandai tidak menggagalkan sapaan; cukup dilaporkan.
+4. **Album Momen:** `resolveActiveAlbum` mengembalikan `ok | inactive | error`; `error` → copy baru `momen.error.temporary` ("Sedang ada gangguan. Coba lagi sebentar lagi."). `deviceShotCount` mengembalikan `null` saat gagal dan sesi **ditolak sementara** alih-alih dibuka dengan jatah penuh palsu. `fetchMomenPhotos` menandai `failed` dan **mempertahankan kursor**; `loadMomenPhotosAction` membalas `error` sehingga tombol "Muat lebih" tetap ada.
+5. **`MomenUploadState.retryable`** memisahkan penolakan SESAAT (galat DB, storage, RPC claim/confirm, rate limit) dari yang PERMANEN (jatah habis, peserta penuh, album penuh/nonaktif, format ditolak, sesi tak sah). Klien menyimpan blob jepretan **hanya** bila `retryable`, lalu menampilkan tombol **"Kirim ulang foto"** yang mengirim foto yang SAMA (tanpa bake/encode ulang). Pada penolakan permanen blob tetap dilepas — tombol di sana hanya harapan palsu. Jepretan baru membuang yang tertunda (`discardPending`, sekaligus melepas object URL).
+6. **Dinding ucapan:** `GuestbookPage.failed` (sejajar `rateLimited` yang sudah ada) → UI menampilkan "Ucapan belum bisa dimuat sekarang. Coba lagi"; pada "muat lebih" yang gagal, `hasMore` **tidak disentuh**.
+7. **Pelaporan:** semua galat masuk Sentry lewat `reportHandledError` dengan area berlabel (`rsvp.invitation`, `rsvp.guest`, `gift.invitation`, `gift.guest`, `guestbook.invitation`, `guestbook.rsvps`, `personalization.invitation`, `personalization.guest`, `personalization.firstViewed`, `momen.guest.invitation`, `momen.guest.album`, `momen.guest.shotCount`, `momen.photos.fetch`). **`guests.token` tidak pernah ikut** — identitas tamu (SPEC §11).
+
+**Ditolak:**
+- **Menyimpan RSVP tak tertaut lalu memperbaikinya belakangan:** tak ada kunci untuk mencocokkan ulang, dan pemilik sudah terlanjur menghubungi tamu berdasar data yang salah.
+- **Melempar galat (pola #45) di aksi tamu:** aksi ini dipanggil dari klien dan tak pernah di-cache; melempar hanya menghasilkan galat Server Action generik yang tak bisa diterjemahkan ke bahasa Indonesia per kasus.
+- **Coba-ulang otomatis untuk unggah foto:** menggandakan beban storage saat gangguan justru memperburuknya; tombol eksplisit memberi tamu kendali dan tetap menyelamatkan fotonya.
+- **Menandai semua penolakan `retryable`:** tombol "Kirim ulang" pada jatah yang habis = harapan palsu.
+- **Mengubah render awal galeri Momen menjadi galat:** tetap degradasi jinak (keputusan #45); hanya "muat lebih" yang berubah.
+
+**Konsekuensi:**
+- Saat DB terganggu, tamu melihat pesan sementara yang jujur di semua jalur; tak ada lagi konfirmasi yang "berhasil" tetapi salah tersimpan.
+- Foto yang gagal diunggah bertahan di memori perangkat sampai jepretan berikutnya — satu blob, dilepas saat berhasil, diganti, atau ditolak permanen.
+- Tombol `.mn-camerr__retry` di-scope `.mn-app` agar mengalahkan reset `.mn-app button { border: 0 }`; tanpa itu bingkainya hilang dan terbaca seperti teks biasa di atas panel merah (tertangkap saat pembuktian browser).
+- Test (baru): `guest-action-errors` (13), `momen-guest-errors` (9), `guest-error-clients` (7 — token selamat, coba-ulang sekali, dinding gagal ≠ habis), `momen-camera-retry` (2 — pipeline kanvas dipalsukan), plus 8 test `retryable` di `momen-guest-upload`.
+- Pembuktian:
+  - **Galat DB nyata di aplikasi yang berjalan:** hak `SELECT` pada `momen_albums` dicabut sementara di DB lokal → unggahan dari galeri ditolak dengan "Sedang ada gangguan. Coba lagi sebentar lagi." + tombol "Kirim ulang foto"; sesudah hak dikembalikan, tombol itu menyimpan **foto yang sama** (tepat satu baris `momen_photos`, `photo_count` naik 1). Album di-`archived` → "Album tidak aktif." TANPA tombol, blob dilepas.
+  - **Uji mutasi:** 23 mutan (menelan galat di tiap titik bacaan, `retryable` di tiap titik balik, token yang dibuang, coba-ulang yang dihapus, kursor galeri, penanda dinding) — semuanya merah oleh test. Mutan kamera (`retryable` diabaikan) awalnya LOLOS; `momen-camera-retry` ditulis untuk menutupnya.
+- **Catatan proses:** review adversarial pertama untuk #46 dibatalkan di tengah jalan — agennya **mengedit file sumber** untuk menguji mutasinya sendiri (tiga file sempat ter-revert). Pohon kerja dipulihkan dan diperiksa ulang terhadap diff; review diulang dengan instruksi read-only sesudah commit.
 
 ---
 

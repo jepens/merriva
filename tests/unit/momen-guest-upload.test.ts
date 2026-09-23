@@ -59,6 +59,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => adminRef.current,
 }));
 
+import { copy } from "@/lib/copy";
 import { signMomenSession } from "@/lib/momen/session";
 import {
   startMomenSessionAction,
@@ -70,6 +71,14 @@ const OTHER_ALBUM = "99999999-9999-4999-8999-999999999999";
 const PHOTO = "22222222-2222-4222-8222-222222222222";
 const DEVICE = "33333333-3333-4333-8333-333333333333";
 const SLUG = "andi-sinta";
+
+/** Bentuk galat postgrest-js sungguhan (objek polos, bukan Error). */
+const BOOM = {
+  message: "canceling statement due to statement timeout",
+  details: null,
+  hint: null,
+  code: "57014",
+};
 
 /** Byte header asli agar `matchesDeclaredFormat` diuji sungguhan. */
 const WEBP = [0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50];
@@ -86,6 +95,8 @@ interface AdminOpts {
   allowLibraryUpload?: boolean;
   claim?: { data: unknown; error: unknown };
   confirm?: { data: unknown; error: unknown };
+  /** Bacaan tabel ini GAGAL (galat DB) — beda dari "barisnya tak ada". */
+  readError?: "invitations" | "momen_albums";
 }
 
 function makeAdmin(opts: AdminOpts = {}) {
@@ -98,6 +109,7 @@ function makeAdmin(opts: AdminOpts = {}) {
       error: null,
     },
     confirm = { data: [{ result: "ok", remaining: 2 }], error: null },
+    readError,
   } = opts;
 
   const rpc = vi.fn((fn: string, _args: unknown) => {
@@ -125,7 +137,12 @@ function makeAdmin(opts: AdminOpts = {}) {
     const chain: Record<string, unknown> = {};
     chain.select = () => chain;
     chain.eq = () => chain;
-    chain.maybeSingle = () => Promise.resolve({ data, error: null });
+    chain.maybeSingle = () =>
+      Promise.resolve(
+        readError === table
+          ? { data: null, error: BOOM }
+          : { data, error: null },
+      );
     return chain;
   });
 
@@ -165,8 +182,10 @@ beforeEach(() => {
     retryAfterMs: 0,
   });
   verifyTurnstile.mockResolvedValue(true);
-  storage.upload.mockClear();
-  storage.delete.mockClear();
+  storage.upload.mockReset();
+  storage.upload.mockResolvedValue("p");
+  storage.delete.mockReset();
+  storage.delete.mockResolvedValue(undefined);
   cookieValue.current = "";
   adminRef.current = makeAdmin();
 });
@@ -524,5 +543,140 @@ describe("uploadMomenPhotoAction — jalur sukses", () => {
     expect(res.status).toBe("error");
     expect(admin.rpc).not.toHaveBeenCalled();
     expect(storage.upload).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * `retryable` memisahkan penolakan SESAAT dari yang PERMANEN (DECISIONS #46).
+ * Klien menyimpan blob jepretan HANYA bila penanda ini benar — momen di acara
+ * tak bisa diulang, tetapi tombol "Kirim ulang" pada penolakan permanen (jatah
+ * habis, album nonaktif, format ditolak) hanya memberi harapan palsu.
+ */
+describe("uploadMomenPhotoAction — penanda `retryable`", () => {
+  const retryable = (r: Awaited<ReturnType<typeof uploadMomenPhotoAction>>) =>
+    r.status === "error" ? r.retryable === true : null;
+
+  it("album gagal DIBACA → sesaat: pesan gangguan + retryable", async () => {
+    cookieValue.current = signFor(ALBUM);
+    const admin = makeAdmin({ readError: "momen_albums" });
+    adminRef.current = admin;
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(res).toEqual({
+      status: "error",
+      message: copy.momen.error.temporary,
+      retryable: true,
+    });
+    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(storage.upload).not.toHaveBeenCalled();
+  });
+
+  it("undangan gagal DIBACA → sesaat", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin({ readError: "invitations" });
+
+    expect(await uploadMomenPhotoAction(SLUG, form())).toEqual({
+      status: "error",
+      message: copy.momen.error.temporary,
+      retryable: true,
+    });
+  });
+
+  it("album memang NONAKTIF → permanen (blob dibuang klien)", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin({ albumId: null });
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(res).toMatchObject({ message: copy.momen.error.notActive });
+    expect(retryable(res)).toBe(false);
+  });
+
+  it("storage bermasalah → sesaat, objek dibersihkan", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin();
+    storage.upload.mockRejectedValueOnce(new Error("503 dari vendor"));
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(retryable(res)).toBe(true);
+    expect(storage.delete).toHaveBeenCalledTimes(2);
+  });
+
+  it("RPC claim galat → sesaat", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin({ claim: { data: null, error: BOOM } });
+
+    expect(retryable(await uploadMomenPhotoAction(SLUG, form()))).toBe(true);
+  });
+
+  it("RPC confirm galat → sesaat, objek dibersihkan", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin({ confirm: { data: null, error: BOOM } });
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(retryable(res)).toBe(true);
+    expect(storage.delete).toHaveBeenCalledTimes(2);
+  });
+
+  it("rate limit (jaringan & perangkat) → sesaat", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin();
+    checkClientRateLimit.mockResolvedValue({
+      ok: false,
+      remaining: 0,
+      retryAfterMs: 1,
+    });
+    expect(retryable(await uploadMomenPhotoAction(SLUG, form()))).toBe(true);
+
+    cookieValue.current = signFor(ALBUM);
+    checkClientRateLimit.mockResolvedValue({
+      ok: true,
+      remaining: 9,
+      retryAfterMs: 0,
+    });
+    checkRateLimit.mockReturnValue({
+      ok: false,
+      remaining: 0,
+      retryAfterMs: 1,
+    });
+    expect(retryable(await uploadMomenPhotoAction(SLUG, form()))).toBe(true);
+  });
+
+  it("penolakan kuota/peserta/album-penuh & format → TIDAK retryable", async () => {
+    for (const result of ["guest-quota", "peserta-penuh", "album-full"]) {
+      cookieValue.current = signFor(ALBUM);
+      adminRef.current = makeAdmin({
+        claim: {
+          data: [{ result, photo_id: null, remaining: 0 }],
+          error: null,
+        },
+      });
+      expect(retryable(await uploadMomenPhotoAction(SLUG, form()))).toBe(false);
+    }
+
+    // Magic-byte / meta ditolak: mengirim ulang byte yang sama tak akan lolos.
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin();
+    expect(retryable(await uploadMomenPhotoAction(SLUG, form({}, PNG)))).toBe(
+      false,
+    );
+
+    // Host melarang unggah galeri: keputusan host, bukan gangguan.
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin({ allowLibraryUpload: false });
+    expect(
+      retryable(
+        await uploadMomenPhotoAction(SLUG, form({ source: "library" })),
+      ),
+    ).toBe(false);
+  });
+
+  it("sesi tak sah / kedaluwarsa → TIDAK retryable (tamu harus masuk lagi)", async () => {
+    cookieValue.current = "";
+    adminRef.current = makeAdmin();
+    expect(retryable(await uploadMomenPhotoAction(SLUG, form()))).toBe(false);
   });
 });

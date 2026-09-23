@@ -489,6 +489,29 @@
   line-height: 1.45;
   z-index: 4;
 }
+/* Kirim ulang jepretan yang gagal diunggah (DECISIONS #46).
+   Di-scope `.mn-app` agar mengalahkan reset `.mn-app button { border: 0 }` di
+   atas — tanpa itu tombolnya kehilangan bingkai dan terbaca seperti teks biasa
+   di atas panel merah. */
+.mn-app .mn-camerr__retry {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 9px 18px;
+  /* Target sentuh di layar ponsel sambil berdiri di acara. */
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mn-app .mn-camerr__retry:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 @keyframes mn-toast {
   0% {
     opacity: 0;

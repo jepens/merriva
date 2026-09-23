@@ -1,6 +1,7 @@
 "use server";
 
 import { copy } from "@/lib/copy";
+import { reportHandledError } from "@/lib/observability";
 import { checkClientRateLimit, getClientIp } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -80,11 +81,17 @@ export async function submitRsvpAction(input: RsvpInput): Promise<RsvpResult> {
   const admin = createSupabaseAdminClient();
 
   // RSVP hanya untuk undangan AKTIF.
-  const { data: inv } = await admin
+  const { data: inv, error: invError } = await admin
     .from("invitations")
     .select("id, settings, status")
     .eq("slug", d.slug)
     .maybeSingle();
+  // Galat DB ≠ "undangan tidak menerima konfirmasi" (DECISIONS #46): pesan
+  // `closed` terdengar permanen, jadi tamu tak mencoba lagi dan RSVP-nya hilang.
+  if (invError) {
+    reportHandledError(invError, "rsvp.invitation", { slug: d.slug });
+    return { status: "error", message: copy.common.error };
+  }
   if (!inv || inv.status !== "active") {
     return {
       status: "error",
@@ -102,12 +109,20 @@ export async function submitRsvpAction(input: RsvpInput): Promise<RsvpResult> {
   let guestId: string | null = null;
   let paxCap = 2;
   if (d.guestToken) {
-    const { data: guest } = await admin
+    const { data: guest, error: guestError } = await admin
       .from("guests")
       .select("id, pax_allocated")
       .eq("invitation_id", inv.id)
       .eq("token", d.guestToken)
       .maybeSingle();
+    // Gagal mencari tamu → JANGAN menyimpan RSVP tak tertaut lalu melapor
+    // sukses (DECISIONS #46): dulu pax dipotong ke 2, ekspor menandainya "belum
+    // RSVP", dan kiriman ulang bertoken membuat baris KEDUA (unique index
+    // parsial hanya berlaku saat guest_id tak null) sehingga total pax ganda.
+    if (guestError) {
+      reportHandledError(guestError, "rsvp.guest", { slug: d.slug });
+      return { status: "error", message: copy.common.error };
+    }
     if (guest) {
       guestId = guest.id;
       paxCap = guest.pax_allocated;
@@ -203,11 +218,16 @@ export async function submitGiftNoteAction(
 
   const admin = createSupabaseAdminClient();
 
-  const { data: inv } = await admin
+  const { data: inv, error: invError } = await admin
     .from("invitations")
     .select("id, status")
     .eq("slug", d.slug)
     .maybeSingle();
+  // Sama seperti RSVP (#46): galat DB bukan "tidak menerima konfirmasi".
+  if (invError) {
+    reportHandledError(invError, "gift.invitation", { slug: d.slug });
+    return { status: "error", message: copy.common.error };
+  }
   if (!inv || inv.status !== "active") {
     return {
       status: "error",
@@ -220,12 +240,17 @@ export async function submitGiftNoteAction(
   // nama dari form. `gift_notes` tak menyimpan guest_id (privasi minimal).
   let guestName = d.guestName;
   if (d.guestToken) {
-    const { data: guest } = await admin
+    const { data: guest, error: guestError } = await admin
       .from("guests")
       .select("name")
       .eq("invitation_id", inv.id)
       .eq("token", d.guestToken)
       .maybeSingle();
+    // Catatan amplop tetap disimpan dengan nama dari form — tak ada data yang
+    // salah tertaut (tabel ini tanpa guest_id), jadi kegagalan cukup dilaporkan.
+    if (guestError) {
+      reportHandledError(guestError, "gift.guest", { slug: d.slug });
+    }
     if (guest?.name) guestName = guest.name;
   }
 
@@ -250,6 +275,12 @@ export interface GuestbookPage {
    * lagi". Tanpa penanda ini kegagalan tampak sebagai fakta (PER-3).
    */
   rateLimited?: boolean;
+  /**
+   * Benar bila bacaan GAGAL (galat DB) — juga BUKAN dinding kosong
+   * (DECISIONS #46). Dulu ditelan menjadi daftar kosong: tamu membaca "Belum
+   * ada ucapan" padahal ada puluhan, dan tombol "Muat lebih" hilang diam-diam.
+   */
+  failed?: boolean;
 }
 
 /**
@@ -271,15 +302,19 @@ export async function getGuestbookAction(
   if (!rl.ok) return { entries: [], hasMore: false, rateLimited: true };
 
   const admin = createSupabaseAdminClient();
-  const { data: inv } = await admin
+  const { data: inv, error: invError } = await admin
     .from("invitations")
     .select("id, status")
     .eq("slug", cleanSlug)
     .maybeSingle();
+  if (invError) {
+    reportHandledError(invError, "guestbook.invitation", { slug: cleanSlug });
+    return { entries: [], hasMore: false, failed: true };
+  }
   if (!inv || inv.status !== "active") return { entries: [], hasMore: false };
 
   const from = p * PAGE_SIZE;
-  const { data } = await admin
+  const { data, error: rowsError } = await admin
     .from("rsvps")
     .select("id, guest_name, message, created_at")
     .eq("invitation_id", inv.id)
@@ -289,6 +324,11 @@ export async function getGuestbookAction(
     .neq("message", "")
     .order("created_at", { ascending: false })
     .range(from, from + PAGE_SIZE); // ambil 1 lebih untuk deteksi hasMore
+
+  if (rowsError) {
+    reportHandledError(rowsError, "guestbook.rsvps", { slug: cleanSlug });
+    return { entries: [], hasMore: false, failed: true };
+  }
 
   const rows = data ?? [];
   const hasMore = rows.length > PAGE_SIZE;

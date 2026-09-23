@@ -34,20 +34,32 @@ export function GuestPersonalizationProvider({
     const params = new URLSearchParams(window.location.search);
     const g = params.get("g");
     const to = params.get("to");
-    void (async (): Promise<{ name: string; token: string | null } | null> => {
+    void (async (): Promise<{
+      name: string | null;
+      token: string | null;
+    } | null> => {
       if (g) {
         // `?g=token` → resolve nama via server (service-role) + catat first_viewed_at.
         let res = await viewGuestByTokenAction(slug, g);
         // Link undangan biasanya disebar serentak di grup WA → lonjakan tajam.
         // Satu kali coba-ulang ber-jitter menyelamatkan sapaan personal tamu
-        // yang kebetulan kena rate limit (AUDIT-2026-09-04 PER-3); tanpa ini
-        // penolakan sementara tak bisa dibedakan dari token tak dikenal.
-        if (res.status === "rate") {
+        // yang kebetulan kena rate limit (AUDIT-2026-09-04 PER-3) atau kedipan
+        // DB (#46); tanpa ini penolakan sementara tak bisa dibedakan dari token
+        // tak dikenal.
+        if (res.status === "rate" || res.status === "error") {
           await new Promise((r) => setTimeout(r, 1200 + Math.random() * 1800));
           if (!active) return null;
           res = await viewGuestByTokenAction(slug, g);
         }
-        return res.status === "ok" ? { name: res.name, token: g } : null;
+        if (res.status === "ok") return { name: res.name, token: g };
+        // Gangguan sementara: nama tak didapat, tetapi TOKEN tetap dipakai
+        // (#46). Server memvalidasi ulang token saat RSVP/amplop, jadi
+        // konfirmasi tetap tertaut ke tamu dan jatah pax-nya utuh — dulu hilang
+        // diam-diam, tercatat 2 orang, dan tampil "belum RSVP" di dashboard.
+        if (res.status === "rate" || res.status === "error") {
+          return { name: null, token: g };
+        }
+        return null;
       }
       if (to) {
         // `?to=Nama` fallback manual (sudah ter-decode oleh URLSearchParams).

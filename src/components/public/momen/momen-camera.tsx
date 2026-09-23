@@ -166,6 +166,16 @@ export function MomenCamera(props: MomenCameraProps) {
   // foto yang BARU saja diunggah tamu ini (galeri tak lagi memuat album penuh).
   const [totalPhotos, setTotalPhotos] = useState(props.totalPhotos);
   const [busy, setBusy] = useState(false);
+  /**
+   * Jepretan yang GAGAL diunggah, disimpan untuk dikirim ulang (DECISIONS
+   * #46). Dulu blob-nya langsung dibuang saat aksi menolak — termasuk saat
+   * penolakan itu hanya gangguan DB sesaat — dan momen di acara tak bisa
+   * diulang.
+   */
+  const [pending, setPending] = useState<{
+    v: Variants;
+    source: "camera" | "library";
+  } | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [camError, setCamError] = useState(false);
@@ -272,6 +282,14 @@ export function MomenCamera(props: MomenCameraProps) {
     popToast(msg);
   };
 
+  /** Lepas jepretan tertunda (jepretan baru menggantikannya). */
+  const discardPending = () => {
+    setPending((p) => {
+      if (p) URL.revokeObjectURL(p.v.displayUrl);
+      return null;
+    });
+  };
+
   async function beginSession(goGallery: boolean) {
     const trimmed = name.trim();
     if (!trimmed || !deviceId || starting) return;
@@ -318,10 +336,22 @@ export function MomenCamera(props: MomenCameraProps) {
 
     const res = await uploadMomenPhotoAction(slug, fd);
     if (res.status !== "ok") {
-      URL.revokeObjectURL(v.displayUrl);
+      // Penolakan SESAAT (DB/storage/rate-limit) → jepretan DIPERTAHANKAN agar
+      // tombol "Kirim ulang" mengirim foto yang SAMA: momen di acara tak bisa
+      // diulang. Penolakan permanen (jatah habis, album nonaktif, format
+      // ditolak) tetap membuang blob — tombol di sana hanya harapan palsu.
+      if (res.retryable) {
+        setPending({ v, source });
+      } else {
+        // Termasuk saat percobaan ULANG ditolak permanen (mis. jatah baru saja
+        // habis): tombolnya harus hilang, bukan menunjuk blob yang sudah lepas.
+        setPending(null);
+        URL.revokeObjectURL(v.displayUrl);
+      }
       fail(res.message ?? c.error.generic);
       return;
     }
+    setPending(null);
     setError(null);
     setRemaining(res.remaining);
     setTaken((t) => t + 1);
@@ -352,9 +382,24 @@ export function MomenCamera(props: MomenCameraProps) {
     }
   }
 
+  /** Kirim ulang jepretan yang gagal (foto yang sama, bukan jepretan baru). */
+  async function retryPending() {
+    if (!pending || busy) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await sendPhoto(pending.v, pending.source);
+    } catch {
+      fail(c.error.generic);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function shoot() {
     const video = videoRef.current;
     if (busy || remaining <= 0 || !video || video.videoWidth === 0) return;
+    discardPending();
     setError(null);
     setBusy(true);
     try {
@@ -381,6 +426,7 @@ export function MomenCamera(props: MomenCameraProps) {
       fail(c.error.formatUnsupported);
       return;
     }
+    discardPending();
     setError(null);
     setBusy(true);
     try {
@@ -560,6 +606,16 @@ export function MomenCamera(props: MomenCameraProps) {
           {error ? (
             <div className="mn-camerr" role="alert">
               {error}
+              {pending ? (
+                <button
+                  type="button"
+                  className="mn-camerr__retry"
+                  onClick={() => void retryPending()}
+                  disabled={busy}
+                >
+                  {c.camera.retryPhoto}
+                </button>
+              ) : null}
             </div>
           ) : null}
 

@@ -39,7 +39,8 @@ export function GuestbookWall({
       if (!active) return;
       setEntries(res.entries);
       setHasMore(res.hasMore);
-      setFailed(res.rateLimited === true);
+      // Rate limit ATAU galat DB (#46) — keduanya bukan 'belum ada ucapan'.
+      setFailed(res.rateLimited === true || res.failed === true);
       setPage(0);
       setLoaded(true);
       setLoading(false);
@@ -54,7 +55,9 @@ export function GuestbookWall({
     setLoading(true);
     const next = page + 1;
     const res = await getGuestbookAction(slug, next);
-    if (res.rateLimited) {
+    if (res.rateLimited || res.failed) {
+      // Jangan menyentuh `hasMore`: tombol "Muat lebih" harus tetap ada agar
+      // tamu bisa mencoba lagi (#46) — dulu hilang diam-diam saat galat.
       setFailed(true);
       setLoading(false);
       return;
