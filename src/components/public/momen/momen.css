@@ -508,6 +508,18 @@
   font-weight: 600;
   cursor: pointer;
 }
+/* Jepretan tertunda di layar terang (masuk/habis) — DECISIONS #46. */
+.mn-pending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--mn-danger);
+  text-align: center;
+}
 .mn-camerr__note {
   margin-top: 6px;
   opacity: 0.9;

@@ -70,6 +70,21 @@ const lsSet = (k: string, v: string): void => {
   }
 };
 
+/** Jepretan yang gagal terkirim dan masih bisa dikirim ulang (DECISIONS #46). */
+interface PendingShot {
+  v: Variants;
+  source: "camera" | "library";
+  /**
+   * Filter yang sudah DIPANGGANG ke piksel. Wajib disimpan: strip filter tetap
+   * hidup di balik panel galat, dan mengirim ulang dengan `selectedFilter` yang
+   * sedang aktif akan mencatat nama film yang salah pada foto itu (kapsi galeri
+   * & lightbox ikut salah).
+   */
+  filterId: string;
+  /** Pesan penolakannya — untuk membedakannya dari galat lain di layar. */
+  message: string;
+}
+
 interface Variants {
   displayBlob: Blob;
   thumbBlob: Blob;
@@ -178,19 +193,7 @@ export function MomenCamera(props: MomenCameraProps) {
    * penolakan itu hanya gangguan DB sesaat — dan momen di acara tak bisa
    * diulang.
    */
-  const [pending, setPending] = useState<{
-    v: Variants;
-    source: "camera" | "library";
-    /**
-     * Filter yang sudah DIPANGGANG ke piksel. Wajib disimpan: strip filter
-     * tetap hidup di balik panel galat, dan mengirim ulang dengan
-     * `selectedFilter` yang sedang aktif akan mencatat nama film yang salah
-     * pada foto itu (kapsi galeri & lightbox ikut salah).
-     */
-    filterId: string;
-    /** Pesan penolakannya — untuk membedakannya dari galat lain di layar. */
-    message: string;
-  } | null>(null);
+  const [pending, setPending] = useState<PendingShot | null>(null);
   const [starting, setStarting] = useState(false);
   const [tsReset, setTsReset] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -277,6 +280,21 @@ export function MomenCamera(props: MomenCameraProps) {
 
   useEffect(() => () => stopStream(), [stopStream]);
 
+  // Lepas object URL jepretan tertunda saat halaman ditinggalkan. Ref dipakai
+  // agar pelepasan HANYA terjadi saat unmount: `pending` yang berubah menjadi
+  // null pada jalur sukses masih memakai URL itu untuk pratinjau galeri.
+  const pendingRef = useRef<PendingShot | null>(null);
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
+  useEffect(
+    () => () => {
+      const p = pendingRef.current;
+      if (p) URL.revokeObjectURL(p.v.displayUrl);
+    },
+    [],
+  );
+
   const flash = () => {
     const el = flashRef.current;
     if (!el) return;
@@ -296,6 +314,22 @@ export function MomenCamera(props: MomenCameraProps) {
   const fail = (msg: string) => {
     setError(msg);
     popToast(msg);
+  };
+
+  /**
+   * Pengiriman MELEMPAR (bukan menolak): WiFi venue putus di tengah unggah
+   * ~1,5 MB, atau id Server Action basi sesudah deploy. `sendPhoto` keluar
+   * sebelum sempat menandai apa pun, jadi jepretan yang sudah dipanggang harus
+   * diselamatkan di sini — kalau tidak, pesan "Coba lagi" muncul tanpa satu pun
+   * cara mematuhinya dan momennya hilang (koreksi review #46).
+   */
+  const keepThrownShot = (
+    v: Variants | null,
+    source: "camera" | "library",
+    filterId: string,
+  ) => {
+    if (v) setPending({ v, source, filterId, message: c.error.generic });
+    fail(c.error.generic);
   };
 
   /** Lepas jepretan tertunda (jepretan baru menggantikannya). */
@@ -439,17 +473,18 @@ export function MomenCamera(props: MomenCameraProps) {
     discardPending();
     setError(null);
     setBusy(true);
+    let shot: Variants | null = null;
     try {
-      const v = await bakeAndEncode(
+      shot = await bakeAndEncode(
         (ctx, w, h) => ctx.drawImage(video, 0, 0, w, h),
         video.videoWidth,
         video.videoHeight,
         selectedFilter,
         taken + 1,
       );
-      await sendPhoto(v, "camera", selectedFilter);
+      await sendPhoto(shot, "camera", selectedFilter);
     } catch {
-      fail(c.error.generic);
+      keepThrownShot(shot, "camera", selectedFilter);
     } finally {
       setBusy(false);
     }
@@ -466,6 +501,7 @@ export function MomenCamera(props: MomenCameraProps) {
     discardPending();
     setError(null);
     setBusy(true);
+    let shot: Variants | null = null;
     try {
       let bmp: ImageBitmap;
       try {
@@ -473,7 +509,7 @@ export function MomenCamera(props: MomenCameraProps) {
       } catch {
         bmp = await createImageBitmap(file);
       }
-      const v = await bakeAndEncode(
+      shot = await bakeAndEncode(
         (ctx, w, h) => ctx.drawImage(bmp, 0, 0, w, h),
         bmp.width,
         bmp.height,
@@ -481,9 +517,9 @@ export function MomenCamera(props: MomenCameraProps) {
         taken + 1,
       );
       bmp.close?.();
-      await sendPhoto(v, source, selectedFilter);
+      await sendPhoto(shot, source, selectedFilter);
     } catch {
-      fail(c.error.generic);
+      keepThrownShot(shot, source, selectedFilter);
     } finally {
       setBusy(false);
     }
@@ -529,6 +565,25 @@ export function MomenCamera(props: MomenCameraProps) {
     else if (taken > 0) setScreen("habis");
     else setScreen("masuk");
   }
+
+  /**
+   * Jepretan tertunda harus terjangkau dari layar mana pun: menutup kamera
+   * (✕) memindahkan tamu ke "habis"/"masuk", dan dulu tombol kirim ulang hanya
+   * hidup di layar kamera — fotonya ikut terkubur di sana (koreksi review #46).
+   */
+  const pendingRow = pending ? (
+    <div className="mn-pending" role="status">
+      <span>{c.camera.pendingShot}</span>
+      <button
+        type="button"
+        className="mn-ghost"
+        onClick={() => void retryPending()}
+        disabled={busy}
+      >
+        {busy ? c.camera.uploading : c.camera.retryPhoto}
+      </button>
+    </div>
+  ) : null;
 
   const previewFilter = preset.css === "none" ? undefined : preset.css;
   const cd = countdownParts(msUntilReveal(now, revealAtIso));
@@ -608,6 +663,7 @@ export function MomenCamera(props: MomenCameraProps) {
               </button>
             ) : null}
             {error ? <div className="mn-err">{error}</div> : null}
+            {pendingRow}
             <div className="mn-note">
               <span className="mn-dot" /> {c.masuk.turnstileNote}
             </div>
@@ -780,6 +836,7 @@ export function MomenCamera(props: MomenCameraProps) {
       >
         <div className="mn-emoji">🎞️</div>
         <h2>{c.habis.title}</h2>
+        {pendingRow}
         {phase === "revealed" ? (
           <>
             <p>{c.habis.revealed}</p>

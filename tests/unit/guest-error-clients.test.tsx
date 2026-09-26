@@ -101,6 +101,16 @@ describe("personalisasi ?g= — token selamat dari gangguan", () => {
     expect(ctx()).toBe("-|-");
   });
 
+  it("aksi MELEMPAR (bukan status galat) → token TETAP dipegang", async () => {
+    // Lemparan dulu tak tertangkap sama sekali: `setGuest` tak pernah jalan,
+    // token hilang, RSVP kembali tak tertaut & pax dipotong ke 2.
+    viewGuestByTokenAction.mockRejectedValue(new Error("Failed to fetch"));
+
+    renderWithToken();
+
+    await waitFor(() => expect(ctx()).toBe(`-|${TOKEN}`));
+  });
+
   it("rate limit juga mempertahankan token", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     viewGuestByTokenAction.mockResolvedValue({ status: "rate" });
@@ -162,6 +172,38 @@ describe("dinding ucapan — gagal ≠ habis", () => {
     ).toBeTruthy();
     // Ucapan yang sudah termuat tidak ikut hilang.
     expect(screen.getByText("ucapan a")).toBeTruthy();
+  });
+
+  it("'muat lebih' berhasil sesudah gagal → spanduk gagal TURUN", async () => {
+    getGuestbookAction.mockResolvedValueOnce({
+      entries: [entry("a")],
+      hasMore: true,
+    });
+    render(<GuestbookWall slug={SLUG} />);
+    const more = await screen.findByRole("button", {
+      name: copy.guestbook.wall.loadMore,
+    });
+
+    getGuestbookAction.mockResolvedValueOnce({
+      entries: [],
+      hasMore: true,
+      failed: true,
+    });
+    fireEvent.click(more);
+    await screen.findByText(copy.guestbook.wall.failed, { exact: false });
+
+    getGuestbookAction.mockResolvedValueOnce({
+      entries: [entry("b")],
+      hasMore: false,
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: copy.guestbook.wall.loadMore }),
+    );
+
+    await screen.findByText("ucapan b");
+    // Spanduk "belum bisa dimuat" tak boleh menetap di atas daftar yang baru
+    // saja bertambah.
+    expect(screen.queryByText(copy.guestbook.wall.failed)).toBeNull();
   });
 
   it("dinding memang kosong → 'belum ada ucapan', tanpa ajakan coba lagi", async () => {

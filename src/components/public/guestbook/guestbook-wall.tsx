@@ -87,6 +87,9 @@ export function GuestbookWall({
       const seen = new Set(prev.map((e) => e.id));
       return [...prev, ...res.entries.filter((e) => !seen.has(e.id))];
     });
+    // Halaman berikutnya BERHASIL → spanduk "belum bisa dimuat" harus turun;
+    // tanpa ini ia menetap di atas daftar yang baru saja bertambah.
+    setFailed(false);
     setHasMore(res.hasMore);
     setPage(next);
     setLoading(false);

@@ -142,11 +142,18 @@ describe("mulai sesi kamera — galat DB ≠ album tidak aktif", () => {
     expect(reportHandledError).not.toHaveBeenCalled();
   });
 
-  it("galat menghitung jepretan perangkat → ditolak sementara, BUKAN sesi berjatah penuh", async () => {
+  /**
+   * Hitungan jepretan perangkat KOSMETIK (pips + sisa jatah). Versi pertama #46
+   * menolak sesi saat hitungan gagal; review membuktikan itu memblokir SELURUH
+   * tamu di hari-H tanpa menambah keamanan kuota sedikit pun — kuotanya
+   * ditegakkan ulang secara atomik di RPC claim/confirm. Kini FAIL-OPEN.
+   */
+  it("galat menghitung jepretan perangkat → sesi TETAP dibuka, galat dilaporkan", async () => {
     refs.tables.momen_photos = { data: null, error: BOOM, count: null };
-    expect(await mulaiSesi()).toEqual({
-      status: "error",
-      message: copy.momen.error.temporary,
+    expect(await mulaiSesi()).toMatchObject({
+      status: "ok",
+      remaining: 5,
+      deviceCount: 0,
     });
     expect(reportHandledError).toHaveBeenCalledWith(
       BOOM,

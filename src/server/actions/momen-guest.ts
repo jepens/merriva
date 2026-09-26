@@ -158,10 +158,12 @@ function albumProblem(lookup: AlbumLookup): string {
 }
 
 /**
- * Berapa foto yang sudah diambil perangkat ini di album (dasar sisa jatah).
- * `null` = gagal dibaca (DECISIONS #46): dulu jatuh ke 0, sehingga tamu yang
- * jatahnya habis dibawa ke layar kamera dengan jatah penuh — lalu ditolak
- * gerbang kuota atomik saat menjepret.
+ * Berapa foto yang sudah diambil perangkat ini di album — angka KOSMETIK:
+ * mengisi pips & sisa jatah di layar kamera. Gerbang kuota sesungguhnya ada di
+ * RPC `momen_claim_upload`/`momen_confirm_photo` (security definer + advisory
+ * lock) yang menghitung ulang di setiap unggah.
+ *
+ * `null` = gagal dibaca; pemanggil sengaja FAIL-OPEN (lihat di bawah).
  */
 async function deviceShotCount(
   admin: ReturnType<typeof createSupabaseAdminClient>,
@@ -253,14 +255,14 @@ export async function startMomenSessionAction(
   }
   const album = lookup.album;
 
-  const deviceCount = await deviceShotCount(
-    admin,
-    album.albumId,
-    parsed.data.deviceId,
-  );
-  if (deviceCount === null) {
-    return { status: "error", message: copy.momen.error.temporary };
-  }
+  // FAIL-OPEN saat hitungan gagal (koreksi review #46). Menolak sesi di sini
+  // memblokir SELURUH tamu di hari-H tanpa menambah keamanan kuota sedikit pun
+  // — kuotanya ditegakkan ulang secara atomik di RPC unggah. Risiko sisanya
+  // hanya kosmetik: tamu yang jatahnya sudah habis melihat pips penuh lalu
+  // ditolak "Jatah jepretanmu sudah habis." saat menjepret. Momen tak bisa
+  // diulang, jadi pintu yang terbuka lebih baik daripada pintu yang terkunci.
+  const deviceCount =
+    (await deviceShotCount(admin, album.albumId, parsed.data.deviceId)) ?? 0;
 
   const cookie = signMomenSession({
     albumId: album.albumId,
