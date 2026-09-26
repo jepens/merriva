@@ -509,6 +509,22 @@
   cursor: pointer;
 }
 /* Jepretan tertunda di layar terang (masuk/habis) — DECISIONS #46. */
+/* Tombol kirim ulang di layar terang: warna bahaya, target sentuh penuh. */
+.mn-app .mn-pending button {
+  margin-top: 0;
+  padding: 11px 20px;
+  min-height: 44px;
+  border: 1.5px solid var(--mn-danger);
+  border-radius: 999px;
+  background: rgba(166, 61, 47, 0.07);
+  color: var(--mn-danger);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.mn-app .mn-pending button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 .mn-pending {
   display: flex;
   flex-direction: column;
@@ -606,7 +622,10 @@
   text-transform: uppercase;
   color: var(--mn-muted);
 }
-.mn-ghost {
+/* Di-scope `.mn-app` agar mengalahkan reset `.mn-app button { border: 0 }` di
+   atas (0,1,1 > 0,1,0). Tanpa itu `border` di sini MATI dan setiap tombol ghost
+   Album Momen — "Lihat Album", "Muat lebih banyak" — tampil seperti teks biasa. */
+.mn-app .mn-ghost {
   margin-top: 22px;
   padding: 13px 24px;
   border: 1.5px solid var(--mn-ink);

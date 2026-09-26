@@ -871,6 +871,9 @@ export function MomenCamera(props: MomenCameraProps) {
           <div className="mn-kicker">{c.gallery.kickerRevealed}</div>
           <h2>{heroTitle}</h2>
           <p>{c.gallery.sub(totalPhotos, props.photographers)}</p>
+          {/* Album reveal-instan: ✕ dari kamera mendarat DI SINI, jadi jepretan
+              tertunda harus bisa dikirim ulang dari layar ini juga. */}
+          {pendingRow}
         </div>
         {photos.length === 0 ? (
           <div className="mn-empty">{c.gallery.empty}</div>

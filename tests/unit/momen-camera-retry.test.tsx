@@ -55,10 +55,18 @@ import { MomenCamera } from "@/components/public/momen/momen-camera";
 const c = copy.momen;
 const SLUG = "andi-sinta";
 
-/** Query di dalam SATU layar: tombol kirim ulang kini hidup di tiga layar. */
+/**
+ * Query di dalam layar yang BENAR-BENAR TAMPIL. jsdom tak menerapkan
+ * `display:none`, jadi seluruh layar ada di DOM sekaligus: menanyai `.mn-masuk`
+ * begitu saja bisa lolos padahal tamu sedang melihat layar lain dan tombolnya
+ * tak terjangkau sama sekali (persis cacat yang ditemukan uji browser).
+ * Selektor di sini WAJIB menyertakan `.mn-on`.
+ */
 const di = (container: HTMLElement, kelas: string) =>
   within(container.querySelector(kelas) as HTMLElement);
-const kamera = (container: HTMLElement) => di(container, ".mn-kamera");
+const kamera = (container: HTMLElement) => di(container, ".mn-kamera.mn-on");
+const layarAktif = (container: HTMLElement) =>
+  di(container, ".mn-screen.mn-on");
 
 const props = {
   slug: SLUG,
@@ -341,19 +349,20 @@ describe("MomenCamera — kirim ulang jepretan", () => {
 
     fireEvent.click(screen.getByRole("button", { name: c.camera.close }));
 
-    // Belum sempat menjepret apa pun → kembali ke layar masuk; tombol kirim
-    // ulang dulu hanya hidup di layar kamera, jadi fotonya ikut terkubur.
-    const masuk = within(container.querySelector(".mn-masuk") as HTMLElement);
-    expect(masuk.getByText(c.camera.pendingShot)).toBeTruthy();
+    // Ke layar mana pun ✕ membawa tamu (galeri untuk album reveal-instan,
+    // habis/masuk untuk album terjadwal), jepretannya harus tetap terjangkau
+    // DI LAYAR ITU — bukan sekadar ada di DOM layar yang tersembunyi.
+    const keluar = layarAktif(container);
+    expect(keluar.getByText(c.camera.pendingShot)).toBeTruthy();
     expect(
-      masuk.getByRole("button", { name: c.camera.retryPhoto }),
+      keluar.getByRole("button", { name: c.camera.retryPhoto }),
     ).toBeTruthy();
 
     uploadMomenPhotoAction.mockResolvedValueOnce({
       status: "ok",
       remaining: 4,
     });
-    fireEvent.click(masuk.getByRole("button", { name: c.camera.retryPhoto }));
+    fireEvent.click(keluar.getByRole("button", { name: c.camera.retryPhoto }));
 
     await waitFor(() =>
       expect(uploadMomenPhotoAction).toHaveBeenCalledTimes(2),
