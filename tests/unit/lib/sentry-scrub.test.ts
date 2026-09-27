@@ -50,7 +50,7 @@ describe("scrubSentryEvent", () => {
         // Payload Server Action RSVP membawa guestToken di dalamnya.
         data: { guestToken: TOKEN, pax: 6 },
       },
-    });
+    })!;
 
     expect(event.request!.url).toBe(
       "https://merriva.id/andi-sinta?g=[redacted]",
@@ -63,7 +63,7 @@ describe("scrubSentryEvent", () => {
   it("query string berbentuk objek maupun pasangan ikut disensor", () => {
     const asObject = scrubSentryEvent({
       request: { query_string: { g: TOKEN, utm: "wa" } },
-    });
+    })!;
     expect(asObject.request!.query_string).toEqual({
       g: "[redacted]",
       utm: "wa",
@@ -76,7 +76,7 @@ describe("scrubSentryEvent", () => {
           ["utm", "wa"],
         ] as [string, string][],
       },
-    });
+    })!;
     expect(asPairs.request!.query_string).toEqual([
       ["g", "[redacted]"],
       ["utm", "wa"],
@@ -93,7 +93,7 @@ describe("scrubSentryEvent", () => {
       ],
       breadcrumbs: [{ data: { url: `/a?g=${TOKEN}` } }],
       exception: { values: [{ value: `fetch failed: /a?g=${TOKEN}` }] },
-    });
+    })!;
 
     expect(JSON.stringify(event)).not.toContain(TOKEN);
     expect(event.spans![0].data!["http.method"]).toBe("POST");
@@ -101,5 +101,67 @@ describe("scrubSentryEvent", () => {
 
   it("event tanpa data request tetap aman (tak melempar)", () => {
     expect(() => scrubSentryEvent({})).not.toThrow();
+  });
+
+  /**
+   * Fixture SEPERTI YANG DIISI SENTRY SUNGGUHAN. Versi pertama berkas ini hanya
+   * merangkai url/query_string/data, sehingga `not.toContain(TOKEN)` lolos
+   * karena field-nya memang tak ada — bukan karena disensor. Dengan
+   * `sendDefaultPii: false` Sentry TETAP melampirkan header & cookie
+   * (defaultnya objek `{deny: …}`, gerbangnya cuma `!== false`).
+   */
+  it("header `referer` membawa URL halaman utuh → ikut disensor", () => {
+    const event = scrubSentryEvent({
+      request: {
+        url: "https://merriva.id/andi-sinta",
+        headers: {
+          referer: `https://merriva.id/andi-sinta?g=${TOKEN}`,
+          "user-agent": "Mozilla/5.0",
+        },
+      },
+    })!;
+
+    expect(event.request!.headers!.referer).toBe(
+      "https://merriva.id/andi-sinta?g=[redacted]",
+    );
+    // Diagnostik yang tak berbahaya tetap utuh.
+    expect(event.request!.headers!["user-agent"]).toBe("Mozilla/5.0");
+    expect(JSON.stringify(event)).not.toContain(TOKEN);
+  });
+
+  it("cookie DIBUANG: sesi unggah Momen & auth Supabase bukan diagnostik", () => {
+    const event = scrubSentryEvent({
+      request: {
+        headers: { cookie: "momen_sess=abc.def; sb-xyz-auth-token=rahasia" },
+        cookies: { momen_sess: "abc.def", "sb-xyz-auth-token": "rahasia" },
+      },
+    })!;
+
+    expect(event.request!.cookies).toBeUndefined();
+    expect(event.request!.headers!.cookie).toBeUndefined();
+    expect(JSON.stringify(event)).not.toContain("rahasia");
+  });
+
+  it("`contexts.nextjs.request_path` (jalur onRequestError) ikut disensor", () => {
+    const event = scrubSentryEvent({
+      contexts: {
+        nextjs: { request_path: `/andi-sinta?g=${TOKEN}`, router_kind: "App" },
+      },
+    })!;
+
+    expect(event.contexts!.nextjs!.request_path).toBe(
+      "/andi-sinta?g=[redacted]",
+    );
+    expect(event.contexts!.nextjs!.router_kind).toBe("App");
+  });
+
+  it("FAIL-CLOSED: penyaring yang gagal membuang event, bukan mengirimnya", () => {
+    const meledak = {
+      get request(): never {
+        throw new Error("bentuk event tak terduga");
+      },
+    };
+
+    expect(scrubSentryEvent(meledak as never)).toBeNull();
   });
 });

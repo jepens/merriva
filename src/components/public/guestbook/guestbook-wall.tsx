@@ -41,11 +41,17 @@ export function GuestbookWall({
     getGuestbookAction(slug, 0)
       .then((res) => {
         if (!active) return;
-        setEntries(res.entries);
-        setHasMore(res.hasMore);
         // Rate limit ATAU galat DB (#46) — keduanya bukan 'belum ada ucapan'.
-        setFailed(res.rateLimited === true || res.failed === true);
-        setPage(0);
+        const gagal = res.rateLimited === true || res.failed === true;
+        // Muat ulang yang gagal (mis. sesudah tamu mengirim ucapan) TIDAK boleh
+        // menyapu daftar yang sudah tampil: daftarnya dibiarkan, spanduk gagal
+        // yang muncul.
+        if (!gagal) {
+          setEntries(res.entries);
+          setHasMore(res.hasMore);
+          setPage(0);
+        }
+        setFailed(gagal);
         setLoaded(true);
         setLoading(false);
       })

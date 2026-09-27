@@ -470,7 +470,6 @@ export function MomenCamera(props: MomenCameraProps) {
   async function shoot() {
     const video = videoRef.current;
     if (busy || remaining <= 0 || !video || video.videoWidth === 0) return;
-    discardPending();
     setError(null);
     setBusy(true);
     let shot: Variants | null = null;
@@ -482,6 +481,10 @@ export function MomenCamera(props: MomenCameraProps) {
         selectedFilter,
         taken + 1,
       );
+      // Baru DI SINI jepretan lama dilepas: `bakeAndEncode` bisa gagal (kanvas
+      // kehabisan memori di HP murah), dan membuangnya lebih dulu berarti
+      // jepretan yang masih bisa dikirim ikut musnah tanpa pengganti.
+      discardPending();
       await sendPhoto(shot, "camera", selectedFilter);
     } catch {
       keepThrownShot(shot, "camera", selectedFilter);
@@ -498,7 +501,6 @@ export function MomenCamera(props: MomenCameraProps) {
       fail(c.error.formatUnsupported);
       return;
     }
-    discardPending();
     setError(null);
     setBusy(true);
     let shot: Variants | null = null;
@@ -517,6 +519,8 @@ export function MomenCamera(props: MomenCameraProps) {
         taken + 1,
       );
       bmp.close?.();
+      // Lihat `shoot()`: pengganti dulu jadi, baru yang lama dilepas.
+      discardPending();
       await sendPhoto(shot, source, selectedFilter);
     } catch {
       keepThrownShot(shot, source, selectedFilter);
@@ -573,7 +577,12 @@ export function MomenCamera(props: MomenCameraProps) {
    */
   const pendingRow = pending ? (
     <div className="mn-pending" role="status">
-      <span>{c.camera.pendingShot}</span>
+      {/* Pesan kegagalan TERAKHIR jepretan ini. Panel galat & toast hanya hidup
+          di layar kamera, jadi kirim ulang yang gagal dari layar masuk/habis/
+          galeri dulu tak memberi tanda apa pun. `pending.message` diperbarui
+          setiap percobaan, termasuk saat pengirimannya melempar. */}
+      <span>{pending.message}</span>
+      <span className="mn-pending__note">{c.camera.pendingShot}</span>
       <button
         type="button"
         className="mn-ghost"

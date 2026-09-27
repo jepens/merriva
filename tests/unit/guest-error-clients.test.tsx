@@ -206,6 +206,28 @@ describe("dinding ucapan — gagal ≠ habis", () => {
     expect(screen.queryByText(copy.guestbook.wall.failed)).toBeNull();
   });
 
+  it("muat ulang yang GAGAL tak menyapu ucapan yang sudah tampil", async () => {
+    getGuestbookAction.mockResolvedValueOnce({
+      entries: [entry("a")],
+      hasMore: false,
+    });
+    const { rerender } = render(<GuestbookWall slug={SLUG} refreshKey={0} />);
+    await screen.findByText("ucapan a");
+
+    // Tamu mengirim ucapan → dinding dimuat ulang, dan bacaannya gagal.
+    getGuestbookAction.mockResolvedValueOnce({
+      entries: [],
+      hasMore: false,
+      failed: true,
+    });
+    rerender(<GuestbookWall slug={SLUG} refreshKey={1} />);
+
+    await screen.findByText(copy.guestbook.wall.failed, { exact: false });
+    // Ucapan yang sudah terbaca tamu tak boleh hilang gara-gara itu.
+    expect(screen.getByText("ucapan a")).toBeTruthy();
+    expect(screen.queryByText(copy.guestbook.wall.empty)).toBeNull();
+  });
+
   it("dinding memang kosong → 'belum ada ucapan', tanpa ajakan coba lagi", async () => {
     getGuestbookAction.mockResolvedValue({ entries: [], hasMore: false });
 

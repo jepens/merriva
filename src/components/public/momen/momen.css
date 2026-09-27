@@ -525,6 +525,9 @@
   opacity: 0.6;
   cursor: default;
 }
+.mn-pending__note {
+  opacity: 0.85;
+}
 .mn-pending {
   display: flex;
   flex-direction: column;

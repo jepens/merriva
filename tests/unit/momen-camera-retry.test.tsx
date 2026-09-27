@@ -50,6 +50,7 @@ vi.mock("@/lib/momen/film-bake", () => ({
 }));
 
 import { copy } from "@/lib/copy";
+import { encodeCanvas } from "@/lib/image/encode";
 import { MomenCamera } from "@/components/public/momen/momen-camera";
 
 const c = copy.momen;
@@ -84,9 +85,12 @@ const props = {
 };
 
 let revoked: string[] = [];
+/** URL blob yang dibuat, berurutan: urls[0] = jepretan pertama, dst. */
+let urls: string[] = [];
 
 beforeEach(() => {
   revoked = [];
+  urls = [];
   startMomenSessionAction.mockResolvedValue({
     status: "ok",
     remaining: 5,
@@ -133,7 +137,11 @@ beforeEach(() => {
   }
   vi.stubGlobal("URL", {
     ...URL,
-    createObjectURL: () => "blob:uji",
+    createObjectURL: () => {
+      const u = `blob:uji-${urls.length + 1}`;
+      urls.push(u);
+      return u;
+    },
     revokeObjectURL: (u: string) => revoked.push(u),
   });
 });
@@ -195,7 +203,7 @@ describe("MomenCamera — kirim ulang jepretan", () => {
       name: c.camera.retryPhoto,
     });
     // Blob TIDAK dilepas — itulah yang membuat kiriman ulang mungkin.
-    expect(revoked).not.toContain("blob:uji");
+    expect(revoked).not.toContain(urls[0]);
 
     fireEvent.click(retry);
 
@@ -271,7 +279,7 @@ describe("MomenCamera — kirim ulang jepretan", () => {
         kamera(container).queryByRole("button", { name: c.camera.retryPhoto }),
       ).toBeNull(),
     );
-    expect(revoked.filter((u) => u === "blob:uji")).toHaveLength(1);
+    expect(revoked.filter((u) => u === urls[0])).toHaveLength(1);
   });
 
   it("galat LAIN (format tak didukung) tak mencuri tombol jepretan tertunda", async () => {
@@ -303,7 +311,7 @@ describe("MomenCamera — kirim ulang jepretan", () => {
       kamera(container).getByRole("button", { name: c.camera.retryPhoto }),
     ).toBeTruthy();
     expect(kamera(container).getByText(c.camera.pendingShot)).toBeTruthy();
-    expect(revoked).not.toContain("blob:uji");
+    expect(revoked).not.toContain(urls[0]);
   });
 
   it("unggah MELEMPAR (transport putus) → jepretan tetap disimpan", async () => {
@@ -316,7 +324,7 @@ describe("MomenCamera — kirim ulang jepretan", () => {
     await unggahDariGaleri(container);
 
     await kamera(container).findByRole("button", { name: c.camera.retryPhoto });
-    expect(revoked).not.toContain("blob:uji");
+    expect(revoked).not.toContain(urls[0]);
 
     uploadMomenPhotoAction.mockResolvedValueOnce({
       status: "ok",
@@ -381,7 +389,7 @@ describe("MomenCamera — kirim ulang jepretan", () => {
     await kamera(container).findByRole("button", {
       name: c.camera.retryPhoto,
     });
-    expect(revoked).not.toContain("blob:uji");
+    expect(revoked).not.toContain(urls[0]);
     const [, fd] = uploadMomenPhotoAction.mock.calls[0];
     expect(fd.get("source")).toBe("camera");
   });
@@ -398,12 +406,137 @@ describe("MomenCamera — kirim ulang jepretan", () => {
     await kamera(container).findByRole("button", {
       name: c.camera.retryPhoto,
     });
-    expect(revoked).not.toContain("blob:uji");
+    expect(revoked).not.toContain(urls[0]);
 
     unmount();
 
     // Blob 1600px tak boleh tetap terpaku di memori dokumen.
-    expect(revoked).toContain("blob:uji");
+    expect(revoked).toContain(urls[0]);
+  });
+
+  it("kirim ulang yang GAGAL dari layar lain tetap memberi tahu tamu", async () => {
+    // Panel galat & toast cuma hidup di layar kamera; tanpa pesan sendiri,
+    // kirim ulang dari galeri/habis gagal tanpa satu pun tanda.
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "error",
+      message: c.error.temporary,
+      retryable: true,
+    });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    await kamera(container).findByRole("button", { name: c.camera.retryPhoto });
+    fireEvent.click(screen.getByRole("button", { name: c.camera.close }));
+
+    const keluar = layarAktif(container);
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "error",
+      message: c.error.rateLimited,
+      retryable: true,
+    });
+    fireEvent.click(keluar.getByRole("button", { name: c.camera.retryPhoto }));
+
+    // Pesan kegagalan TERBARU muncul di layar yang sedang dilihat tamu.
+    await waitFor(() =>
+      expect(layarAktif(container).getByText(c.error.rateLimited)).toBeTruthy(),
+    );
+    expect(
+      layarAktif(container).getByRole("button", { name: c.camera.retryPhoto }),
+    ).toBeTruthy();
+  });
+
+  it("jepretan BARU yang gagal dipanggang tak memusnahkan jepretan tertunda", async () => {
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "error",
+      message: c.error.temporary,
+      retryable: true,
+    });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    await kamera(container).findByRole("button", { name: c.camera.retryPhoto });
+
+    // Jepretan berikutnya gagal di tahap encode (HP murah kehabisan memori):
+    // penggantinya tak pernah jadi, jadi yang lama tak boleh ikut dibuang.
+    vi.mocked(encodeCanvas).mockRejectedValueOnce(new Error("canvas penuh"));
+    const input = container.querySelector<HTMLInputElement>(
+      'input[accept="image/jpeg,image/png,image/webp"]',
+    )!;
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File([new Uint8Array([1])], "b.png", { type: "image/png" }),
+        ],
+      },
+    });
+
+    await waitFor(() =>
+      expect(
+        kamera(container).getByRole("button", { name: c.camera.retryPhoto }),
+      ).toBeTruthy(),
+    );
+    expect(revoked).not.toContain(urls[0]);
+  });
+
+  it("jepretan KAMERA yang gagal dipanggang tak memusnahkan jepretan tertunda", async () => {
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "error",
+      message: c.error.temporary,
+      retryable: true,
+    });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    await kamera(container).findByRole("button", { name: c.camera.retryPhoto });
+
+    // Rana ditekan, tetapi encode gagal → penggantinya tak pernah ada.
+    vi.mocked(encodeCanvas).mockRejectedValueOnce(new Error("canvas penuh"));
+    fireEvent.click(screen.getByRole("button", { name: c.camera.shutter }));
+
+    await waitFor(() =>
+      expect(
+        kamera(container).getByRole("button", { name: c.camera.retryPhoto }),
+      ).toBeTruthy(),
+    );
+    expect(revoked).not.toContain(urls[0]);
+  });
+
+  it("jepretan pengganti yang jadi melepas blob jepretan tertunda", async () => {
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "error",
+      message: c.error.temporary,
+      retryable: true,
+    });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    await kamera(container).findByRole("button", { name: c.camera.retryPhoto });
+    expect(revoked).not.toContain(urls[0]);
+
+    // Jepretan berikutnya BERHASIL → yang tertunda digantikan, dan blob 1600px
+    // miliknya harus dilepas (kalau tidak, memori terpaku selama dokumen hidup).
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "ok",
+      remaining: 4,
+    });
+    const input = container.querySelector<HTMLInputElement>(
+      'input[accept="image/jpeg,image/png,image/webp"]',
+    )!;
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File([new Uint8Array([1])], "c.png", { type: "image/png" }),
+        ],
+      },
+    });
+
+    await waitFor(() =>
+      expect(uploadMomenPhotoAction).toHaveBeenCalledTimes(2),
+    );
+    await waitFor(() => expect(revoked).toContain(urls[0]));
+    expect(
+      kamera(container).queryByRole("button", { name: c.camera.retryPhoto }),
+    ).toBeNull();
   });
 
   it("penolakan PERMANEN → tanpa tombol kirim ulang, blob dilepas", async () => {
@@ -419,7 +552,7 @@ describe("MomenCamera — kirim ulang jepretan", () => {
     expect(
       kamera(container).queryByRole("button", { name: c.camera.retryPhoto }),
     ).toBeNull();
-    expect(revoked).toContain("blob:uji");
+    expect(revoked).toContain(urls[0]);
   });
 });
 
