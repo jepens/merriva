@@ -182,6 +182,76 @@ async function deviceShotCount(
   return count ?? 0;
 }
 
+/** Sisa jatah perangkat sesudah jalur idempoten (hitungan kosmetik). */
+async function sisaJatah(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  album: ActiveAlbum,
+  session: { deviceId: string },
+): Promise<number> {
+  const terpakai = await deviceShotCount(
+    admin,
+    album.albumId,
+    session.deviceId,
+  );
+  return Math.max(0, album.quotaPerGuest - (terpakai ?? 0));
+}
+
+/**
+ * Hapus objek storage HANYA bila tak ada baris yang memilikinya. Sejak id foto
+ * berasal dari klien, semua percobaan atas jepretan yang sama berbagi satu path
+ * — `cleanup()` tanpa syarat bisa menghapus objek milik baris yang sudah commit
+ * dan meninggalkan foto rusak permanen di album host.
+ */
+async function bersihkanBilaYatim(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  cleanup: () => Promise<unknown>,
+  shotId: string,
+  album: ActiveAlbum,
+  session: { deviceId: string },
+): Promise<void> {
+  const pemilik = await shotOwner(
+    admin,
+    shotId,
+    album.albumId,
+    session.deviceId,
+  );
+  if (pemilik.kind === "mine") return;
+  await cleanup();
+}
+
+/**
+ * Baris foto dengan id ini, apa pun albumnya. Id foto DIPILIH KLIEN (idempotensi
+ * kirim ulang, DECISIONS #46) sedangkan `momen_photos.id` adalah primary key
+ * GLOBAL, jadi pemiliknya WAJIB diperiksa: id album lain bisa dipungut dari HTML
+ * publik halaman album yang sudah reveal. Tanpa pemeriksaan ini, id pinjaman
+ * membuat `confirm` gagal 23505 sementara objek storage-nya terlanjur ditulis —
+ * lolos jatah tamu, slot peserta, dan `photo_ceiling`, dan tak pernah ikut
+ * terhapus oleh purge (yang hanya mengenumerasi path dari BARIS).
+ */
+type ShotOwner =
+  { kind: "none" } | { kind: "mine" } | { kind: "foreign" } | { kind: "error" };
+
+async function shotOwner(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  shotId: string,
+  albumId: string,
+  deviceId: string,
+): Promise<ShotOwner> {
+  const { data, error } = await admin
+    .from("momen_photos")
+    .select("id, album_id, device_id")
+    .eq("id", shotId)
+    .maybeSingle();
+  if (error) {
+    reportHandledError(error, "momen.dedupe", { albumId });
+    return { kind: "error" };
+  }
+  if (!data) return { kind: "none" };
+  return data.album_id === albumId && data.device_id === deviceId
+    ? { kind: "mine" }
+    : { kind: "foreign" };
+}
+
 /** Pesan lokal dari alasan penolakan RPC (claim/confirm). */
 function denyMessage(result: string): string {
   switch (result) {
@@ -401,34 +471,29 @@ export async function uploadMomenPhotoAction(
     return { status: "error", message: copy.momen.error.invalid };
   }
 
-  // IDEMPOTEN (#46): bila jepretan dengan id ini sudah tersimpan, percobaan
-  // sebelumnya ternyata sampai di server dan hanya responsnya yang hilang.
-  // Jawab "ok" tanpa menyentuh kuota, storage, atau baris baru — kalau tidak,
-  // tombol "Kirim ulang" menggandakan foto dan memakan jatah kedua.
-  const { data: sudahAda, error: dupErr } = await admin
-    .from("momen_photos")
-    .select("id")
-    .eq("id", meta.data.shotId)
-    .eq("album_id", album.albumId)
-    .maybeSingle();
-  if (dupErr) {
-    reportHandledError(dupErr, "momen.dedupe", { albumId: album.albumId });
+  // IDEMPOTEN (#46): bila jepretan dengan id ini sudah tersimpan oleh perangkat
+  // INI di album INI, percobaan sebelumnya ternyata sampai di server dan hanya
+  // responsnya yang hilang. Jawab "ok" tanpa menyentuh kuota, storage, atau
+  // baris baru — kalau tidak, "Kirim ulang" menggandakan foto dan memakan jatah
+  // kedua. Id milik album/perangkat LAIN ditolak SEBELUM satu byte pun ditulis.
+  const pemilik = await shotOwner(
+    admin,
+    meta.data.shotId,
+    album.albumId,
+    session.deviceId,
+  );
+  if (pemilik.kind === "error") {
     return {
       status: "error",
       message: copy.momen.error.generic,
       retryable: true,
     };
   }
-  if (sudahAda) {
-    const terpakai = await deviceShotCount(
-      admin,
-      album.albumId,
-      session.deviceId,
-    );
-    return {
-      status: "ok",
-      remaining: Math.max(0, album.quotaPerGuest - (terpakai ?? 0)),
-    };
+  if (pemilik.kind === "foreign") {
+    return { status: "error", message: copy.momen.error.invalid };
+  }
+  if (pemilik.kind === "mine") {
+    return { status: "ok", remaining: await sisaJatah(admin, album, session) };
   }
 
   // Claim (pra-cek lembut). `photo_id` yang dikembalikannya SENGAJA diabaikan:
@@ -506,22 +571,30 @@ export async function uploadMomenPhotoAction(
       p_bytes: display.size,
     },
   );
-  // 23505 = baris dengan id ini sudah ada → percobaan lain menang balapan.
-  // Fotonya tersimpan, jadi ini SUKSES, bukan kegagalan (lihat pra-cek di atas).
+  // 23505 = id ini sudah dipakai baris lain. Itu SUKSES hanya bila barisnya
+  // milik perangkat ini di album ini (balapan antar-percobaan jepretan yang
+  // sama); id pinjaman dari album lain harus ditolak DAN objeknya dibersihkan.
   if (confirmErr?.code === "23505") {
-    const terpakai = await deviceShotCount(
+    const pemilikAkhir = await shotOwner(
       admin,
+      photoId,
       album.albumId,
       session.deviceId,
     );
-    return {
-      status: "ok",
-      remaining: Math.max(0, album.quotaPerGuest - (terpakai ?? 0)),
-    };
+    if (pemilikAkhir.kind === "mine") {
+      // JANGAN cleanup(): kirim ulang berbagi path, jadi objek itu milik baris
+      // yang sudah commit — menghapusnya merusak foto yang sudah tersimpan.
+      return {
+        status: "ok",
+        remaining: await sisaJatah(admin, album, session),
+      };
+    }
+    await cleanup();
+    return { status: "error", message: copy.momen.error.invalid };
   }
   if (confirmErr) {
     reportHandledError(confirmErr, "momen.confirm", { albumId: album.albumId });
-    await cleanup();
+    await bersihkanBilaYatim(admin, cleanup, photoId, album, session);
     return {
       status: "error",
       message: copy.momen.error.generic,
@@ -530,6 +603,21 @@ export async function uploadMomenPhotoAction(
   }
   const confirm = confirmRows?.[0];
   if (!confirm || confirm.result !== "ok") {
+    // Percobaan lain atas jepretan yang SAMA bisa sudah commit lebih dulu; di
+    // situ fotonya memang tersimpan dan penolakan ini (mis. jatah habis karena
+    // baris itu sendiri) tak boleh menghapus objeknya.
+    const pemilikAkhir = await shotOwner(
+      admin,
+      photoId,
+      album.albumId,
+      session.deviceId,
+    );
+    if (pemilikAkhir.kind === "mine") {
+      return {
+        status: "ok",
+        remaining: await sisaJatah(admin, album, session),
+      };
+    }
     await cleanup();
     return {
       status: "error",

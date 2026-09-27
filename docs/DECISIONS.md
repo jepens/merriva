@@ -809,6 +809,30 @@ Empat celah, diurutkan dari yang paling mahal:
 
 **Terbantah / sudah tertutup:** kebocoran `Referer` & cookie, `contexts.nextjs.request_path`, penyaring yang tak fail-closed, `discardPending` sebelum bake, dan muat ulang dinding yang menyapu ucapan — semuanya sudah ditutup putaran ketiga; sisanya dinilai tak berdasar oleh mayoritas suara.
 
+
+**Putaran review TERAKHIR (2026-09-27) — #46 ditutup di sini.** Atas keputusan pemilik: satu putaran atas `abff40e`, lalu berhenti apa pun hasilnya; hanya temuan **high** dikerjakan, medium dicatat sebagai butir terbuka. Review dibatasi melaporkan medium ke atas saja (maksimal enam per lensa) supaya kuota agen tak habis di tengah seperti dua putaran sebelumnya — hasilnya 70 agen selesai TANPA satu pun gagal: 22 temuan dinilai, 5 high, 11 medium, 6 terbantah.
+
+Kelima temuan high semuanya di **perubahan idempotensi yang baru saja dibuat di putaran keempat** — tiga cacat berbeda, semuanya akibat satu keputusan: identitas foto kini DIPILIH KLIEN sementara `momen_photos.id` adalah primary key GLOBAL lintas album.
+
+1. **Objek storage yatim yang menembus setiap gerbang kuota.** Pra-cek dedupe di-scope `album_id`, jadi id milik album LAIN tak terdeteksi; id semacam itu bisa dipungut tanpa autentikasi dari HTML publik album mana pun yang sudah reveal (`app/[slug]/momen/page.tsx` menyerialkan `id` setiap foto). Alurnya: pra-cek meleset → `momen_claim_upload` lolos (ia menghitung BARIS milik perangkat, dan perangkat itu memang belum punya) → dua objek ditulis ke storage → `confirm` gagal 23505 → kode lama menjawab "ok" **sebelum** `cleanup()`. Hasil: tak ada baris, `photo_count` tak naik, perangkat tak pernah jadi peserta, jatah tak terpakai, dan objeknya tak akan pernah dibersihkan — `purge_invitation_data` sengaja hanya mengenumerasi path dari BARIS karena mengasumsikan path ber-UUID acak, asumsi yang persis dipatahkan id pilihan-klien. Rem yang tersisa hanya rate limit.
+2. **`cleanup()` menghapus objek milik baris yang SUDAH commit.** Karena semua percobaan atas jepretan yang sama kini berbagi satu path, penolakan `confirm` pada percobaan kedua (mis. `guest-quota` yang justru disebabkan baris percobaan pertama) menghapus objek foto yang sudah tersimpan — host mewarisi foto rusak permanen. Sebelum id pilihan-klien ini mustahil: tiap percobaan punya path sendiri.
+3. **Pra-cek memperlakukan "ada baris" sebagai bukti "objeknya ada".** Bila objeknya sudah terhapus oleh (2), jalur idempoten menjawab "tersimpan", klien membuang blob-nya, dan jepretan yang tak terulang hilang sambil dilaporkan sukses.
+
+**Perbaikan (tanpa migrasi):** helper `shotOwner()` membaca baris berdasarkan id SAJA lalu membandingkan `album_id` **dan** `device_id`. Pra-cek: `mine` → ok; `foreign` → ditolak permanen SEBELUM satu byte ditulis; `none` → lanjut. Sesudah 23505: `mine` → ok **tanpa** `cleanup()` (objeknya milik baris yang sudah commit); selain itu → `cleanup()` + tolak. Penolakan `confirm` biasa: bila baris kita sudah ada → sukses tanpa menghapus apa pun; galat `confirm`: `bersihkanBilaYatim()` hanya menghapus bila tak ada baris yang memilikinya.
+
+- Test: penyaring `id` benar-benar di-assert (mock lama mengabaikan seluruh argumen `.eq()` — temuan review tersendiri), id milik album lain dan perangkat lain ditolak tanpa menyentuh RPC/storage, 23505 atas id pinjaman dibersihkan, 23505 atas baris sendiri sukses, dan penolakan `confirm` atas baris yang sudah commit tak menghapus objek.
+- Uji mutasi putaran enam: 4 mutan, semuanya merah.
+
+**Butir terbuka — TIDAK dikerjakan, sesuai keputusan pemilik (11 temuan medium, semuanya bertahan verifikasi):**
+- `momen_photos.id` sebaiknya kembali `gen_random_uuid()` server dan id klien disimpan di kolom terpisah `client_shot_id` dengan unique index `(album_id, client_shot_id)` — idempotensi yang sama tanpa menyerahkan primary key global ke tamu. Butuh migrasi, jadi ditunda sampai ada staging.
+- `remaining` pada jalur idempoten memakai hitungan yang fail-open: satu bacaan gagal mengembalikan jatah PENUH ke tamu di tengah sesi.
+- Form masuk Album Momen masih membuang tantangan Turnstile yang sah pada penolakan pra-verifikasi (perbaikan `tokenTerpakai` baru diterapkan ke RSVP & amplop).
+- `useTurnstileReset` di form daftar ikut me-reset pada penolakan rate limit, yang juga terjadi sebelum verifikasi.
+- Wiring reset Turnstile di form reset kata sandi praktis kode mati (aksinya menolak lewat `fieldErrors`), sehingga klaim ADR putaran keempat soal form itu hanya separuh benar.
+- `remaining` pada kedua jalur sukses baru tak pernah di-assert test.
+
+**Catatan penutup #46.** Enam commit, empat putaran koreksi, satu uji browser. Polanya konsisten dan layak diingat: **setiap lapis perbaikan melahirkan cacat baru di lapisan itu sendiri**, dan yang menangkapnya selalu mata di luar penulisnya — review adversarial, lalu uji browser, lalu review lagi. Test buatan sendiri tiga kali lolos karena alasan yang salah (fixture Sentry tanpa header, query ke layar tersembunyi, mock yang mengabaikan `.eq()`). Hal-hal yang tersisa di atas menunggu bukti dari lingkungan nyata, bukan putaran review berikutnya.
+
 **Masih terbuka (ditunda atas permintaan pemilik):** review menilai `reportHandledError` kini menambah ~13 titik tangkap tanpa sampling di jalur tamu terpanas, sehingga satu gangguan DB di resepsi besar bisa menghabiskan kuota Sentry. Ditunda bersama pengaktifan DSN Sentry (LAUNCH-CHECKLIST) — selama DSN kosong, semua titik itu no-op.
 
 **Terbantah / sudah tertutup:** penolakan Turnstile, filter kirim ulang, galat format yang mencuri tombol, dan galeri "muat lebih" yang senyap sudah ditutup koreksi pertama; pesan seragam untuk penolakan yang berbeda (3 suara) dan catatan `first_viewed_at` di #45 (2 dari 3 suara) dinilai tak berdasar.

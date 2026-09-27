@@ -55,6 +55,8 @@ vi.mock("@/lib/storage", () => ({ getStorage: () => storage }));
 const { adminRef } = vi.hoisted(() => ({
   adminRef: { current: null as unknown },
 }));
+/** Penyaring `.eq()` yang benar-benar dikirim ke `momen_photos`. */
+let eqCalls: { table: string; col: string; val: unknown }[] = [];
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => adminRef.current,
 }));
@@ -94,6 +96,8 @@ function imageFile(magic: number[], type: string, name: string): File {
 interface AdminOpts {
   /** Baris `momen_photos` dengan id = shotId sudah ada (kiriman ulang). */
   shotSudahAda?: boolean;
+  /** Pemilik baris itu; default = album & perangkat sesi ini. */
+  shotRow?: { album_id: string; device_id: string } | null;
   invitationStatus?: string | null;
   albumId?: string | null;
   allowLibraryUpload?: boolean;
@@ -115,6 +119,7 @@ function makeAdmin(opts: AdminOpts = {}) {
     confirm = { data: [{ result: "ok", remaining: 2 }], error: null },
     readError,
     shotSudahAda = false,
+    shotRow = { album_id: ALBUM, device_id: DEVICE },
   } = opts;
 
   const rpc = vi.fn((fn: string, _args: unknown) => {
@@ -143,10 +148,20 @@ function makeAdmin(opts: AdminOpts = {}) {
     chain.select = () => chain;
     chain.eq = () => chain;
     if (table === "momen_photos") {
-      // Pra-cek idempotensi + hitungan jatah perangkat.
+      // Pra-cek kepemilikan + hitungan jatah perangkat. Argumen `.eq()` DICATAT:
+      // tanpa itu penyaring id/album/device tak pernah teruji (temuan review).
+      const filters: Record<string, unknown> = {};
+      chain.eq = (col: string, val: unknown) => {
+        filters[col] = val;
+        eqCalls.push({ table, col, val });
+        return chain;
+      };
       chain.maybeSingle = () =>
         Promise.resolve({
-          data: shotSudahAda ? { id: SHOT } : null,
+          data:
+            shotSudahAda && filters.id === SHOT && shotRow
+              ? { id: SHOT, ...shotRow }
+              : null,
           error: null,
         });
       chain.then = (ok: (v: unknown) => unknown) =>
@@ -204,6 +219,7 @@ beforeEach(() => {
   storage.delete.mockReset();
   storage.delete.mockResolvedValue(undefined);
   cookieValue.current = "";
+  eqCalls = [];
   adminRef.current = makeAdmin();
 });
 
@@ -609,11 +625,125 @@ describe("uploadMomenPhotoAction — kiriman ulang tak menggandakan", () => {
     expect(args.p_storage_path).toContain(SHOT);
   });
 
-  it("balapan: confirm menabrak primary key (23505) → SUKSES, bukan galat", async () => {
+  it("pra-cek menyaring tepat pada id jepretan ini", async () => {
     cookieValue.current = signFor(ALBUM);
-    adminRef.current = makeAdmin({
+    adminRef.current = makeAdmin({ shotSudahAda: true });
+
+    await uploadMomenPhotoAction(SLUG, form());
+
+    // Tanpa penyaring `id`, baris milik siapa pun bisa dikira milik kita.
+    expect(eqCalls).toContainEqual({
+      table: "momen_photos",
+      col: "id",
+      val: SHOT,
+    });
+  });
+
+  it("id jepretan MILIK ALBUM LAIN → ditolak SEBELUM satu byte pun ditulis", async () => {
+    // `momen_photos.id` primary key GLOBAL, dan id album lain bisa dipungut
+    // dari HTML publik album yang sudah reveal. Tanpa cek pemilik, objeknya
+    // terlanjur ditulis lalu confirm gagal 23505 → yatim yang lolos SEMUA
+    // gerbang kuota dan tak pernah ikut terhapus purge.
+    cookieValue.current = signFor(ALBUM);
+    const admin = makeAdmin({
+      shotSudahAda: true,
+      shotRow: { album_id: OTHER_ALBUM, device_id: DEVICE },
+    });
+    adminRef.current = admin;
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(res).toMatchObject({ status: "error" });
+    expect(res.status === "error" && res.retryable).toBeFalsy();
+    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(storage.upload).not.toHaveBeenCalled();
+  });
+
+  it("id jepretan milik PERANGKAT LAIN di album ini → ditolak juga", async () => {
+    cookieValue.current = signFor(ALBUM);
+    const admin = makeAdmin({
+      shotSudahAda: true,
+      shotRow: {
+        album_id: ALBUM,
+        device_id: "55555555-5555-4555-8555-555555555555",
+      },
+    });
+    adminRef.current = admin;
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(res).toMatchObject({ status: "error" });
+    expect(storage.upload).not.toHaveBeenCalled();
+  });
+
+  it("23505 atas id PINJAMAN → ditolak DAN objeknya dibersihkan", async () => {
+    cookieValue.current = signFor(ALBUM);
+    // Pra-cek meleset (barisnya lahir sesudahnya), lalu confirm menabrak PK.
+    let panggilan = 0;
+    const admin = makeAdmin({
       confirm: { data: null, error: { ...BOOM, code: "23505" } },
     });
+    const asli = admin.from;
+    admin.from = vi.fn((table: string) => {
+      if (table === "momen_photos") {
+        panggilan += 1;
+        // Panggilan pertama = pra-cek (kosong); kedua = sesudah 23505 (asing).
+        return makeAdmin({
+          shotSudahAda: panggilan > 1,
+          shotRow: { album_id: OTHER_ALBUM, device_id: DEVICE },
+        }).from(table);
+      }
+      return asli(table);
+    }) as typeof admin.from;
+    adminRef.current = admin;
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(res).toMatchObject({ status: "error" });
+    expect(storage.delete).toHaveBeenCalledTimes(2);
+  });
+
+  it("confirm MENOLAK padahal baris kita sudah commit → sukses, objek TIDAK dihapus", async () => {
+    // Kirim ulang berbagi path: menghapus objeknya berarti merusak foto yang
+    // sudah tersimpan dan mewariskan gambar rusak ke album host.
+    cookieValue.current = signFor(ALBUM);
+    let panggilan = 0;
+    const admin = makeAdmin({
+      confirm: { data: [{ result: "guest-quota", remaining: 0 }], error: null },
+    });
+    const asli = admin.from;
+    admin.from = vi.fn((table: string) => {
+      if (table === "momen_photos") {
+        panggilan += 1;
+        return makeAdmin({ shotSudahAda: panggilan > 1 }).from(table);
+      }
+      return asli(table);
+    }) as typeof admin.from;
+    adminRef.current = admin;
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(res).toMatchObject({ status: "ok" });
+    expect(storage.delete).not.toHaveBeenCalled();
+  });
+
+  it("balapan: confirm menabrak PK dan barisnya MILIK KITA → SUKSES, bukan galat", async () => {
+    cookieValue.current = signFor(ALBUM);
+    // Pra-cek meleset (barisnya lahir sesudahnya), lalu confirm menabrak PK —
+    // barisnya milik perangkat & album ini, jadi fotonya memang tersimpan.
+    let panggilan = 0;
+    const admin = makeAdmin({
+      confirm: { data: null, error: { ...BOOM, code: "23505" } },
+    });
+    const asli = admin.from;
+    admin.from = vi.fn((table: string) => {
+      if (table === "momen_photos") {
+        panggilan += 1;
+        return makeAdmin({ shotSudahAda: panggilan > 1 }).from(table);
+      }
+      return asli(table);
+    }) as typeof admin.from;
+    adminRef.current = admin;
 
     const res = await uploadMomenPhotoAction(SLUG, form());
 

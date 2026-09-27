@@ -72,12 +72,15 @@ function makeAdmin() {
     const data =
       table === "invitations"
         ? { id: "inv-1", status: "active" }
-        : {
-            id: ALBUM,
-            status: "active",
-            quota_per_guest: 5,
-            allow_library_upload: true,
-          };
+        : // Pra-cek kepemilikan jepretan: belum ada baris dengan id ini.
+          table === "momen_photos"
+          ? null
+          : {
+              id: ALBUM,
+              status: "active",
+              quota_per_guest: 5,
+              allow_library_upload: true,
+            };
     const chain: Record<string, unknown> = {};
     chain.select = () => chain;
     chain.eq = () => chain;
