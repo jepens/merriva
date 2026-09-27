@@ -103,12 +103,35 @@ describe("personalisasi ?g= — token selamat dari gangguan", () => {
 
   it("aksi MELEMPAR (bukan status galat) → token TETAP dipegang", async () => {
     // Lemparan dulu tak tertangkap sama sekali: `setGuest` tak pernah jalan,
-    // token hilang, RSVP kembali tak tertaut & pax dipotong ke 2.
+    // token hilang, RSVP kembali tak tertaut & pax dipotong ke 2. Kini lemparan
+    // juga melewati coba-ulang ber-jitter, jadi waktunya perlu dimajukan.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     viewGuestByTokenAction.mockRejectedValue(new Error("Failed to fetch"));
 
     renderWithToken();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3500);
+    });
 
     await waitFor(() => expect(ctx()).toBe(`-|${TOKEN}`));
+    expect(viewGuestByTokenAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("aksi MELEMPAR ikut dicoba-ulang, lalu sapaannya pulih", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    viewGuestByTokenAction
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
+      .mockResolvedValueOnce({ status: "ok", name: "Sasa" });
+
+    renderWithToken();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3500);
+    });
+
+    // Lemparan dulu langsung menyerah: token selamat, tetapi sapaannya hilang
+    // padahal penolakan setara yang mengembalikan status akan pulih.
+    await waitFor(() => expect(ctx()).toBe(`Sasa|${TOKEN}`));
+    expect(viewGuestByTokenAction).toHaveBeenCalledTimes(2);
   });
 
   it("rate limit juga mempertahankan token", async () => {

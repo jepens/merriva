@@ -90,6 +90,7 @@ function makeAdmin() {
 function photoForm(): FormData {
   const bytes = new Uint8Array([...WEBP, ...new Array(200).fill(0)]);
   const fd = new FormData();
+  fd.set("shotId", crypto.randomUUID());
   fd.set("filterId", "hangat");
   fd.set("format", "webp");
   fd.set("source", "camera");

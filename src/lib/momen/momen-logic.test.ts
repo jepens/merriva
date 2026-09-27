@@ -166,6 +166,7 @@ describe("momenUploadMetaSchema", () => {
   const valid = {
     guestName: "Déwi & Raka",
     deviceId: "2f5b0d0e-4a1c-4c8e-9b3a-8f2f6f1a7d42",
+    shotId: "9c1f2f3a-5b6c-4d7e-8f90-1a2b3c4d5e6f",
     filterId: "senja",
     format: "webp",
     source: "camera",

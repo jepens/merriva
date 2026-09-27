@@ -79,6 +79,16 @@ export type MomenSessionStart = z.infer<typeof momenSessionStartSchema>;
 export const momenUploadMetaSchema = z.strictObject({
   guestName,
   deviceId: z.uuid(),
+  /**
+   * Id jepretan yang dibuat KLIEN sekali per foto dan dipakai ulang di setiap
+   * percobaan kirim (DECISIONS #46 — koreksi review). Tanpa ini, unggah yang
+   * MELEMPAR setelah server sempat menyimpan akan digandakan oleh tombol
+   * "Kirim ulang": `momen_claim_upload` membuat id baru tiap panggilan,
+   * sehingga fotonya masuk dua kali dan jatah tamu terpakai dua slot.
+   * Dipakai sebagai primary key `momen_photos.id`, jadi percobaan kedua
+   * menabrak PK dan diperlakukan sebagai "sudah tersimpan".
+   */
+  shotId: z.uuid(),
   filterId: filterEnum,
   /**
    * Format hasil encode klien. WebP = jalur utama; JPEG = fallback WAJIB untuk

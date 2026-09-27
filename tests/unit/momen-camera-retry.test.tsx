@@ -539,6 +539,126 @@ describe("MomenCamera — kirim ulang jepretan", () => {
     ).toBeNull();
   });
 
+  it("mulai sesi yang MELEMPAR tak bicara soal foto (belum ada jepretan)", async () => {
+    startMomenSessionAction.mockRejectedValueOnce(new Error("Failed to fetch"));
+
+    const { container } = render(<MomenCamera {...props} />);
+    await masukKamera();
+
+    // Layar masuk: "Gagal menyimpan foto." menyesatkan — belum ada foto apa pun.
+    const masuk = di(container, ".mn-masuk.mn-on");
+    expect(masuk.getByText(c.error.temporary)).toBeTruthy();
+    expect(masuk.queryByText(c.error.generic)).toBeNull();
+  });
+
+  it("panel galat tak pernah jadi kotak merah kosong saat kirim ulang berjalan", async () => {
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "error",
+      message: c.error.temporary,
+      retryable: true,
+    });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    const retry = await kamera(container).findByRole("button", {
+      name: c.camera.retryPhoto,
+    });
+
+    // Kiriman ulang yang menggantung: `error` dibersihkan, jepretan tetap ada.
+    uploadMomenPhotoAction.mockReturnValueOnce(new Promise(() => {}));
+    fireEvent.click(retry);
+
+    await waitFor(() =>
+      expect(uploadMomenPhotoAction).toHaveBeenCalledTimes(2),
+    );
+    const panel = container.querySelector(".mn-camerr") as HTMLElement;
+    expect(panel).not.toBeNull();
+    expect(panel.textContent ?? "").toContain(c.error.temporary);
+  });
+
+  it("kirim ulang yang ditolak PERMANEN dari layar lain tetap menjelaskan kenapa", async () => {
+    // Jalur paling merugikan: barisnya lenyap DAN blob-nya dilepas. Tanpa pesan
+    // di layar itu, hilangnya foto tak bisa dibedakan dari kiriman yang sukses.
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "error",
+      message: c.error.temporary,
+      retryable: true,
+    });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    await kamera(container).findByRole("button", { name: c.camera.retryPhoto });
+    fireEvent.click(screen.getByRole("button", { name: c.camera.close }));
+
+    const keluar = layarAktif(container);
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "error",
+      message: c.error.guestQuota,
+    });
+    fireEvent.click(keluar.getByRole("button", { name: c.camera.retryPhoto }));
+
+    await waitFor(() =>
+      expect(layarAktif(container).getByText(c.error.guestQuota)).toBeTruthy(),
+    );
+    expect(
+      layarAktif(container).queryByRole("button", {
+        name: c.camera.retryPhoto,
+      }),
+    ).toBeNull();
+    expect(revoked).toContain(urls[0]);
+  });
+
+  it("kirim ulang memakai id jepretan yang SAMA (server bisa mengenalinya)", async () => {
+    uploadMomenPhotoAction
+      .mockResolvedValueOnce({
+        status: "error",
+        message: c.error.temporary,
+        retryable: true,
+      })
+      .mockResolvedValueOnce({ status: "ok", remaining: 4 });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    fireEvent.click(
+      await kamera(container).findByRole("button", {
+        name: c.camera.retryPhoto,
+      }),
+    );
+
+    await waitFor(() =>
+      expect(uploadMomenPhotoAction).toHaveBeenCalledTimes(2),
+    );
+    const [, fd1] = uploadMomenPhotoAction.mock.calls[0];
+    const [, fd2] = uploadMomenPhotoAction.mock.calls[1];
+    // Inti idempotensi: id yang sama → server tahu ini kiriman yang sama.
+    expect(fd2.get("shotId")).toBe(fd1.get("shotId"));
+    expect(String(fd1.get("shotId"))).toMatch(/^[0-9a-f-]{36}$/i);
+  });
+
+  it("jepretan BERBEDA memakai id berbeda", async () => {
+    uploadMomenPhotoAction.mockResolvedValue({ status: "ok", remaining: 3 });
+
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    const input = container.querySelector<HTMLInputElement>(
+      'input[accept="image/jpeg,image/png,image/webp"]',
+    )!;
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File([new Uint8Array([2])], "d.png", { type: "image/png" }),
+        ],
+      },
+    });
+
+    await waitFor(() =>
+      expect(uploadMomenPhotoAction).toHaveBeenCalledTimes(2),
+    );
+    const [, fd1] = uploadMomenPhotoAction.mock.calls[0];
+    const [, fd2] = uploadMomenPhotoAction.mock.calls[1];
+    expect(fd2.get("shotId")).not.toBe(fd1.get("shotId"));
+  });
+
   it("penolakan PERMANEN → tanpa tombol kirim ulang, blob dilepas", async () => {
     uploadMomenPhotoAction.mockResolvedValue({
       status: "error",

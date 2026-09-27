@@ -14,6 +14,18 @@ import "./guestbook.css";
  * form ringan. Data terkirim via `submitGiftNoteAction` (privat, service-role +
  * anti-spam). State ringan tanpa react-hook-form demi bundle halaman tetap kecil.
  */
+/**
+ * Token Turnstile hanya HANGUS bila server sempat memverifikasinya. Urutan
+ * aksi tamu: Zod → honeypot → rate limit → Turnstile → DB. Jadi penolakan
+ * `invalid` dan `rate` terjadi SEBELUM verifikasi dan tokennya masih sah —
+ * me-reset di situ membuang tantangan yang baik, dan kiriman perbaikan
+ * berikutnya justru ditolak "Verifikasi anti-bot gagal" karena token barunya
+ * belum tiba (DECISIONS #46 — koreksi review).
+ */
+function tokenTerpakai(reason?: string): boolean {
+  return reason !== "invalid" && reason !== "rate";
+}
+
 export function GiftConfirm({
   slug,
   guestToken,
@@ -39,9 +51,10 @@ export function GiftConfirm({
   const onToken = useCallback((tk: string) => setToken(tk), []);
 
   /** Kiriman ditolak → tantangan Turnstile baru (lihat RsvpForm, DECISIONS #46). */
-  const failSubmit = useCallback((msg: string) => {
+  const failSubmit = useCallback((msg: string, reason?: string) => {
     setStatus("error");
     setFeedback(msg);
+    if (!tokenTerpakai(reason)) return;
     setToken("");
     setTsReset((n) => n + 1);
   }, []);
@@ -67,7 +80,7 @@ export function GiftConfirm({
         setFeedback(t.success);
         return;
       }
-      failSubmit(res.message ?? t.invalid);
+      failSubmit(res.message ?? t.invalid, res.reason);
     } catch {
       failSubmit(copy.common.error);
     }

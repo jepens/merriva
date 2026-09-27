@@ -76,6 +76,23 @@ export function GuestPersonalizationProvider({
 }
 
 /**
+ * Aksi yang MELEMPAR diperlakukan sama dengan status `error`, supaya ia ikut
+ * mendapat coba-ulang ber-jitter di bawah. Tanpa ini lemparan langsung jatuh ke
+ * penangkap terluar: token tamu selamat, tetapi sapaannya hilang padahal
+ * penolakan setara yang mengembalikan status akan pulih (DECISIONS #46).
+ */
+async function lihatTamu(
+  slug: string,
+  g: string,
+): Promise<Awaited<ReturnType<typeof viewGuestByTokenAction>>> {
+  try {
+    return await viewGuestByTokenAction(slug, g);
+  } catch {
+    return { status: "error" };
+  }
+}
+
+/**
  * `?g={token}` → nama tamu via server (service-role) + catat `first_viewed_at`.
  * Token dipertahankan pada SETIAP kegagalan sementara: server memvalidasinya
  * ulang saat RSVP/amplop, jadi konfirmasi tamu tetap tertaut dan jatah pax-nya
@@ -86,7 +103,7 @@ async function resolveByToken(
   g: string,
   stillActive: () => boolean,
 ): Promise<ResolvedGuest | null> {
-  let res = await viewGuestByTokenAction(slug, g);
+  let res = await lihatTamu(slug, g);
   // Link undangan biasanya disebar serentak di grup WA → lonjakan tajam. Satu
   // kali coba-ulang ber-jitter menyelamatkan sapaan personal tamu yang kebetulan
   // kena rate limit (AUDIT-2026-09-04 PER-3) atau kedipan DB (#46); tanpa ini
@@ -94,7 +111,7 @@ async function resolveByToken(
   if (res.status === "rate" || res.status === "error") {
     await new Promise((r) => setTimeout(r, 1200 + Math.random() * 1800));
     if (!stillActive()) return null;
-    res = await viewGuestByTokenAction(slug, g);
+    res = await lihatTamu(slug, g);
   }
   if (res.status === "ok") return { name: res.name, token: g };
   if (res.status === "rate" || res.status === "error") {

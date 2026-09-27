@@ -13,6 +13,18 @@ import { TurnstileWidget } from "./turnstile-widget";
  * Turnstile via widget (bila site key ada). Server yang menegakkan validasi,
  * anti-spam, dan batas pax — di sini hanya UX.
  */
+/**
+ * Token Turnstile hanya HANGUS bila server sempat memverifikasinya. Urutan
+ * aksi tamu: Zod → honeypot → rate limit → Turnstile → DB. Jadi penolakan
+ * `invalid` dan `rate` terjadi SEBELUM verifikasi dan tokennya masih sah —
+ * me-reset di situ membuang tantangan yang baik, dan kiriman perbaikan
+ * berikutnya justru ditolak "Verifikasi anti-bot gagal" karena token barunya
+ * belum tiba (DECISIONS #46 — koreksi review).
+ */
+function tokenTerpakai(reason?: string): boolean {
+  return reason !== "invalid" && reason !== "rate";
+}
+
 export function RsvpForm({
   slug,
   guestToken,
@@ -46,10 +58,13 @@ export function RsvpForm({
    * Kiriman ditolak → minta tantangan Turnstile baru (DECISIONS #46). Token
    * lama sudah dipakai server sebelum bacaan DB gagal; tanpa reset, "silakan
    * coba lagi" selalu berakhir "verifikasi gagal" dan RSVP tamu hilang.
+   * Penolakan yang terjadi SEBELUM verifikasi tak menghanguskan token apa pun,
+   * jadi tantangannya dibiarkan (lihat `tokenTerpakai`).
    */
-  const failSubmit = useCallback((msg: string) => {
+  const failSubmit = useCallback((msg: string, reason?: string) => {
     setStatus("error");
     setFeedback(msg);
+    if (!tokenTerpakai(reason)) return;
     setToken("");
     setTsReset((n) => n + 1);
   }, []);
@@ -76,7 +91,7 @@ export function RsvpForm({
         onSubmitted?.();
         return;
       }
-      failSubmit(res.message ?? t.invalid);
+      failSubmit(res.message ?? t.invalid, res.reason);
     } catch {
       // Aksi MELEMPAR (jaringan venue putus, id aksi basi sesudah deploy):
       // tanpa ini `status` tersangkut "sending" selamanya — tombol mati, tanpa

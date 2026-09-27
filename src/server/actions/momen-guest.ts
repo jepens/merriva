@@ -362,6 +362,7 @@ export async function uploadMomenPhotoAction(
   const meta = momenUploadMetaSchema.safeParse({
     guestName: session.guestName,
     deviceId: session.deviceId,
+    shotId: formData.get("shotId"),
     filterId: formData.get("filterId"),
     format: formData.get("format"),
     source: formData.get("source"),
@@ -400,7 +401,38 @@ export async function uploadMomenPhotoAction(
     return { status: "error", message: copy.momen.error.invalid };
   }
 
-  // Claim (pra-cek lembut) → dapat photo_id untuk membentuk path.
+  // IDEMPOTEN (#46): bila jepretan dengan id ini sudah tersimpan, percobaan
+  // sebelumnya ternyata sampai di server dan hanya responsnya yang hilang.
+  // Jawab "ok" tanpa menyentuh kuota, storage, atau baris baru — kalau tidak,
+  // tombol "Kirim ulang" menggandakan foto dan memakan jatah kedua.
+  const { data: sudahAda, error: dupErr } = await admin
+    .from("momen_photos")
+    .select("id")
+    .eq("id", meta.data.shotId)
+    .eq("album_id", album.albumId)
+    .maybeSingle();
+  if (dupErr) {
+    reportHandledError(dupErr, "momen.dedupe", { albumId: album.albumId });
+    return {
+      status: "error",
+      message: copy.momen.error.generic,
+      retryable: true,
+    };
+  }
+  if (sudahAda) {
+    const terpakai = await deviceShotCount(
+      admin,
+      album.albumId,
+      session.deviceId,
+    );
+    return {
+      status: "ok",
+      remaining: Math.max(0, album.quotaPerGuest - (terpakai ?? 0)),
+    };
+  }
+
+  // Claim (pra-cek lembut). `photo_id` yang dikembalikannya SENGAJA diabaikan:
+  // identitas foto berasal dari klien agar kirim ulang tetap idempoten.
   const { data: claimRows, error: claimErr } = await admin.rpc(
     "momen_claim_upload",
     { p_album_id: album.albumId, p_device_id: session.deviceId },
@@ -420,7 +452,7 @@ export async function uploadMomenPhotoAction(
       message: denyMessage(claim?.result ?? "generic"),
     };
   }
-  const photoId = claim.photo_id;
+  const photoId = meta.data.shotId;
 
   const [displayPath, thumbPath] = momenObjectPaths(
     album.albumId,
@@ -474,6 +506,19 @@ export async function uploadMomenPhotoAction(
       p_bytes: display.size,
     },
   );
+  // 23505 = baris dengan id ini sudah ada → percobaan lain menang balapan.
+  // Fotonya tersimpan, jadi ini SUKSES, bukan kegagalan (lihat pra-cek di atas).
+  if (confirmErr?.code === "23505") {
+    const terpakai = await deviceShotCount(
+      admin,
+      album.albumId,
+      session.deviceId,
+    );
+    return {
+      status: "ok",
+      remaining: Math.max(0, album.quotaPerGuest - (terpakai ?? 0)),
+    };
+  }
   if (confirmErr) {
     reportHandledError(confirmErr, "momen.confirm", { albumId: album.albumId });
     await cleanup();

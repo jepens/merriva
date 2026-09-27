@@ -70,6 +70,8 @@ const ALBUM = "11111111-1111-4111-8111-111111111111";
 const OTHER_ALBUM = "99999999-9999-4999-8999-999999999999";
 const PHOTO = "22222222-2222-4222-8222-222222222222";
 const DEVICE = "33333333-3333-4333-8333-333333333333";
+/** Id jepretan dari klien: stabil lintas percobaan (idempotensi #46). */
+const SHOT = "44444444-4444-4444-8444-444444444444";
 const SLUG = "andi-sinta";
 
 /** Bentuk galat postgrest-js sungguhan (objek polos, bukan Error). */
@@ -90,6 +92,8 @@ function imageFile(magic: number[], type: string, name: string): File {
 }
 
 interface AdminOpts {
+  /** Baris `momen_photos` dengan id = shotId sudah ada (kiriman ulang). */
+  shotSudahAda?: boolean;
   invitationStatus?: string | null;
   albumId?: string | null;
   allowLibraryUpload?: boolean;
@@ -110,6 +114,7 @@ function makeAdmin(opts: AdminOpts = {}) {
     },
     confirm = { data: [{ result: "ok", remaining: 2 }], error: null },
     readError,
+    shotSudahAda = false,
   } = opts;
 
   const rpc = vi.fn((fn: string, _args: unknown) => {
@@ -137,6 +142,17 @@ function makeAdmin(opts: AdminOpts = {}) {
     const chain: Record<string, unknown> = {};
     chain.select = () => chain;
     chain.eq = () => chain;
+    if (table === "momen_photos") {
+      // Pra-cek idempotensi + hitungan jatah perangkat.
+      chain.maybeSingle = () =>
+        Promise.resolve({
+          data: shotSudahAda ? { id: SHOT } : null,
+          error: null,
+        });
+      chain.then = (ok: (v: unknown) => unknown) =>
+        Promise.resolve({ data: null, error: null, count: 1 }).then(ok);
+      return chain;
+    }
     chain.maybeSingle = () =>
       Promise.resolve(
         readError === table
@@ -151,6 +167,7 @@ function makeAdmin(opts: AdminOpts = {}) {
 
 function form(over: Record<string, string> = {}, magic = WEBP): FormData {
   const fd = new FormData();
+  fd.set("shotId", SHOT);
   fd.set("filterId", "hangat");
   fd.set("format", "webp");
   fd.set("source", "camera");
@@ -552,6 +569,60 @@ describe("uploadMomenPhotoAction — jalur sukses", () => {
  * tak bisa diulang, tetapi tombol "Kirim ulang" pada penolakan permanen (jatah
  * habis, album nonaktif, format ditolak) hanya memberi harapan palsu.
  */
+/**
+ * Idempotensi kirim ulang (DECISIONS #46 — koreksi review). Unggah yang MELEMPAR
+ * setelah server sempat menyimpan dulu digandakan oleh tombol "Kirim ulang":
+ * `momen_claim_upload` membuat id baru tiap panggilan, jadi fotonya masuk dua
+ * kali dan jatah tamu terpakai dua slot.
+ */
+describe("uploadMomenPhotoAction — kiriman ulang tak menggandakan", () => {
+  it("jepretan dengan id ini sudah ada → 'ok' tanpa claim, unggah, atau baris baru", async () => {
+    cookieValue.current = signFor(ALBUM);
+    const admin = makeAdmin({ shotSudahAda: true });
+    adminRef.current = admin;
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    expect(res).toMatchObject({ status: "ok" });
+    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(storage.upload).not.toHaveBeenCalled();
+  });
+
+  it("id jepretan dari KLIEN dipakai sebagai identitas foto & path", async () => {
+    cookieValue.current = signFor(ALBUM);
+    const admin = makeAdmin({
+      // Claim memberi id lain; yang dipakai harus tetap milik klien.
+      claim: {
+        data: [{ result: "ok", photo_id: PHOTO, remaining: 3 }],
+        error: null,
+      },
+    });
+    adminRef.current = admin;
+
+    await uploadMomenPhotoAction(SLUG, form());
+
+    const confirmCall = admin.rpc.mock.calls.find(
+      (c) => c[0] === "momen_confirm_photo",
+    );
+    const args = confirmCall?.[1] as Record<string, unknown>;
+    expect(args.p_photo_id).toBe(SHOT);
+    expect(args.p_storage_path).toContain(SHOT);
+  });
+
+  it("balapan: confirm menabrak primary key (23505) → SUKSES, bukan galat", async () => {
+    cookieValue.current = signFor(ALBUM);
+    adminRef.current = makeAdmin({
+      confirm: { data: null, error: { ...BOOM, code: "23505" } },
+    });
+
+    const res = await uploadMomenPhotoAction(SLUG, form());
+
+    // Fotonya tersimpan oleh percobaan lain; objek storage TIDAK dihapus.
+    expect(res).toMatchObject({ status: "ok" });
+    expect(storage.delete).not.toHaveBeenCalled();
+  });
+});
+
 describe("uploadMomenPhotoAction — penanda `retryable`", () => {
   const retryable = (r: Awaited<ReturnType<typeof uploadMomenPhotoAction>>) =>
     r.status === "error" ? r.retryable === true : null;

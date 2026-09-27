@@ -111,6 +111,47 @@ describe("RsvpForm — pulih dari penolakan", () => {
     expect(resetCount()).toBe("1");
   });
 
+  it("penolakan SEBELUM verifikasi (invalid/rate) tak membuang token yang masih sah", async () => {
+    // Urutan server: Zod → honeypot → rate limit → Turnstile → DB. Me-reset di
+    // sini membuang tantangan yang baik, lalu kiriman perbaikan berikutnya
+    // ditolak "Verifikasi anti-bot gagal" karena token barunya belum tiba.
+    submitRsvpAction.mockResolvedValueOnce({
+      status: "error",
+      reason: "invalid",
+      message: t.invalid,
+    });
+    render(<RsvpForm slug={SLUG} />);
+    isiRsvp();
+
+    fireEvent.click(screen.getByRole("button", { name: t.submit }));
+    await screen.findByText(t.invalid);
+    expect(resetCount()).toBe("0");
+
+    submitRsvpAction.mockResolvedValueOnce({
+      status: "error",
+      reason: "rate",
+      message: t.rateLimited,
+    });
+    fireEvent.click(screen.getByRole("button", { name: t.submit }));
+    await screen.findByText(t.rateLimited);
+    expect(resetCount()).toBe("0");
+  });
+
+  it("penolakan SESUDAH verifikasi (captcha/ditutup/galat) tetap minta tantangan baru", async () => {
+    submitRsvpAction.mockResolvedValueOnce({
+      status: "error",
+      reason: "captcha",
+      message: t.captchaFailed,
+    });
+    render(<RsvpForm slug={SLUG} />);
+    isiRsvp();
+
+    fireEvent.click(screen.getByRole("button", { name: t.submit }));
+
+    await screen.findByText(t.captchaFailed);
+    expect(resetCount()).toBe("1");
+  });
+
   it("berhasil → tak ada reset, form berganti pesan sukses", async () => {
     submitRsvpAction.mockResolvedValue({ status: "success", moderated: false });
     render(<RsvpForm slug={SLUG} />);

@@ -86,6 +86,12 @@ interface PendingShot {
 }
 
 interface Variants {
+  /**
+   * Identitas jepretan ini, dibuat SEKALI saat dipanggang dan dikirim ulang apa
+   * adanya di tiap percobaan → server bisa mengenali kiriman yang sama dan tak
+   * menggandakan foto/jatah (DECISIONS #46).
+   */
+  shotId: string;
   displayBlob: Blob;
   thumbBlob: Blob;
   format: EncodedFormat;
@@ -144,6 +150,7 @@ async function bakeAndEncode(
   const { blob: displayBlob, format } = await encodeCanvas(display, 0.82);
   const { blob: thumbBlob } = await encodeCanvas(thumb, 0.75);
   return {
+    shotId: crypto.randomUUID(),
     displayBlob,
     thumbBlob,
     format,
@@ -371,8 +378,9 @@ export function MomenCamera(props: MomenCameraProps) {
       }
     } catch {
       // Aksi MELEMPAR (jaringan venue putus) — tanpa ini tamu hanya melihat
-      // tombol kembali aktif tanpa satu pun penjelasan.
-      setError(c.error.generic);
+      // tombol kembali aktif tanpa satu pun penjelasan. Pesannya BUKAN "gagal
+      // menyimpan foto": di layar masuk belum ada satu pun jepretan.
+      setError(c.error.temporary);
       setTsToken("");
       setTsReset((n) => n + 1);
     } finally {
@@ -389,6 +397,7 @@ export function MomenCamera(props: MomenCameraProps) {
     const fd = new FormData();
     // Filter dari JEPRETANNYA (bukan `selectedFilter` saat ini): tamu bisa
     // menyentuh strip filter sambil panel galat terbuka.
+    fd.set("shotId", v.shotId);
     fd.set("filterId", filterId);
     fd.set("format", v.format);
     // Asal foto dideklarasikan agar server bisa menegakkan `allow_library_upload`.
@@ -575,6 +584,20 @@ export function MomenCamera(props: MomenCameraProps) {
    * (✕) memindahkan tamu ke "habis"/"masuk", dan dulu tombol kirim ulang hanya
    * hidup di layar kamera — fotonya ikut terkubur di sana (koreksi review #46).
    */
+  /**
+   * Pesan galat untuk layar TERANG (masuk/habis/galeri). Panel merah & toast
+   * hanya hidup di layar kamera, jadi tanpa baris ini penolakan PERMANEN atas
+   * kirim ulang — jatah habis, album diarsipkan host, sesi kedaluwarsa —
+   * membuat baris jepretan lenyap tanpa satu pun penjelasan, persis seperti
+   * kiriman yang berhasil, padahal blob-nya baru saja dilepas (review #46).
+   */
+  const errorLine =
+    error && error !== pending?.message ? (
+      <div className="mn-err" role="alert">
+        {error}
+      </div>
+    ) : null;
+
   const pendingRow = pending ? (
     <div className="mn-pending" role="status">
       {/* Pesan kegagalan TERAKHIR jepretan ini. Panel galat & toast hanya hidup
@@ -671,7 +694,7 @@ export function MomenCamera(props: MomenCameraProps) {
                 {c.habis.toGallery}
               </button>
             ) : null}
-            {error ? <div className="mn-err">{error}</div> : null}
+            {errorLine}
             {pendingRow}
             <div className="mn-note">
               <span className="mn-dot" /> {c.masuk.turnstileNote}
@@ -714,9 +737,12 @@ export function MomenCamera(props: MomenCameraProps) {
               {c.camera.uploading}
             </div>
           ) : null}
-          {error || pending ? (
+          {/* Saat kirim ulang sedang berjalan, `error` sudah dibersihkan tetapi
+              jepretannya masih tertunda: tanpa teks cadangan ini panelnya
+              menjadi kotak merah kosong berisi tombol saja. */}
+          {(error ?? pending?.message) ? (
             <div className="mn-camerr" role="alert">
-              {error}
+              {error ?? pending?.message}
               {pending ? (
                 <>
                   {error && error !== pending.message ? (
@@ -845,6 +871,7 @@ export function MomenCamera(props: MomenCameraProps) {
       >
         <div className="mn-emoji">🎞️</div>
         <h2>{c.habis.title}</h2>
+        {errorLine}
         {pendingRow}
         {phase === "revealed" ? (
           <>
@@ -882,6 +909,7 @@ export function MomenCamera(props: MomenCameraProps) {
           <p>{c.gallery.sub(totalPhotos, props.photographers)}</p>
           {/* Album reveal-instan: ✕ dari kamera mendarat DI SINI, jadi jepretan
               tertunda harus bisa dikirim ulang dari layar ini juga. */}
+          {errorLine}
           {pendingRow}
         </div>
         {photos.length === 0 ? (

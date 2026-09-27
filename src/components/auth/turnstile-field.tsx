@@ -10,14 +10,18 @@ import { TurnstileWidget } from "@/components/public/guestbook/turnstile-widget"
  * melewati verifikasi). Token disimpan di hidden input `name="turnstile"` yang
  * dibaca Server Action. Site key `NEXT_PUBLIC_*` di-inline ke bundel klien.
  */
-export function TurnstileField() {
+export function TurnstileField({ resetKey = 0 }: { resetKey?: number }) {
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const [token, setToken] = useState("");
   if (!siteKey) return null;
   return (
     <div>
       <input type="hidden" name="turnstile" value={token} />
-      <TurnstileWidget siteKey={siteKey} onToken={setToken} />
+      <TurnstileWidget
+        siteKey={siteKey}
+        onToken={setToken}
+        resetKey={resetKey}
+      />
     </div>
   );
 }
