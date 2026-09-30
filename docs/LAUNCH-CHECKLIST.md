@@ -29,7 +29,11 @@ uji lapangan). Checklist ini mengurutkannya dari nol → go-live.
 - [ ] **Pakasir**: project production; set webhook URL → `https://merriva.id/api/webhooks/pakasir`; isi `PAKASIR_PROJECT_SLUG` + `PAKASIR_API_KEY`
 - [ ] **Resend**: verifikasi domain (SPF/DKIM); `RESEND_API_KEY` + `EMAIL_FROM` (alamat di domain terverifikasi)
 - [ ] **Turnstile**: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`
-- [ ] **Email verifikasi signup** aktif via Supabase Auth (bawaan). _(Opsional: arahkan SMTP Supabase Auth → Resend agar email verifikasi seragam dengan kuitansi/reminder.)_
+- [ ] **Custom SMTP Supabase Auth → Resend** — **WAJIB, bukan opsional** (Auth → Emails → SMTP Settings; host `smtp.resend.com`, port `465`, user `resend`, password = `RESEND_API_KEY`, sender = `EMAIL_FROM`).
+  - Alasannya bukan sekadar kuota: SMTP bawaan Supabase **menolak mengirim ke alamat di luar anggota tim project** ("not meant for production use"), jadi tanpa ini deliverability ke pelanggan = **0%**, bukan 2 email/jam. Verifikasi email wajib (`Confirm email` aktif) → pendaftar tak akan pernah bisa masuk.
+  - Kegagalannya SENYAP di sisi pengguna: `requestPasswordResetAction` sengaja selalu menjawab sukses generik (anti-enumerasi), jadi pengguna melihat "tautan sudah dikirim" walau tak ada yang terkirim. Jejaknya hanya ada di Sentry (`area: auth.signup` / `auth.reset`) → **isi `NEXT_PUBLIC_SENTRY_DSN` sebelum fase ini**, kalau tidak kegagalannya tetap tak terlihat.
+  - Verify: daftar **3 akun uji dengan alamat di luar anggota tim project** dalam satu jam → ketiganya menerima email dari domain sendiri → klik tautan → berhasil masuk. Lalu `select confirmation_sent_at, email_confirmed_at from auth.users` — keduanya harus terisi. (Per 2026-10-01 `auth.users` hanya berisi 1 admin buatan manual: jalur ini **belum pernah** berhasil — AUDIT-2026-10-01 A1.)
+- [ ] **Confirm email** aktif (Auth → Providers → Email) — prasyarat SPEC §4.2; setel SETELAH Custom SMTP jalan.
 - [ ] **Leaked Password Protection** aktif (Supabase → Auth → Policies) — tolak password yang pernah bocor (HaveIBeenPwned). _Temuan security advisor; toggle dashboard, bukan kode._
 
 ## Fase 3 — Cron (Easypanel scheduled jobs)

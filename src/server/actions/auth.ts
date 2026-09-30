@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { copy } from "@/lib/copy";
 import { appUrl } from "@/lib/env";
+import { reportHandledError } from "@/lib/observability";
 import { normalizeIndonesianPhone } from "@/lib/phone";
 import {
   checkClientRateLimit,
@@ -92,6 +93,16 @@ export async function signUpAction(
       error.code === "user_already_exists" ||
       /already.*regist/i.test(error.message);
     if (!alreadyRegistered) {
+      // Anti-enumerasi mengatur JAWABAN ke pengguna, bukan jejak diagnostik di
+      // server. Tanpa baris ini kegagalan kirim email verifikasi tak terlihat
+      // di mana pun: pendaftar hanya melihat pesan generik dan tim tak pernah
+      // tahu funnel akuisisi mati (AUDIT-2026-10-01 A1 — jalur daftar belum
+      // pernah sekali pun berhasil di proyek produksi).
+      // `extra` ikut terkirim ke Sentry → JANGAN memuat email atau nama.
+      reportHandledError(error, "auth.signup", {
+        code: error.code ?? null,
+        status: error.status ?? null,
+      });
       return errorState(copy.auth.genericAuthError);
     }
   }
@@ -156,6 +167,13 @@ export async function signInWithGoogleAction(
   });
 
   if (error || !data?.url) {
+    // Provider Google salah konfigurasi (redirect URI, client secret kedaluwarsa)
+    // tampak identik dengan "pengguna membatalkan" bagi tim: keduanya berakhir
+    // di `?error=oauth`. Laporkan agar salah-konfigurasi punya jejak.
+    reportHandledError(error ?? new Error("oauth: url kosong"), "auth.oauth", {
+      code: error?.code ?? null,
+      status: error?.status ?? null,
+    });
     redirect("/masuk?error=oauth");
   }
   redirect(data.url);
@@ -206,9 +224,21 @@ export async function requestPasswordResetAction(
 
   if (limitOk) {
     const supabase = await createSupabaseServerClient();
-    await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-      redirectTo: `${appUrl}/auth/confirm?next=/reset-password/ubah`,
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      parsed.data.email,
+      { redirectTo: `${appUrl}/auth/confirm?next=/reset-password/ubah` },
+    );
+    // Jawaban ke pengguna TETAP sukses generik (anti-enumerasi), tetapi
+    // kegagalannya wajib meninggalkan jejak. Bila Custom SMTP proyek belum
+    // disetel, Supabase MENOLAK mengirim ke alamat di luar anggota tim — dan
+    // tanpa baris ini pengguna melihat "tautan sudah dikirim" selamanya sementara
+    // tak ada satu pun sinyal ke tim (AUDIT-2026-10-01 A1).
+    if (error) {
+      reportHandledError(error, "auth.reset", {
+        code: error.code ?? null,
+        status: error.status ?? null,
+      });
+    }
   }
 
   // Selalu sukses generik → hindari enumerasi email terdaftar.
@@ -240,6 +270,13 @@ export async function updatePasswordAction(
     password: parsed.data.password,
   });
   if (error) {
+    // Kata sandi baru ditolak GoTrue (mis. kebijakan panjang/kebocoran di sisi
+    // server, sesi recovery kedaluwarsa) hanya tampak sebagai "coba lagi" bagi
+    // pengguna — jejaknya dibutuhkan untuk membedakan kebijakan dari kerusakan.
+    reportHandledError(error, "auth.update-password", {
+      code: error.code ?? null,
+      status: error.status ?? null,
+    });
     return errorState(copy.auth.genericAuthError);
   }
 

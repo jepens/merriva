@@ -842,6 +842,69 @@ Kelima temuan high semuanya di **perubahan idempotensi yang baru saja dibuat di 
 
 - **Catatan proses:** review adversarial pertama untuk #46 dibatalkan di tengah jalan — agennya **mengedit file sumber** untuk menguji mutasinya sendiri (tiga file sempat ter-revert). Pohon kerja dipulihkan dan diperiksa ulang terhadap diff; review diulang dengan instruksi read-only sesudah commit.
 
+## #47 — 2026-10-01 · Custom SMTP Supabase naik jadi WAJIB; kegagalan aksi auth berhenti senyap
+
+**Keputusan:** (a) `docs/LAUNCH-CHECKLIST.md` menaikkan Custom SMTP → Resend dari
+_"(Opsional)"_ menjadi **butir wajib Fase 2** dengan uji terima eksplisit;
+(b) empat titik kegagalan di `src/server/actions/auth.ts` yang sebelumnya tak
+meninggalkan jejak apa pun kini memanggil `reportHandledError` — `auth.signup`,
+`auth.reset`, `auth.update-password`, `auth.oauth`. **Jawaban ke pengguna tidak
+berubah sedikit pun**: anti-enumerasi tetap utuh.
+
+**Alasan:** Audit standar SaaS (`audits/AUDIT-2026-10-01-standar-saas.md`, temuan
+A1) menemukan bahwa jalur daftar → verifikasi → masuk **belum pernah sekali pun
+berhasil di proyek produksi** — `auth.users` berisi tepat satu baris, admin yang
+dibuat manual (`confirmation_sent_at` NULL, `email_confirmed_at` sama persis
+dengan `created_at`). Kriteria terima SPEC §4.2 belum pernah dijalankan terhadap
+cloud.
+
+Penyebab paling mungkin bukan soal kuota. Dokumentasi Supabase menyatakan SMTP
+bawaannya **menolak mengirim ke alamat yang bukan anggota tim project**, jadi
+untuk produk self-service deliverability ke pelanggan = **0%**, bukan 2 email/jam
+— dan karena `Confirm email` aktif, pendaftar tak akan pernah bisa masuk.
+`docs/AUTH-SETUP.md` sebelumnya menyebut alasannya hanya "dibatasi rate-nya",
+yang membuat butir ini terbaca sebagai optimasi, bukan prasyarat. Itu ikut
+diperbaiki.
+
+Yang membuatnya berbahaya adalah ketiadaan sinyal, bukan kegagalannya:
+`requestPasswordResetAction` sengaja **selalu** menjawab sukses generik demi
+anti-enumerasi (#39), sehingga layar berbunyi "tautan sudah dikirim" walau tak
+ada yang terkirim; `signUpAction` menjawab pesan generik. Keduanya benar sebagai
+keputusan keamanan — yang hilang murni jejak diagnostiknya, persis kelas yang
+sudah ditutup `reportHandledError` di jalur pembayaran & tamu (KUA-4, #46).
+**Anti-enumerasi mengatur jawaban ke pengguna, bukan telemetri server.**
+
+**Ditolak:**
+- *Menambah `console.warn`/`console.error`* — pola yang justru dikritik audit di
+  `src/server/email/notify.ts`: komentarnya mengklaim "Sentry menangkap console",
+  padahal tak ada `captureConsoleIntegration` di ketiga `Sentry.init`, sehingga
+  jejaknya hanya jadi baris stdout yang lenyap saat redeploy.
+- *Melaporkan kegagalan `signInAction`* — kata sandi salah adalah galat pengguna
+  yang wajar, bukan kerusakan sistem; melaporkannya akan membanjiri Sentry.
+- *Melaporkan "email sudah terdaftar"* — itu jalur normal anti-enumerasi, bukan
+  kegagalan. Mutan M6 menguji tepat ini.
+- *Memasukkan email ke `extra`* — `extra` ikut terkirim ke Sentry. Hanya `code`
+  dan `status` yang dikirim; mutan M5 (menyuntikkan `email` ke `extra`) dipakai
+  membuktikan assertion negatifnya benar-benar menggigit.
+
+**Konsekuensi:**
+- Telemetri ini **no-op selama `NEXT_PUBLIC_SENTRY_DSN` kosong**. Jadi A1 belum
+  benar-benar tertutup sampai DSN diisi — checklist kini menyatakan itu sebagai
+  prasyarat fase, bukan catatan kaki. Ini bersinggungan dengan butir terbuka #46
+  (volume tangkap Sentry tanpa sampling) yang tetap ditunda.
+- Setelan Custom SMTP hidup di dashboard Supabase cloud, **tidak ter-versioning
+  di repo**. `supabase/config.toml` hanya mengatur stack lokal (`project_id`,
+  port 54321, `[local_smtp]` mail-catcher) dan **tidak** membuktikan apa pun
+  tentang produksi — kekeliruan yang sempat dibuat auditor putaran pertama dan
+  dikoreksi penguji.
+- Aksi auth sebelumnya **tidak punya satu pun test**. `tests/unit/auth-action-errors.test.ts`
+  (9 tes) menutup itu sekaligus mengunci invarian anti-enumerasi, sehingga
+  "memperbaiki UX pesan sukses" kelak akan menjatuhkan test, bukan lolos diam-diam.
+- Uji mutasi: 7 mutan, **7 merah** (baseline diverifikasi `returncode 0` pada
+  invokasi yang sama, agar "mutan mati" tak tertukar dengan runner yang rusak).
+
+---
+
 ---
 
 ## Template entri baru
