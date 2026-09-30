@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { SupportContact } from "@/components/support-contact";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
@@ -156,6 +157,7 @@ export function MomenPaymentPoller({
           amountIdr={amountIdr}
           orderCode={orderCode}
         />
+        <SupportContact orderCode={orderCode} />
         <Link
           href="/dashboard"
           className={buttonVariants({ variant: "outline" })}
@@ -188,6 +190,9 @@ export function MomenPaymentPoller({
             {c.back}
           </Link>
         </div>
+        {/* State ini tak merender `Summary`, jadi kode pesanan tak ada di
+            layar — `SupportContact` membawanya sendiri ke mailto. */}
+        <SupportContact orderCode={orderCode} />
       </StatusCard>
     );
   }
@@ -219,6 +224,7 @@ export function MomenPaymentPoller({
             {c.back}
           </Link>
         </div>
+        <SupportContact orderCode={orderCode} />
       </StatusCard>
     );
   }

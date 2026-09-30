@@ -4,6 +4,7 @@ import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { SupportContact } from "@/components/support-contact";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
@@ -177,6 +178,7 @@ export function PaymentStatusPoller({
           amountIdr={amountIdr}
           orderCode={orderCode}
         />
+        <SupportContact orderCode={orderCode} />
         <Link
           href="/dashboard"
           className={buttonVariants({ variant: "outline" })}
@@ -209,6 +211,9 @@ export function PaymentStatusPoller({
             {c.back}
           </Link>
         </div>
+        {/* State `error` sengaja TIDAK merender OrderSummary, jadi kode order
+            tak ada di layar — `SupportContact` membawanya sendiri ke mailto. */}
+        <SupportContact orderCode={orderCode} />
       </StatusCard>
     );
   }
@@ -240,6 +245,7 @@ export function PaymentStatusPoller({
             {c.back}
           </Link>
         </div>
+        <SupportContact orderCode={orderCode} />
       </StatusCard>
     );
   }

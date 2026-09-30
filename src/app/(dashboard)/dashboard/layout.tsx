@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { SupportContact } from "@/components/support-contact";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { signOutAction } from "@/server/actions/auth";
@@ -20,12 +21,20 @@ export default async function DashboardLayout({
           <Link href="/dashboard" className="font-semibold tracking-tight">
             {copy.brand.name}
           </Link>
-          <nav className="flex items-center gap-1 text-sm">
+          {/* `flex-wrap`: brand + 3 tautan + Keluar meluber di lebar 360px,
+              ukuran layar mayoritas pengguna produk ini. */}
+          <nav className="flex flex-wrap items-center gap-1 text-sm">
             <Link
               href="/dashboard"
               className={buttonVariants({ variant: "ghost", size: "sm" })}
             >
               {copy.dashboard.navInvitations}
+            </Link>
+            <Link
+              href="/dashboard/pesanan"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              {copy.dashboard.navOrders}
             </Link>
             <Link
               href="/dashboard/profil"
@@ -42,6 +51,11 @@ export default async function DashboardLayout({
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+      {/* Dashboard sebelumnya tak punya footer sama sekali — tak ada satu pun
+          jalan ke manusia dari dalam produk (AUDIT-2026-10-01 A5). */}
+      <footer className="mx-auto max-w-5xl px-4 pb-8">
+        <SupportContact variant="line" />
+      </footer>
     </div>
   );
 }

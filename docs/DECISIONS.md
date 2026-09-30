@@ -905,6 +905,97 @@ sudah ditutup `reportHandledError` di jalur pembayaran & tamu (KUA-4, #46).
 
 ---
 
+## #48 — 2026-10-01 · Riwayat pesanan `/dashboard/pesanan` + satu saluran dukungan; `orders` dibaca kolom-per-kolom
+
+**Keputusan:** (a) halaman `/dashboard/pesanan` menampilkan SELURUH order pemilik
+(aktivasi, perpanjangan, add-on Album Momen), terbaru dulu, berhalaman 20;
+(b) `copy.support` menjadi satu-satunya sumber alamat dukungan, dirender di footer
+dashboard, boundary galat dashboard, dan kartu `review`/`timeout`/`error` pada
+KEDUA poller pembayaran; (c) bacaan `orders` menyebut kolomnya satu per satu —
+`select("*")` dilarang di jalur pelanggan; (d) `SPEC.md` §4.8 diperluas lebih dulu.
+**Tanpa migrasi.**
+
+**Alasan.** Audit A4/A5 (`audits/AUDIT-2026-10-01-standar-saas.md`). Satu-satunya
+bacaan order dari sisi pelanggan ada di `dashboard/undangan/[id]/bayar/page.tsx`
+dengan `.limit(1)`, pada halaman yang tak bisa dijangkau lagi dari UI setelah
+membayar — perpanjangan dan add-on menimbun order aktivasi pertama. Jadi satu-satunya
+bukti transaksi adalah email kuitansi sekali kirim tanpa retry, sementara kebijakan
+refund justru MEWAJIBKAN pelanggan menyebut kode order yang hanya hidup di email itu.
+Bersamaan dengan itu, `copy.paymentStatus.reviewBody` dan `copy.momen.payment.reviewBody`
+menyuruh "hubungi kami" TANPA alamat apa pun — tepat pada layar yang muncul ketika
+uang pelanggan sudah keluar tetapi undangannya belum aktif.
+
+**Temuan keamanan yang muncul saat merancang, bukan saat mengaudit:** §6b
+`init_schema.sql:500-518` mencabut hak per-kolom untuk `profiles`, `invitations`, dan
+`rsvps` — dan **melewatkan `orders`**. Grant SELECT `authenticated` di tabel itu masih
+mencakup seluruh kolom, termasuk `raw_notification` yang berisi payload mentah Pakasir
+pada jalur webhook dan `{"source":"admin_manual","admin_id":"<uuid>"}` pada aktivasi
+manual. `ORDER_COLUMNS` adalah satu konstanta yang dipakai setiap bacaan, dan mutan
+`select("*")` diuji merah. Konsekuensi lanjutan yang dicatat: **jangan pernah menambah
+policy UPDATE pada `orders`** — satu policy longgar langsung membuat pelanggan bisa
+menulis ulang `status` dan `amount_idr` miliknya sendiri.
+
+**Ditolak:**
+- *Klien service_role untuk `orders`* — `orders_select` sudah mengizinkan pemilik.
+  Admin client di sini HANYA menyentuh `packages`. Keduanya hidup di satu fungsi
+  (`attachRefs`), jadi satu kelalaian `.eq("user_id", …)` di jalur admin akan
+  membocorkan order seluruh pelanggan; test mengunci bahwa `orders` tak pernah
+  disentuh klien admin.
+- *Membaca `packages` dengan klien sesi* — `packages_select_public` =
+  `using (is_active or is_admin())`, jadi paket yang dinonaktifkan saat pemilik
+  mengganti harga mengembalikan NULL SECARA SENYAP: riwayat lama kehilangan nama paket
+  DAN kehilangan `kind`, sehingga add-on salah label. Preseden identik:
+  `src/server/momen/orders.ts`.
+- *Menyimpulkan jenis order dari nominal* — `premium` dan `momen_50` sama-sama
+  Rp199.000. Label jenis HANYA dari `packages.kind`.
+- *Menulis "Perpanjangan"* — aktivasi pertama, bayar-ulang, dan perpanjangan
+  menghasilkan baris `orders` yang bentuknya persis sama. Menyimpulkannya dari urutan
+  `created_at` akan salah begitu admin memakai `admin_extend_invitation` (tak membuat
+  order sama sekali).
+- *`wibDate`* — `admin/order/page.tsx` memakainya sehingga dua order di hari yang sama
+  tampil identik, persis skenario bayar-ulang yang membuat halaman ini dibutuhkan.
+  Halaman pelanggan memakai `wibDateTime`.
+- *Membangun ulang link pembayaran Pakasir di riwayat* — `getPaymentGateway()` MELEMPAR
+  bila `PAKASIR_PROJECT_SLUG` kosong, dan itu akan mematikan seluruh halaman. Riwayat
+  menautkan ke `/bayar` yang sudah ada.
+- *Migrasi* — seluruh data yang ditampilkan sudah ada, `orders_user_idx` sudah ada, dan
+  `orders_select` sudah mengizinkan pemilik. Yang sengaja TIDAK ditambahkan dan
+  konsekuensinya diterima: `updated_at` (waktu transisi ke `expired`/`refunded` tak
+  terekam), snapshot nama paket (rename paket menulis ulang sejarah), dan penanda siklus.
+
+**Konsekuensi:**
+- Halaman ini memakai `dataOrThrow`, **berbeda** dari halaman dashboard lain yang
+  memakai `data ?? []`. Disengaja: halaman yang gunanya membuktikan pembayaran tak boleh
+  menjawab "belum ada pesanan" saat DB bermasalah — kebohongan itu persis yang membuat
+  pelanggan mengira uangnya hilang. Karena itu `(dashboard)/dashboard/error.tsx` masuk
+  commit yang sama; tanpa boundary itu galatnya naik ke `global-error.tsx` yang mengganti
+  seluruh dokumen sehingga header, navigasi, dan kontak dukungan ikut hilang.
+- Riwayat **tidak** menjanjikan kelengkapan, dan copy-nya sengaja tak memakai kata
+  "semua": `orders.invitation_id` NOT NULL dengan `on delete cascade`, dan pemilik boleh
+  hard-delete undangan `draft` — order `pending` bisa ikut terhapus. Order **lunas** aman
+  (selalu membuat undangan `active`/`suspended` yang tak bisa dihapus, dan purge retensi
+  secara eksplisit mempertahankan `orders`).
+- `admin_extend_invitation` tak membuat baris order → masa aktif bisa bertambah tanpa
+  jejak di riwayat. Sebaliknya `admin_activate_invitation` membuat order
+  `payment_method='manual'` walau uangnya bergerak di luar sistem; labelnya menjelaskan itu.
+- Status `failed` dan `refunded` dirender lengkap tetapi **tak pernah ditulis kode mana
+  pun**. Jangan ada yang menyimpulkan dari halaman ini bahwa alur refund sudah ada
+  (temuan A3 masih terbuka).
+- `halo@merriva.id` kini dijanjikan dari dalam produk di banyak tempat → **wajib mailbox
+  nyata yang dijaga sebelum launch**, sejenis dependensi Custom SMTP (#47). Bila belum,
+  kita menjanjikan kanal yang mem-bounce — lebih buruk daripada keadaan sebelumnya.
+- Uji mutasi: 16 mutan, **16 merah**, baseline diverifikasi `returncode 0` pada invokasi
+  yang sama. Termasuk M5 (kembali ke perilaku `.limit(1)` lama), M1 (`select("*")`),
+  M4 (paket dibaca klien sesi), M11 (kartu perhatian mengabaikan `kind`), dan M15
+  (string kosong diteruskan sebagai kode order).
+
+**Belum dikerjakan, menyusul di potongan berikutnya (A4 belum tertutup penuh):** halaman
+kuitansi `/dashboard/pesanan/[kode]` yang bisa dicetak, `replyTo` + footer email yang
+berhenti berkata "jangan membalas", dan tombol kirim-ulang kuitansi. Ketiganya sengaja
+tidak digabung agar tak ada tautan menggantung ke halaman yang belum ada.
+
+---
+
 ---
 
 ## Template entri baru

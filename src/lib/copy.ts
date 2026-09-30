@@ -2,6 +2,14 @@
  * Teks UI berbahasa Indonesia, terpusat (persiapan i18n). Lihat SPEC §9.
  * Seluruh string yang tampil ke pengguna sebaiknya berasal dari sini.
  */
+/**
+ * SATU-SATUNYA alamat dukungan pelanggan (AUDIT-2026-10-01 A5). Dipakai
+ * `copy.support` dan `copy.marketing.legal.contactEmail` agar alamatnya tak
+ * bisa bercabang diam-diam. Literal, bukan env: mengubahnya butuh deploy —
+ * disengaja, karena alamat ini ikut tercetak di dokumen yang disimpan pelanggan.
+ */
+const SUPPORT_EMAIL = "halo@merriva.id";
+
 export const copy = {
   brand: {
     name: "Merriva",
@@ -27,6 +35,28 @@ export const copy = {
     },
     save: "Simpan",
     cancel: "Batal",
+  },
+  // Kontak dukungan (AUDIT-2026-10-01 A5). Sebelumnya produk menyuruh "hubungi
+  // kami" di kartu pembayaran yang tertahan TANPA memberi alamat apa pun —
+  // tepat saat uang pelanggan sudah keluar tetapi undangannya belum aktif.
+  // Subject & body mailto memuat kode order karena kebijakan refund mewajibkan
+  // pelanggan menyebutkannya, sementara state `error` pada poller tidak
+  // merender ringkasan order sama sekali.
+  support: {
+    email: SUPPORT_EMAIL,
+    title: "Butuh bantuan?",
+    body: "Email tim Merriva. Kami menanggapi pada hari kerja, biasanya dalam 1x24 jam.",
+    bodyWithOrder:
+      "Email tim Merriva dan sebutkan kode order Anda. Bila acara sudah dekat, tulis juga tanggal acaranya agar kami dahulukan.",
+    cta: "Email tim Merriva",
+    emailLabel: "Atau kirim manual ke",
+    footerLine: "Ada kendala? Email kami di",
+    mailSubject: "Bantuan Merriva",
+    mailSubjectOrder: (orderCode: string) =>
+      `Bantuan Merriva — order ${orderCode}`,
+    mailBody: "Ceritakan kendala Anda di sini.",
+    mailBodyOrder: (orderCode: string) =>
+      `Kode order: ${orderCode}\n\nCeritakan kendala Anda di sini:\n`,
   },
   auth: {
     // Label & field
@@ -91,6 +121,7 @@ export const copy = {
     emailReadonlyHint: "Email tidak dapat diubah di sini.",
     navInvitations: "Undangan",
     navProfile: "Profil",
+    navOrders: "Pesanan",
     status: {
       draft: "Draf",
       pending_payment: "Menunggu pembayaran",
@@ -115,6 +146,55 @@ export const copy = {
     deleteError: "Gagal menghapus undangan. Coba lagi.",
     deleteNotAllowed:
       "Undangan yang masih aktif tidak bisa dihapus. Tunggu masa aktif berakhir.",
+    // Riwayat pesanan (AUDIT-2026-10-01 A4). Sebelumnya satu-satunya bacaan
+    // order dari sisi pelanggan memakai `.limit(1)` pada halaman yang tak bisa
+    // dijangkau lagi setelah membayar — perpanjangan & add-on menimbun order
+    // lama, dan kode order hanya hidup di satu email sekali kirim.
+    // Istilah dikunci: "pesanan" untuk halaman, "Kode order" untuk kodenya —
+    // kebijakan refund menyuruh pelanggan menyebut "kode order".
+    orders: {
+      title: "Pesanan & Kuitansi",
+      subtitle:
+        "Pembayaran Anda di Merriva, termasuk perpanjangan dan Album Momen.",
+      emptyTitle: "Belum ada pesanan",
+      emptyBody:
+        "Pembayaran pertama Anda akan muncul di sini beserta kode ordernya.",
+      emptyCta: "Ke daftar undangan",
+      colOrder: "Kode order",
+      colCreated: "Dibuat",
+      colPaidAt: "Dibayar",
+      colMethod: "Metode pembayaran",
+      colInvitation: "Undangan",
+      dash: "—",
+      statusLabel: {
+        pending: "Menunggu pembayaran",
+        paid: "Lunas",
+        expired: "Kedaluwarsa",
+        failed: "Gagal",
+        refunded: "Dana dikembalikan",
+      },
+      kindInvitation: "Paket undangan",
+      kindAddonMomen: "Add-on Album Momen",
+      kindUnknown: "Pesanan",
+      packageUnknown: "Paket tidak tercatat",
+      // HANYA nilai yang benar-benar diketahui. Channel lain diteruskan mentah
+      // oleh `formatPaymentMethod` — pada bukti pembayaran, kode vendor lebih
+      // jujur daripada label karangan.
+      methodLabel: {
+        qris: "QRIS",
+        manual: "Dicatat manual oleh tim Merriva",
+      } as Record<string, string>,
+      invitationDeleted: "Undangan ini sudah dihapus",
+      continuePayment: "Lanjutkan pembayaran",
+      checkStatus: "Cek status pembayaran",
+      manageMomen: "Kelola Album Momen",
+      attentionTitle: "Pembayaran sudah masuk, undangan belum aktif",
+      attentionBody:
+        "Satu pesanan Anda sudah lunas tetapi undangannya belum aktif. Biasanya ini selesai sendiri dalam beberapa menit. Bila acara Anda sudah dekat, hubungi kami sekarang dengan kode order di bawah — kami dahulukan.",
+      page: (n: number) => `Halaman ${n}`,
+      prev: "Sebelumnya",
+      next: "Berikutnya",
+    },
     // Moderasi ucapan & konfirmasi amplop (SPEC §4.6).
     guestbook: {
       title: "Ucapan & Amplop",
@@ -347,8 +427,11 @@ export const copy = {
       "Pembayaran tidak selesai dalam batas waktu. Silakan mulai lagi untuk mengaktifkan undangan.",
     activateAgain: "Aktifkan lagi",
     reviewTitle: "Pembayaran diterima — undangan sedang ditinjau",
+    // "Hubungi kami bila butuh bantuan." dibuang: kalimat itu menyuruh tanpa
+    // memberi alamat, tepat di layar yang muncul saat uang sudah keluar
+    // (AUDIT-2026-10-01 A5). Alamatnya kini dirender `SupportContact`.
     reviewBody:
-      "Terima kasih. Undangan Anda sedang ditinjau dan akan aktif setelah proses selesai. Hubungi kami bila butuh bantuan.",
+      "Terima kasih. Pembayaran Anda sudah kami terima dan undangan sedang ditinjau — biasanya selesai dalam 1x24 jam. Bila acara Anda sudah dekat, hubungi kami dengan kode order di bawah agar kami dahulukan.",
     noneTitle: "Belum ada pembayaran",
     noneBody: "Belum ada order pembayaran untuk undangan ini.",
     errorTitle: "Tidak dapat memeriksa status",
@@ -911,8 +994,11 @@ export const copy = {
         "Pesanan ini sudah tidak berlaku. Kamu bisa memilih paket lagi tanpa tertagih dua kali.",
       chooseAgain: "Pilih paket lagi",
       reviewTitle: "Perlu dicek tim kami",
+      // "kode pesanan di atas" dihindari: state `error` pada poller tidak
+      // merender ringkasan order, jadi kodenya belum tentu ada di layar. Kontak
+      // kini dirender `SupportContact` yang membawa kodenya sendiri.
       reviewBody:
-        "Pembayaranmu tercatat tetapi album belum terbentuk. Tim kami akan menindaklanjuti — hubungi kami dengan menyebut kode pesanan di atas bila album belum aktif dalam 1x24 jam.",
+        "Pembayaranmu tercatat tetapi album belum terbentuk. Tim kami akan menindaklanjuti. Bila album belum aktif dalam 1x24 jam, hubungi kami lewat kontak di bawah.",
       timeoutTitle: "Masih menunggu konfirmasi",
       timeoutBody:
         "Pembayaran belum terkonfirmasi sampai sekarang. Album tetap akan aktif otomatis begitu pembayaran diterima — kamu boleh menutup halaman ini.",
@@ -1508,7 +1594,7 @@ export const copy = {
     // Halaman legal. Ketentuan refund adalah draf standar produk digital —
     // pemilik wajib meninjau/menyesuaikan (SPEC §11: refund kasus per kasus).
     legal: {
-      contactEmail: "halo@merriva.id",
+      contactEmail: SUPPORT_EMAIL,
       updated: "Terakhir diperbarui 31 Juli 2026",
       backHome: "Kembali ke beranda",
       contactHeading: "Hubungi kami",
@@ -1614,7 +1700,7 @@ export const copy = {
           {
             heading: "Cara mengajukan",
             body: [
-              "Kirim email ke alamat kontak di bawah, sertakan kode order dan penjelasan singkat, paling lambat 7 hari sejak pembayaran.",
+              "Kirim email ke alamat kontak di bawah, sertakan kode order dan penjelasan singkat, paling lambat 7 hari sejak pembayaran. Kode order bisa Anda lihat kapan saja di menu Pesanan pada dashboard.",
               "Kami menanggapi setiap permintaan dalam 3 hari kerja.",
             ],
           },
