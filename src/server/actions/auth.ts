@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { isFreshEmailGrant } from "@/lib/auth/email-grant";
 import { copy } from "@/lib/copy";
 import { appUrl } from "@/lib/env";
 import { reportHandledError } from "@/lib/observability";
@@ -266,6 +267,30 @@ export async function updatePasswordAction(
   } = await supabase.auth.getUser();
   if (!user) {
     return errorState(copy.auth.genericAuthError);
+  }
+
+  // Sebelumnya `getUser()` tak-null adalah SATU-SATUNYA syarat, sehingga sesi
+  // dashboard biasa pun lolos: siapa pun yang memegang perangkat yang masih
+  // login bisa mengganti kata sandi tanpa tahu yang lama, permanen dan tanpa
+  // notifikasi (AUDIT-2026-10-01 B1). Jalur TANPA kata sandi lama kini hanya
+  // untuk sesi yang baru lahir dari klik tautan email; sisanya diarahkan ke
+  // form ganti kata sandi di profil yang menuntut kata sandi saat ini.
+  const { data: klaim } = await supabase.auth.getClaims();
+  if (!isFreshEmailGrant(klaim?.claims?.amr, Math.floor(Date.now() / 1000))) {
+    return errorState(copy.auth.recoveryGrantMissing);
+  }
+
+  // Berbeda dari `signInAction` & `requestPasswordResetAction`, aksi ini dulu
+  // tak punya rate limit sama sekali.
+  if (
+    !(
+      await checkClientRateLimit("auth-update-pw", {
+        max: 10,
+        windowMs: 60_000,
+      })
+    ).ok
+  ) {
+    return errorState(copy.auth.rateLimited);
   }
 
   const { error } = await supabase.auth.updateUser({

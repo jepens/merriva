@@ -80,6 +80,10 @@ export const copy = {
     changePasswordSubtitle:
       "Masukkan kata sandi saat ini untuk memastikan ini benar-benar Anda.",
     changePasswordCta: "Ubah kata sandi",
+    // Ditampilkan bila /reset-password/ubah dibuka TANPA tautan email yang
+    // segar — mis. oleh sesi yang sudah lama masuk di perangkat itu.
+    recoveryGrantMissing:
+      "Tautan atur ulang sudah kedaluwarsa atau halaman ini dibuka tanpa tautan email. Minta tautan baru, atau ubah kata sandi dari halaman Profil dengan memasukkan kata sandi saat ini.",
     fullName: "Nama lengkap",
     phone: "Nomor WhatsApp",
     phoneHint: "Opsional. Untuk notifikasi & pengingat (mis. 08123456789).",

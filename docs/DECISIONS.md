@@ -1131,6 +1131,71 @@ memindahkan apa pun) — ketiganya ditulis ulang sampai benar-benar menguji.
 
 ---
 
+## #51 — 2026-10-01 · `/reset-password/ubah` menuntut tautan email segar; GoTrue menulis `otp`, BUKAN `recovery`
+
+**Keputusan:** `updatePasswordAction` hanya menerima sesi yang lahir dari klik tautan
+email dalam 30 menit terakhir, diuji lewat `isFreshEmailGrant()` atas klaim `amr` dari
+`supabase.auth.getClaims()`. Sesi lain diarahkan ke form ganti kata sandi di profil
+(#50) yang menuntut kata sandi saat ini. Aksi ini juga akhirnya mendapat rate limit.
+
+**Alasan.** Ini separuh temuan B1 yang #50 sengaja tinggalkan terbuka. Sebelum entri ini,
+`getUser()` tak-null adalah SATU-SATUNYA syarat: siapa pun yang memegang perangkat yang
+masih login bisa membuka URL itu dan mengganti kata sandi tanpa tahu yang lama — pemilik
+asli tersingkir permanen, tanpa notifikasi. Komentar di halamannya menyatakan "dibuka
+tanpa sesi recovery akan ditolak (getUser null)", dan komentar yang salah itulah yang
+menutupi celahnya selama berbulan-bulan. Komentarnya ikut dikoreksi.
+
+**Temuan yang mengubah seluruh rancangan, dan kenapa ini dicatat panjang.** #50 menunda
+tightening ini justru karena satu hal belum terverifikasi: apakah GoTrue menuliskan
+`recovery` ke `amr`. Dokumentasi Supabase ("JWT Claims Reference") mencantumkan
+`"recovery"` sebagai salah satu nilai `amr.method`, dan tipe `AMRMethod` di
+`@supabase/auth-js` memuatnya. Pengujian langsung terhadap proyek ini —
+`admin.generateLink({ type: "recovery" })` → `verifyOtp` pada klien sekali pakai →
+membaca payload JWT — menghasilkan:
+
+```
+amr : [{ "method": "otp", "timestamp": 1790835431 }]
+aal : aal1
+```
+
+**`recovery` tidak muncul sama sekali.** Mengikuti dokumentasi akan menghasilkan gerbang
+yang menolak SETIAP sesi recovery, yakni mengunci setiap pengguna dari pemulihan kata
+sandi — kegagalan jauh lebih parah daripada celah yang hendak ditutup, dan tak akan
+tertangkap test mana pun yang fixture-nya ditulis dari dokumentasi yang sama. Mutan G1
+(mengganti `otp` → `recovery`) kini merah, jadi kekeliruan itu tak bisa masuk diam-diam.
+
+`getClaims()` juga diverifikasi bentuknya: mengembalikan `{ claims, header, signature }`,
+`claims.sub` cocok dengan id pengguna, dan `claims.amr` berbentuk `AMREntry[]` **dengan
+timestamp** (bukan `string[]`).
+
+**Ditolak:**
+- *Mengikuti dokumentasi tanpa verifikasi* — lihat di atas. Satu skrip sekali pakai
+  mengubah tebakan jadi fakta; biayanya beberapa menit.
+- *Cookie bertanda tangan sendiri yang diset `/auth/confirm`* — rancangan cadangan di
+  #50. Tak jadi dipakai karena menuntut secret baru di `.env` (friksi pemilik, dan harus
+  gagal-tertutup bila kosong) sementara klaim `amr` sudah membawa informasi yang sama.
+- *Memeriksa `method` saja tanpa kesegaran* — `amr` menumpuk dan entri `otp` bertahan
+  setelah token refresh, jadi sesi yang lahir dari pemulihan berbulan-bulan lalu akan
+  jadi izin selamanya. Mutan G2 menguncinya.
+
+**Konsekuensi:**
+- Verifikasi email saat PENDAFTARAN juga menghasilkan `otp`, jadi pendaftar baru punya
+  jendela 30 menit tempat ia bisa mengganti kata sandi tanpa menyebut yang lama. Diterima
+  sadar: ia baru saja membuktikan kendali atas kotak masuknya, jadi bukan eskalasi.
+- Bentuk `string[]` (RFC-8176) diterima TANPA cek kesegaran. Bentuk itu tak teramati di
+  sini; menolaknya bila GoTrue kelak berganti bentuk akan mematikan pemulihan kata sandi.
+  Ini gagal-aman yang disengaja ke arah ketersediaan, dan dicatat agar tak dikira kelalaian.
+- Jendela 30 menit adalah satu-satunya angka yang disetel di sini
+  (`EMAIL_GRANT_MAX_AGE_SEC`). Tautan recovery Supabase sendiri punya masa berlaku sendiri;
+  gerbang ini menyempitkan, bukan menggantikannya.
+- **Masih belum ada:** email notifikasi "kata sandi Anda baru saja diubah". Itu menunggu
+  Custom SMTP (#47) dan kepastian mailbox dukungan; sampai itu ada, perubahan kata sandi
+  tetap tak memberi tahu pemilik akun.
+
+Uji mutasi: 6 mutan, 6 merah (baseline `returncode 0` diverifikasi).
+
+---
+
 ---
 
 ## Template entri baru

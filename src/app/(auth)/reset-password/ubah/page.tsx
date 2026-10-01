@@ -8,8 +8,15 @@ export const metadata: Metadata = { title: "Atur kata sandi baru" };
 
 /**
  * Halaman ini dijangkau setelah tautan recovery diklik → /auth/confirm menaruh
- * sesi recovery di cookie lalu redirect ke sini. Jika dibuka tanpa sesi recovery,
- * updatePasswordAction akan menolak (getUser null).
+ * sesinya di cookie lalu redirect ke sini.
+ *
+ * Komentar lama di sini menyatakan "dibuka tanpa sesi recovery akan ditolak
+ * (getUser null)" — itu SALAH, dan selama berbulan-bulan menutupi celah nyata:
+ * sesi dashboard biasa juga membuat `getUser()` tak-null, sehingga siapa pun
+ * yang memegang perangkat yang masih login bisa mengganti kata sandi di sini
+ * tanpa tahu yang lama. Penjagaannya kini ada di `updatePasswordAction`, yang
+ * menuntut sesi lahir dari klik tautan email yang masih segar
+ * (AUDIT-2026-10-01 B1, DECISIONS #51).
  */
 export default function UpdatePasswordPage() {
   return (

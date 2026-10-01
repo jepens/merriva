@@ -51,6 +51,7 @@ const { auth } = vi.hoisted(() => ({
     resetPasswordForEmail: vi.fn<() => Promise<AuthResult>>(),
     updateUser: vi.fn<() => Promise<AuthResult>>(),
     getUser: vi.fn<() => Promise<{ data: { user: unknown } }>>(),
+    getClaims: vi.fn<() => Promise<{ data: unknown }>>(),
   },
 }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -113,6 +114,16 @@ beforeEach(() => {
   auth.updateUser.mockReset();
   auth.getUser.mockReset();
   auth.getUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+  auth.getClaims.mockReset();
+  // Default: sesi yang baru lahir dari klik tautan email — bentuk NYATA yang
+  // dihasilkan `verifyOtp({ type: "recovery" })` pada proyek ini.
+  auth.getClaims.mockResolvedValue({
+    data: {
+      claims: {
+        amr: [{ method: "otp", timestamp: Math.floor(Date.now() / 1000) }],
+      },
+    },
+  });
 });
 
 describe("signUpAction — kegagalan kirim email verifikasi", () => {
@@ -232,6 +243,57 @@ describe("updatePasswordAction — penolakan GoTrue meninggalkan jejak", () => {
     expect(reportHandledError).toHaveBeenCalledTimes(1);
     expect(reportHandledError.mock.calls[0]![1]).toBe("auth.update-password");
     expect(extraTerakhir()).toEqual({ code: "weak_password", status: null });
+  });
+
+  it("sesi login biasa DITOLAK — inti celah pengambilalihan akun", async () => {
+    // Sebelumnya `getUser()` tak-null adalah satu-satunya syarat, jadi siapa
+    // pun yang memegang perangkat yang masih login bisa mengganti kata sandi
+    // di sini tanpa tahu yang lama.
+    auth.getClaims.mockResolvedValue({
+      data: {
+        claims: {
+          amr: [
+            { method: "password", timestamp: Math.floor(Date.now() / 1000) },
+          ],
+        },
+      },
+    });
+
+    const state = await updatePasswordAction(idleState, formSandiBaru());
+
+    expect(state).toEqual({
+      status: "error",
+      message: copy.auth.recoveryGrantMissing,
+    });
+    expect(auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("tautan email yang sudah basi ditolak", async () => {
+    auth.getClaims.mockResolvedValue({
+      data: {
+        claims: {
+          amr: [
+            { method: "otp", timestamp: Math.floor(Date.now() / 1000) - 7200 },
+          ],
+        },
+      },
+    });
+
+    const state = await updatePasswordAction(idleState, formSandiBaru());
+
+    expect(state.status).toBe("error");
+    expect(auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("sesi dari tautan email yang segar tetap boleh — pemulihan tak boleh rusak", async () => {
+    auth.updateUser.mockResolvedValue({ error: null });
+
+    await expect(
+      updatePasswordAction(idleState, formSandiBaru()),
+    ).rejects.toThrow("NEXT_REDIRECT");
+    expect(auth.updateUser).toHaveBeenCalledWith({
+      password: "kata-sandi-baru",
+    });
   });
 
   it("tanpa sesi → pesan generik TANPA laporan (bukan kerusakan, tautan kedaluwarsa)", async () => {
