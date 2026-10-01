@@ -1013,6 +1013,63 @@ membalas ke alamat yang mem-bounce, lebih buruk daripada keadaan sekarang.
 
 ---
 
+## #49 — 2026-10-01 · Tombol "lihat kata sandi", bukan kolom konfirmasi
+
+**Keputusan:** ketiga form kata sandi (daftar, masuk, atur ulang) memakai
+`PasswordInput` dengan tombol lihat/sembunyikan, dan syarat panjang ditampilkan
+sebagai hint statis **sebelum** submit. `registerSchema` **tidak** diberi field
+`confirm`.
+
+**Alasan.** Pertanyaan pemilik yang memulai audit ini: *"kenapa kata sandi tidak
+diverifikasi saat mendaftar? kenapa hanya 1x?"* Jawabannya ternyata inkonsistensi,
+bukan keputusan — `updatePasswordSchema` punya `confirm` + `.refine`, `registerSchema`
+tidak, dan `SPEC.md` §4.2 tak pernah menyebut keduanya. String `passwordConfirm:
+"Ulangi kata sandi"` bahkan sudah ada di `copy.ts` tetapi hanya dipakai di halaman reset.
+
+Tetapi menambah kolom kedua bukan perbaikan yang benar untuk produk ini. Halaman ini
+hidup di HP: mengetik kata sandi dua kali di keyboard ponsel kerap disiasati
+salin-tempel dari kolom pertama, sehingga salah ketiknya ikut tersalin dan kolom
+konfirmasi tak menangkap apa pun. NIST SP 800-63B §5.1.1.2 menganjurkan
+memperlihatkan kata sandi ketimbang memintanya dua kali.
+
+Cacat sebenarnya bukan "tidak ada konfirmasi" melainkan **tidak ada satu pun dari dua
+desain yang sah**: tak ada konfirmasi DAN tak ada tombol lihat. Pengguna mengetik buta,
+lalu salah ketiknya baru ketahuan saat login berikutnya dengan pesan "Email atau kata
+sandi salah" — yang justru mengarahkan dugaan ke email. Diperparah anti-enumerasi:
+mendaftar ulang menjawab "Akun dibuat. Kami mengirim tautan verifikasi" tanpa mengirim
+email apa pun.
+
+**Ditolak:**
+- *Menambah `confirm` ke `registerSchema`* — alasan di atas. Halaman reset tetap punya
+  `confirm` dan itu dibiarkan: di sana pengguna TIDAK bisa memakai jalur pemulihan
+  kedua kalinya dengan mudah, jadi biaya salah ketiknya berbeda.
+- *Indikator kekuatan (`zxcvbn` dsb.)* — dependency baru di jalur kritis demi sinyal
+  yang tak menolak apa pun. Yang benar-benar menahan kata sandi lemah adalah Leaked
+  Password Protection di sisi Supabase (butir LAUNCH-CHECKLIST yang masih terbuka,
+  temuan B5), bukan meter di klien.
+- *Hanya memperbaiki form pendaftaran* — halaman MASUK justru tempat korban salah-ketik
+  terjebak; tanpa tombol lihat di sana ia tetap tak bisa memeriksa apa yang diketiknya.
+
+**Konsekuensi:**
+- Tombolnya WAJIB `type="button"`. Tanpa itu ia menjadi tombol submit default di dalam
+  `<form>` dan menekan "lihat" justru mengirim formulir — pada halaman daftar itu berarti
+  membakar satu tantangan Turnstile. Mutan P2 menguji tepat ini.
+- `aria-label` berbunyi sebagai PERINTAH ("Tampilkan/Sembunyikan kata sandi") dan berubah
+  mengikuti keadaan, dengan `aria-pressed` sebagai status. Mutan P3 & P4 menguji keduanya
+  — label yang tak berubah lolos test naif karena tombolnya tetap ada.
+- Hint ditautkan lewat `aria-describedby` ke id dari `useId()`, bukan sekadar `<p>` di
+  bawahnya: pembaca layar harus mendengar syaratnya saat fokus di field, bukan setelah
+  melewatinya.
+- Nilai field bertahan saat `type` ditukar karena React tidak me-remount elemennya; bila
+  kelak komponen ini dipecah dua dan di-render bergantian, nilainya akan hilang saat
+  tombol ditekan. Dikunci test.
+- Uji mutasi: 8 mutan, 8 merah (baseline `returncode 0` diverifikasi).
+- **Belum dikerjakan (B5):** kebijakan kata sandi masih berhenti di panjang 8 tanpa
+  blocklist, dan Leaked Password Protection masih mati di dashboard Supabase. Tombol ini
+  memperbaiki salah-ketik, bukan kata sandi lemah — jangan tertukar.
+
+---
+
 ---
 
 ## Template entri baru

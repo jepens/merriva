@@ -64,6 +64,13 @@ export const copy = {
     password: "Kata sandi",
     passwordNew: "Kata sandi baru",
     passwordConfirm: "Ulangi kata sandi",
+    // Tombol lihat kata sandi (AUDIT-2026-10-01 B2). Dipakai sebagai
+    // `aria-label`, jadi harus berbunyi sebagai PERINTAH, bukan status.
+    passwordShow: "Tampilkan kata sandi",
+    passwordHide: "Sembunyikan kata sandi",
+    // Syarat ditampilkan SEBELUM submit — sebelumnya pengguna baru mengetahuinya
+    // dari pesan penolakan, setelah tantangan Turnstile terlanjur terpakai.
+    passwordHint: "Minimal 8 karakter.",
     fullName: "Nama lengkap",
     phone: "Nomor WhatsApp",
     phoneHint: "Opsional. Untuk notifikasi & pengingat (mis. 08123456789).",

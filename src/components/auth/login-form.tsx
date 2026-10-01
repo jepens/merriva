@@ -11,6 +11,7 @@ import { signInAction } from "@/server/actions/auth";
 import { idleState } from "@/server/actions/types";
 
 import { FieldError, FormAlert } from "./form-parts";
+import { PasswordInput } from "./password-input";
 
 export function LoginForm({ next }: { next?: string }) {
   const [state, formAction, pending] = useActionState(signInAction, idleState);
@@ -44,10 +45,9 @@ export function LoginForm({ next }: { next?: string }) {
             {copy.auth.forgotPassword}
           </Link>
         </div>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           aria-invalid={Boolean(fieldErrors?.password)}

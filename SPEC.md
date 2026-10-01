@@ -112,9 +112,9 @@ Halaman publik berisi value proposition, katalog tema (filter per kategori acara
 
 ### 4.2 Autentikasi & akun
 
-Supabase Auth: email+password (dengan verifikasi email) dan Google OAuth. Reset password via email. Profil minimal: nama, no. WhatsApp. Role: `client` (default) dan `admin` (di-set manual di database — tidak ada UI pendaftaran admin).
+Supabase Auth: email+password (dengan verifikasi email) dan Google OAuth. Reset password via email. Setiap field kata sandi punya tombol lihat/sembunyikan (bukan kolom konfirmasi — mayoritas pengguna mendaftar dari HP, tempat mengetik dua kali justru disiasati salin-tempel), dan syarat panjang ditampilkan sebelum submit, bukan sebagai pesan penolakan. Profil minimal: nama, no. WhatsApp. Role: `client` (default) dan `admin` (di-set manual di database — tidak ada UI pendaftaran admin).
 
-**Kriteria terima:** register→verifikasi→login berjalan di HP → Google OAuth berjalan → reset password berjalan → user tidak bisa mengakses data user lain (diverifikasi lewat test RLS) → sesi bertahan (refresh token) sehingga klien tidak sering dipaksa login ulang.
+**Kriteria terima:** register→verifikasi→login berjalan di HP → kata sandi yang diketik bisa diperiksa pengguna sebelum dikirim, dan tombol pemeriksanya tidak ikut mengirim formulir → Google OAuth berjalan → reset password berjalan → user tidak bisa mengakses data user lain (diverifikasi lewat test RLS) → sesi bertahan (refresh token) sehingga klien tidak sering dipaksa login ulang.
 
 ### 4.3 Dashboard klien
 

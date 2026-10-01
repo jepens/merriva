@@ -3,13 +3,13 @@
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { copy } from "@/lib/copy";
 import { updatePasswordAction } from "@/server/actions/auth";
 import { idleState } from "@/server/actions/types";
 
 import { FieldError, FormAlert } from "./form-parts";
+import { PasswordInput } from "./password-input";
 
 export function UpdatePasswordForm() {
   const [state, formAction, pending] = useActionState(
@@ -24,12 +24,12 @@ export function UpdatePasswordForm() {
 
       <div className="space-y-1.5">
         <Label htmlFor="password">{copy.auth.passwordNew}</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           required
+          hint={copy.auth.passwordHint}
           aria-invalid={Boolean(fieldErrors?.password)}
         />
         <FieldError errors={fieldErrors?.password} />
@@ -37,10 +37,9 @@ export function UpdatePasswordForm() {
 
       <div className="space-y-1.5">
         <Label htmlFor="confirm">{copy.auth.passwordConfirm}</Label>
-        <Input
+        <PasswordInput
           id="confirm"
           name="confirm"
-          type="password"
           autoComplete="new-password"
           required
           aria-invalid={Boolean(fieldErrors?.confirm)}

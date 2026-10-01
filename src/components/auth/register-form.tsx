@@ -10,6 +10,7 @@ import { signUpAction } from "@/server/actions/auth";
 import { idleState } from "@/server/actions/types";
 
 import { FieldError, FormAlert } from "./form-parts";
+import { PasswordInput } from "./password-input";
 import { TurnstileField } from "./turnstile-field";
 
 /**
@@ -81,12 +82,12 @@ export function RegisterForm() {
 
       <div className="space-y-1.5">
         <Label htmlFor="password">{copy.auth.password}</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           required
+          hint={copy.auth.passwordHint}
           aria-invalid={Boolean(fieldErrors?.password)}
         />
         <FieldError errors={fieldErrors?.password} />
