@@ -160,11 +160,20 @@ export const copy = {
       emptyBody:
         "Pembayaran pertama Anda akan muncul di sini beserta kode ordernya.",
       emptyCta: "Ke daftar undangan",
+      back: "Kembali ke daftar pesanan",
       colOrder: "Kode order",
+      colStatus: "Status",
+      colPackage: "Paket",
+      colKind: "Jenis",
+      colDuration: "Masa aktif dibeli",
+      colAmount: "Total",
       colCreated: "Dibuat",
       colPaidAt: "Dibayar",
       colMethod: "Metode pembayaran",
       colInvitation: "Undangan",
+      colActiveUntil: "Aktif hingga",
+      colBuyer: "Atas nama",
+      durationMonths: (months: number) => `${months} bulan`,
       dash: "—",
       statusLabel: {
         pending: "Menunggu pembayaran",
@@ -185,9 +194,28 @@ export const copy = {
         manual: "Dicatat manual oleh tim Merriva",
       } as Record<string, string>,
       invitationDeleted: "Undangan ini sudah dihapus",
+      viewReceipt: "Lihat kuitansi",
       continuePayment: "Lanjutkan pembayaran",
       checkStatus: "Cek status pembayaran",
       manageMomen: "Kelola Album Momen",
+      openInvitation: "Buka undangan",
+      // Kuitansi sebagai DOKUMEN yang disimpan pelanggan — karena itu penerbit
+      // dan alamat kontaknya selalu tercetak, bahkan saat pesanan belum lunas.
+      receiptTitle: "Kuitansi",
+      receiptMetaTitle: (orderCode: string) => `Kuitansi ${orderCode}`,
+      receiptDocTitle: "Kuitansi Pembayaran",
+      receiptSubtitle:
+        "Simpan halaman ini sebagai bukti pembayaran. Halaman ini tetap bisa Anda buka kapan pun dari menu Pesanan.",
+      receiptNumber: "No. kuitansi",
+      issuedBy: "Diterbitkan oleh",
+      receiptValidityNote:
+        "Kuitansi ini diterbitkan otomatis oleh sistem Merriva dan sah tanpa tanda tangan.",
+      receiptUnpaidNotice:
+        "Pesanan ini belum lunas, jadi dokumen ini belum menjadi bukti pembayaran. Selesaikan pembayaran lebih dulu.",
+      print: "Cetak / simpan PDF",
+      refundHint:
+        "Perlu mengajukan pengembalian dana? Sertakan kode order di atas dan baca",
+      refundLink: "Kebijakan Refund",
       attentionTitle: "Pembayaran sudah masuk, undangan belum aktif",
       attentionBody:
         "Satu pesanan Anda sudah lunas tetapi undangannya belum aktif. Biasanya ini selesai sendiri dalam beberapa menit. Bila acara Anda sudah dekat, hubungi kami sekarang dengan kode order di bawah — kami dahulukan.",

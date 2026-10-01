@@ -989,10 +989,27 @@ menulis ulang `status` dan `amount_idr` miliknya sendiri.
   M4 (paket dibaca klien sesi), M11 (kartu perhatian mengabaikan `kind`), dan M15
   (string kosong diteruskan sebagai kode order).
 
-**Belum dikerjakan, menyusul di potongan berikutnya (A4 belum tertutup penuh):** halaman
-kuitansi `/dashboard/pesanan/[kode]` yang bisa dicetak, `replyTo` + footer email yang
-berhenti berkata "jangan membalas", dan tombol kirim-ulang kuitansi. Ketiganya sengaja
-tidak digabung agar tak ada tautan menggantung ke halaman yang belum ada.
+**Potongan kedua (2026-10-01, commit terpisah).** Halaman kuitansi
+`/dashboard/pesanan/[kode]` ditambahkan: dokumen yang bisa dicetak/disimpan PDF lewat
+`window.print()` (nol dependency baru — Chrome Android & Safari iOS sama-sama menawarkan
+"Simpan sebagai PDF"), dengan penerbit + alamat kontak yang SELALU tercetak. `PrintButton`
+diangkat dari `components/dashboard/momen/` ke `components/print-button.tsx` dengan label
+sebagai prop, sehingga kartu QR Momen dan kuitansi memakai satu komponen. `receipt.css`
+sengaja TIDAK memakai trik `visibility:hidden` + `position:fixed` seperti `momen-qr.css`:
+kartu QR selalu muat satu halaman A6, sedangkan kuitansi bisa tumbuh melewati satu halaman
+dan trik itu akan memotong isinya.
+
+Penjagaan akses: kode order milik orang lain dijawab IDENTIK dengan kode yang tak ada
+(keduanya `notFound()`), sehingga halaman ini tak bisa dipakai sebagai oracle untuk menebak
+kode pelanggan lain. Uji mutasi putaran kedua: 9 mutan, 9 merah — tetapi K2 (galat DB pada
+lookup kuitansi dijawab `null` alih-alih dilempar) **selamat pada percobaan pertama**, dan
+itu celah nyata: pelanggan akan diberi tahu bukti pembayarannya TIDAK ADA padahal yang gagal
+hanya koneksi DB. Testnya ditulis setelah mutan itu menunjukkannya, bukan sebelumnya.
+
+**Masih belum dikerjakan:** `replyTo` + footer email yang berhenti berkata "jangan membalas",
+dan tombol kirim-ulang kuitansi. Keduanya menunggu kepastian bahwa `halo@merriva.id` adalah
+mailbox nyata yang dijaga — tanpa itu kita mengubah email transaksional agar menyuruh
+membalas ke alamat yang mem-bounce, lebih buruk daripada keadaan sekarang.
 
 ---
 

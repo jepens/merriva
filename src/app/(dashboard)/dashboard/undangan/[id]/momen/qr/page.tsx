@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import QRCode from "qrcode";
 
-import { PrintButton } from "@/components/dashboard/momen/print-button";
+import { PrintButton } from "@/components/print-button";
 import "@/components/dashboard/momen/momen-qr.css";
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
@@ -84,7 +84,7 @@ export default async function MomenQrPage({
       </div>
 
       <div className="mn-noprint flex justify-center">
-        <PrintButton />
+        <PrintButton label={q.print} />
       </div>
     </div>
   );

@@ -49,8 +49,10 @@ export interface OrderRecord {
 export interface OrderView extends OrderRecord {
   packageName: string | null;
   packageKind: OrderKind | null;
+  packageDurationMonths: number | null;
   invitationSlug: string | null;
   invitationStatus: InvitationStatus | null;
+  invitationActiveUntil: string | null;
   invitationPurged: boolean;
 }
 
@@ -118,6 +120,31 @@ export async function fetchOwnOrderPage(
 }
 
 /**
+ * Satu order milik `userId` berdasarkan kode publiknya.
+ *
+ * `null` untuk kode yang tak ada MAUPUN milik orang lain — pemanggil menjawab
+ * `notFound()` pada keduanya, sehingga tak ada beda perilaku yang bisa dipakai
+ * menebak kode order pelanggan lain.
+ */
+export async function fetchOwnOrderByCode(
+  supabase: Client,
+  userId: string,
+  orderCode: string,
+): Promise<OrderRecord | null> {
+  const res = await supabase
+    .from("orders")
+    .select(ORDER_COLUMNS)
+    .eq("order_code", orderCode)
+    .eq("user_id", userId)
+    .maybeSingle();
+  const row = dataOrThrow(
+    res,
+    "orders (kuitansi)",
+  ) as unknown as OrderRow | null;
+  return row ? toRecord(row) : null;
+}
+
+/**
  * Lengkapi order dengan nama paket & undangannya.
  *
  * Undangan dibaca dengan klien SESI (RLS pemilik) + filter eksplisit; paket
@@ -143,14 +170,14 @@ export async function attachRefs(
 
   const invRes = await supabase
     .from("invitations")
-    .select("id, slug, status, purged_at")
+    .select("id, slug, status, active_until, purged_at")
     .eq("user_id", userId)
     .in("id", invIds);
   const invRows = dataOrThrow(invRes, "invitations (riwayat pesanan)") ?? [];
 
   const pkgRes = await admin
     .from("packages")
-    .select("id, name, kind")
+    .select("id, name, kind, duration_months")
     .in("id", pkgIds);
   const pkgRows = dataOrThrow(pkgRes, "packages (riwayat pesanan)") ?? [];
 
@@ -164,8 +191,10 @@ export async function attachRefs(
       ...r,
       packageName: pkg?.name ?? null,
       packageKind: toOrderKind(pkg?.kind),
+      packageDurationMonths: pkg?.duration_months ?? null,
       invitationSlug: inv?.slug ?? null,
       invitationStatus: inv?.status ?? null,
+      invitationActiveUntil: inv?.active_until ?? null,
       invitationPurged: Boolean(inv?.purged_at),
     };
   });

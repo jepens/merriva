@@ -45,7 +45,7 @@ function Baris({
   return (
     <div className="flex gap-2">
       <dt className="text-muted-foreground shrink-0">{label}</dt>
-      <dd className="min-w-0 break-words">{children}</dd>
+      <dd className="min-w-0 wrap-break-word">{children}</dd>
     </div>
   );
 }
@@ -180,29 +180,39 @@ export default async function OrdersPage({
                     </Baris>
                   </dl>
 
-                  {o.status === "pending" ? (
-                    <div className="flex flex-wrap gap-2">
-                      {/* Link Pakasir TIDAK dibangun ulang di sini:
+                  <div className="flex flex-wrap gap-2">
+                    {o.status === "paid" ? (
+                      <Link
+                        href={`/dashboard/pesanan/${o.orderCode}`}
+                        className={buttonVariants({ size: "sm" })}
+                      >
+                        {t.viewReceipt}
+                      </Link>
+                    ) : null}
+                    {o.status === "pending" ? (
+                      <>
+                        {/* Link Pakasir TIDAK dibangun ulang di sini:
                           `getPaymentGateway()` MELEMPAR bila slug proyek kosong,
                           dan itu akan mematikan seluruh halaman riwayat.
                           Halaman /bayar yang sudah ada permukaan yang benar. */}
-                      <Link
-                        href={
-                          o.packageKind === "addon_momen"
-                            ? `/dashboard/undangan/${o.invitationId}/momen`
-                            : `/dashboard/undangan/${o.invitationId}/bayar`
-                        }
-                        className={buttonVariants({
-                          variant: "outline",
-                          size: "sm",
-                        })}
-                      >
-                        {o.packageKind === "addon_momen"
-                          ? t.manageMomen
-                          : t.continuePayment}
-                      </Link>
-                    </div>
-                  ) : null}
+                        <Link
+                          href={
+                            o.packageKind === "addon_momen"
+                              ? `/dashboard/undangan/${o.invitationId}/momen`
+                              : `/dashboard/undangan/${o.invitationId}/bayar`
+                          }
+                          className={buttonVariants({
+                            variant: "outline",
+                            size: "sm",
+                          })}
+                        >
+                          {o.packageKind === "addon_momen"
+                            ? t.manageMomen
+                            : t.continuePayment}
+                        </Link>
+                      </>
+                    ) : null}
+                  </div>
                 </CardContent>
               </Card>
             </li>

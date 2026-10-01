@@ -1,0 +1,30 @@
+/*
+ * Gaya cetak kuitansi pesanan (AUDIT-2026-10-01 A4).
+ *
+ * SENGAJA tidak memakai trik `visibility:hidden` + `position:fixed` seperti
+ * `momen-qr.css`: kartu QR selalu muat satu halaman A6, sedangkan kuitansi bisa
+ * tumbuh melewati satu halaman (paket bernama panjang, slug panjang, baris
+ * tambahan untuk add-on). Pada dokumen bertumbuh, trik itu memotong isinya.
+ */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .mrv-receipt-noprint {
+    display: none !important;
+  }
+
+  /* Di kertas, bingkai & bayangan kartu hanya menghabiskan tinta. */
+  .mrv-receipt {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+}
