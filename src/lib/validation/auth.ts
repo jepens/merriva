@@ -53,6 +53,27 @@ export const updatePasswordSchema = z
     path: ["confirm"],
   });
 
+/**
+ * Ganti kata sandi DARI DALAM AKUN (bukan jalur "lupa kata sandi").
+ * `current` sengaja hanya `min(1)`: ia diverifikasi ke Supabase, bukan ke aturan
+ * panjang — akun lama bisa punya kata sandi yang lebih pendek dari aturan baru,
+ * dan menolaknya di sini akan mengunci justru orang yang ingin memperbaikinya.
+ */
+export const changePasswordSchema = z
+  .object({
+    current: z.string().min(1, "Kata sandi saat ini wajib diisi"),
+    password: passwordField,
+    confirm: z.string(),
+  })
+  .refine((d) => d.password === d.confirm, {
+    message: "Konfirmasi kata sandi tidak cocok",
+    path: ["confirm"],
+  })
+  .refine((d) => d.password !== d.current, {
+    message: "Kata sandi baru harus berbeda dari yang sekarang",
+    path: ["password"],
+  });
+
 export const profileSchema = z.object({
   full_name: z
     .string()
@@ -66,4 +87,5 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ResetRequestInput = z.infer<typeof resetRequestSchema>;
 export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type ProfileInput = z.infer<typeof profileSchema>;

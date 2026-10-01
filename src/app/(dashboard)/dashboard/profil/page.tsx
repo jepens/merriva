@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ChangePasswordForm } from "@/components/dashboard/change-password-form";
 import { ProfileForm } from "@/components/dashboard/profile-form";
 import {
   Card,
@@ -25,18 +26,30 @@ export default async function ProfilePage() {
     .single();
 
   return (
-    <Card className="max-w-lg">
-      <CardHeader>
-        <CardTitle>{copy.dashboard.profileTitle}</CardTitle>
-        <CardDescription>{copy.dashboard.profileSubtitle}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ProfileForm
-          email={user.email ?? ""}
-          defaultName={profile?.full_name ?? ""}
-          defaultPhone={profile?.phone ?? ""}
-        />
-      </CardContent>
-    </Card>
+    <div className="max-w-lg space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{copy.dashboard.profileTitle}</CardTitle>
+          <CardDescription>{copy.dashboard.profileSubtitle}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProfileForm
+            email={user.email ?? ""}
+            defaultName={profile?.full_name ?? ""}
+            defaultPhone={profile?.phone ?? ""}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{copy.auth.changePasswordTitle}</CardTitle>
+          <CardDescription>{copy.auth.changePasswordSubtitle}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChangePasswordForm />
+        </CardContent>
+      </Card>
+    </div>
   );
 }

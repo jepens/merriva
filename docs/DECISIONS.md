@@ -1070,6 +1070,67 @@ email apa pun.
 
 ---
 
+## #50 — 2026-10-01 · Ganti kata sandi dari dalam akun; `current_password` GoTrue sengaja TIDAK dipakai
+
+**Keputusan:** `/dashboard/profil` mendapat kartu "Ubah kata sandi" dengan tiga field
+(sandi saat ini, baru, ulangi) lewat `changePasswordAction`. Kata sandi lama
+diverifikasi SENDIRI dengan `signInWithPassword` pada klien anon TANPA cookie
+(`createSupabasePublicClient`), bukan dengan parameter `current_password` milik GoTrue.
+
+**Alasan.** Audit B1: produk sama sekali tak punya jalur ganti kata sandi — pelanggan
+yang hanya ingin mengganti sandi harus berpura-pura lupa dan menunggu email, dan bila
+emailnya masuk spam atau alamatnya sudah tak terpakai, ia tak punya jalan lain sama
+sekali.
+
+**Jebakan yang nyaris saya masuki, dan kenapa dicatat di sini.** Dokumentasi Supabase
+menampilkan `updateUser({ current_password, password })` sebagai cara meminta kata sandi
+lama. Tipe `UserAttributes` di `@supabase/auth-js@2.110.8` menyatakan sebaliknya dalam
+komentarnya: *"This is only ever present when the user is resetting their password and
+`GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD` is true."* Artinya bila
+setelan proyek itu MATI — dan di proyek ini ia memang belum disentuh — parameter tersebut
+**diabaikan diam-diam**. Kodenya akan lolos review, lolos typecheck, dan tampak aman
+sambil tidak memverifikasi apa pun. Mutan C4 menguji tepat ini: menambahkan
+`current_password` ke panggilan `updateUser` membuat test merah.
+
+**Ditolak:**
+- *Verifikasi lewat klien sesi* — `signInWithPassword` pada klien SSR akan menulis ulang
+  cookie sesi pengguna sebagai efek samping percobaan verifikasi. Mutan C2 mengunci ini.
+- *Mengaktifkan `REQUIRE_CURRENT_PASSWORD` di dashboard* — setelan itu berlaku
+  project-wide dan berisiko ikut menuntut kata sandi lama pada jalur RECOVERY, yang
+  justru dipakai orang yang lupa kata sandinya. Tidak diambil tanpa bukti empiris.
+- *Rate limit per-jaringan saja* — form ini menerima tebakan kata sandi dari pemegang
+  sesi; tanpa lapis per-akun ia menjadi oracle. Mutan C5 mengunci lapis identity-nya,
+  dan mutan C3 mengunci bahwa gerbangnya dievaluasi SEBELUM verifikasi.
+
+**Konsekuensi — dan batas yang jujur.** Entri ini menutup SETENGAH temuan B1. Separuh
+yang lain **masih terbuka**: `/reset-password/ubah` tetap bisa dibuka oleh sesi dashboard
+biasa, sehingga siapa pun yang memegang perangkat yang masih login dapat mengganti kata
+sandi tanpa tahu yang lama. Komentar di `src/app/(auth)/reset-password/ubah/page.tsx`
+yang menyatakan "akan menolak (getUser null)" tetap SALAH dan belum dikoreksi di sini.
+
+Menutupnya butuh membedakan sesi recovery dari sesi biasa. Jalur yang tersedia:
+`supabase.auth.getClaims()` ada di versi terpasang, dan `JwtPayload.amr` bertipe
+`AMREntry[] | string[]` dengan `"recovery"` sebagai salah satu nilai `AMRMethod` yang
+didokumentasikan. **Tetapi belum diverifikasi** bahwa GoTrue benar-benar menuliskan
+`recovery` ke `amr` setelah `verifyOtp({ type: "recovery" })`, maupun apakah nilai itu
+bertahan setelah token refresh. Menebak di sini berisiko mengunci SETIAP pengguna dari
+pemulihan kata sandi — kegagalan yang jauh lebih parah daripada celah yang hendak ditutup.
+
+Langkah verifikasi yang harus dijalankan sebelum tightening: `auth.admin.generateLink({
+type: "recovery" })` dengan service_role → `verifyOtp` pada klien throwaway → periksa
+`amr` pada JWT sesi yang dihasilkan. Dua kemungkinan hasilnya menentukan desain: bila
+`recovery` ada dan segar, cek amr cukup; bila tidak, perlu cookie bertanda tangan
+ber-TTL pendek yang diset `/auth/confirm` saat `type=recovery`.
+
+Catatan terpisah: `updatePasswordAction` sampai sekarang **tanpa rate limit sama sekali**,
+berbeda dari `signInAction` dan `requestPasswordResetAction` yang keduanya dibatasi.
+
+Uji mutasi: 7 mutan, 7 merah (baseline `returncode 0` diverifikasi). Dua mutan sempat
+tak terpasang dan satu sempat selamat karena mutannya sendiri cacat (`void 0;` yang tak
+memindahkan apa pun) — ketiganya ditulis ulang sampai benar-benar menguji.
+
+---
+
 ---
 
 ## Template entri baru

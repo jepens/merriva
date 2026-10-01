@@ -71,6 +71,15 @@ export const copy = {
     // Syarat ditampilkan SEBELUM submit — sebelumnya pengguna baru mengetahuinya
     // dari pesan penolakan, setelah tantangan Turnstile terlanjur terpakai.
     passwordHint: "Minimal 8 karakter.",
+    // Ganti kata sandi dari dalam akun (AUDIT-2026-10-01 B1).
+    passwordCurrent: "Kata sandi saat ini",
+    currentPasswordWrong: "Kata sandi saat ini salah.",
+    passwordChanged:
+      "Kata sandi berhasil diubah. Perangkat lain yang masih masuk akan diminta masuk ulang saat sesinya berakhir.",
+    changePasswordTitle: "Ubah kata sandi",
+    changePasswordSubtitle:
+      "Masukkan kata sandi saat ini untuk memastikan ini benar-benar Anda.",
+    changePasswordCta: "Ubah kata sandi",
     fullName: "Nama lengkap",
     phone: "Nomor WhatsApp",
     phoneHint: "Opsional. Untuk notifikasi & pengingat (mis. 08123456789).",

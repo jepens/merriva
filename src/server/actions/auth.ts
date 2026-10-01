@@ -13,9 +13,11 @@ import {
   staticRateKey,
 } from "@/lib/request-ip";
 import { safeNextPath } from "@/lib/safe-redirect";
+import { createSupabasePublicClient } from "@/lib/supabase/public";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { verifyTurnstile } from "@/lib/turnstile";
 import {
+  changePasswordSchema,
   loginSchema,
   registerSchema,
   resetRequestSchema,
@@ -282,6 +284,88 @@ export async function updatePasswordAction(
 
   revalidatePath("/dashboard", "layout");
   redirect("/dashboard");
+}
+
+// --- Ganti kata sandi dari dalam akun ---------------------------------------
+/**
+ * Ganti kata sandi tanpa melewati jalur "lupa kata sandi" (AUDIT-2026-10-01 B1).
+ *
+ * Sebelum ini produk sama sekali tak punya jalurnya: pelanggan yang hanya ingin
+ * mengganti sandi harus berpura-pura lupa dan menunggu email. Lebih buruk,
+ * `/reset-password/ubah` bisa dibuka oleh sesi dashboard biasa, sehingga siapa
+ * pun yang memegang perangkat yang masih login bisa mengganti kata sandi tanpa
+ * tahu yang lama.
+ *
+ * Kata sandi lama diverifikasi SENDIRI, bukan diserahkan ke `current_password`
+ * milik GoTrue: parameter itu hanya divalidasi bila setelan proyek
+ * `REQUIRE_CURRENT_PASSWORD` aktif, dan bila mati ia DIABAIKAN DIAM-DIAM —
+ * kodenya akan tampak aman sambil tidak memeriksa apa pun. Verifikasi memakai
+ * klien anon TANPA cookie (`createSupabasePublicClient`) agar sesi pengguna di
+ * cookie tidak ikut ditulis ulang oleh percobaan login ini.
+ */
+export async function changePasswordAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) {
+    return errorState(copy.auth.genericAuthError);
+  }
+
+  const parsed = changePasswordSchema.safeParse({
+    current: formData.get("current"),
+    password: formData.get("password"),
+    confirm: formData.get("confirm"),
+  });
+  if (!parsed.success) {
+    return fieldErrorState(parsed.error.flatten().fieldErrors);
+  }
+
+  // Dibatasi per AKUN, bukan hanya per jaringan: tanpa ini form ini menjadi
+  // oracle untuk menebak kata sandi pemilik sesi yang dicuri.
+  if (
+    !(
+      await checkClientRateLimit(
+        "auth-change-pw",
+        { max: 10, windowMs: 60_000 },
+        undefined,
+        [
+          {
+            key: staticRateKey("auth-change-pw-user", user.id),
+            opts: { max: 5, windowMs: 900_000 },
+          },
+        ],
+      )
+    ).ok
+  ) {
+    return errorState(copy.auth.rateLimited);
+  }
+
+  const verifier = createSupabasePublicClient();
+  const { error: wrongCurrent } = await verifier.auth.signInWithPassword({
+    email: user.email,
+    password: parsed.data.current,
+  });
+  if (wrongCurrent) {
+    return fieldErrorState({ current: [copy.auth.currentPasswordWrong] });
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+  if (error) {
+    reportHandledError(error, "auth.change-password", {
+      code: error.code ?? null,
+      status: error.status ?? null,
+    });
+    return errorState(copy.auth.genericAuthError);
+  }
+
+  revalidatePath("/dashboard", "layout");
+  return { status: "success", message: copy.auth.passwordChanged };
 }
 
 // --- Keluar ------------------------------------------------------------------
