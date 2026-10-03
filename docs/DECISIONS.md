@@ -1388,6 +1388,54 @@ UPDATE. Itu perlu dijaga sungguhan, bukan diasumsikan.
 
 ---
 
+## #55 — 2026-10-03 · Login diberi plafon PER-AKUN; hashing kunci diuji di tempat yang benar
+
+**Keputusan:** `signInAction` menambah lapis `identity` per-email (8 percobaan / 15 menit)
+di atas plafon per-jaringan yang sudah ada. Turnstile pada login **belum** dipasang.
+
+**Alasan.** Audit B4. Satu-satunya penahan sebelumnya adalah 10 percobaan/menit per blok
+jaringan, dengan argumen `identity` dibiarkan kosong — padahal `requestPasswordResetAction`
+di berkas yang sama sudah memakai lapis itu. Credential stuffing datang terdistribusi dari
+ribuan IP; botnet atau VPN murah membuat plafon per-jaringan praktis tak terbatas terhadap
+SATU akun.
+
+Taruhannya bukan sekadar gangguan: sekali masuk, penyerang melihat seluruh daftar tamu
+berikut nomor HP-nya (UU PDP), dan dapat MENGGANTI nomor rekening amplop digital pada
+undangan yang sudah aktif — hadiah uang tamu mengalir ke rekening lain, dan pemiliknya tak
+menerima notifikasi apa pun karena email "kata sandi/akun berubah" belum ada (#51).
+
+**Catatan metode yang layak diingat.** Test pertama yang saya tulis untuk ini —
+"kunci lapis akun di-HASH, email tak pernah jadi kunci mentah" — GAGAL, dan gagalnya benar:
+`tests/unit/auth-action-errors.test.ts` me-mock `staticRateKey` menjadi `` `${a}:${v}` ``,
+sehingga assertion itu sebenarnya menguji mock saya sendiri, bukan hashing-nya. Seandainya
+mock-nya kebetulan ikut meng-hash, test itu akan HIJAU tanpa menguji apa pun.
+
+Invarian hashing dipindahkan ke `tests/unit/client-rate-limit.test.ts`, yang memakai fungsi
+ASLI — dan `staticRateKey` ternyata memang belum punya test sama sekali, padahal ia satu-
+satunya hal yang menjaga kunci limiter tidak menjadi daftar email pelanggan yang sedang
+aktif di memori proses. Mutan L3 (mengembalikan nilai mentah) kini merah.
+
+**Ditolak:**
+- *Turnstile pada login setelah N kegagalan* — menuntut penghitungan kegagalan lintas
+  permintaan DAN alur UI dua langkah (aksi memberi tahu form untuk merender widget, pengguna
+  mengirim ulang). Nilainya nyata tetapi jauh lebih kecil daripada lapis per-akun ini, dan
+  ia menambah friksi pada jalur masuk yang paling sering dipakai. Tetap terbuka.
+- *Melaporkan kegagalan login ke Sentry* — kata sandi salah adalah galat pengguna yang
+  wajar; melaporkannya akan membanjiri Sentry dengan salah ketik sehari-hari dan menenggelamkan
+  kegagalan yang benar-benar perlu dilihat. Dikunci test.
+
+**Konsekuensi:**
+- Rate limit ini in-memory per-proses: reset saat deploy dan tak berlaku lintas instance.
+  Untuk satu kontainer Easypanel itu cukup; bila kelak di-scale, penahan sesungguhnya harus
+  pindah ke penyimpanan bersama. Sudah tercatat sebagai keterbatasan sejak `lib/rate-limit.ts`.
+- **Leaked Password Protection di Supabase masih mati** (butir LAUNCH-CHECKLIST, temuan B5).
+  Plafon ini memperlambat penebakan; ia tidak menolak kata sandi yang sudah bocor. Keduanya
+  dibutuhkan, dan yang kedua adalah toggle dashboard milik pemilik.
+
+Uji mutasi: 3 mutan, 3 merah.
+
+---
+
 ---
 
 ## Template entri baru

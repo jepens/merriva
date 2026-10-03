@@ -127,13 +127,34 @@ export async function signInAction(
     return fieldErrorState(parsed.error.flatten().fieldErrors);
   }
 
-  // Rate-limit per-jaringan (anti brute-force kredensial).
+  // Dua lapis, dan lapis AKUN yang menentukan (AUDIT-2026-10-01 B4).
+  //
+  // Sebelumnya hanya ada plafon per-jaringan. Credential stuffing datang
+  // terdistribusi dari ribuan IP — botnet atau VPN murah membuat plafon itu
+  // praktis tak terbatas terhadap SATU akun. Yang dipertaruhkan bukan sekadar
+  // gangguan: sekali masuk, penyerang melihat seluruh daftar tamu berikut nomor
+  // HP-nya, dan bisa MENGGANTI nomor rekening amplop digital pada undangan yang
+  // sudah aktif — hadiah uang tamu mengalir ke rekening lain.
+  //
+  // Polanya identik dengan `requestPasswordResetAction`. Kuncinya di-hash
+  // (`staticRateKey`) sehingga alamat email tak pernah jadi kunci mentah di
+  // memori proses.
   if (
     !(
-      await checkClientRateLimit("auth-signin", {
-        max: 10,
-        windowMs: 60_000,
-      })
+      await checkClientRateLimit(
+        "auth-signin",
+        { max: 10, windowMs: 60_000 },
+        undefined,
+        [
+          {
+            key: staticRateKey(
+              "auth-signin-email",
+              parsed.data.email.toLowerCase(),
+            ),
+            opts: { max: 8, windowMs: 900_000 },
+          },
+        ],
+      )
     ).ok
   ) {
     return errorState(copy.auth.rateLimited);

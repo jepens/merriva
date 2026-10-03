@@ -52,6 +52,7 @@ const { auth } = vi.hoisted(() => ({
     updateUser: vi.fn<() => Promise<AuthResult>>(),
     getUser: vi.fn<() => Promise<{ data: { user: unknown } }>>(),
     getClaims: vi.fn<() => Promise<{ data: unknown }>>(),
+    signInWithPassword: vi.fn<() => Promise<AuthResult>>(),
   },
 }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -61,6 +62,7 @@ vi.mock("@/lib/supabase/server", () => ({
 import { copy } from "@/lib/copy";
 import {
   requestPasswordResetAction,
+  signInAction,
   signUpAction,
   updatePasswordAction,
 } from "@/server/actions/auth";
@@ -114,6 +116,8 @@ beforeEach(() => {
   auth.updateUser.mockReset();
   auth.getUser.mockReset();
   auth.getUser.mockResolvedValue({ data: { user: { id: "u-1" } } });
+  auth.signInWithPassword.mockReset();
+  auth.signInWithPassword.mockResolvedValue({ error: null });
   auth.getClaims.mockReset();
   // Default: sesi yang baru lahir dari klik tautan email — bentuk NYATA yang
   // dihasilkan `verifyOtp({ type: "recovery" })` pada proyek ini.
@@ -303,6 +307,73 @@ describe("updatePasswordAction — penolakan GoTrue meninggalkan jejak", () => {
 
     expect(state.status).toBe("error");
     expect(auth.updateUser).not.toHaveBeenCalled();
+    expect(reportHandledError).not.toHaveBeenCalled();
+  });
+});
+
+describe("signInAction — brute force tak cukup ditahan plafon per-jaringan", () => {
+  function formMasuk(): FormData {
+    const fd = new FormData();
+    fd.set("email", EMAIL);
+    fd.set("password", "tebakan");
+    return fd;
+  }
+
+  it("rate limit punya lapis PER-AKUN di atas per-jaringan", async () => {
+    const { checkClientRateLimit } = await import("@/lib/request-ip");
+    vi.mocked(checkClientRateLimit).mockClear();
+
+    await signInAction(idleState, formMasuk()).catch(() => {});
+
+    // Credential stuffing datang terdistribusi dari ribuan IP, jadi plafon
+    // per-blok jaringan praktis tak menyentuh percobaan terhadap satu akun.
+    const [aksi, , , lapis] = vi.mocked(checkClientRateLimit).mock.calls[0]!;
+    expect(aksi).toBe("auth-signin");
+    expect(lapis).toBeTruthy();
+    expect(lapis![0]!.opts.max).toBeLessThanOrEqual(10);
+  });
+
+  it("email besar-kecil huruf dinormalkan — kuncinya tak bisa dihindari", async () => {
+    const { checkClientRateLimit, staticRateKey } =
+      await import("@/lib/request-ip");
+    vi.mocked(checkClientRateLimit).mockClear();
+
+    const fd = formMasuk();
+    fd.set("email", EMAIL.toUpperCase());
+    await signInAction(idleState, fd).catch(() => {});
+
+    const [, , , lapis] = vi.mocked(checkClientRateLimit).mock.calls[0]!;
+    expect(lapis![0]!.key).toBe(
+      staticRateKey("auth-signin-email", EMAIL.toLowerCase()),
+    );
+  });
+
+  it("gerbang dievaluasi SEBELUM menyentuh Supabase", async () => {
+    const { checkClientRateLimit } = await import("@/lib/request-ip");
+    vi.mocked(checkClientRateLimit).mockResolvedValueOnce({
+      ok: false,
+      remaining: 0,
+      retryAfterMs: 1000,
+    });
+
+    const state = await signInAction(idleState, formMasuk());
+
+    expect(state).toEqual({
+      status: "error",
+      message: copy.auth.rateLimited,
+    });
+    expect(auth.signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it("kata sandi salah TIDAK dilaporkan ke Sentry — itu galat pengguna wajar", async () => {
+    auth.signInWithPassword.mockResolvedValue({
+      error: { message: "Invalid login credentials" },
+    });
+
+    const state = await signInAction(idleState, formMasuk());
+
+    expect(state.status).toBe("error");
+    // Melaporkannya akan membanjiri Sentry dengan salah ketik sehari-hari.
     expect(reportHandledError).not.toHaveBeenCalled();
   });
 });

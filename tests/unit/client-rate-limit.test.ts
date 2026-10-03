@@ -17,7 +17,11 @@ vi.mock("next/headers", () => ({
 }));
 
 import { __resetRateLimit } from "@/lib/rate-limit";
-import { checkClientRateLimit, IPV6_AGGREGATE_FACTOR } from "@/lib/request-ip";
+import {
+  checkClientRateLimit,
+  IPV6_AGGREGATE_FACTOR,
+  staticRateKey,
+} from "@/lib/request-ip";
 
 const LIMIT = { max: 2, windowMs: 60_000 };
 const AGGREGATE_CAP = LIMIT.max * IPV6_AGGREGATE_FACTOR;
@@ -127,5 +131,37 @@ describe("checkClientRateLimit — agregat IPv6 /48", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+/**
+ * `staticRateKey` adalah satu-satunya hal yang menjaga alamat email TIDAK
+ * menjadi kunci mentah di memori proses — kunci limiter dipakai untuk login,
+ * reset kata sandi, dan ganti kata sandi, jadi isinya adalah daftar email
+ * pelanggan yang sedang aktif.
+ *
+ * Diuji di sini, BUKAN di test aksi: berkas-berkas itu me-mock `staticRateKey`,
+ * sehingga assertion apa pun soal hashing di sana hanya menguji mock-nya.
+ */
+describe("staticRateKey", () => {
+  const EMAIL = "calon.pelanggan@contoh.co.id";
+
+  it("tidak pernah memuat nilai aslinya", () => {
+    const key = staticRateKey("auth-signin-email", EMAIL);
+    expect(key).not.toContain(EMAIL);
+    expect(key).not.toContain("contoh.co.id");
+    expect(key).not.toContain("@");
+  });
+
+  it("deterministik, dan terpisah per aksi", () => {
+    expect(staticRateKey("a", EMAIL)).toBe(staticRateKey("a", EMAIL));
+    // Plafon login tak boleh menghabiskan jatah reset kata sandi, dan sebaliknya.
+    expect(staticRateKey("a", EMAIL)).not.toBe(staticRateKey("b", EMAIL));
+  });
+
+  it("nilai berbeda → kunci berbeda", () => {
+    expect(staticRateKey("a", EMAIL)).not.toBe(
+      staticRateKey("a", "orang.lain@contoh.co.id"),
+    );
   });
 });
