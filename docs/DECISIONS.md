@@ -1648,6 +1648,57 @@ tanggung jawab dan klausul konten.
 
 ---
 
+## #60 — 2026-10-04 · Jejak eksekusi cron di DB + status di panel admin
+
+**Keputusan:** tabel `cron_runs` (SATU baris per job, di-upsert tiap jalan), helper
+`recordCronRun`, dan kartu status di `/admin` yang menandai job **basi** dan **belum
+pernah jalan**. Keempat route cron juga akhirnya memanggil `reportHandledError` pada
+jalur 503-nya.
+
+**Alasan.** Empat cron memegang kewajiban hukum (retensi UU PDP), komersial (aktivasi
+order lunas), dan kontraktual (pengingat H-14), tetapi tak ada satu pun cara mengetahui
+mereka berhenti. Kegagalan dijawab `{ok:false}` 503 yang hanya jadi exit code curl di
+panel Easypanel — tak masuk Sentry, tak terlihat di mana pun. Dan NON-EKSEKUSI lebih
+buruk lagi: job yang dihapus, salah ketik, atau mati setelah redeploy **tidak mengirim
+apa pun**. `/api/health` pun hanya memprobe PostgREST.
+
+**Keputusan pemilik (2026-10-03):** tabel + panel, bukan dead-man switch eksternal
+(healthchecks.io). Batasnya diterima sadar dan dicatat: ini terlihat **bila dilihat** —
+ia tidak mendorong notifikasi. Nilainya tetap nyata karena sebelumnya bahkan MELIHAT pun
+tak mungkin tanpa membuka Easypanel.
+
+**Yang paling penting bukan "gagal", melainkan "basi".** Status `ok: true` dari jalan
+sukses tiga hari lalu TIDAK berarti job itu masih hidup — dan itulah mode kegagalan yang
+sesungguhnya. Mutan M2 (membuang cek basi) dan M6 (`ok` lama tampak hijau) menguncinya.
+
+**Ditolak:**
+- *Riwayat penuh (satu baris per eksekusi)* — tumbuh tanpa batas dan menuntut cron
+  pembersih sendiri: cron untuk menjaga cron. Satu baris per job menjawab pertanyaan yang
+  sebenarnya ("kapan terakhir jalan, apakah berhasil") tanpa perawatan.
+- *Ambang basi = 1× jadwal* — jitter penjadwal atau redeploy yang kebetulan bertepatan
+  akan memerahkan panel tiap minggu, dan alarm yang terlalu sering berakhir diabaikan.
+  Dipakai 2×. Mutan M3 menguncinya.
+- *`recordCronRun` yang melempar* — jejak adalah pendamping, bukan efek utama. Kegagalan
+  mencatat tidak boleh menggagalkan purge retensi yang sudah berhasil. Ia menelan
+  galatnya sendiri, dan bila DB-nya yang mati, `last_run_at` yang membasi adalah sinyal
+  yang benar.
+
+**Konsekuensi:**
+- `JADWAL_JAM` di `status.ts` HARUS cocok dengan perintah cron di panel Easypanel
+  (LAUNCH-CHECKLIST Fase 3). Bila jadwalnya kelak diubah di sana tanpa diubah di sini,
+  panel akan menuduh job yang sehat — kebalikan dari masalah yang hendak diselesaikan.
+- `cron_runs` ber-RLS aktif TANPA policy sama sekali: hanya service_role yang
+  menyentuhnya. anon & authenticated tak melihat nama job maupun pesan galat.
+- Pesan galat dipotong 300 karakter dan sengaja tanpa detail baris — cron ini menyentuh
+  data tamu, dan pesan Postgres bisa memuat nilai kolom.
+- **Masih belum ada:** notifikasi dorong. Bila tak ada yang membuka `/admin` selama
+  sebulan, job yang mati tetap tak diketahui sebulan. Itu konsekuensi langsung dari
+  pilihan di atas, bukan kelalaian.
+
+Uji mutasi: 5 mutan, 5 merah.
+
+---
+
 ---
 
 ## Template entri baru

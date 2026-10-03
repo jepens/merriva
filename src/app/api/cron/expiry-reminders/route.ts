@@ -1,4 +1,6 @@
+import { reportHandledError } from "@/lib/observability";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { recordCronRun } from "@/server/cron/record";
 import { isAuthorizedCron } from "@/server/cron/auth";
 import { sendExpiryReminder } from "@/server/email/notify";
 
@@ -49,7 +51,11 @@ export async function POST(req: Request) {
     .lte("active_until", horizonIso) // dalam 14 hari
     .order("active_until", { ascending: true })
     .limit(BATCH);
-  if (error) return json({ ok: false }, 503);
+  if (error) {
+    reportHandledError(error, "cron.expiry-reminders");
+    await recordCronRun("expiry-reminders", false, {}, error);
+    return json({ ok: false }, 503);
+  }
 
   let sent = 0;
   let skipped = 0;
@@ -84,6 +90,12 @@ export async function POST(req: Request) {
   }
 
   const scanned = targets?.length ?? 0;
+  await recordCronRun("expiry-reminders", true, {
+    scanned,
+    sent,
+    skipped,
+    failed,
+  });
   return json(
     { ok: true, scanned, truncated: scanned === BATCH, sent, skipped, failed },
     200,

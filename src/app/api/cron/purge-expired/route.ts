@@ -1,6 +1,8 @@
 import { mediaObjectPaths } from "@/lib/media";
 import { getStorage } from "@/lib/storage";
+import { reportHandledError } from "@/lib/observability";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { recordCronRun } from "@/server/cron/record";
 import { isAuthorizedCron } from "@/server/cron/auth";
 
 /**
@@ -59,7 +61,11 @@ export async function POST(req: Request) {
     .lt("active_until", cutoff)
     .order("active_until", { ascending: true })
     .limit(BATCH);
-  if (error) return json({ ok: false }, 503);
+  if (error) {
+    reportHandledError(error, "cron.purge-expired");
+    await recordCronRun("purge-expired", false, {}, error);
+    return json({ ok: false }, 503);
+  }
 
   const storage = getStorage();
   let purged = 0;
@@ -94,6 +100,12 @@ export async function POST(req: Request) {
   }
 
   const scanned = due?.length ?? 0;
+  await recordCronRun("purge-expired", true, {
+    scanned,
+    purged,
+    skipped,
+    storageFailed,
+  });
   return json(
     {
       ok: true,

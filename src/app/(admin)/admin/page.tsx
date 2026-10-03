@@ -5,8 +5,10 @@ import { copy } from "@/lib/copy";
 import { formatEventDateTime } from "@/lib/datetime";
 import { formatIdr } from "@/lib/format";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { cn } from "@/lib/utils";
 import { dataOrThrow } from "@/lib/supabase/result";
 import { getAdminMetrics } from "@/server/admin/metrics";
+import { fetchCronStatus, type CronHealth } from "@/server/cron/status";
 import { requireAdmin } from "@/server/guards/auth";
 
 export const metadata: Metadata = { title: copy.admin.overview.title };
@@ -36,6 +38,13 @@ function Metric({
 }
 
 /** Ringkasan admin (SPEC §4.9): metrik utama + aktivitas admin terakhir. */
+const cronBadge: Record<CronHealth, string> = {
+  ok: "bg-emerald-100 text-emerald-800",
+  gagal: "bg-red-100 text-red-800",
+  basi: "bg-amber-100 text-amber-800",
+  "belum-pernah": "bg-muted text-muted-foreground",
+};
+
 export default async function AdminOverviewPage() {
   await requireAdmin(); // defense-in-depth di atas guard layout (page pakai service_role)
   const metrics = await getAdminMetrics();
@@ -52,6 +61,8 @@ export default async function AdminOverviewPage() {
       .limit(10),
     "admin_logs (beranda admin)",
   );
+
+  const cron = await fetchCronStatus(admin);
 
   const conversionPct = `${(metrics.conversionRate * 100).toFixed(1)}%`;
 
@@ -93,6 +104,50 @@ export default async function AdminOverviewPage() {
           hint={c.paidOrdersThisMonth(metrics.paidOrdersThisMonth)}
         />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{c.cron.heading}</CardTitle>
+          <p className="text-muted-foreground text-sm">{c.cron.subtitle}</p>
+        </CardHeader>
+        <CardContent>
+          <ul className="divide-y text-sm">
+            {cron.map((j) => (
+              <li key={j.name} className="space-y-1 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-mono text-xs">{j.name}</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-xs font-medium",
+                      cronBadge[j.health],
+                    )}
+                  >
+                    {c.cron.health[j.health]}
+                  </span>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {c.cron.lastRun}:{" "}
+                  {j.lastRunAt
+                    ? (formatEventDateTime(j.lastRunAt, "Asia/Jakarta")?.full ??
+                      j.lastRunAt)
+                    : c.cron.never}
+                  {j.runs > 0 ? (
+                    <> · {c.cron.failuresOf(j.failures, j.runs)}</>
+                  ) : null}
+                </p>
+                {j.health === "basi" || j.health === "belum-pernah" ? (
+                  <p className="text-xs text-amber-700">{c.cron.staleHint}</p>
+                ) : null}
+                {j.lastError ? (
+                  <p className="text-destructive font-mono text-[11px] break-all">
+                    {j.lastError}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

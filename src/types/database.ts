@@ -80,6 +80,39 @@ export type Database = {
           },
         ];
       };
+      cron_runs: {
+        Row: {
+          failures: number;
+          last_error: string | null;
+          last_ok_at: string | null;
+          last_run_at: string;
+          name: string;
+          ok: boolean;
+          runs: number;
+          stats: Json;
+        };
+        Insert: {
+          failures?: number;
+          last_error?: string | null;
+          last_ok_at?: string | null;
+          last_run_at?: string;
+          name: string;
+          ok: boolean;
+          runs?: number;
+          stats?: Json;
+        };
+        Update: {
+          failures?: number;
+          last_error?: string | null;
+          last_ok_at?: string | null;
+          last_run_at?: string;
+          name?: string;
+          ok?: boolean;
+          runs?: number;
+          stats?: Json;
+        };
+        Relationships: [];
+      };
       gift_notes: {
         Row: {
           amount: number | null;

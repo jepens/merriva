@@ -1247,6 +1247,28 @@ export const copy = {
         `${converted} dari ${total} undangan`,
       revenueThisMonth: "Revenue bulan ini",
       paidOrdersThisMonth: (n: number) => `${n} order lunas bulan ini`,
+      // Kesehatan scheduled job (AUDIT-2026-10-01). Keputusan pemilik: jejak di
+      // panel, bukan dead-man switch eksternal. Yang paling penting ditampilkan
+      // bukan "gagal" melainkan "basi" — job yang berhenti jalan tak pernah
+      // mengirim galat, ia hanya diam.
+      cron: {
+        heading: "Scheduled job",
+        subtitle:
+          "Retensi UU PDP, aktivasi order lunas, dan pengingat H-14 bergantung pada job ini.",
+        health: {
+          ok: "Sehat",
+          gagal: "Gagal",
+          basi: "Tidak jalan",
+          "belum-pernah": "Belum pernah jalan",
+        },
+        lastRun: "Terakhir jalan",
+        lastOk: "Sukses terakhir",
+        never: "—",
+        failuresOf: (failures: number, runs: number) =>
+          `${failures} gagal dari ${runs} jalan`,
+        staleHint:
+          "Melewati dua kali jadwalnya. Periksa scheduled job di panel Easypanel — job yang terhapus atau salah ketik tidak mengirim galat apa pun.",
+      },
       recentActivity: "Aktivitas admin terakhir",
       noActivity: "Belum ada aktivitas admin.",
     },

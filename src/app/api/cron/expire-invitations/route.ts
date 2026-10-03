@@ -1,6 +1,8 @@
 import { revalidatePath } from "next/cache";
 
+import { reportHandledError } from "@/lib/observability";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { recordCronRun } from "@/server/cron/record";
 import { isAuthorizedCron } from "@/server/cron/auth";
 
 /**
@@ -35,9 +37,17 @@ export async function POST(req: Request) {
     .not("active_until", "is", null)
     .lt("active_until", nowIso)
     .select("slug");
-  if (error) return json({ ok: false }, 503);
+  if (error) {
+    // Dulu 503 ini hanya jadi exit code curl di panel Easypanel — tak masuk
+    // Sentry, tak terlihat di mana pun (AUDIT-2026-10-01).
+    reportHandledError(error, "cron.expire-invitations");
+    await recordCronRun("expire-invitations", false, {}, error);
+    return json({ ok: false }, 503);
+  }
 
   for (const row of data ?? []) revalidatePath(`/${row.slug}`);
 
-  return json({ ok: true, expired: data?.length ?? 0 }, 200);
+  const expired = data?.length ?? 0;
+  await recordCronRun("expire-invitations", true, { expired });
+  return json({ ok: true, expired }, 200);
 }

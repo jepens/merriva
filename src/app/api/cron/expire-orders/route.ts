@@ -1,7 +1,9 @@
 import { revalidatePath } from "next/cache";
 
 import { getPaymentGateway } from "@/lib/payment";
+import { reportHandledError } from "@/lib/observability";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { recordCronRun } from "@/server/cron/record";
 import { isAuthorizedCron } from "@/server/cron/auth";
 import { notifyOrderPaid } from "@/server/email/notify";
 import { verifyAndActivate } from "@/server/payment/reconcile";
@@ -45,7 +47,11 @@ export async function POST(req: Request) {
     .lt("created_at", cutoff)
     .order("created_at", { ascending: true })
     .limit(BATCH);
-  if (error) return json({ ok: false }, 503);
+  if (error) {
+    reportHandledError(error, "cron.expire-orders");
+    await recordCronRun("expire-orders", false, {}, error);
+    return json({ ok: false }, 503);
+  }
 
   let activated = 0; // rekonsiliasi menemukan lunas → diaktifkan
   let keptPaid = 0; // lunas tetapi tak dipublikasi (held) / anomali → JANGAN expire
@@ -106,6 +112,14 @@ export async function POST(req: Request) {
   }
 
   const scanned = stale?.length ?? 0;
+  await recordCronRun("expire-orders", true, {
+    scanned,
+    activated,
+    keptPaid,
+    expired,
+    skipped,
+    cancelFailed,
+  });
   return json(
     {
       ok: true,
