@@ -123,6 +123,35 @@ export async function createCheckoutAction(
 
   // Order + payment link hanya lewat service_role.
   const admin = createSupabaseAdminClient();
+
+  // Order PENDING untuk paket yang SAMA dipakai ulang, bukan ditimpa order baru
+  // (AUDIT-2026-10-01 A3). Penahan ini sudah ada di jalur add-on tetapi tak
+  // pernah dipasang di sini, sehingga klik-ganda atau "bayar lagi" setelah
+  // meninggalkan halaman Pakasir menghasilkan dua order untuk satu undangan —
+  // penyebab utama pembayaran ganda, yang justru jadi kasus refund yang
+  // dijanjikan kebijakan. Nominalnya diambil dari ORDER, bukan harga paket saat
+  // ini: Pakasir menagih sesuai order yang sudah dibuat, dan harga bisa berubah
+  // di antara dua percobaan.
+  const { data: pending } = await admin
+    .from("orders")
+    .select("order_code, amount_idr")
+    .eq("invitation_id", invitationId)
+    .eq("package_id", pkg.id)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (pending) {
+    return {
+      status: "redirect",
+      url: getPaymentGateway().createPaymentLink({
+        orderCode: pending.order_code,
+        amountIdr: pending.amount_idr,
+        redirectUrl: `${appUrl}/dashboard/undangan/${invitationId}/bayar`,
+      }),
+    };
+  }
+
   let orderCode = "";
   let created = false;
   for (let attempt = 0; attempt < ORDER_CODE_RETRIES; attempt += 1) {

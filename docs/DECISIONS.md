@@ -1196,6 +1196,80 @@ Uji mutasi: 6 mutan, 6 merah (baseline `returncode 0` diverifikasi).
 
 ---
 
+## #52 — 2026-10-03 · Jalur eksekusi refund; RPC diuji dalam transaksi yang di-rollback
+
+**Keputusan:** RPC `admin_refund_order(order_code, admin_id, reason)` menandai order
+lunas sebagai `refunded` DAN mencabut layanan yang dibeli, atomik bersama `admin_logs`.
+Tombolnya di `/admin/order`, alasan WAJIB diketik. Sekaligus: `createCheckoutAction`
+kini MEMAKAI ULANG order pending untuk paket yang sama alih-alih membuat order kedua.
+
+**Alasan.** Audit A3. Enum `order_status` sudah memuat `'refunded'` sejak migrasi awal,
+tetapi tak ada satu baris kode pun yang pernah menulisnya: `/admin/order` read-only dan
+`PaymentGateway` tak punya `refundTransaction`. Refund yang disetujui dikerjakan di luar
+sistem — order tetap `paid`, undangan tetap aktif, jadi pelanggan mendapat uang kembali
+DAN layanan, sementara laporan admin berhenti cocok dengan mutasi rekening. Kebijakan
+refund yang sudah tayang menjanjikan tanggapan 3 hari kerja tanpa alat apa pun untuk
+memenuhinya.
+
+**Keputusan pemilik (2026-10-03):** refund MENCABUT layanan. Uangnya tetap digerakkan di
+dashboard Pakasir — gateway tak punya API refund — dan UI menyatakan itu eksplisit agar
+tak ada yang mengira tombol ini mengembalikan uang.
+
+**Dua penghalus yang tak diminta tetapi wajib, supaya pencabutan tak menjadi bug sendiri:**
+- *Order lunas lain yang menopang.* Pelanggan yang membayar aktivasi lalu memperpanjang,
+  dan hanya salah satunya direfund, tak boleh kehilangan keduanya. RPC menghitung order
+  lunas lain ber-`kind <> 'addon_momen'`; bila ada, undangan DIBIARKAN dan hasilnya
+  `refunded_still_paid` supaya admin tahu.
+- *Add-on Album Momen.* Yang dibeli albumnya, bukan undangannya. Mencabut undangan akan
+  mematikan layanan yang tak pernah dikembalikan uangnya. Add-on → `momen_albums.status`
+  menjadi `archived`, undangan tak disentuh.
+
+**BUG yang HANYA ketahuan karena RPC-nya dijalankan, bukan dibaca.** Versi pertama
+memakai `returns table (…, invitation_id uuid)`. Nama kolom OUT itu menaungi
+`momen_albums.invitation_id` di dalam badan fungsi, sehingga cabang add-on gagal dengan
+`column reference "invitation_id" is ambiguous` — **setiap refund add-on akan gagal di
+produksi**. Unit test aksi tak akan pernah menangkapnya: aksi me-mock RPC-nya, dan
+`pnpm typecheck` tak melihat ke dalam SQL. Kolomnya diganti `inv_id` dan UPDATE-nya
+dikualifikasi (`momen_albums a`).
+
+**Cara pengujiannya, karena layak diulang.** Produksi masih kosong (0 undangan, 0 order),
+jadi RPC diuji langsung terhadap skema NYATA di dalam satu blok `do $$ … $$` yang
+menyisipkan fixture, memanggil fungsinya, lalu `raise exception` di akhir — pengecualian
+itu membatalkan seluruh blok, sehingga nol baris tertinggal (diverifikasi sesudahnya).
+Hasilnya: A satu order lunas → `refunded_revoked`, undangan `expired`; B dua order lunas
+→ `refunded_still_paid`, undangan tetap `active`; C add-on → `refunded_album_archived`,
+album `archived` dan undangan tak berubah; D refund ulang → `not_paid:refunded` tanpa
+jejak audit kedua. `admin_logs` berisi 3 entri, bukan 4.
+
+**Penahan pembayaran ganda.** Pola "jangan buat order kedua" sudah ada di jalur add-on
+(`findPendingMomenOrder`) tetapi tak pernah dipasang di checkout undangan — klik-ganda
+atau mencoba lagi setelah meninggalkan halaman Pakasir menghasilkan dua order, penyebab
+utama kasus refund yang dijanjikan kebijakan. Sekarang order pending untuk undangan+paket
+yang SAMA dipakai ulang dan pemilik diarahkan ke link bayar order itu. Nominalnya diambil
+dari ORDER, bukan harga paket saat ini: Pakasir menagih sesuai order yang sudah dibuat.
+
+**Ditolak:**
+- *Memblokir checkout selama ada order pending* — pemilik yang meninggalkan halaman bayar
+  akan terkunci sampai cron mengedaluwarsakannya (24 jam). Memakai ulang lebih baik.
+- *Memakai ulang juga saat PAKET berbeda* — itu ganti pikiran yang sah; menagihkan paket
+  lama diam-diam jauh lebih buruk. Konsekuensinya diterima: bila keduanya dibayar, kini
+  ADA jalur refund untuk membereskannya.
+- *Menulis status `refunded` tanpa mencabut layanan* — persis keadaan sebelum entri ini.
+
+**Konsekuensi:**
+- Uangnya TIDAK bergerak dari sini. `copy.admin.refund.note` menyatakannya di dalam form,
+  bukan hanya di dokumentasi.
+- `pnpm test:db` (pgTAP) masih belum di CI, jadi RPC ini tak punya penjaga otomatis.
+  Blok rollback di atas adalah pengujian SATU KALI, bukan regresi. Butir terbuka.
+- Nama kolom OUT pada RPC apa pun yang menyentuh banyak tabel wajib dipilih agar tak
+  menaungi nama kolom — pelajaran ini berlaku untuk RPC berikutnya, bukan hanya ini.
+
+Uji unit: 12 tes aksi refund + 2 tes pemakaian-ulang order pending. Helper `orders()` di
+`checkout-action.test.ts` dipertajam jadi hanya menghitung INSERT, karena jalur itu kini
+juga MEMBACA `orders`.
+
+---
+
 ---
 
 ## Template entri baru

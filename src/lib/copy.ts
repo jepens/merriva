@@ -1227,6 +1227,7 @@ export const copy = {
       page: (n: number) => `Halaman ${n}`,
       back: "← Kembali",
       dash: "—",
+      actions: "Aksi",
     },
     statusLabel: {
       draft: "Draf",
@@ -1246,6 +1247,24 @@ export const copy = {
       expired: "Kedaluwarsa",
       failed: "Gagal",
       refunded: "Refund",
+    },
+    // Refund (AUDIT-2026-10-01 A3). Uangnya digerakkan di dashboard Pakasir —
+    // tombol ini mencatat keputusannya dan mencabut layanan yang dibeli.
+    refund: {
+      cta: "Tandai refund",
+      reasonLabel: "Alasan refund",
+      reasonPlaceholder: "mis. pembayaran ganda, order MRV-XXXXXX",
+      confirm:
+        "Tandai order ini sebagai refund dan cabut layanannya? Uangnya tetap harus Anda kembalikan sendiri lewat dashboard Pakasir.",
+      note: "Mencatat refund di sini TIDAK mengembalikan uang. Lakukan pengembaliannya di dashboard Pakasir, lalu tandai di sini agar laporan dan layanan ikut menyesuaikan.",
+      okRevoked: "Order ditandai refund. Undangan dicabut (kedaluwarsa).",
+      okStillPaid:
+        "Order ditandai refund. Undangan TETAP aktif karena masih ada order lunas lain yang menopangnya.",
+      okAlbumArchived:
+        "Order add-on ditandai refund. Album Momen diarsipkan; undangan tidak disentuh.",
+      notFound: "Order tidak ditemukan.",
+      notPaid: "Hanya order berstatus Lunas yang bisa ditandai refund.",
+      failed: "Gagal menandai refund. Coba lagi.",
     },
     invitations: {
       title: "Undangan",
@@ -1418,6 +1437,16 @@ export const copy = {
         "Hanya undangan aktif/kedaluwarsa yang bisa diperpanjang.",
       extend_failed: "Gagal memperpanjang masa aktif.",
       suspend_ok: "Undangan ditangguhkan.",
+      refund_ok_revoked:
+        "Order ditandai refund. Undangan dicabut (kedaluwarsa). Kembalikan uangnya di dashboard Pakasir bila belum.",
+      refund_ok_still_paid:
+        "Order ditandai refund. Undangan TETAP aktif karena masih ada order lunas lain yang menopangnya.",
+      refund_ok_album:
+        "Order add-on ditandai refund. Album Momen diarsipkan; undangan tidak disentuh.",
+      refund_not_found: "Order tidak ditemukan.",
+      refund_not_paid: "Hanya order berstatus Lunas yang bisa ditandai refund.",
+      refund_invalid: "Alasan refund wajib diisi.",
+      refund_failed: "Gagal menandai refund. Coba lagi.",
       suspend_invalid: "Alasan wajib diisi.",
       suspend_failed: "Gagal menangguhkan undangan.",
       reinstate_ok: "Penangguhan dibatalkan.",

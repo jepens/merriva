@@ -19,6 +19,14 @@ export const adminSuspendSchema = z.object({
   reason: z.string().trim().min(1, "Alasan wajib diisi").max(500),
 });
 
+/**
+ * Refund order (AUDIT-2026-10-01 A3). Alasan WAJIB: ia masuk `admin_logs` dan
+ * menjadi satu-satunya penjelasan kenapa uang bergerak di luar sistem.
+ */
+export const adminRefundSchema = z.object({
+  reason: z.string().trim().min(1, "Alasan wajib diisi").max(500),
+});
+
 export const adminChangeOwnerSchema = z.object({
   newUserId: z.string().uuid(),
 });

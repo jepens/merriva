@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { RefundOrderForm } from "@/components/admin/refund-order-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
@@ -15,6 +16,13 @@ export const metadata: Metadata = { title: copy.admin.orders.title };
 const PAGE_SIZE = 25;
 const c = copy.admin.orders;
 const STATUSES = Object.keys(copy.admin.orderStatusLabel) as OrderStatus[];
+
+/** Hasil refund yang BERHASIL → spanduk hijau; sisanya kuning. */
+const OK_MSG = new Set([
+  "refund_ok_revoked",
+  "refund_ok_still_paid",
+  "refund_ok_album",
+]);
 
 interface Row {
   id: string;
@@ -32,7 +40,12 @@ interface Row {
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    page?: string;
+    msg?: string;
+  }>;
 }) {
   await requireAdmin(); // defense-in-depth (page pakai service_role)
   const sp = await searchParams;
@@ -41,6 +54,10 @@ export default async function AdminOrdersPage({
     ? (sp.status as OrderStatus)
     : "";
   const page = Math.max(1, Number(sp.page) || 1);
+  const msgText =
+    sp.msg && sp.msg in copy.admin.msg
+      ? copy.admin.msg[sp.msg as keyof typeof copy.admin.msg]
+      : null;
   const from = (page - 1) * PAGE_SIZE;
 
   const admin = createSupabaseAdminClient();
@@ -75,6 +92,18 @@ export default async function AdminOrdersPage({
         <h1 className="text-xl font-semibold tracking-tight">{c.title}</h1>
         <p className="text-muted-foreground text-sm">{c.subtitle}</p>
       </div>
+
+      {msgText ? (
+        <div
+          className={`rounded-md border px-4 py-2 text-sm ${
+            sp.msg && OK_MSG.has(sp.msg)
+              ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+              : "border-amber-300 bg-amber-50 text-amber-800"
+          }`}
+        >
+          {msgText}
+        </div>
+      ) : null}
 
       <form method="get" className="flex flex-wrap items-center gap-2">
         <input
@@ -112,13 +141,16 @@ export default async function AdminOrdersPage({
                 <th className="px-4 py-2 font-medium">{c.colOwner}</th>
                 <th className="px-4 py-2 font-medium">{c.colCreated}</th>
                 <th className="px-4 py-2 font-medium">{c.colNotification}</th>
+                <th className="px-4 py-2 font-medium">
+                  {copy.admin.common.actions}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="text-muted-foreground px-4 py-6 text-center"
                   >
                     {copy.admin.common.empty}
@@ -160,6 +192,16 @@ export default async function AdminOrdersPage({
                         </details>
                       ) : (
                         c.rawNone
+                      )}
+                    </td>
+                    <td className="px-4 py-2 align-top">
+                      {/* Hanya order LUNAS yang bisa direfund; `pending`
+                          dibatalkan cron expire-orders, dan `refunded` sudah
+                          punya jejak auditnya sendiri. */}
+                      {r.status === "paid" ? (
+                        <RefundOrderForm orderCode={r.order_code} />
+                      ) : (
+                        copy.admin.common.dash
                       )}
                     </td>
                   </tr>

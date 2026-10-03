@@ -751,6 +751,18 @@ export type Database = {
           slug: string;
         }[];
       };
+      admin_refund_order: {
+        Args: { p_admin_id: string; p_order_code: string; p_reason: string };
+        Returns: {
+          // `inv_id` SENGAJA bukan `invitation_id`: nama itu menaungi kolom
+          // `momen_albums.invitation_id` di dalam fungsi dan membuat setiap
+          // refund add-on gagal "ambiguous" (DECISIONS #52). Null pada
+          // 'not_found' — koreksi manual, pertahankan saat regen.
+          inv_id: string | null;
+          result: string;
+          slug: string | null;
+        }[];
+      };
       admin_suspend_invitation: {
         Args: { p_admin_id: string; p_invitation_id: string; p_reason: string };
         Returns: {

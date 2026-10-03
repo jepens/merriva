@@ -81,6 +81,7 @@ function makeClient(
       return chain;
     };
     chain.order = () => chain;
+    chain.limit = () => chain;
     chain.insert = (payload: unknown) => {
       const error = insertErrors[insertAttempt] ?? null;
       insertAttempt += 1;
@@ -131,7 +132,12 @@ function setup(
   inv: unknown,
   pkg: unknown = PKG,
   adminOpts: { insertErrors?: ({ code: string } | null)[] } = {},
-  server: { events?: unknown; errors?: Record<string, unknown> } = {},
+  server: {
+    events?: unknown;
+    errors?: Record<string, unknown>;
+    /** Order pending yang sudah ada untuk undangan+paket yang sama. */
+    pendingOrder?: unknown;
+  } = {},
 ) {
   refs.server = makeClient(
     {
@@ -142,10 +148,20 @@ function setup(
     calls,
     { errors: server.errors },
   );
-  refs.admin = makeClient({}, calls, adminOpts);
+  refs.admin = makeClient(
+    { orders: "pendingOrder" in server ? server.pendingOrder : null },
+    calls,
+    adminOpts,
+  );
 }
 
-const orders = () => calls.filter((c) => c.table === "orders");
+/**
+ * HANYA percobaan INSERT order. Sejak penahan pembayaran-ganda dipasang
+ * (AUDIT-2026-10-01 A3), jalur ini juga MEMBACA `orders` untuk mencari order
+ * pending yang bisa dipakai ulang — bacaan itu bukan "order dibuat".
+ */
+const orders = () =>
+  calls.filter((c) => c.table === "orders" && c.op === "insert");
 
 describe("createCheckoutAction — gerbang sebelum order dibuat", () => {
   it("belum login → ditolak, tak ada order maupun link bayar", async () => {
@@ -369,6 +385,53 @@ describe("createCheckoutAction — jalur sukses", () => {
     expect(createPaymentLink).toHaveBeenCalledWith(
       expect.objectContaining({ amountIdr: 299000 }),
     );
+  });
+
+  it("order PENDING untuk paket yang sama dipakai ulang — bukan order kedua", async () => {
+    // Penyebab utama pembayaran ganda: pemilik menekan bayar, meninggalkan
+    // halaman Pakasir, lalu mencoba lagi. Dulu setiap percobaan membuat order
+    // baru; bila keduanya dibayar, satu-satunya penyelesaiannya adalah refund.
+    setup(
+      { id: INV, status: "pending_payment", slug: "andi-sinta" },
+      PKG,
+      {},
+      {
+        pendingOrder: { order_code: "MRV-LAMA01", amount_idr: 299000 },
+      },
+    );
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res).toEqual({
+      status: "redirect",
+      url: "https://pakasir.test/pay/XYZ",
+    });
+    expect(orders()).toHaveLength(0);
+    // Link mengarah ke order LAMA, dengan nominal dari ORDER itu — bukan harga
+    // paket saat ini, karena Pakasir menagih sesuai order yang sudah dibuat.
+    expect(createPaymentLink).toHaveBeenCalledWith(
+      expect.objectContaining({ orderCode: "MRV-LAMA01", amountIdr: 299000 }),
+    );
+  });
+
+  it("pencarian order pending disaring undangan, paket, DAN status pending", async () => {
+    setup(
+      { id: INV, status: "pending_payment", slug: "andi-sinta" },
+      PKG,
+      {},
+      {
+        pendingOrder: { order_code: "MRV-LAMA01", amount_idr: 299000 },
+      },
+    );
+
+    await createCheckoutAction(INV, "premium");
+
+    const baca = calls.find((c) => c.table === "orders" && c.op === "select");
+    expect(baca?.filters).toMatchObject({
+      invitation_id: INV,
+      package_id: "pkg-premium",
+      status: "pending",
+    });
   });
 
   it("undangan TIDAK diaktifkan; transisi hanya draft → pending_payment, ber-guard", async () => {

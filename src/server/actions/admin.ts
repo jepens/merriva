@@ -10,8 +10,10 @@ import {
   adminActivateSchema,
   adminChangeOwnerSchema,
   adminExtendSchema,
+  adminRefundSchema,
   adminSuspendSchema,
 } from "@/lib/validation/admin";
+import { orderCodeSchema } from "@/lib/validation/order";
 import { requireAdmin } from "@/server/guards/auth";
 
 /**
@@ -23,10 +25,15 @@ import { requireAdmin } from "@/server/guards/auth";
  */
 
 const LIST = "/admin/undangan";
+const ORDERS = "/admin/order";
 const ORDER_CODE_RETRIES = 5;
 
 function detail(id: string, msg: string): never {
   redirect(`${LIST}/${id}?msg=${msg}`);
+}
+
+function orders(msg: string): never {
+  redirect(`${ORDERS}?msg=${msg}`);
 }
 
 /** Revalidate tampilan terdampak: publik (ISR), dashboard pemilik, panel admin. */
@@ -144,6 +151,51 @@ export async function adminSuspendInvitationAction(
     detail(invitationId, "suspend_ok");
   }
   detail(invitationId, "suspend_failed");
+}
+
+/**
+ * Tandai order lunas sebagai REFUND dan cabut layanan yang dibeli
+ * (AUDIT-2026-10-01 A3).
+ *
+ * Uangnya TIDAK bergerak di sini: `PaymentGateway` tak punya `refundTransaction`
+ * dan pengembalian dilakukan di dashboard Pakasir. Yang dikerjakan aksi ini
+ * adalah bagian yang selama ini hilang — tanpanya order tetap `paid` dan
+ * undangan tetap aktif, sehingga pelanggan mendapat uang kembali DAN layanan,
+ * dan laporan admin berhenti cocok dengan mutasi rekening.
+ */
+export async function adminRefundOrderAction(
+  orderCode: string,
+  formData: FormData,
+): Promise<never> {
+  const adminUser = await requireAdmin();
+
+  const code = orderCode.trim().toUpperCase();
+  if (!orderCodeSchema.safeParse(code).success) orders("refund_failed");
+
+  const parsed = adminRefundSchema.safeParse({
+    reason: formData.get("reason"),
+  });
+  if (!parsed.success) orders("refund_invalid");
+
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.rpc("admin_refund_order", {
+    p_order_code: code,
+    p_admin_id: adminUser.id,
+    p_reason: parsed.data.reason,
+  });
+  if (error) orders("refund_failed");
+
+  const row = data?.[0];
+  revalidateAfter(row?.slug);
+  revalidatePath(ORDERS);
+
+  if (row?.result === "refunded_revoked") orders("refund_ok_revoked");
+  if (row?.result === "refunded_still_paid") orders("refund_ok_still_paid");
+  if (row?.result === "refunded_album_archived") orders("refund_ok_album");
+  if (row?.result === "not_found") orders("refund_not_found");
+  // RPC mengembalikan 'not_paid:<status>' agar jejaknya jelas di log server.
+  if (row?.result?.startsWith("not_paid")) orders("refund_not_paid");
+  orders("refund_failed");
 }
 
 /** Reinstate (batalkan suspend) → status dipulihkan dari active_until. */
