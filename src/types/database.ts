@@ -3,7 +3,19 @@
  * Regenerate setelah migrasi baru:
  *   pnpm supabase gen types typescript --project-id <ref> > src/types/database.ts
  *   # atau via Supabase MCP: generate_typescript_types
- * Jangan diedit manual.
+ *
+ * Jangan diedit manual, KECUALI dua penyimpangan sengaja yang harus dipasang
+ * ulang setiap kali berkas ini digenerate (dijaga `tests/unit/db-types.test.ts`):
+ *
+ *  1. `invitations.user_id` & `orders.user_id` pada **Row** bertipe
+ *     `string | null`. Keduanya memang nullable sejak migrasi hapus-akun
+ *     (20261003140000): baris dianonimkan dengan `user_id = NULL` demi
+ *     kewajiban pembukuan. Hasil generate sebelumnya menyatakannya non-null,
+ *     sehingga tak ada satu pun pemanggil yang dipaksa menjaganya.
+ *  2. Pada **Insert/Update** keduanya tetap WAJIB/`string` — lebih ketat
+ *     daripada DB, dan disengaja: hanya RPC `admin_delete_account` (service_role,
+ *     di dalam SQL) yang boleh menulis NULL. Kode aplikasi yang lupa mengisi
+ *     pemilik harus tetap gagal di compile.
  */
 
 export type Json =
@@ -262,7 +274,7 @@ export type Database = {
           status: Database["public"]["Enums"]["invitation_status"];
           theme_id: string;
           updated_at: string;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           active_until?: string | null;
@@ -481,9 +493,10 @@ export type Database = {
           package_id: string;
           paid_at: string | null;
           payment_method: string | null;
+          purpose: string;
           raw_notification: Json | null;
           status: Database["public"]["Enums"]["order_status"];
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           amount_idr: number;
@@ -494,6 +507,7 @@ export type Database = {
           package_id: string;
           paid_at?: string | null;
           payment_method?: string | null;
+          purpose?: string;
           raw_notification?: Json | null;
           status?: Database["public"]["Enums"]["order_status"];
           user_id: string;
@@ -507,6 +521,7 @@ export type Database = {
           package_id?: string;
           paid_at?: string | null;
           payment_method?: string | null;
+          purpose?: string;
           raw_notification?: Json | null;
           status?: Database["public"]["Enums"]["order_status"];
           user_id?: string;

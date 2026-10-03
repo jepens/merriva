@@ -7,6 +7,7 @@ import {
   renderExpiryReminderEmail,
   renderMomenReceiptEmail,
   renderReceiptEmail,
+  renderUpgradeReceiptEmail,
 } from "@/lib/email/templates";
 import { appUrl } from "@/lib/env";
 import type { Database } from "@/types/database";
@@ -55,11 +56,16 @@ export async function notifyOrderPaid(
     const { data: order } = await admin
       .from("orders")
       .select(
-        "order_code, amount_idr, paid_at, user_id, invitation_id, package_id",
+        "order_code, amount_idr, paid_at, user_id, invitation_id, package_id, purpose",
       )
       .eq("order_code", orderCode)
       .maybeSingle();
     if (!order) return;
+    // Pemilik order bisa TAK ADA: akun yang dihapus meninggalkan baris `orders`
+    // ber-`user_id` NULL demi kewajiban pembukuan (A6). Tak ada alamat tujuan —
+    // dan itu bukan galat. Sebelum tipe DB-nya dibetulkan, cabang ini tak
+    // terpikirkan dan `getUserById(null)` yang jalan.
+    if (!order.user_id) return;
 
     const { data: userRes } = await admin.auth.admin.getUserById(order.user_id);
     const email = userRes?.user?.email;
@@ -86,19 +92,16 @@ export async function notifyOrderPaid(
     );
     if (!inv) return;
 
-    // Add-on Album Momen: kuitansi berbeda (album ikut retensi undangan, bukan
-    // durasi paket) & CTA menuju halaman kelola album — bukan link undangan.
+    // Tiga bentuk kuitansi, dipilih dari jenis ORDER — bukan dari nominalnya.
+    //  * upgrade  → paket naik, masa aktif TIDAK berubah (B3). Paketnya paket
+    //    undangan biasa, jadi `kind` saja akan salah memilih kuitansi aktivasi
+    //    yang mengaku "undangan Anda kini aktif" dan menyiratkan periode baru.
+    //  * addon_momen → album ikut retensi undangan (bukan durasi paket) & CTA
+    //    menuju halaman kelola album, bukan link undangan.
+    //  * sisanya → aktivasi/perpanjangan.
     const rendered =
-      pkg?.kind === "addon_momen"
-        ? renderMomenReceiptEmail({
-            name: profile?.full_name ?? null,
-            packageName: pkg?.name ?? "",
-            amountIdr: order.amount_idr,
-            orderCode: order.order_code,
-            paidAtLabel: fmtDateTime(order.paid_at),
-            manageUrl: `${appUrl}/dashboard/undangan/${order.invitation_id}/momen`,
-          })
-        : renderReceiptEmail({
+      order.purpose === "upgrade"
+        ? renderUpgradeReceiptEmail({
             name: profile?.full_name ?? null,
             packageName: pkg?.name ?? "",
             amountIdr: order.amount_idr,
@@ -106,7 +109,25 @@ export async function notifyOrderPaid(
             paidAtLabel: fmtDateTime(order.paid_at),
             activeUntilLabel: fmtDate(inv.active_until),
             invitationUrl: `${appUrl}/${inv.slug}`,
-          });
+          })
+        : pkg?.kind === "addon_momen"
+          ? renderMomenReceiptEmail({
+              name: profile?.full_name ?? null,
+              packageName: pkg?.name ?? "",
+              amountIdr: order.amount_idr,
+              orderCode: order.order_code,
+              paidAtLabel: fmtDateTime(order.paid_at),
+              manageUrl: `${appUrl}/dashboard/undangan/${order.invitation_id}/momen`,
+            })
+          : renderReceiptEmail({
+              name: profile?.full_name ?? null,
+              packageName: pkg?.name ?? "",
+              amountIdr: order.amount_idr,
+              orderCode: order.order_code,
+              paidAtLabel: fmtDateTime(order.paid_at),
+              activeUntilLabel: fmtDate(inv.active_until),
+              invitationUrl: `${appUrl}/${inv.slug}`,
+            });
     const result = await sendTransactionalEmail({
       to: email,
       subject: rendered.subject,

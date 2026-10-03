@@ -31,9 +31,20 @@ export const ORDER_HISTORY_PAGE_SIZE = 20;
  * `{"source":"admin_manual","admin_id":"<uuid admin>"}` pada aktivasi manual.
  */
 const ORDER_COLUMNS =
-  "order_code, status, amount_idr, payment_method, created_at, paid_at, invitation_id, package_id";
+  "order_code, status, amount_idr, payment_method, created_at, paid_at, invitation_id, package_id, purpose";
 
 export type OrderKind = "invitation" | "addon_momen";
+
+/**
+ * Jenis ORDER, terpisah dari jenis PAKET (AUDIT-2026-10-01 B3).
+ *
+ * Order upgrade memakai paket undangan biasa, jadi `packages.kind` sendirian
+ * akan melabelinya "Paket undangan" dan — lebih buruk — membuat kuitansinya
+ * mencantumkan "Masa aktif dibeli: 6 bulan" untuk pembayaran yang tidak membeli
+ * masa aktif sama sekali. Pada dokumen bukti pembayaran itu bukan label yang
+ * kurang tepat, itu keterangan yang salah.
+ */
+export type OrderPurpose = "purchase" | "upgrade";
 
 export interface OrderRecord {
   orderCode: string;
@@ -44,6 +55,7 @@ export interface OrderRecord {
   paidAt: string | null;
   invitationId: string;
   packageId: string;
+  purpose: OrderPurpose;
 }
 
 export interface OrderView extends OrderRecord {
@@ -54,11 +66,31 @@ export interface OrderView extends OrderRecord {
   invitationStatus: InvitationStatus | null;
   invitationActiveUntil: string | null;
   invitationPurged: boolean;
+  /**
+   * Paket undangan SAAT INI. Dibandingkan dengan `packageId` order untuk
+   * mengenali upgrade yang sudah dibayar tetapi paketnya tak pernah naik
+   * (RPC `held`) — satu-satunya tempat pelanggan bisa melihat uang yang
+   * tertahan itu, karena undangannya tetap `active` sehingga kartu "pembayaran
+   * masuk, undangan belum aktif" tak akan pernah menyalakannya.
+   */
+  invitationPackageId: string | null;
 }
 
 /** `packages.kind` bertipe `string` di tipe DB → disempitkan sebelum dipakai. */
 function toOrderKind(raw: string | null | undefined): OrderKind | null {
   return raw === "invitation" || raw === "addon_momen" ? raw : null;
+}
+
+/**
+ * `orders.purpose` bertipe `string` di tipe DB → disempitkan.
+ *
+ * Nilai tak dikenal jatuh ke `"purchase"`, BUKAN `"upgrade"`: bila kelak ada
+ * jenis order baru, salah melabelinya sebagai pembelian biasa hanya membuat
+ * labelnya kurang tepat — salah melabelinya sebagai upgrade akan MENYEMBUNYIKAN
+ * masa aktif yang benar-benar dibeli dari kuitansinya.
+ */
+function toOrderPurpose(raw: string | null | undefined): OrderPurpose {
+  return raw === "upgrade" ? "upgrade" : "purchase";
 }
 
 type OrderRow = {
@@ -70,6 +102,7 @@ type OrderRow = {
   paid_at: string | null;
   invitation_id: string;
   package_id: string;
+  purpose: string;
 };
 
 function toRecord(r: OrderRow): OrderRecord {
@@ -82,6 +115,7 @@ function toRecord(r: OrderRow): OrderRecord {
     paidAt: r.paid_at,
     invitationId: r.invitation_id,
     packageId: r.package_id,
+    purpose: toOrderPurpose(r.purpose),
   };
 }
 
@@ -170,7 +204,7 @@ export async function attachRefs(
 
   const invRes = await supabase
     .from("invitations")
-    .select("id, slug, status, active_until, purged_at")
+    .select("id, slug, status, active_until, purged_at, package_id")
     .eq("user_id", userId)
     .in("id", invIds);
   const invRows = dataOrThrow(invRes, "invitations (riwayat pesanan)") ?? [];
@@ -196,23 +230,69 @@ export async function attachRefs(
       invitationStatus: inv?.status ?? null,
       invitationActiveUntil: inv?.active_until ?? null,
       invitationPurged: Boolean(inv?.purged_at),
+      invitationPackageId: inv?.package_id ?? null,
     };
   });
 }
 
 /**
- * Label jenis pesanan — HANYA dari `packages.kind`, tak pernah dari nominal:
- * paket `premium` dan `momen_50` sama-sama Rp199.000.
+ * Label jenis pesanan — dari `packages.kind` + `orders.purpose`, tak pernah dari
+ * nominal: paket `premium` dan `momen_50` sama-sama Rp199.000.
+ *
+ * `purpose` diperiksa LEBIH DULU karena order upgrade memakai paket undangan
+ * biasa; tanpa itu ia akan terbaca sama dengan aktivasi.
  */
 export function orderKindLabel(
   kind: OrderKind | null,
+  purpose: OrderPurpose,
   c: {
     kindInvitation: string;
     kindAddonMomen: string;
+    kindUpgrade: string;
     kindUnknown: string;
   },
 ): string {
+  if (purpose === "upgrade") return c.kindUpgrade;
   if (kind === "invitation") return c.kindInvitation;
   if (kind === "addon_momen") return c.kindAddonMomen;
   return c.kindUnknown;
+}
+
+/**
+ * true bila order ini benar-benar MEMBELI masa aktif undangan.
+ *
+ * Penentu tampilnya baris "Masa aktif dibeli" dan "Aktif hingga" pada kuitansi
+ * & riwayat. Add-on tidak membelinya (album ikut retensi undangan) dan upgrade
+ * juga tidak (hanya menukar paket untuk sisa masa aktif yang sama) — keduanya
+ * akan mencantumkan `duration_months` paketnya bila dinilai dari `kind` saja.
+ */
+/**
+ * Halaman tempat pelanggan bisa MELANJUTKAN pembayaran order `pending`.
+ *
+ * Ketiga jenis order punya permukaan status sendiri, dan mengirim pelanggan ke
+ * permukaan yang salah bukan sekadar tak nyaman: `/bayar` berkunci pada status
+ * UNDANGAN dan langsung menyatakan "Pembayaran berhasil! Undangan Anda kini
+ * aktif" bila undangannya `active` — tepat keadaan setiap pembeli upgrade dan
+ * add-on. Layar sukses untuk pembayaran yang belum terjadi.
+ *
+ * Link Pakasir-nya sendiri TIDAK dibangun ulang di pemanggil: `getPaymentGateway()`
+ * MELEMPAR bila slug proyek kosong, dan itu akan mematikan seluruh halaman
+ * riwayat.
+ */
+export function pendingPaymentPath(
+  invitationId: string,
+  kind: OrderKind | null,
+  purpose: OrderPurpose,
+): string {
+  const base = `/dashboard/undangan/${invitationId}`;
+  if (purpose === "upgrade") return `${base}/upgrade`;
+  if (kind === "addon_momen") return `${base}/momen`;
+  return `${base}/bayar`;
+}
+
+export function buysActivePeriod(
+  kind: OrderKind | null,
+  purpose: OrderPurpose,
+): boolean {
+  return kind === "invitation" && purpose === "purchase";
 }

@@ -102,6 +102,17 @@ describe("pemetaan hasil RPC", () => {
     expect(await jalankan()).toContain("refund_ok_revoked");
   });
 
+  it("refund UPGRADE → pesan sukses yang menyebut penurunan paket, BUKAN gagal", async () => {
+    // Ditemukan dengan membaca pemetaan ini setelah cabang `refunded_downgraded`
+    // ditambahkan ke RPC (B3): hasil baru yang tak dipetakan jatuh ke
+    // `refund_failed`, jadi refundnya BERHASIL di DB sementara admin membaca
+    // "gagal". Percobaan kedua menjawab "hanya order Lunas yang bisa direfund",
+    // yang terbaca seolah refundnya tak pernah terjadi — dan uang sungguhan
+    // dipindahkan manual di dashboard Pakasir berdasarkan bacaan itu.
+    hasil("refunded_downgraded");
+    expect(await jalankan()).toContain("refund_ok_downgraded");
+  });
+
   it("masih ada order lunas lain → undangan TIDAK dicabut, dan dikatakan", async () => {
     // Pelanggan yang membayar aktivasi lalu memperpanjang, dan hanya salah
     // satunya direfund, tak boleh kehilangan keduanya. Admin harus TAHU itu.

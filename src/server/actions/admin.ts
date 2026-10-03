@@ -192,6 +192,12 @@ export async function adminRefundOrderAction(
   if (row?.result === "refunded_revoked") orders("refund_ok_revoked");
   if (row?.result === "refunded_still_paid") orders("refund_ok_still_paid");
   if (row?.result === "refunded_album_archived") orders("refund_ok_album");
+  // B3. Tanpa cabang ini refund upgrade BERHASIL di DB tetapi admin melihat
+  // "gagal" — lalu mencoba lagi, mendapat "hanya order Lunas yang bisa
+  // direfund", dan menyimpulkan refundnya tak pernah terjadi. Pada aksi yang
+  // mendampingi perpindahan uang nyata di dashboard Pakasir, pesan yang salah
+  // itu berisiko refund ganda.
+  if (row?.result === "refunded_downgraded") orders("refund_ok_downgraded");
   if (row?.result === "not_found") orders("refund_not_found");
   // RPC mengembalikan 'not_paid:<status>' agar jejaknya jelas di log server.
   if (row?.result?.startsWith("not_paid")) orders("refund_not_paid");

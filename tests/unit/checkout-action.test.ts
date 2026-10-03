@@ -414,7 +414,7 @@ describe("createCheckoutAction — jalur sukses", () => {
     );
   });
 
-  it("pencarian order pending disaring undangan, paket, DAN status pending", async () => {
+  it("pencarian order pending disaring undangan, paket, status, DAN purpose", async () => {
     setup(
       { id: INV, status: "pending_payment", slug: "andi-sinta" },
       PKG,
@@ -431,7 +431,45 @@ describe("createCheckoutAction — jalur sukses", () => {
       invitation_id: INV,
       package_id: "pkg-premium",
       status: "pending",
+      // Lihat test berikutnya untuk alasan `purpose`.
+      purpose: "purchase",
     });
+  });
+
+  it("order UPGRADE yang menggantung TIDAK dipakai ulang sebagai aktivasi (B3)", async () => {
+    // Order upgrade memakai paket tujuan yang SAMA (`premium`) tetapi nominalnya
+    // hanya SELISIH harga. Tanpa filter `purpose`, pemilik yang punya order
+    // upgrade belum lunas lalu menekan "Aktifkan"/"Perpanjang" akan dipakaikan
+    // ulang order selisih itu — mendapat masa aktif PENUH dengan membayar
+    // selisihnya. Filter inilah satu-satunya yang memisahkan dua harga untuk
+    // satu paket, dan `toMatchObject` di test di atas tak akan pernah
+    // menangkap ketidakhadirannya.
+    const dipakai: Record<string, unknown>[] = [];
+    setup(
+      { id: INV, status: "expired", slug: "andi-sinta" },
+      PKG,
+      {},
+      { pendingOrder: null },
+    );
+
+    await createCheckoutAction(INV, "premium");
+
+    for (const c of calls) {
+      if (c.table === "orders" && c.op === "select") dipakai.push(c.filters);
+    }
+    expect(dipakai).not.toHaveLength(0);
+    for (const f of dipakai) expect(f.purpose).toBe("purchase");
+  });
+
+  it("order yang dibuat ditandai `purpose: purchase` secara eksplisit", async () => {
+    // Jenis order adalah bagian kontrak jalur uang: membiarkannya bergantung
+    // pada default kolom membuat perubahan default di DB mengubah arti order
+    // tanpa satu baris kode pun berubah.
+    setup({ id: INV, status: "draft", slug: "andi-sinta" });
+
+    await createCheckoutAction(INV, "premium");
+
+    expect(orders()[0]?.payload).toMatchObject({ purpose: "purchase" });
   });
 
   it("undangan TIDAK diaktifkan; transisi hanya draft → pending_payment, ber-guard", async () => {

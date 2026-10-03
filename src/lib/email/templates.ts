@@ -136,6 +136,58 @@ ${detailRows(rows)}
   };
 }
 
+/**
+ * Kuitansi UPGRADE paket (AUDIT-2026-10-01 B3).
+ *
+ * Bentuknya sama dengan kuitansi aktivasi, teksnya TIDAK: `copy.email.receipt`
+ * mengaku "undangan Anda kini aktif" dan membuat barisnya terbaca seperti
+ * pembelian masa aktif. Pada upgrade keduanya salah — undangan sudah aktif
+ * sebelum ini, dan yang dibayar hanya selisih harga. `activeUntilLabel` tetap
+ * dicantumkan karena nilainya memang tak berubah; justru itu yang perlu dilihat.
+ */
+export function renderUpgradeReceiptEmail(
+  data: ReceiptEmailData,
+): RenderedEmail {
+  const r = C.upgradeReceipt;
+  const rows: [string, string][] = [
+    [r.pkg, data.packageName],
+    [r.total, formatIdr(data.amountIdr)],
+    [r.order, data.orderCode],
+  ];
+  if (data.paidAtLabel) rows.push([r.paidAt, data.paidAtLabel]);
+  if (data.activeUntilLabel) rows.push([r.activeUntil, data.activeUntilLabel]);
+
+  const inner = `<p style="margin:0 0 16px">${escapeHtml(r.greeting(data.name))}</p>
+<p style="margin:0 0 8px">${escapeHtml(r.intro)}</p>
+${detailRows(rows)}
+<p style="margin:0 0 24px">${button(data.invitationUrl, r.cta)}</p>
+<p style="margin:0;font-size:13px;color:${MUTED}">${escapeHtml(r.outro)}</p>`;
+
+  const text = [
+    r.greeting(data.name),
+    "",
+    r.intro,
+    "",
+    `${r.pkg}: ${data.packageName}`,
+    `${r.total}: ${formatIdr(data.amountIdr)}`,
+    `${r.order}: ${data.orderCode}`,
+    ...(data.paidAtLabel ? [`${r.paidAt}: ${data.paidAtLabel}`] : []),
+    ...(data.activeUntilLabel
+      ? [`${r.activeUntil}: ${data.activeUntilLabel}`]
+      : []),
+    "",
+    `${r.cta}: ${data.invitationUrl}`,
+    "",
+    r.outro,
+  ].join("\n");
+
+  return {
+    subject: r.subject,
+    html: layout(r.preheader, r.heading, inner),
+    text,
+  };
+}
+
 export function renderMomenReceiptEmail(
   data: MomenReceiptEmailData,
 ): RenderedEmail {

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   activationCtaFor,
   PAYABLE_STATUSES,
+  UPGRADABLE_STATUSES,
   type ActivationCta,
 } from "@/lib/invitation-status";
 import { copy } from "@/lib/copy";
@@ -47,6 +48,28 @@ describe("CTA aktivasi per status undangan", () => {
     }
     // Tanpa purged, status yang sama tetap menawarkan perpanjangan.
     expect(activationCtaFor("expired", null)).toBe("renew");
+  });
+
+  it("gerbang upgrade dan gerbang pembayaran TIDAK PERNAH beririsan", () => {
+    // Invarian UANG, bukan kerapian (AUDIT-2026-10-01 B3): kedua jalur menagih
+    // nominal berbeda untuk paket yang sama — harga penuh vs selisih harga.
+    // Satu status yang masuk ke keduanya berarti pelanggan bisa memilih jalur
+    // yang lebih murah untuk hasil yang sama: `active` di `PAYABLE_STATUSES`
+    // akan menagih dua kali, dan `expired`/`draft` di `UPGRADABLE_STATUSES`
+    // akan menjual masa aktif penuh seharga selisihnya.
+    const irisan = [...UPGRADABLE_STATUSES].filter((s) =>
+      PAYABLE_STATUSES.has(s),
+    );
+    expect(irisan).toEqual([]);
+  });
+
+  it("hanya undangan yang masa aktifnya berjalan boleh di-upgrade", () => {
+    expect([...UPGRADABLE_STATUSES]).toEqual(["active"]);
+    // `expired` sengaja DI LUAR: Premium tanpa masa aktif tak bernilai, dan
+    // perpanjangan sudah menjadi jalannya (harga penuh + periode baru).
+    expect(UPGRADABLE_STATUSES.has("expired")).toBe(false);
+    expect(UPGRADABLE_STATUSES.has("draft")).toBe(false);
+    expect(UPGRADABLE_STATUSES.has("suspended")).toBe(false);
   });
 
   it("label CTA persis seperti yang dijanjikan & cukup pendek untuk bar 360px", () => {

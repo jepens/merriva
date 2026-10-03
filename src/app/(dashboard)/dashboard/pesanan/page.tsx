@@ -13,8 +13,10 @@ import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/guards/auth";
 import {
   attachRefs,
+  buysActivePeriod,
   fetchOwnOrderPage,
   orderKindLabel,
+  pendingPaymentPath,
 } from "@/server/orders/history";
 import type { Database } from "@/types/database";
 
@@ -74,8 +76,20 @@ export default async function OrdersPage({
   const attention = orders.find(
     (o) =>
       o.status === "paid" &&
-      o.packageKind === "invitation" &&
+      buysActivePeriod(o.packageKind, o.purpose) &&
       o.invitationStatus !== "active",
+  );
+
+  // Sepupunya pada jalur upgrade: undangannya TETAP `active`, jadi kartu di atas
+  // tak akan pernah menyalakannya — padahal selisihnya sudah dibayar dan
+  // paketnya tak pernah naik (RPC `held`: masa aktif berakhir saat pembayaran
+  // berjalan, atau paket tujuannya sudah dipegang lewat perpanjangan). Tanpa
+  // kartu ini, uang itu tak punya satu pun tempat untuk terlihat.
+  const upgradeAttention = orders.find(
+    (o) =>
+      o.status === "paid" &&
+      o.purpose === "upgrade" &&
+      o.invitationPackageId !== o.packageId,
   );
 
   return (
@@ -97,6 +111,24 @@ export default async function OrdersPage({
               {t.checkStatus}
             </Link>
             <SupportContact orderCode={attention.orderCode} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {upgradeAttention ? (
+        <Card className="border-amber-300">
+          <CardContent className="space-y-3 py-4">
+            <h2 className="text-sm font-medium">{t.attentionUpgradeTitle}</h2>
+            <p className="text-muted-foreground text-sm">
+              {t.attentionUpgradeBody}
+            </p>
+            <Link
+              href={`/dashboard/undangan/${upgradeAttention.invitationId}/upgrade`}
+              className={buttonVariants({ size: "sm" })}
+            >
+              {t.checkUpgradeStatus}
+            </Link>
+            <SupportContact orderCode={upgradeAttention.orderCode} />
           </CardContent>
         </Card>
       ) : null}
@@ -125,7 +157,7 @@ export default async function OrdersPage({
                         {o.packageName ?? t.packageUnknown}
                       </p>
                       <p className="text-muted-foreground text-xs">
-                        {orderKindLabel(o.packageKind, t)}
+                        {orderKindLabel(o.packageKind, o.purpose, t)}
                       </p>
                     </div>
                     <span
@@ -190,27 +222,21 @@ export default async function OrdersPage({
                       </Link>
                     ) : null}
                     {o.status === "pending" ? (
-                      <>
-                        {/* Link Pakasir TIDAK dibangun ulang di sini:
-                          `getPaymentGateway()` MELEMPAR bila slug proyek kosong,
-                          dan itu akan mematikan seluruh halaman riwayat.
-                          Halaman /bayar yang sudah ada permukaan yang benar. */}
-                        <Link
-                          href={
-                            o.packageKind === "addon_momen"
-                              ? `/dashboard/undangan/${o.invitationId}/momen`
-                              : `/dashboard/undangan/${o.invitationId}/bayar`
-                          }
-                          className={buttonVariants({
-                            variant: "outline",
-                            size: "sm",
-                          })}
-                        >
-                          {o.packageKind === "addon_momen"
-                            ? t.manageMomen
-                            : t.continuePayment}
-                        </Link>
-                      </>
+                      <Link
+                        href={pendingPaymentPath(
+                          o.invitationId,
+                          o.packageKind,
+                          o.purpose,
+                        )}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
+                      >
+                        {o.packageKind === "addon_momen"
+                          ? t.manageMomen
+                          : t.continuePayment}
+                      </Link>
                     ) : null}
                   </div>
                 </CardContent>

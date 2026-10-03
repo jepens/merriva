@@ -233,6 +233,10 @@ export const copy = {
       },
       kindInvitation: "Paket undangan",
       kindAddonMomen: "Add-on Album Momen",
+      // Order upgrade: paketnya paket undangan biasa, jadi `packages.kind` saja
+      // akan melabelinya "Paket undangan" dan membuatnya tampak membeli masa
+      // aktif. Labelnya ditentukan BERSAMA `orders.purpose` (B3).
+      kindUpgrade: "Upgrade paket",
       kindUnknown: "Pesanan",
       packageUnknown: "Paket tidak tercatat",
       // HANYA nilai yang benar-benar diketahui. Channel lain diteruskan mentah
@@ -265,6 +269,10 @@ export const copy = {
       refundHint:
         "Perlu mengajukan pengembalian dana? Sertakan kode order di atas dan baca",
       refundLink: "Kebijakan Refund",
+      attentionUpgradeTitle: "Upgrade sudah dibayar, paket belum naik",
+      attentionUpgradeBody:
+        "Selisih harga sudah kami terima tetapi paket undangannya belum berubah. Biasanya ini karena masa aktif undangan berakhir saat pembayaran berjalan. Hubungi kami dengan kode order di bawah — kami naikkan manual atau kembalikan dananya.",
+      checkUpgradeStatus: "Cek status upgrade",
       attentionTitle: "Pembayaran sudah masuk, undangan belum aktif",
       attentionBody:
         "Satu pesanan Anda sudah lunas tetapi undangannya belum aktif. Biasanya ini selesai sendiri dalam beberapa menit. Bila acara Anda sudah dekat, hubungi kami sekarang dengan kode order di bawah — kami dahulukan.",
@@ -317,7 +325,11 @@ export const copy = {
       limitOf: "dari",
       unlimited: "tanpa batas",
       limitReached:
-        "Kuota tamu paket sudah penuh. Tingkatkan paket untuk menambah tamu.",
+        // "Tingkatkan paket" dulu adalah instruksi tanpa tombol: tak ada satu
+        // pun jalur upgrade di produk ini (AUDIT-2026-10-01 B3). Sejak jalurnya
+        // ada, kalimat ini jujur — tombolnya di kartu undangan dashboard untuk
+        // undangan aktif, dan di pemilih paket untuk yang belum.
+        "Kuota tamu paket sudah penuh. Naikkan paket undangan ini untuk menambah tamu.",
       addTitle: "Tambah Tamu",
       addCta: "Tambah",
       adding: "Menambah…",
@@ -394,6 +406,7 @@ export const copy = {
     },
     cardShare: "Sebar",
     cardMomen: "Album Momen",
+    cardUpgrade: "Upgrade paket",
     // Sebar Undangan (SPEC §4.7).
     sebar: {
       title: "Sebar Undangan",
@@ -484,6 +497,84 @@ export const copy = {
       noWatermark: "Tanpa watermark Merriva",
       watermark: "Watermark kecil di footer",
       rsvp: "RSVP + ucapan & amplop digital",
+    },
+  },
+  // Upgrade paket di tengah masa aktif — bayar SELISIH (AUDIT-2026-10-01 B3,
+  // SPEC §4.8). Semua teks di sini punya satu kewajiban yang sama: pelanggan
+  // harus paham SEBELUM membayar bahwa yang dibeli adalah peningkatan untuk
+  // SISA masa aktif yang sedang berjalan — bukan periode baru.
+  upgrade: {
+    title: "Upgrade Paket",
+    subtitle:
+      "Naik ke paket yang lebih lengkap untuk sisa masa aktif undangan Anda. Anda hanya membayar selisih harganya.",
+    back: "Kembali ke dashboard",
+    currentLabel: "Paket sekarang",
+    currentPrice: "Harga paket sekarang",
+    targetPrice: "Harga paket tujuan",
+    payLabel: "Yang Anda bayar",
+    payHint: "Selisih harga",
+    activeUntilLabel: "Masa aktif berakhir",
+    daysLeft: (n: number) => (n === 0 ? "berakhir hari ini" : `sisa ${n} hari`),
+    // Kalimat terpenting di halaman ini. Paket Premium biasanya datang dengan
+    // masa aktif lebih panjang daripada Basic; upgrade TIDAK membawa tambahan
+    // itu, dan pelanggan harus tahu sebelum menekan tombol — bukan sesudah.
+    periodNotice:
+      "Upgrade menaikkan paket untuk SISA masa aktif yang sedang berjalan. Masa aktif tidak diperpanjang dan tanggal berakhirnya tidak berubah.",
+    gainsTitle: "Yang Anda dapat setelah upgrade",
+    cta: "Bayar selisih & upgrade",
+    redirecting: "Mengalihkan ke pembayaran…",
+    error: "Gagal memulai pembayaran upgrade. Silakan coba lagi.",
+    // Gerbang: undangan belum/tidak bisa di-upgrade.
+    needActiveTitle: "Upgrade hanya untuk undangan aktif",
+    needActiveBody:
+      "Paket hanya bisa dinaikkan selama masa aktif berjalan. Untuk undangan yang belum aktif atau sudah kedaluwarsa, pilih paket yang Anda inginkan saat aktivasi atau perpanjangan — harganya penuh, tetapi masa aktifnya baru.",
+    noPackageTitle: "Paket undangan ini tidak tercatat",
+    noPackageBody:
+      "Tidak ada harga paket yang bisa dijadikan pengurang, jadi selisihnya tak bisa dihitung. Hubungi kami dan kami bantu pindahkan paketnya manual.",
+    topTierTitle: "Sudah di paket tertinggi",
+    topTierBody:
+      "Undangan ini sudah memakai paket paling lengkap yang tersedia. Tidak ada yang perlu di-upgrade.",
+    // Penahan server (halaman dilewati / sudah basi).
+    notUpgradable:
+      "Paket undangan ini tidak bisa dinaikkan saat ini. Upgrade hanya untuk undangan yang masa aktifnya sedang berjalan.",
+    noCurrentPackage:
+      "Paket undangan ini tidak tercatat, jadi selisih harganya tak bisa dihitung. Hubungi kami untuk pindah paket manual.",
+    packageUnavailable: "Paket tujuan tidak tersedia. Silakan coba lagi.",
+    noDifference:
+      "Paket itu tidak lebih tinggi dari paket Anda sekarang, jadi tidak ada selisih yang perlu dibayar.",
+    orderPending:
+      "Masih ada pembayaran upgrade yang belum selesai. Tunggu sampai terverifikasi — paketnya akan naik sendiri.",
+    // Poller status pembayaran upgrade (jalur aktivasi otoritatif kedua).
+    payment: {
+      pendingTitle: "Menunggu konfirmasi pembayaran",
+      pendingBody: (orderCode: string) =>
+        `Order ${orderCode} sedang kami tunggu konfirmasinya dari Pakasir. Paket akan naik otomatis begitu pembayaran terverifikasi — halaman ini memperbarui sendiri.`,
+      pendingHint:
+        "Sudah bayar tetapi belum berubah? Biarkan halaman ini terbuka beberapa saat. Anda juga bisa menutupnya — pembayaran tetap diproses di latar.",
+      activeTitle: "Paket Anda sudah naik",
+      activeBody:
+        "Pembayaran terverifikasi dan paket undangan sudah diperbarui. Masa aktifnya tidak berubah.",
+      reviewTitle: "Pembayaran diterima — paket belum berubah",
+      reviewBody:
+        "Pembayaran Anda tercatat, tetapi paketnya belum bisa dinaikkan (biasanya karena masa aktif undangan berakhir saat pembayaran berjalan). Hubungi kami dengan kode order di bawah — kami selesaikan manual atau kembalikan dananya.",
+      expiredTitle: "Sesi pembayaran kedaluwarsa",
+      expiredBody:
+        "Pembayaran upgrade tidak selesai dalam batas waktu. Anda bisa memulainya lagi.",
+      errorTitle: "Status pembayaran tidak bisa dipastikan",
+      errorBody:
+        "Kami belum bisa memastikan status pembayaran upgrade ini. Coba lagi sebentar; bila Anda yakin sudah membayar, hubungi kami dengan kode order.",
+      timeoutTitle: "Masih menunggu konfirmasi",
+      timeoutBody:
+        "Konfirmasi dari Pakasir belum sampai. Pembayaran tetap diproses di latar — cek lagi nanti, atau hubungi kami bila acara Anda sudah dekat.",
+      chooseAgain: "Pilih paket lagi",
+      checkNow: "Cek sekarang",
+      checking: "Memeriksa…",
+      retry: "Coba lagi",
+      viewInvitation: "Lihat undangan",
+      back: "Ke dashboard",
+      package: "Paket tujuan",
+      amount: "Selisih dibayar",
+      order: "Kode order",
     },
   },
   // Halaman cek status pembayaran (M3.3) — poll `transactiondetail`.
@@ -706,7 +797,8 @@ export const copy = {
       photosLabel: "foto",
       remove: "Hapus foto",
       working: "Menyiapkan & mengunggah…",
-      limitReached: "Jumlah foto sudah mencapai batas paket.",
+      limitReached:
+        "Jumlah foto sudah mencapai batas paket. Naikkan paket undangan ini untuk menambah foto.",
       invalidFile: "Berkas harus berupa gambar (JPG, PNG, atau WebP).",
       tooLarge: "Foto terlalu besar setelah dikompres. Coba foto lain.",
       error: "Gagal mengunggah foto. Coba lagi.",
@@ -1192,6 +1284,24 @@ export const copy = {
       cta: "Lihat undangan",
       outro: "Simpan email ini sebagai bukti pembayaran.",
     },
+    // Kuitansi UPGRADE paket (B3). Berbeda dari kuitansi aktivasi: tak boleh
+    // mengaku "undangan Anda kini aktif" (ia sudah aktif sebelum ini) dan tak
+    // boleh menyiratkan masa aktif baru — nominalnya hanya selisih harga.
+    upgradeReceipt: {
+      subject: "Upgrade berhasil — paket undangan Anda sudah naik",
+      preheader: "Pembayaran selisih diterima. Paket undangan Anda sudah naik.",
+      heading: "Upgrade berhasil 🎉",
+      greeting: (name: string | null) => (name ? `Halo ${name},` : "Halo,"),
+      intro:
+        "Terima kasih. Pembayaran selisih telah kami terima dan paket undangan Anda sudah naik. Masa aktif undangan tidak berubah.",
+      pkg: "Paket sekarang",
+      total: "Selisih dibayar",
+      order: "Kode order",
+      paidAt: "Tanggal bayar",
+      activeUntil: "Masa aktif berakhir",
+      cta: "Lihat undangan",
+      outro: "Simpan email ini sebagai bukti pembayaran.",
+    },
     // Kuitansi add-on Album Momen (dikirim saat order add-on → paid). Album ikut
     // masa retensi undangan (bukan durasi paket) → tanpa baris "aktif hingga".
     momenReceipt: {
@@ -1393,6 +1503,7 @@ export const copy = {
       ownerEmail: "Email",
       ownerPhone: "WhatsApp",
       ownerId: "User ID",
+      ownerDeleted: "Akun sudah dihapus",
       noOrders: "Belum ada order.",
       // Aksi
       activateTitle: "Aktivasi manual",
@@ -1521,6 +1632,8 @@ export const copy = {
         "Order ditandai refund. Undangan TETAP aktif karena masih ada order lunas lain yang menopangnya.",
       refund_ok_album:
         "Order add-on ditandai refund. Album Momen diarsipkan; undangan tidak disentuh.",
+      refund_ok_downgraded:
+        "Order upgrade ditandai refund. Paket undangan diturunkan kembali; masa aktifnya tidak disentuh.",
       refund_not_found: "Order tidak ditemukan.",
       refund_not_paid: "Hanya order berstatus Lunas yang bisa ditandai refund.",
       refund_invalid: "Alasan refund wajib diisi.",

@@ -132,12 +132,20 @@ export async function createCheckoutAction(
   // dijanjikan kebijakan. Nominalnya diambil dari ORDER, bukan harga paket saat
   // ini: Pakasir menagih sesuai order yang sudah dibuat, dan harga bisa berubah
   // di antara dua percobaan.
+  //
+  // `purpose = 'purchase'` WAJIB ada di filter ini (B3). Order upgrade memakai
+  // paket tujuan yang SAMA (`premium`) tetapi nominalnya hanya SELISIH harga:
+  // tanpa filter ini, pemilik yang punya order upgrade menggantung lalu
+  // mengaktifkan/memperpanjang undangan akan dipakaikan ulang order Rp100.000
+  // itu dan mendapat masa aktif penuh dengan membayar selisih. Gerbangnya
+  // dua arah — `findPendingUpgradeOrder` memfilter ke sisi sebaliknya.
   const { data: pending } = await admin
     .from("orders")
     .select("order_code, amount_idr")
     .eq("invitation_id", invitationId)
     .eq("package_id", pkg.id)
     .eq("status", "pending")
+    .eq("purpose", "purchase")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -163,6 +171,9 @@ export async function createCheckoutAction(
       amount_idr: pkg.price_idr,
       status: "pending",
       order_code: orderCode,
+      // Eksplisit meski kolomnya ber-default: jenis order adalah bagian dari
+      // kontrak jalur uang, bukan detail skema yang boleh diam-diam berubah.
+      purpose: "purchase",
     });
     if (!error) {
       created = true;

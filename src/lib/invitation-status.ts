@@ -52,3 +52,20 @@ export const PAYABLE_STATUSES: ReadonlySet<InvitationStatus> = new Set([
   "expired",
   "pending_payment",
 ]);
+
+/**
+ * Status yang boleh membayar UPGRADE paket (AUDIT-2026-10-01 B3): HANYA
+ * `active`.
+ *
+ * Daftar ini sengaja TERPISAH dari `PAYABLE_STATUSES`, dan keduanya WAJIB tak
+ * beririsan. Itu bukan kerapian — itu gerbang uang: kedua jalur menagih nominal
+ * BERBEDA untuk paket yang sama (harga penuh vs selisih harga), jadi satu status
+ * yang masuk ke keduanya berarti pelanggan bisa memilih jalur yang lebih murah
+ * untuk hasil yang sama. `draft`/`pending_payment` belum pernah membayar apa pun
+ * sehingga tak ada yang bisa dikreditkan sebagai selisih; `expired` harus
+ * memperpanjang karena Premium tanpa masa aktif tak bernilai; `suspended` tak
+ * bisa diselesaikan sendiri. Dijaga test, bukan oleh kode.
+ */
+export const UPGRADABLE_STATUSES: ReadonlySet<InvitationStatus> = new Set([
+  "active",
+]);

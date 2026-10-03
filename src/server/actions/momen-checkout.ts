@@ -111,6 +111,9 @@ export async function createMomenCheckoutAction(
       amount_idr: pkg.price_idr,
       status: "pending",
       order_code: orderCode,
+      // Add-on MEMBELI sesuatu (albumnya), jadi 'purchase' — bukan 'upgrade',
+      // yang khusus untuk order yang hanya menukar paket undangan (B3).
+      purpose: "purchase",
     });
     if (!error) {
       created = true;

@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   attachRefs,
+  buysActivePeriod,
   fetchOwnOrderPage,
   orderKindLabel,
+  pendingPaymentPath,
   ORDER_HISTORY_PAGE_SIZE,
   type OrderRecord,
 } from "@/server/orders/history";
@@ -193,6 +195,7 @@ describe("attachRefs", () => {
       paidAt: "2026-08-01T03:05:00.000Z",
       invitationId: "inv-1",
       packageId: "pkg-basic",
+      purpose: "purchase",
     },
   ];
 
@@ -289,14 +292,81 @@ describe("orderKindLabel", () => {
   const c = {
     kindInvitation: "Paket undangan",
     kindAddonMomen: "Add-on Album Momen",
+    kindUpgrade: "Upgrade paket",
     kindUnknown: "Pesanan",
   };
 
-  it("label jenis HANYA dari packages.kind", () => {
+  it("label jenis dari packages.kind, bukan dari nominal", () => {
     // `premium` dan `momen_50` sama-sama Rp199.000 → nominal tak bisa
     // membedakan jenis, dan menebaknya dari nama paket sama rapuhnya.
-    expect(orderKindLabel("invitation", c)).toBe(c.kindInvitation);
-    expect(orderKindLabel("addon_momen", c)).toBe(c.kindAddonMomen);
-    expect(orderKindLabel(null, c)).toBe(c.kindUnknown);
+    expect(orderKindLabel("invitation", "purchase", c)).toBe(c.kindInvitation);
+    expect(orderKindLabel("addon_momen", "purchase", c)).toBe(c.kindAddonMomen);
+    expect(orderKindLabel(null, "purchase", c)).toBe(c.kindUnknown);
+  });
+
+  it("order upgrade TIDAK terbaca sebagai paket undangan biasa (B3)", () => {
+    // Paket tujuan upgrade memang paket undangan, jadi `kind` sendirian akan
+    // melabelinya identik dengan aktivasi — dan riwayat pesanan pelanggan jadi
+    // memperlihatkan dua "Paket undangan" untuk satu undangan.
+    expect(orderKindLabel("invitation", "upgrade", c)).toBe(c.kindUpgrade);
+  });
+});
+
+describe("pendingPaymentPath", () => {
+  const INV = "inv-1";
+
+  it("order upgrade menuju halaman upgrade, BUKAN /bayar", async () => {
+    // `/bayar` berkunci pada status UNDANGAN dan langsung menyatakan
+    // "Pembayaran berhasil! Undangan Anda kini aktif" bila undangannya
+    // `active` — tepat keadaan SETIAP pembeli upgrade. Mengirimnya ke sana
+    // berarti layar sukses untuk pembayaran yang belum terjadi.
+    expect(pendingPaymentPath(INV, "invitation", "upgrade")).toBe(
+      "/dashboard/undangan/inv-1/upgrade",
+    );
+  });
+
+  it("add-on menuju halaman kelola album (alasan yang sama)", () => {
+    expect(pendingPaymentPath(INV, "addon_momen", "purchase")).toBe(
+      "/dashboard/undangan/inv-1/momen",
+    );
+  });
+
+  it("purpose MENANG atas kind — aturan yang sama di label & RPC", () => {
+    // Kombinasi ini TAK TERJANGKAU lewat produk: checkout upgrade memfilter
+    // `kind='invitation'`. Ia dipaku bukan karena bisa terjadi, melainkan karena
+    // urutan pemeriksaannya kalau tidak akan jadi satu-satunya aturan presedensi
+    // di repo ini yang tak diuji — sementara `orderKindLabel` dan kedua cabang
+    // RPC semuanya memeriksa `purpose` lebih dulu. Satu aturan, di semua tempat.
+    expect(pendingPaymentPath(INV, "addon_momen", "upgrade")).toBe(
+      "/dashboard/undangan/inv-1/upgrade",
+    );
+  });
+
+  it("aktivasi & perpanjangan menuju /bayar", () => {
+    expect(pendingPaymentPath(INV, "invitation", "purchase")).toBe(
+      "/dashboard/undangan/inv-1/bayar",
+    );
+    // Paket tak terbaca → jalur paling umum, bukan halaman yang tak relevan.
+    expect(pendingPaymentPath(INV, null, "purchase")).toBe(
+      "/dashboard/undangan/inv-1/bayar",
+    );
+  });
+});
+
+describe("buysActivePeriod", () => {
+  it("hanya order PEMBELIAN paket undangan yang membeli masa aktif", () => {
+    expect(buysActivePeriod("invitation", "purchase")).toBe(true);
+  });
+
+  it("upgrade TIDAK membeli masa aktif — kuitansinya tak boleh mengaku begitu", () => {
+    // Inti B3: tanpa ini kuitansi upgrade mencetak "Masa aktif dibeli: 12 bulan"
+    // untuk pembayaran selisih yang tak membeli satu bulan pun. Pada dokumen
+    // bukti pembayaran itu keterangan yang salah.
+    expect(buysActivePeriod("invitation", "upgrade")).toBe(false);
+  });
+
+  it("add-on Album Momen juga tidak (album ikut retensi undangan)", () => {
+    expect(buysActivePeriod("addon_momen", "purchase")).toBe(false);
+    expect(buysActivePeriod(null, "purchase")).toBe(false);
   });
 });

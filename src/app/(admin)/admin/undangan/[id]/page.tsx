@@ -62,30 +62,41 @@ export default async function AdminInvitationDetailPage({
     .maybeSingle();
   if (!inv) notFound();
 
-  const [{ data: profile }, ownerRes, { data: orders }, { data: packages }] =
-    await Promise.all([
-      admin
-        .from("profiles")
-        .select("full_name, phone")
-        .eq("id", inv.user_id)
-        .maybeSingle(),
-      admin.auth.admin.getUserById(inv.user_id),
-      admin
-        .from("orders")
-        .select(
-          "order_code, status, amount_idr, payment_method, created_at, paid_at",
-        )
-        .eq("invitation_id", id)
-        .order("created_at", { ascending: false }),
-      admin
-        .from("packages")
-        .select("code, name, price_idr")
-        .eq("is_active", true)
-        .eq("kind", "invitation") // aktivasi manual hanya paket undangan
-        .order("price_idr", { ascending: true }),
-    ]);
+  // Pemilik bisa TAK ADA: akun yang dihapus meninggalkan kerangka undangan
+  // ber-`user_id` NULL demi pembukuan (A6). Memanggil `getUserById(null)` dan
+  // `.eq("id", null)` di sini akan memecahkan halaman — kemungkinan yang
+  // tersembunyi dari compiler selama tipe DB menyatakan kolomnya non-null.
+  const ownerId = inv.user_id;
+  const [{ data: orders }, { data: packages }] = await Promise.all([
+    admin
+      .from("orders")
+      .select(
+        "order_code, status, amount_idr, payment_method, created_at, paid_at",
+      )
+      .eq("invitation_id", id)
+      .order("created_at", { ascending: false }),
+    admin
+      .from("packages")
+      .select("code, name, price_idr")
+      .eq("is_active", true)
+      .eq("kind", "invitation") // aktivasi manual hanya paket undangan
+      .order("price_idr", { ascending: true }),
+  ]);
 
-  const email = ownerRes.data?.user?.email ?? copy.admin.common.dash;
+  const [profileRes, ownerRes] = ownerId
+    ? await Promise.all([
+        admin
+          .from("profiles")
+          .select("full_name, phone")
+          .eq("id", ownerId)
+          .maybeSingle(),
+        admin.auth.admin.getUserById(ownerId),
+      ])
+    : [null, null];
+  const profile = profileRes?.data ?? null;
+  const email = ownerId
+    ? (ownerRes?.data?.user?.email ?? copy.admin.common.dash)
+    : d.ownerDeleted;
   const status = inv.status as InvitationStatus;
   const draftSlug = isDraftSlug(inv.slug);
   const msgText =
@@ -169,7 +180,7 @@ export default async function AdminInvitationDetailPage({
               label={d.ownerPhone}
               value={profile?.phone ?? copy.admin.common.dash}
             />
-            <Row label={d.ownerId} value={inv.user_id} mono />
+            <Row label={d.ownerId} value={ownerId ?? d.ownerDeleted} mono />
           </CardContent>
         </Card>
       </div>

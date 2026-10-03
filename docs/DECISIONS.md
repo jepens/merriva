@@ -1697,6 +1697,116 @@ sesungguhnya. Mutan M2 (membuang cek basi) dan M6 (`ok` lama tampak hijau) mengu
 
 Uji mutasi: 5 mutan, 5 merah.
 
+## #61 — 2026-10-04 · Upgrade paket bayar SELISIH: penandanya kolom pada ORDER, bukan paket semu
+
+**Keputusan:** kolom `orders.purpose` (`'purchase' | 'upgrade'`, default `'purchase'`),
+cabang ketiga di `activate_paid_order` yang HANYA menukar `invitations.package_id`,
+`UPGRADABLE_STATUSES = {active}` terpisah dari `PAYABLE_STATUSES`, halaman
+`/dashboard/undangan/[id]/upgrade` dengan poll sendiri, dan cabang upgrade di
+`admin_refund_order`.
+
+**Keputusan pemilik (2026-10-04):** bayar selisih harga, masa aktif TIDAK di-reset.
+
+**Kenapa kolom pada order, bukan baris `packages` semu.** Paket tujuan upgrade adalah
+paket undangan biasa (`premium`) dan HARUS tetap begitu: `orders.package_id` dibaca
+kuitansi, riwayat pesanan, dan `invitations.package_id`. Baris semu
+"upgrade_basic_premium" akan membekukan selisih harga di dalam katalog — basi begitu
+harga paket berubah — dan menuntut indireksi untuk menemukan paket tujuannya.
+`packages.kind` juga tak bisa dipakai: yang membedakan order ini memang bukan paketnya,
+melainkan EFEKNYA.
+
+**Tiga jenis order, satu jalur uang:**
+`purchase + invitation` → undangan active, `active_until` dihitung ·
+`purchase + addon_momen` → album dibuat, undangan tak disentuh ·
+`upgrade + invitation` → `package_id` ditukar, sisanya tak disentuh.
+
+**Kolom ini WAJIB difilter di KEDUA arah — dan itu temuan, bukan kerapian.** Order
+upgrade memakai paket yang sama dengan aktivasi tetapi nominalnya hanya selisih. Tanpa
+`.eq("purpose","purchase")` di `createCheckoutAction`, pemilik yang punya order upgrade
+menggantung lalu menekan "Perpanjang" akan DIPAKAIKAN ULANG order Rp100.000 itu dan
+mendapat masa aktif penuh dengan membayar selisihnya. Kebocoran ini diciptakan oleh
+fitur baru di dalam kode LAMA yang tak berubah satu baris pun. Mutan "filter purpose
+dibuang" menguncinya.
+
+**`active_until` dinilai dari apa yang TIDAK berubah.** Satu baris `set` yang ikut
+tersalin dari cabang aktivasi sudah cukup untuk menjual masa aktif penuh seharga
+selisih, tanpa galat di mana pun. `supabase/tests/database/order_upgrade.test.sql`
+menguji ketidakberubahan `active_until`, `published_at`, dan `status` secara eksplisit —
+unit test me-MOCK RPC ini, jadi tak satu pun dari mereka menyentuh SQL-nya.
+
+**Dua penahan yang ditemukan dengan MENJALANKAN RPC-nya,** bukan dengan membacanya:
+- undangan yang **kedaluwarsa saat pembayaran berjalan** → `held`, paket tak ditukar.
+  Premium tanpa masa aktif tak bernilai, dan menimpa `suspended` lewat jalur pembayaran
+  akan membatalkan moderasi admin.
+- undangan yang **sudah memegang paket tujuan** (kedaluwarsa → diperpanjang dengan
+  Premium sementara order upgrade menggantung) → `held`. Tanpa `package_id is distinct
+  from`, penukarannya jadi no-op senyap: pelanggan membayar selisih untuk sesuatu yang
+  sudah dimilikinya dan RPC melaporkan sukses.
+
+**Poll sendiri, bukan `checkPaymentStatusAction`.** Jalur undangan berhenti di status
+UNDANGAN `active` — dan undangan pembeli upgrade SELALU `active`, jadi order upgrade tak
+akan pernah direkonsiliasi di sana. Jebakan yang sama persis sudah ditemukan pada add-on
+Album Momen (AUDIT-2026-09-04 KUA-2b); berkas ini mengikuti pola itu, bukan membuat pola
+ketiga.
+
+**Refund order upgrade menurunkan paket, bukan mencabut undangan.** Tanpa cabangnya,
+refund berakhir di cabang undangan, menemukan order aktivasi yang masih lunas, dan
+menyimpulkan `refunded_still_paid` — benar bahwa undangan tak dicabut, tetapi
+`package_id` tetap di paket yang baru saja dikembalikan uangnya: pelanggan dapat uangnya
+kembali DAN tetap memegang Premium. Sekaligus hitungan "order lunas lain yang menopang"
+kini memfilter `purpose = 'purchase'`: order upgrade tak pernah membeli masa aktif, jadi
+keberadaannya tak boleh membuat undangan tampak masih tertopang ketika aktivasi
+satu-satunya justru yang direfund.
+
+**Ditolak:**
+- *Melebarkan `PAYABLE_STATUSES` dengan `active`* — komentar di `invitation-status.ts`
+  sendiri sudah memperingatkannya. Dua jalur menagih nominal BERBEDA untuk paket yang
+  sama; satu status di keduanya berarti pelanggan memilih jalur termurah untuk hasil yang
+  sama. Test menjaga kedua himpunan tetap tak beririsan.
+- *Kredit dari nominal order lunas terakhir, bukan harga katalog* — lebih "adil" pada
+  kasus harga berubah, tetapi tak terdefinisi pada aktivasi manual admin (tanpa order)
+  dan pada aktivasi gratis. Katalog = satu sumber, dan angka yang dilihat pelanggan
+  adalah angka yang ditagih.
+- *Mengizinkan upgrade tanpa `package_id`* — tak ada yang bisa dikreditkan, jadi
+  tagihannya menjadi harga PENUH lewat jalur yang tak memberi periode baru. Itu tagihan
+  paling buruk yang bisa dihasilkan fitur ini; ditolak dengan pesan menuju dukungan.
+- *Prorata menurut sisa hari* — tidak disetujui dan tidak diminta. Dicatat sebagai
+  pertanyaan terbuka di bawah.
+
+**Konsekuensi:**
+- Premium berdurasi **12 bulan** sementara Basic **6**. Upgrade membayar selisih penuh
+  (Rp100.000) tetapi TIDAK membawa tambahan durasi itu. Karena itu halaman upgrade
+  menyebut tanggal berakhir + sisa hari dan satu kalimat eksplisit bahwa masa aktif tak
+  diperpanjang. **Keadilan harganya patut ditinjau pemilik** — menyentuh struktur harga,
+  jadi tidak diubah sendiri.
+- Kuitansi & riwayat tak boleh menilai dari `packages.kind` saja lagi: `buysActivePeriod`
+  dan `orderKindLabel` memerlukan `purpose`. Tanpa itu kuitansi upgrade mencetak "Masa
+  aktif dibeli: 12 bulan" — pada dokumen bukti pembayaran itu keterangan yang salah.
+- Kuitansi email punya bentuk ketiga (`renderUpgradeReceiptEmail`): yang lama mengaku
+  "undangan Anda kini aktif" dan menyiratkan periode baru.
+- Pesan kuota tamu & foto (`"Tingkatkan paket…"`) akhirnya punya tombol. Sebelum ini ia
+  instruksi tanpa tujuan — temuan B3 di audit.
+- Order upgrade lunas yang paketnya tak pernah naik mendapat kartunya sendiri di
+  `/dashboard/pesanan`: undangannya tetap `active`, jadi kartu "pembayaran masuk,
+  undangan belum aktif" tak akan pernah menyalakannya.
+- Tombol "Lanjutkan pembayaran" tak boleh lagi menebak tujuannya dari `kind`
+  (`pendingPaymentPath`). `/bayar` berkunci pada status UNDANGAN dan langsung
+  menyatakan "Pembayaran berhasil! Undangan Anda kini aktif" bila undangannya
+  `active` — keadaan SETIAP pembeli upgrade. Layar sukses untuk pembayaran yang
+  belum terjadi.
+- **Hasil RPC baru WAJIB dipetakan di `adminRefundOrderAction`.** `refunded_downgraded`
+  mula-mula jatuh ke `refund_failed`: refundnya berhasil di DB sementara admin membaca
+  "gagal", lalu percobaan kedua menjawab "hanya order Lunas yang bisa direfund" — yang
+  terbaca seolah refundnya tak pernah terjadi. Uang sungguhan dipindahkan manual di
+  dashboard Pakasir berdasarkan bacaan itu, jadi pesan yang salah di sini berisiko
+  refund ganda. Ditemukan dengan membaca pemetaannya, bukan oleh typecheck.
+
+Uji mutasi: 22 mutan, 22 merah (13 jalur checkout/katalog/label + 6 poller + 2 rute
+lanjut-bayar + 1 pemetaan hasil refund). Satu mutan ekuivalen (urutan pemeriksaan
+`purpose` vs `kind` pada kombinasi tak terjangkau) dibunuh dengan memaku aturan
+presedensinya, karena aturan itu sama di `orderKindLabel` dan kedua RPC.
+Uji langsung RPC terhadap skema cloud (blok rollback) sebelum ada satu baris TypeScript.
+
 ---
 
 ---

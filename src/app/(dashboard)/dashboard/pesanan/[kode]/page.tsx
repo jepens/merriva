@@ -18,8 +18,10 @@ import { orderCodeSchema } from "@/lib/validation/order";
 import { requireUser } from "@/server/guards/auth";
 import {
   attachRefs,
+  buysActivePeriod,
   fetchOwnOrderByCode,
   orderKindLabel,
+  pendingPaymentPath,
 } from "@/server/orders/history";
 import type { Database } from "@/types/database";
 
@@ -99,7 +101,12 @@ export default async function ReceiptPage({
   );
 
   const isPaid = view.status === "paid";
-  const isInvitation = view.packageKind === "invitation";
+  // Baris masa aktif hanya untuk order yang MEMANG membelinya. Order upgrade
+  // memakai paket undangan biasa, jadi `packageKind` sendirian akan mencetak
+  // "Masa aktif dibeli: 12 bulan" pada dokumen bukti pembayaran yang sebenarnya
+  // tak membeli satu bulan pun (B3) — pada kuitansi itu keterangan yang salah,
+  // bukan label yang kurang tepat.
+  const buysPeriod = buysActivePeriod(view.packageKind, view.purpose);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -154,8 +161,10 @@ export default async function ReceiptPage({
           <Baris label={t.colPackage}>
             {view.packageName ?? t.packageUnknown}
           </Baris>
-          <Baris label={t.colKind}>{orderKindLabel(view.packageKind, t)}</Baris>
-          {isInvitation && view.packageDurationMonths !== null ? (
+          <Baris label={t.colKind}>
+            {orderKindLabel(view.packageKind, view.purpose, t)}
+          </Baris>
+          {buysPeriod && view.packageDurationMonths !== null ? (
             <Baris label={t.colDuration}>
               {t.durationMonths(view.packageDurationMonths)}
             </Baris>
@@ -180,7 +189,9 @@ export default async function ReceiptPage({
               </span>
             ) : null}
           </Baris>
-          {isInvitation && view.invitationActiveUntil ? (
+          {/* Pada upgrade, tanggal ini justru PENTING: ia memperlihatkan bahwa
+              masa aktifnya tidak berubah. Pada add-on ia tak relevan. */}
+          {view.packageKind === "invitation" && view.invitationActiveUntil ? (
             <Baris label={t.colActiveUntil}>
               {wibDateTime(view.invitationActiveUntil)}
             </Baris>
@@ -202,7 +213,11 @@ export default async function ReceiptPage({
         <PrintButton label={t.print} />
         {view.status === "pending" ? (
           <Link
-            href={`/dashboard/undangan/${view.invitationId}/bayar`}
+            href={pendingPaymentPath(
+              view.invitationId,
+              view.packageKind,
+              view.purpose,
+            )}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             {t.continuePayment}

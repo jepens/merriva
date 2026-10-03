@@ -37,12 +37,37 @@ export default async function DashboardPage() {
     dataOrThrow(
       await supabase
         .from("invitations")
-        .select("id, slug, category, status, event_date")
+        .select("id, slug, category, status, event_date, package_id")
         .eq("user_id", user.id)
         .is("purged_at", null)
         .order("created_at", { ascending: false }),
       "invitations (daftar dashboard)",
     ) ?? [];
+
+  // Harga paket undangan — untuk memutuskan apakah tombol "Upgrade paket"
+  // masuk akal (ada paket aktif yang lebih mahal dari paket undangan ini).
+  //
+  // `data ?? []`, BUKAN `dataOrThrow`: di sini arah fail-safe-nya berlawanan
+  // dengan daftar undangan. Kehilangan satu tombol pintasan tak membohongi
+  // siapa pun — halaman `/upgrade` tetap bekerja lewat tautan langsung — jadi
+  // memerahkan seluruh dashboard karena katalog harga tak terbaca jauh lebih
+  // mahal daripada menyembunyikan tombolnya (bandingkan DECISIONS #45/#46).
+  const { data: pkgRows } = await supabase
+    .from("packages")
+    .select("id, price_idr")
+    .eq("is_active", true)
+    .eq("kind", "invitation");
+  const priceById = new Map((pkgRows ?? []).map((p) => [p.id, p.price_idr]));
+  const topPrice = Math.max(0, ...(pkgRows ?? []).map((p) => p.price_idr));
+  /**
+   * Paket undangan ini masih bisa dinaikkan? Paket yang tak terbaca (mis.
+   * dinonaktifkan pemilik toko) dianggap TAK bisa — menawarkan upgrade yang
+   * selisihnya tak bisa dihitung lebih buruk daripada tak menawarkannya.
+   */
+  const bisaUpgrade = (status: string, packageId: string | null) =>
+    status === "active" &&
+    packageId !== null &&
+    (priceById.get(packageId) ?? Number.POSITIVE_INFINITY) < topPrice;
 
   return (
     <div className="space-y-6">
@@ -139,6 +164,17 @@ export default async function DashboardPage() {
                         })}
                       >
                         {copy.dashboard.cardShare}
+                      </Link>
+                    ) : null}
+                    {bisaUpgrade(inv.status, inv.package_id) ? (
+                      <Link
+                        href={`/dashboard/undangan/${inv.id}/upgrade`}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
+                      >
+                        {copy.dashboard.cardUpgrade}
                       </Link>
                     ) : null}
                     {inv.status === "active" ? (

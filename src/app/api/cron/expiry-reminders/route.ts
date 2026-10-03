@@ -60,9 +60,18 @@ export async function POST(req: Request) {
   let sent = 0;
   let skipped = 0;
   let failed = 0;
+  let noOwner = 0;
 
   for (const t of targets ?? []) {
     if (!t.active_until) continue; // dijaga filter di atas; guard tipe
+    // Pemilik sudah menghapus akunnya (`user_id` NULL — A6): tak ada alamat
+    // tujuan. DIHITUNG, bukan di-`continue` diam-diam: barisnya akan terpilih
+    // lagi setiap jalan karena `reminder_sent_at` tak pernah ditandai, dan satu
+    // angka di `cron_runs.stats` lebih baik daripada lingkaran tak terlihat.
+    if (!t.user_id) {
+      noOwner += 1;
+      continue;
+    }
     const status = await sendExpiryReminder(
       admin,
       {
@@ -95,9 +104,18 @@ export async function POST(req: Request) {
     sent,
     skipped,
     failed,
+    noOwner,
   });
   return json(
-    { ok: true, scanned, truncated: scanned === BATCH, sent, skipped, failed },
+    {
+      ok: true,
+      scanned,
+      truncated: scanned === BATCH,
+      sent,
+      skipped,
+      failed,
+      noOwner,
+    },
     200,
   );
 }

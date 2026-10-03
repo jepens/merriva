@@ -23,6 +23,7 @@ const OK_MSG = new Set([
   "refund_ok_revoked",
   "refund_ok_still_paid",
   "refund_ok_album",
+  "refund_ok_downgraded",
 ]);
 
 interface Row {
