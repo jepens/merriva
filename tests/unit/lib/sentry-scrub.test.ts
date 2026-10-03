@@ -9,7 +9,11 @@ import { redactGuestToken, scrubSentryEvent } from "@/lib/sentry-scrub";
  * Berkas ini mengunci penyaringnya (DECISIONS #46 — koreksi temuan review).
  */
 
-const TOKEN = "V1StGXR8Z5jdHi6BmyT";
+// gitleaks:allow — token tamu PALSU. `guests.token` memang string acak, jadi
+// heuristik entropi `generic-api-key` menandainya. Ditandai per-baris, bukan
+// lewat allowlist path: mematikan aturan untuk seluruh `tests/` berarti JWT
+// sungguhan (mis. SUPABASE_SERVICE_ROLE_KEY) bisa lolos di fixture kelak.
+const TOKEN = "V1StGXR8Z5jdHi6BmyT"; // gitleaks:allow
 
 describe("redactGuestToken", () => {
   it("menyensor ?g= di URL penuh, membiarkan sisanya terbaca", () => {

@@ -1516,6 +1516,21 @@ sendiri dan mengembalikannya ke daftar undangan.
 **Ditolak:** `(admin)/not-found.tsx` — panel admin memakai `redirect()` ke daftar, bukan
 `notFound()`, pada hampir semua jalurnya; menambahkannya akan jadi kode mati.
 
+**Koreksi (pemindaian pertama merah).** gitleaks menemukan 2 temuan, keduanya token tamu
+PALSU di fixture test — `generic-api-key` adalah heuristik entropi, dan `guests.token`
+memang string acak. Dua upaya perbaikan dicoba dan yang pertama DIBUANG:
+
+1. `.gitleaks.toml` dengan `[[allowlists]] targetRules` — tak berpengaruh (konfigurasinya
+   tak terbaca action, atau `targetRules` belum didukung versi gitleaks yang dibundelnya).
+2. `// gitleaks:allow` per BARIS — berhasil, dan memang lebih tepat.
+
+Allowlist ber-path untuk `tests/` sengaja TIDAK dipakai meski paling mudah: ia mematikan
+aturan untuk seluruh direktori, sehingga JWT sungguhan — `SUPABASE_SERVICE_ROLE_KEY`
+mem-bypass RLS di semua tabel — bisa lolos bila kelak tertempel di sebuah fixture. Penanda
+per-baris menandai persis dua baris itu, terlihat oleh siapa pun yang membaca test-nya, dan
+memaksa keputusan sadar untuk setiap fixture baru. Alat keamanan yang hanya berpura-pura
+memeriksa lebih buruk daripada tidak ada.
+
 ---
 
 ---

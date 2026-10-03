@@ -34,7 +34,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 import { __resetRateLimit } from "@/lib/rate-limit";
 import { viewGuestByTokenAction } from "@/server/actions/personalization";
 
-const TOKEN = "tok-0123456789";
+const TOKEN = "tok-0123456789"; // gitleaks:allow — token tamu palsu
 const VIEW_LIMIT = 300;
 
 beforeEach(() => {

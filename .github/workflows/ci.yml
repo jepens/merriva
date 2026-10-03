@@ -34,6 +34,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # Fixture test yang memang berbentuk kunci ditandai `// gitleaks:allow`
+      # PER BARIS, bukan lewat allowlist path: mematikan aturan untuk seluruh
+      # `tests/` berarti JWT sungguhan bisa lolos di fixture kelak, dan setiap
+      # fixture baru jadi tak perlu keputusan sadar lagi.
+      #
       # Secret yang ter-commit tak bisa "dibatalkan" — sejarah git permanen, dan
       # SUPABASE_SERVICE_ROLE_KEY mem-bypass RLS di SELURUH tabel. Sejarah repo
       # ini bersih hari ini (AUDIT-2026-10-01); yang belum ada adalah mekanisme
@@ -42,9 +47,6 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          # `.gitleaks.toml` mempersempit SATU aturan berisik di `tests/` saja —
-          # aturan ber-keyakinan tinggi tetap berlaku di sana.
-          GITLEAKS_CONFIG: .gitleaks.toml
 
       - name: Lint
         run: pnpm lint
