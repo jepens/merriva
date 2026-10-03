@@ -1436,6 +1436,45 @@ Uji mutasi: 3 mutan, 3 merah.
 
 ---
 
+## #56 — 2026-10-03 · Dashboard & panel admin berhenti menelan galat DB
+
+**Keputusan:** bacaan DAFTAR di `(dashboard)` dan `(admin)` memakai `dataOrThrow`, bukan
+`data ?? []`. `(admin)/admin/error.tsx` ditambahkan dalam commit yang sama.
+
+**Alasan.** Temuan ini muncul bukan dari audit, melainkan dari VERIFIKASI audit: penguji
+yang membantah temuan "boundary galat kurang" justru menemukan kebalikannya — seluruh
+halaman `(admin)` (9 bacaan), `/dashboard`, `/dashboard/profil`, dan `undangan/baru`
+memakai `const { data } = await …` tanpa memeriksa `error`.
+
+Kelas kegagalannya sama dengan #45/#46, dan yang membuatnya mahal justru karena ia TIDAK
+terlihat seperti kegagalan: satu kedipan DB menghasilkan layar yang sah dan meyakinkan —
+"Belum ada undangan" bagi pemilik yang undangannya sedang aktif, tabel order kosong di
+panel yang dipakai merekonsiliasi uang, pemilih tema tanpa satu pun pilihan, form profil
+kosong yang mengundang pemilik mengetik ulang di atas data yang sebenarnya ada, dan nama
+pembeli yang berubah jadi "—" pada kuitansi yang gunanya membuktikan pembayaran.
+
+**Ditolak:**
+- *Mengubah halaman `[id]` sekaligus* — di sana pola `notFound()` punya semantik sendiri
+  dan beberapa sudah ditangani sadar (mis. jadwal yang tak terbaca di `aktifkan/page.tsx`,
+  DECISIONS #44). Di luar lingkup; dikerjakan terpisah bila perlu.
+- *`dataOrThrow` tanpa boundary admin lebih dulu* — tepat kesalahan yang diperingatkan
+  #45: galat naik ke `global-error.tsx` yang mengganti seluruh dokumen, sehingga header,
+  navigasi, dan jalan kembali ikut hilang. `error.tsx` masuk commit yang sama.
+- *`SupportContact` di boundary admin* — admin adalah tim Merriva sendiri, bukan pelanggan
+  yang perlu dialihkan ke alamat dukungan.
+
+**Konsekuensi:**
+- `listUsers` GoTrue di `/admin/pengguna` ikut diperiksa: galat di sana dulu menghasilkan
+  daftar pengguna yang SEPARUH (loop paginasi berhenti diam-diam), yang lebih menyesatkan
+  daripada kosong.
+- Pembedaan "kosong" versus "gagal" kini dikunci test: daftar yang benar-benar kosong
+  TETAP menampilkan ajakan, galat DB melempar. Mutan yang mengembalikan `data ?? []` merah.
+- Pembaca kode berikutnya bisa tergoda "menyeragamkan" ini kembali ke pola `?? []` yang
+  masih dipakai halaman `[id]`. Komentar di tiap lokasi menyebut alasannya, dan testnya
+  yang akan menahan.
+
+---
+
 ---
 
 ## Template entri baru

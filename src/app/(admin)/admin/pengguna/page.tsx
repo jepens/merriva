@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { isUserBanned, wibDate } from "@/lib/admin/display";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow, SupabaseReadError } from "@/lib/supabase/result";
 import {
   adminReinstateUserAction,
   adminSetUserRoleAction,
@@ -60,10 +61,12 @@ export default async function AdminUsersPage({
   }[] = [];
   let truncated = false;
   for (let p = 1; p <= MAX_SCAN_PAGES; p += 1) {
-    const { data } = await admin.auth.admin.listUsers({
+    const { data, error } = await admin.auth.admin.listUsers({
       page: p,
       perPage: SCAN_PER_PAGE,
     });
+    // GoTrue gagal → jangan merender daftar pengguna yang separuh atau kosong.
+    if (error) throw new SupabaseReadError("auth.listUsers (admin)", error);
     const chunk = data?.users ?? [];
     allUsers.push(...chunk);
     if (chunk.length < SCAN_PER_PAGE) break;
@@ -80,10 +83,13 @@ export default async function AdminUsersPage({
     string,
     { role: ProfileRole; full_name: string | null; phone: string | null }
   >();
-  const { data: profiles } = await admin
-    .from("profiles")
-    .select("id, role, full_name, phone")
-    .range(0, MAX_SCAN_PAGES * SCAN_PER_PAGE - 1);
+  const profiles = dataOrThrow(
+    await admin
+      .from("profiles")
+      .select("id, role, full_name, phone")
+      .range(0, MAX_SCAN_PAGES * SCAN_PER_PAGE - 1),
+    "profiles (admin)",
+  );
   for (const pr of profiles ?? []) {
     profileMap.set(pr.id, {
       role: pr.role,

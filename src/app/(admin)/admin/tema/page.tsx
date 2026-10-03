@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { adminUpdateThemeAction } from "@/server/actions/admin-catalog";
 import { requireAdmin } from "@/server/guards/auth";
 import type { InvitationCategory, ThemeTier } from "@/types";
@@ -39,11 +40,13 @@ export default async function AdminThemesPage({
       : null;
 
   const admin = createSupabaseAdminClient();
-  const { data } = await admin
-    .from("themes")
-    .select("id, slug, name, categories, tier, sort_order, is_active")
-    .order("sort_order", { ascending: true });
-  const themes = (data ?? []) as ThemeRow[];
+  const themes = dataOrThrow(
+    await admin
+      .from("themes")
+      .select("id, slug, name, categories, tier, sort_order, is_active")
+      .order("sort_order", { ascending: true }),
+    "themes (admin)",
+  ) as ThemeRow[];
 
   return (
     <div className="space-y-5">

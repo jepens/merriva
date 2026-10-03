@@ -11,6 +11,7 @@ import { wibDateTime } from "@/lib/admin/display";
 import { copy } from "@/lib/copy";
 import { formatIdr, formatPaymentMethod } from "@/lib/format";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { orderCodeSchema } from "@/lib/validation/order";
@@ -86,11 +87,16 @@ export default async function ReceiptPage({
 
   const admin = createSupabaseAdminClient();
   const [view] = await attachRefs(supabase, admin, user.id, [record]);
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .maybeSingle();
+  // Pada DOKUMEN bukti pembayaran, nama pembeli yang berubah jadi "—" karena
+  // DB berkedip lebih buruk daripada halaman yang jujur gagal.
+  const profile = dataOrThrow(
+    await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle(),
+    "profiles (kuitansi)",
+  );
 
   const isPaid = view.status === "paid";
   const isInvitation = view.packageKind === "invitation";

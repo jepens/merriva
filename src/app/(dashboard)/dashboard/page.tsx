@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import { requireUser } from "@/server/guards/auth";
@@ -28,14 +29,20 @@ export default async function DashboardPage() {
 
   // `purged_at` tak null = kerangka pasca-retensi (data pribadi sudah dihapus) →
   // sembunyikan dari daftar pemilik (baris tetap ada untuk statistik & orders).
-  const { data } = await supabase
-    .from("invitations")
-    .select("id, slug, category, status, event_date")
-    .eq("user_id", user.id)
-    .is("purged_at", null)
-    .order("created_at", { ascending: false });
-
-  const invitations = data ?? [];
+  // `dataOrThrow`, bukan `data ?? []`: "Belum ada undangan" saat DB berkedip
+  // adalah kebohongan yang paling meyakinkan di produk ini — pemilik yang punya
+  // undangan aktif mengira karyanya hilang (AUDIT-2026-10-01). Galatnya mendarat
+  // di `(dashboard)/dashboard/error.tsx`.
+  const invitations =
+    dataOrThrow(
+      await supabase
+        .from("invitations")
+        .select("id, slug, category, status, event_date")
+        .eq("user_id", user.id)
+        .is("purged_at", null)
+        .order("created_at", { ascending: false }),
+      "invitations (daftar dashboard)",
+    ) ?? [];
 
   return (
     <div className="space-y-6">

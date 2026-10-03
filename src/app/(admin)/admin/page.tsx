@@ -5,6 +5,7 @@ import { copy } from "@/lib/copy";
 import { formatEventDateTime } from "@/lib/datetime";
 import { formatIdr } from "@/lib/format";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { getAdminMetrics } from "@/server/admin/metrics";
 import { requireAdmin } from "@/server/guards/auth";
 
@@ -40,11 +41,17 @@ export default async function AdminOverviewPage() {
   const metrics = await getAdminMetrics();
 
   const admin = createSupabaseAdminClient();
-  const { data: logs } = await admin
-    .from("admin_logs")
-    .select("id, action, target_type, created_at")
-    .order("created_at", { ascending: false })
-    .limit(10);
+  // `dataOrThrow`, bukan `data ?? []`: panel yang dipakai merekonsiliasi uang
+  // tak boleh menjawab "tidak ada aktivitas" saat DB berkedip
+  // (AUDIT-2026-10-01). Mendarat di `(admin)/admin/error.tsx`.
+  const logs = dataOrThrow(
+    await admin
+      .from("admin_logs")
+      .select("id, action, target_type, created_at")
+      .order("created_at", { ascending: false })
+      .limit(10),
+    "admin_logs (beranda admin)",
+  );
 
   const conversionPct = `${(metrics.conversionRate * 100).toFixed(1)}%`;
 

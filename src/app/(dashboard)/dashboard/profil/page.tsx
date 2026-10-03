@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser } from "@/server/guards/auth";
 
@@ -19,11 +20,16 @@ export default async function ProfilePage() {
   const user = await requireUser();
   const supabase = await createSupabaseServerClient();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, phone")
-    .eq("id", user.id)
-    .single();
+  // Galat DB akan merender form profil KOSONG — terlihat seperti data yang
+  // hilang, dan mengundang pemilik mengetik ulang di atas yang sebenarnya ada.
+  const profile = dataOrThrow(
+    await supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("id", user.id)
+      .single(),
+    "profiles (halaman profil)",
+  );
 
   return (
     <div className="max-w-lg space-y-6">

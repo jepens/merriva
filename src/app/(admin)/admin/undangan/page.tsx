@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { wibDate } from "@/lib/admin/display";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { requireAdmin } from "@/server/guards/auth";
 import type { InvitationStatus } from "@/types";
 
@@ -53,9 +54,10 @@ export default async function AdminInvitationsPage({
   if (q) query = query.ilike("slug", `%${q}%`);
   if (status) query = query.eq("status", status);
 
-  const { data, count } = await query;
-  const rows = (data ?? []) as unknown as Row[];
-  const total = count ?? 0;
+  // Galat DB TIDAK boleh menyamar jadi "tidak ada undangan" (AUDIT-2026-10-01).
+  const res = await query;
+  const rows = dataOrThrow(res, "invitations (admin)") as unknown as Row[];
+  const total = res.count ?? 0;
   const hasNext = from + PAGE_SIZE < total;
 
   const href = (p: number) => {

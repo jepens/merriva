@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { resolveLimits } from "@/lib/limits";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { adminUpdatePackageAction } from "@/server/actions/admin-catalog";
 import { requireAdmin } from "@/server/guards/auth";
 
@@ -28,11 +29,14 @@ export default async function AdminPackagesPage({
       : null;
 
   const admin = createSupabaseAdminClient();
-  const { data: packages } = await admin
-    .from("packages")
-    .select("code, name, price_idr, duration_months, is_active, limits")
-    .eq("kind", "invitation") // editor paket undangan; add-on Momen dikelola terpisah
-    .order("price_idr", { ascending: true });
+  const packages = dataOrThrow(
+    await admin
+      .from("packages")
+      .select("code, name, price_idr, duration_months, is_active, limits")
+      .eq("kind", "invitation") // editor paket undangan; add-on Momen terpisah
+      .order("price_idr", { ascending: true }),
+    "packages (admin)",
+  );
 
   return (
     <div className="space-y-5">

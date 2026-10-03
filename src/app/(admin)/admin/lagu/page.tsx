@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow } from "@/lib/supabase/result";
 import {
   adminAddSongAction,
   adminDeleteSongAction,
@@ -40,11 +41,13 @@ export default async function AdminSongsPage({
       : null;
 
   const admin = createSupabaseAdminClient();
-  const { data } = await admin
-    .from("songs")
-    .select("id, title, artist, storage_path, is_active")
-    .order("title", { ascending: true });
-  const songs = (data ?? []) as SongRow[];
+  const songs = dataOrThrow(
+    await admin
+      .from("songs")
+      .select("id, title, artist, storage_path, is_active")
+      .order("title", { ascending: true }),
+    "songs (admin)",
+  ) as SongRow[];
   const storage = getStorage();
 
   return (

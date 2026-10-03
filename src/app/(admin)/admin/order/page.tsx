@@ -8,6 +8,7 @@ import { copy } from "@/lib/copy";
 import { wibDate } from "@/lib/admin/display";
 import { formatIdr } from "@/lib/format";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { dataOrThrow } from "@/lib/supabase/result";
 import { requireAdmin } from "@/server/guards/auth";
 import type { OrderStatus } from "@/types";
 
@@ -72,9 +73,11 @@ export default async function AdminOrdersPage({
   if (q) query = query.ilike("order_code", `%${q.toUpperCase()}%`);
   if (status) query = query.eq("status", status);
 
-  const { data, count } = await query;
-  const rows = (data ?? []) as unknown as Row[];
-  const total = count ?? 0;
+  // Tabel uang: "tidak ada order" saat DB berkedip adalah kebohongan yang
+  // langsung merusak rekonsiliasi (AUDIT-2026-10-01).
+  const res = await query;
+  const rows = dataOrThrow(res, "orders (admin)") as unknown as Row[];
+  const total = res.count ?? 0;
   const hasNext = from + PAGE_SIZE < total;
 
   const href = (p: number) => {
