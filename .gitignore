@@ -64,3 +64,6 @@ handoff/music/mp3/
 
 # CSS tema hasil generate (scripts/build-theme-css.mjs) — dibuat ulang saat dev/build.
 /public/themes/
+
+# Laporan gitleaks di runner CI — jangan pernah ikut ter-commit.
+results.sarif

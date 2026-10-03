@@ -25,3 +25,8 @@ src/themes/_shared/demo-photos.generated.ts
 
 # manifest CSS tema (di-generate `scripts/build-theme-css.mjs`)
 src/themes/theme-css.generated.ts
+
+# Laporan gitleaks (ditulis action ke workspace SAAT CI berjalan, sebelum
+# langkah Lint). Bukan berkas repo — ia hanya ada di runner, dan `prettier
+# --check .` memerahkan CI karenanya.
+results.sarif
