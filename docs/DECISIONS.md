@@ -1533,6 +1533,67 @@ memeriksa lebih buruk daripada tidak ada.
 
 ---
 
+## #58 — 2026-10-03 · Kebijakan privasi mencerminkan pemrosesan yang sebenarnya; tamu diberi tahu di titik pengumpulan
+
+**Keputusan:** `copy.marketing.legal.privacy` diperluas (Album Momen, pengenal perangkat,
+tempat pemrosesan, dasar pemrosesan, peran pengendali/pemroses, Sentry), dan komponen
+`GuestPrivacyNote` dipasang di tiga formulir publik: RSVP, konfirmasi amplop, dan
+onboarding Album Momen sebelum kamera terbuka.
+
+**Alasan.** Sisa temuan legal yang bertahan setelah verifikasi membantah bentuk aslinya
+(#57 mencatat bantahan itu: Pasal 21 UU PDP tidak mewajibkan penyebutan seluruh pemroses,
+dan Album Momen sudah memberi notis tujuan di layar masuknya). Yang TETAP berdiri, dan
+dikerjakan di sini:
+
+- **Kategori data Album Momen tak pernah disebut.** Diverifikasi langsung di skema:
+  `momen_photos` menyimpan `guest_name`, `device_id` (UUID dari localStorage), serta path
+  foto `display`/`thumb`. Kebijakan lama hanya menyebut "nama, nomor WhatsApp, RSVP, dan
+  ucapan" — tak satu kata pun tentang foto yang bisa memuat wajah tamu dan orang lain di
+  acara. Ini celah paling sah dari seluruh temuan legal.
+- **`localStorage` bukan cookie.** Kebijakan lama menyebut "cookie sesi" saja; pengenal
+  perangkat tamu hidup di penyimpanan lokal peramban, dan cookie sesi tamu Album Momen
+  bertanda tangan adalah hal ketiga lagi. Ketiganya kini dipisah namanya.
+- **Transfer lintas yurisdiksi tak diungkap** padahal basis data di Singapura dan layanan
+  email/anti-bot/pemantauan di luar Indonesia.
+- **Kebijakan menjanjikan hak "menarik persetujuan"** padahal tak ada persetujuan yang
+  pernah dikumpulkan — klaim yang justru melemahkan posisi hukumnya sendiri. Diganti
+  bagian "Dasar pemrosesan" yang menyebut dasar yang BENAR: pelaksanaan perjanjian untuk
+  layanan, kewajiban hukum untuk catatan pembayaran.
+- **Peran atas data tamu hanya melimpahkan.** Kini dinyatakan hitam-putih: pengguna =
+  pengendali, Merriva = pemroses, beserta kewajiban masing-masing.
+
+**Sentry dimasukkan sekarang meski DSN belum diisi.** Menamai pemroses yang segera dipakai
+bukan ketidakakuratan; tidak menamai yang dipakai adalah pelanggaran. Memasukkannya
+sekarang juga menghapus satu langkah yang mudah terlupa saat DSN akhirnya diaktifkan.
+Penyaringan PII (`sentry-scrub.ts`) ikut disebut karena itu yang membuat klaimnya jujur.
+
+**Pemberitahuan di titik pengumpulan, bukan di halaman legal.** UU PDP menuntut
+pemberitahuan SEBELUM data dikumpulkan. `/privasi` hanya tertaut dari footer halaman
+marketing — permukaan yang takkan pernah tamu buka, karena tamu masuk lewat tautan
+WhatsApp langsung ke `/{slug}`. Satu baris di bawah formulirnya adalah satu-satunya tempat
+yang sah.
+
+**Ditolak:**
+- *`next/link` untuk tautan privasi* — ia mem-prefetch tujuannya. Mem-prefetch halaman
+  marketing dari halaman undangan membebani tamu di 4G tanpa manfaat apa pun bagi mereka,
+  dan halaman ini punya anggaran bundel 64 KB gzip. Anchor biasa, `target="_blank"` agar
+  tamu yang sedang mengisi RSVP tak kehilangan isiannya.
+- *Menyebut Merriva lebih dulu dalam notisnya* — tuan rumahlah pengendali datanya. Teks
+  yang menyebut Merriva duluan salah secara hukum DAN menyesatkan tamu soal kepada siapa
+  ia harus meminta penghapusan.
+- *Checkbox persetujuan untuk tamu* — dasar pemrosesannya bukan persetujuan, dan menuntut
+  centang di formulir RSVP menambah friksi pada jalur yang paling tipis toleransinya.
+
+**Konsekuensi:**
+- Teks kebijakan kini dikunci test terhadap apa yang BENAR-BENAR ada di skema. Bila kelak
+  ada kategori data baru (mis. QR check-in Fase 2) dan kebijakannya tak diperbarui, testnya
+  tak akan menangkapnya — itu batas yang jujur: test menjaga yang sudah diketahui, bukan
+  yang belum.
+- Anggaran bundel halaman undangan dijaga gerbang CI; komponen notis tak menambah
+  dependency baru.
+
+---
+
 ---
 
 ## Template entri baru

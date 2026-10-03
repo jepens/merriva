@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { GuestPrivacyNote } from "@/components/public/guest-privacy-note";
 import { copy } from "@/lib/copy";
 import { encodeCanvas, type EncodedFormat } from "@/lib/image/encode";
 import {
@@ -683,6 +684,9 @@ export function MomenCamera(props: MomenCameraProps) {
             >
               {starting ? c.masuk.starting : c.masuk.start} <span>→</span>
             </button>
+            {/* Sebelum kamera terbuka: tamu di sini menyerahkan FOTO WAJAHNYA,
+                permukaan dengan risiko tertinggi di seluruh produk. */}
+            <GuestPrivacyNote className="mn-privacy" />
             {phase === "revealed" ? (
               <button
                 type="button"

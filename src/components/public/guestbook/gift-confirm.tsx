@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState, type FormEvent } from "react";
 
+import { GuestPrivacyNote } from "@/components/public/guest-privacy-note";
 import { copy } from "@/lib/copy";
 import { submitGiftNoteAction } from "@/server/actions/guestbook";
 
@@ -212,6 +213,8 @@ export function GiftConfirm({
           {t.close}
         </button>
       </div>
+
+      <GuestPrivacyNote className="gb-privacy" />
     </form>
   );
 }

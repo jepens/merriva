@@ -49,6 +49,22 @@ export const copy = {
   // Subject & body mailto memuat kode order karena kebijakan refund mewajibkan
   // pelanggan menyebutkannya, sementara state `error` pada poller tidak
   // merender ringkasan order sama sekali.
+  // Pemberitahuan privasi di TITIK PENGUMPULAN (AUDIT-2026-10-01).
+  // Tamu bukan pelanggan Merriva: ia menyerahkan nama, nomor WhatsApp, ucapan,
+  // dan — di Album Momen — fotonya sendiri, tanpa pernah punya hubungan dengan
+  // kami. UU PDP menuntut pemberitahuan SEBELUM data dikumpulkan, dan satu-
+  // satunya tempat yang sah untuk itu adalah formulirnya, bukan halaman legal
+  // yang takkan pernah dibuka tamu.
+  //
+  // Tuan rumah disebut lebih dulu karena DIALAH pengendali datanya; Merriva
+  // hanya pemroses. Anchor biasa, bukan `next/link` — halaman undangan punya
+  // anggaran bundel 64 KB gzip dan prefetch halaman marketing tak ada gunanya
+  // bagi tamu.
+  guestPrivacy: {
+    note: "Data yang kamu kirim dikelola tuan rumah acara.",
+    link: "Kebijakan Privasi",
+    href: "/privasi",
+  },
   support: {
     email: SUPPORT_EMAIL,
     title: "Butuh bantuan?",
@@ -1718,7 +1734,8 @@ export const copy = {
               "Data akun: nama, alamat email, dan nomor WhatsApp (opsional) yang Anda berikan saat mendaftar.",
               "Konten undangan: teks, foto, jadwal acara, dan detail lain yang Anda masukkan.",
               "Data tamu: nama, nomor WhatsApp, status kehadiran (RSVP), dan ucapan — baik yang Anda tambahkan maupun yang diisi tamu.",
-              "Data teknis: alamat IP, jenis perangkat, dan cookie sesi yang menjaga Anda tetap masuk.",
+              "Album Momen (bila diaktifkan): foto yang diunggah tamu dari kameranya, nama tampilan yang tamu isi sendiri, serta pengenal perangkat acak yang disimpan di peramban tamu untuk menghitung kuota peserta. Foto dapat memuat wajah tamu dan orang lain yang ada di acara.",
+              "Data teknis: alamat IP, jenis perangkat, cookie sesi yang menjaga Anda tetap masuk, dan — khusus Album Momen — cookie sesi tamu bertanda tangan serta pengenal perangkat di penyimpanan lokal peramban (bukan cookie).",
             ],
           },
           {
@@ -1737,7 +1754,15 @@ export const copy = {
               "Pakasir — pemroses pembayaran (QRIS & Virtual Account). Kami tidak menyimpan data kartu atau rekening pembayaran Anda.",
               "Resend — pengiriman email transaksional (kuitansi & pengingat).",
               "Cloudflare Turnstile — perlindungan anti-bot pada formulir publik.",
+              "Sentry — pemantauan galat & kinerja pada versi produksi. Laporan galat disaring lebih dulu: token tamu, cookie, header, dan isi formulir dibuang sebelum dikirim.",
               "Masing-masing memproses data sesuai kebijakan privasinya sendiri.",
+            ],
+          },
+          {
+            heading: "Tempat data diproses",
+            body: [
+              "Basis data dan penyimpanan berkas kami berada di pusat data Singapura. Layanan email, anti-bot, dan pemantauan galat yang kami gunakan juga memproses data di luar Indonesia.",
+              "Kami memilih penyedia yang menerapkan enkripsi saat transit maupun saat disimpan, serta terikat kebijakan privasinya masing-masing.",
             ],
           },
           {
@@ -1762,15 +1787,24 @@ export const copy = {
             ],
           },
           {
-            heading: "Hak Anda",
+            heading: "Dasar pemrosesan",
             body: [
-              "Anda berhak mengakses, memperbaiki, atau menghapus data pribadi Anda, serta menarik persetujuan. Hubungi kami untuk menggunakan hak-hak ini.",
+              "Data akun dan undangan kami proses untuk menjalankan layanan yang Anda beli — yaitu pelaksanaan perjanjian antara Anda dan Merriva.",
+              "Catatan pembayaran kami simpan untuk memenuhi kewajiban hukum di bidang pembukuan dan perpajakan.",
             ],
           },
           {
-            heading: "Tanggung jawab atas data tamu",
+            heading: "Hak Anda",
             body: [
-              "Sebagai pembuat undangan, Anda bertanggung jawab atas data tamu yang Anda unggah dan memastikan Anda berhak membagikannya kepada kami untuk keperluan undangan Anda.",
+              "Anda berhak mengakses, memperbaiki, dan menghapus data pribadi Anda, serta meminta salinannya. Hubungi kami lewat alamat di bawah untuk menggunakan hak-hak ini.",
+            ],
+          },
+          {
+            heading: "Peran kami atas data tamu",
+            body: [
+              "Atas data tamu — nama, nomor WhatsApp, RSVP, ucapan, catatan amplop, dan foto Album Momen — Anda bertindak sebagai pengendali data: Andalah yang menentukan siapa diundang dan untuk apa datanya dipakai.",
+              "Merriva bertindak sebagai pemroses: kami hanya menyimpan dan menampilkan data itu untuk menjalankan undangan Anda, tidak memakainya untuk tujuan kami sendiri, dan tidak menjualnya kepada siapa pun.",
+              "Anda bertanggung jawab memastikan Anda berhak membagikan data tamu kepada kami. Kami bertanggung jawab menjaganya, menghapusnya saat diminta, dan memberi tahu Anda bila terjadi insiden.",
             ],
           },
           {

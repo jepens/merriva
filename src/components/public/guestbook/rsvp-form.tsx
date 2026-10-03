@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState, type FormEvent } from "react";
 
+import { GuestPrivacyNote } from "@/components/public/guest-privacy-note";
 import { copy } from "@/lib/copy";
 import { submitRsvpAction } from "@/server/actions/guestbook";
 
@@ -201,6 +202,8 @@ export function RsvpForm({
       >
         {status === "sending" ? t.submitting : t.submit}
       </button>
+
+      <GuestPrivacyNote className="gb-privacy" />
     </form>
   );
 }
