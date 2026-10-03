@@ -90,6 +90,45 @@ hukum; nominal dan tanggalnya bukan data pribadi setelah pemiliknya dilepas.
 **Belum ada:** tombol hapus mandiri di dashboard pelanggan. Permintaan masuk
 lewat alamat dukungan dan dieksekusi admin.
 
+## Rotasi & kebocoran kredensial — AUDIT-2026-10-01
+
+Dokumen ini menjawab satu pertanyaan: *"kunci ini bocor, apa yang saya lakukan 30
+menit ke depan?"* Sebelumnya RUNBOOK hanya mendaftar kredensial untuk MASUK
+kembali, bukan untuk MENCABUT.
+
+**Urutan saat dicurigai bocor (jangan dibalik)**
+
+1. **Cabut kunci lamanya dulu**, sebelum apa pun. Kunci yang masih hidup sambil
+   Anda menyiapkan penggantinya tetap bisa dipakai.
+2. Pasang kunci baru di tempat yang dibutuhkan (lihat tabel).
+3. Periksa jejak pemakaian: Supabase Dashboard → Logs. Untuk `service_role`,
+   cari permintaan yang tak Anda kenali — kunci itu mem-bypass RLS di SELURUH
+   tabel, jadi satu permintaan saja bisa membaca semua `guests` dan `orders`.
+4. Paksa keluar semua sesi bila akun pengguna ikut terdampak (Supabase →
+   Authentication → Users).
+
+**Efek samping per kredensial — ini bagian yang tak terlihat dari kode**
+
+| Kredensial | Tempat rotasi | Efek samping |
+|---|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API | Ganti env Easypanel lalu redeploy. Tak perlu rebuild (dibaca saat runtime). |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_*` lainnya | Supabase / Cloudflare | **WAJIB REBUILD.** `Dockerfile` menerimanya sebagai `ARG` dan Next meng-INLINE-nya ke bundel saat build — mengganti nilainya di Environment saja tidak berpengaruh sampai image dibangun ulang. |
+| `CRON_SECRET` | Buat sendiri (`openssl rand -hex 32`) | Dipakai BERSAMA oleh 4 scheduled job. `isAuthorizedCron` fail-closed: begitu secretnya diganti tanpa memperbarui perintah cron di Easypanel, keempatnya mulai dijawab 401 **tanpa satu pun galat yang terlihat** — retensi UU PDP dan rekonsiliasi pembayaran berhenti diam-diam. Ganti env DAN keempat perintah cron dalam satu sesi. |
+| `MOMEN_SESSION_SECRET` | Buat sendiri (`openssl rand -hex 32`) | **MEMBATALKAN SELURUH SESI TAMU Album Momen seketika.** Tamu yang sedang memotret di tengah resepsi akan terlempar keluar dan harus masuk ulang. **Jangan pernah dirotasi saat ada acara berlangsung.** Di produksi variabel ini WAJIB terisi — server gagal-keras bila kosong. |
+| `PAKASIR_API_KEY` | Dashboard Pakasir | Verifikasi pembayaran (`transactiondetail`) berhenti sampai env diperbarui. Order yang sudah dibayar tidak hilang — cron `expire-orders` merekonsiliasinya setelah kunci baru aktif. |
+| `RESEND_API_KEY` | Dashboard Resend | Email berhenti terkirim; `sendTransactionalEmail` mengembalikan `skipped`/`error` tanpa menggagalkan aksinya. Perhatikan: ini juga password SMTP Supabase Auth bila Custom SMTP sudah disetel — perbarui di KEDUA tempat. |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile | Pendaftaran, reset kata sandi, dan sesi Album Momen ditolak sampai env diperbarui. Site key-nya `NEXT_PUBLIC_*` → bila ikut diganti, **butuh rebuild**. |
+| `R2_SECRET_ACCESS_KEY` (saat `STORAGE_DRIVER=r2`) | Cloudflare R2 | Unggah & hapus media gagal; media yang sudah ada tetap tersaji karena disajikan lewat domain sendiri. |
+
+**Yang membuat rotasi di sini berbeda dari kebanyakan proyek:** separuh kredensial
+di atas di-inline saat build, dan separuh lagi dipakai bersama oleh beberapa
+konsumen. Mengganti nilainya di satu tempat lalu menganggap selesai adalah
+kesalahan yang paling mungkin terjadi — dan yang paling senyap.
+
+**Belum ada:** kebijakan rotasi berkala. Kunci pihak ketiga (Pakasir, Resend)
+berumur tak terbatas. Latihan rotasi `service_role` 1× layak dijadwalkan sebelum
+launch, sejajar latihan restore backup.
+
 ## Checklist kredensial pemulihan (simpan di password manager)
 
 - Supabase: URL + anon + service_role (prod), Access Token, DB password
