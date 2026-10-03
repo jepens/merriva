@@ -1248,6 +1248,18 @@ export const copy = {
       failed: "Gagal",
       refunded: "Refund",
     },
+    // Hapus akun (AUDIT-2026-10-01 A6). Tak bisa dibatalkan, jadi butuh alasan
+    // DAN email target diketik ulang.
+    deleteAccount: {
+      cta: "Hapus akun",
+      reasonLabel: "Alasan penghapusan",
+      reasonPlaceholder: "mis. permintaan pelanggan via email 3 Okt",
+      confirmLabel: "Ketik ulang email akun ini untuk konfirmasi",
+      submit: "Hapus permanen",
+      confirm:
+        "Hapus akun ini permanen? Data tamu, RSVP, ucapan, dan foto akan hilang dan tidak bisa dikembalikan.",
+      note: "Riwayat pesanan DIPERTAHANKAN ter-anonimisasi untuk pembukuan. Akun dengan undangan yang masih aktif akan ditolak.",
+    },
     // Refund (AUDIT-2026-10-01 A3). Uangnya digerakkan di dashboard Pakasir —
     // tombol ini mencatat keputusannya dan mencabut layanan yang dibeli.
     refund: {
@@ -1419,6 +1431,18 @@ export const copy = {
       user_role_self: "Tidak dapat mengubah peran akun Anda sendiri.",
       user_role_failed: "Gagal mengubah peran pengguna.",
       user_suspend_ok: "Akun ditangguhkan — pengguna tidak dapat login.",
+      user_delete_ok:
+        "Akun dihapus permanen. Riwayat pesanan dipertahankan ter-anonimisasi untuk pembukuan.",
+      user_delete_has_active:
+        "Akun ini masih punya undangan AKTIF. Tunggu masa aktifnya berakhir — tamunya sudah memegang tautannya.",
+      user_delete_mismatch:
+        "Email konfirmasi tidak cocok dengan akun yang dipilih. Tidak ada yang dihapus.",
+      user_delete_invalid: "Alasan dan email konfirmasi wajib diisi.",
+      user_delete_self: "Anda tidak bisa menghapus akun Anda sendiri.",
+      user_delete_not_found: "Akun tidak ditemukan.",
+      user_delete_auth_left:
+        "Data pribadi sudah terhapus, tetapi baris login-nya gagal dihapus. Periksa Sentry dan hapus manual di dashboard Supabase.",
+      user_delete_failed: "Gagal menghapus akun. Coba lagi.",
       user_suspend_self: "Tidak dapat menangguhkan akun Anda sendiri.",
       user_suspend_admin:
         "Turunkan peran admin ke klien dulu sebelum menangguhkan akun.",
@@ -1720,7 +1744,8 @@ export const copy = {
             body: [
               "Data disimpan selama akun dan undangan Anda aktif.",
               "Undangan yang telah kedaluwarsa tetap kami simpan hingga 6 bulan agar dapat Anda perpanjang, setelah itu dapat dihapus.",
-              "Anda dapat meminta penghapusan data kapan saja.",
+              "Anda dapat meminta penghapusan akun dan data kapan saja lewat alamat kontak di bawah. Permintaan diverifikasi ke alamat email akun Anda sendiri sebelum dijalankan.",
+              "Pengecualian: catatan pesanan (nomor order, nominal, tanggal) tetap kami simpan untuk kewajiban pembukuan, tetapi sudah tidak lagi tertaut pada identitas Anda.",
             ],
           },
           {

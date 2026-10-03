@@ -192,6 +192,8 @@ Halaman "cek status pembayaran" di dashboard mem-poll `transactiondetail` — un
 
 ### 4.9 Panel admin
 
+**Hapus akun (AUDIT-2026-10-01 A6).** Admin dapat menghapus akun permanen dari `/admin/pengguna` (alasan wajib + email akun diketik ulang dan dicocokkan di server). Data pribadi tiap undangan di-purge berikut objek storage-nya; baris `orders` dan kerangka `invitations` DIPERTAHANKAN dengan `user_id` NULL untuk kewajiban pembukuan. Akun yang masih punya undangan `active` DITOLAK. Prosedurnya di `docs/RUNBOOK.md`.
+
 Ringkasan metrik (undangan/hari, konversi draft→paid, revenue bulan berjalan) · daftar & pencarian semua user/undangan/order · aksi: aktivasi manual (mis. bayar di luar sistem), perpanjang masa aktif, suspend undangan (konten bermasalah), ganti kepemilikan (untuk klien jasa EO) · CRUD paket & harga · CRUD metadata tema (kode tema tetap di repo; admin mengatur nama, kategori, status aktif, tier) · log aktivitas admin.
 
 **Kriteria terima:** role `client` tidak bisa membuka satu pun route/API admin (test RLS + middleware) → aktivasi manual menghasilkan status yang identik dengan aktivasi via pembayaran → perubahan harga langsung tercermin di landing & checkout tanpa deploy.

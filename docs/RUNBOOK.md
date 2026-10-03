@@ -40,6 +40,56 @@ Prosedur singkat pemulihan ketika VPS/aplikasi bermasalah. Prinsip inti: **aplik
 - Skema dikelola via `supabase/migrations/`. Terapkan ke project: `pnpm supabase db push` (setelah `supabase link`).
 - **Selalu** uji migrasi di **staging** dulu; snapshot/backup sebelum migrasi destruktif di production (boundary wajib).
 
+## Permintaan hapus akun (UU PDP) — AUDIT-2026-10-01 A6
+
+`/privasi` menjanjikan "Anda dapat meminta penghapusan data kapan saja". Sejak
+2026-10-03 janji itu bisa ditepati dari dalam produk; **jangan** mengeksekusinya
+lewat SQL editor.
+
+**Prosedur**
+
+1. Verifikasi bahwa permintaannya berasal dari pemilik akun — balas dari alamat
+   dukungan ke **alamat email akun itu sendiri** dan minta konfirmasi. Jangan
+   menerima permintaan dari alamat lain.
+2. Buka `/admin/pengguna`, cari akunnya, tekan **Hapus akun**.
+3. Isi alasan (masuk `admin_logs`, jadi satu-satunya penjelasan kelak) dan
+   **ketik ulang email akun tersebut**. Server mencocokkannya; salah ketik →
+   tak ada yang dihapus.
+4. Bila ditolak dengan *"masih punya undangan AKTIF"*: itu disengaja. Tamunya
+   sudah memegang tautan dan acaranya mungkin belum lewat. Beri tahu pelanggan
+   tanggal `active_until`-nya, atau — bila ia memang ingin undangannya mati
+   sekarang — buat undangannya kedaluwarsa dulu lewat `/admin/undangan/<id>`,
+   baru hapus akunnya.
+
+**Apa yang terjadi**
+
+| Data | Nasib |
+|---|---|
+| `auth.users` (login) | dihapus |
+| `profiles` (nama, WhatsApp) | dihapus |
+| `guests`, `rsvps`, `gift_notes`, `media`, `invitation_events`, `momen_albums`+foto | dihapus permanen |
+| Objek storage (foto galeri & Album Momen) | dihapus (best-effort) |
+| Baris `invitations` | **tetap ada** sebagai kerangka kosong (`content = {}`, `purged_at` terisi, `user_id` → NULL) — ia menahan FK `orders.invitation_id` |
+| Baris `orders` | **tetap ada**, `user_id` → NULL |
+
+Riwayat pesanan sengaja dipertahankan ter-anonimisasi: tanpanya laporan omzet
+kehilangan transaksi yang benar-benar terjadi dan rekonsiliasi dengan mutasi
+rekening Pakasir jadi mustahil. UU PDP mengizinkan retensi untuk kewajiban
+hukum; nominal dan tanggalnya bukan data pribadi setelah pemiliknya dilepas.
+
+**Bila gagal di tengah**
+
+- *"Data pribadi sudah terhapus, tetapi baris login-nya gagal dihapus"* —
+  seluruh data pribadi sudah hilang; yang tersisa hanya baris `auth.users`.
+  Hapus manual di Supabase Dashboard → Authentication → Users. Periksa Sentry
+  (`area: admin.delete-account.auth`).
+- Objek storage yang gagal dihapus dilaporkan ke Sentry
+  (`area: admin.delete-account.storage`) tanpa membatalkan penghapusan. Bersihkan
+  manual bila perlu; pathnya ada di pesan galatnya.
+
+**Belum ada:** tombol hapus mandiri di dashboard pelanggan. Permintaan masuk
+lewat alamat dukungan dan dieksekusi admin.
+
 ## Checklist kredensial pemulihan (simpan di password manager)
 
 - Supabase: URL + anon + service_role (prod), Access Token, DB password

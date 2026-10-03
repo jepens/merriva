@@ -728,6 +728,17 @@ export type Database = {
           result: string;
         }[];
       };
+      admin_delete_account: {
+        Args: { p_admin_id: string; p_reason: string; p_user_id: string };
+        Returns: {
+          // Array path null pada hasil 'not_found'/'has_active' — koreksi
+          // manual seperti create_momen_album. Pertahankan saat regen.
+          media_paths: string[] | null;
+          momen_paths: string[] | null;
+          purged_count: number;
+          result: string;
+        }[];
+      };
       admin_extend_invitation: {
         Args: { p_admin_id: string; p_invitation_id: string; p_months: number };
         Returns: {

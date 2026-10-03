@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { DeleteAccountForm } from "@/components/admin/delete-account-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
@@ -269,6 +270,13 @@ export default async function AdminUsersPage({
                                 </button>
                               </form>
                             )}
+                            {/* Hapus permanen — berbeda dari "tangguhkan"
+                                yang hanya memblokir login dan membiarkan
+                                datanya utuh. */}
+                            <DeleteAccountForm
+                              userId={r.id}
+                              email={r.email ?? ""}
+                            />
                           </div>
                         )}
                       </td>

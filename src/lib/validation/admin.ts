@@ -31,6 +31,16 @@ export const adminChangeOwnerSchema = z.object({
   newUserId: z.string().uuid(),
 });
 
+/**
+ * Hapus akun (AUDIT-2026-10-01 A6). `confirmEmail` harus diketik ulang dan
+ * dicocokkan dengan email akun TARGET di server — tindakan ini tak bisa
+ * dibatalkan, jadi salah klik pada baris tabel tak boleh cukup.
+ */
+export const adminDeleteAccountSchema = z.object({
+  reason: z.string().trim().min(1, "Alasan wajib diisi").max(500),
+  confirmEmail: z.string().trim().min(3).max(320),
+});
+
 /** Ubah peran pengguna (SPEC §4.9 "kelola user"). Enum selaras `profile_role`. */
 export const adminUserRoleSchema = z.object({
   role: z.enum(["client", "admin"]),

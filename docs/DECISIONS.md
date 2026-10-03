@@ -1270,6 +1270,86 @@ juga MEMBACA `orders`.
 
 ---
 
+## #53 — 2026-10-03 · Hapus akun: FK `user_id` jadi SET NULL agar riwayat pesanan bertahan
+
+**Keputusan:** `orders.user_id` dan `invitations.user_id` menjadi nullable dengan
+`ON DELETE SET NULL` (sebelumnya `NOT NULL` + `CASCADE`). RPC `admin_delete_account`
+mem-purge data pribadi tiap undangan, menghapus baris `profiles`, dan membiarkan FK
+mengosongkan kepemilikan — satu transaksi bersama `admin_logs`. Aksi admin di
+`/admin/pengguna` + prosedur di `RUNBOOK.md`. **Belum** ada tombol self-service.
+
+**Alasan.** Audit A6: `/privasi` sudah tayang menjanjikan "Anda dapat meminta penghapusan
+data kapan saja", tetapi `auth.admin.deleteUser` tak pernah dipanggil di mana pun dan
+panel admin hanya bisa MEMBEKUKAN (ban GoTrue). Janji publik tanpa mekanisme.
+
+**Mengapa skemanya harus berubah — ini inti entri ini.** Pemilik memilih riwayat pesanan
+DIPERTAHANKAN ter-anonimisasi. Itu mustahil dengan skema sebelumnya; rantainya:
+
+```
+profiles  --CASCADE-->  invitations.user_id
+profiles  --CASCADE-->  orders.user_id
+invitations --CASCADE-->  orders.invitation_id
+```
+
+Ketiganya `NOT NULL`, jadi menghapus profil PASTI menghapus setiap order. Diperiksa di
+`information_schema`, bukan diasumsikan. Dengan `SET NULL`, baris order bertahan tanpa
+pemilik dan `admin_month_revenue` tetap melihat transaksi yang benar-benar terjadi.
+
+`orders.invitation_id` SENGAJA dibiarkan `NOT NULL` + `CASCADE`: kerangka undangan memang
+dipertahankan — itu pola retensi yang sudah ada sejak `purge_invitation_data` (isi
+dikosongkan, `purged_at` disetel, barisnya tetap) — jadi tak ada order yang kehilangan
+induknya dan tak perlu melonggarkan kolom ketiga.
+
+Nullable TIDAK melemahkan RLS: setiap policy membandingkan `user_id = auth.uid()`, dan
+`NULL = uuid` menghasilkan NULL (bukan true), sehingga baris yatim tak terlihat klien mana
+pun — hanya service_role/admin. Hal yang sama berlaku pada `with check` di jalur INSERT.
+
+**Urutan eksekusi WAJIB: RPC → storage → GoTrue.** RPC-lah yang mengembalikan path objek
+yang harus dihapus. Menghapus pengguna GoTrue lebih dulu membuang satu-satunya cara
+menemukan path itu, dan objeknya jadi yatim SELAMANYA — purge retensi pun takkan
+menemukannya karena ia hanya mengenumerasi path dari BARIS yang sudah tiada. Urutan ini
+dikunci test (`jejak[0] === "rpc"`, `jejak.at(-1) === "deleteUser"`).
+
+**Ditolak:**
+- *Tabel `order_archive` terpisah* — `orders` tetap ketat, tetapi `admin_month_revenue`
+  membaca `orders`, jadi omzet bulan-bulan lama tetap bolong kecuali query laporan ikut
+  diubah: masalah yang sama, dipindah tempat.
+- *Menerima pesanan ikut terhapus* — paling bersih bagi subjek data, tetapi laporan omzet
+  kehilangan transaksi nyata dan rekonsiliasi dengan mutasi rekening jadi mustahil.
+- *Tombol self-service sekarang* — keputusan pemilik: jalurnya diuji operator dulu.
+  Permintaan masuk lewat alamat dukungan dan dieksekusi admin.
+- *Menghapus baris `invitations`* — akan meng-cascade `orders` lewat `invitation_id`,
+  membatalkan seluruh tujuan perubahan ini.
+
+**Pengujian.** Pola yang sama dengan #52: produksi masih kosong, jadi RPC dijalankan
+terhadap skema NYATA di dalam blok `do $$ … $$` yang berakhir `raise exception` sehingga
+seluruhnya di-rollback (nol baris tertinggal, diverifikasi sesudahnya). Hasil: undangan
+`active` → `has_active` tanpa perubahan apa pun; penghapusan → `deleted`, 3 undangan
+di-purge, **`guests` habis**, baris order **bertahan** dengan `user_id` NULL, kerangka
+undangan bertahan dengan `user_id` NULL, `profiles` kosong, dan **`admin_month_revenue`
+tetap melaporkan Rp99.000**; akun yang sudah tiada → `not_found`.
+
+**Konsekuensi:**
+- Undangan berstatus `active` MENAHAN penghapusan (keputusan pemilik). Pesan penolakannya
+  menyebut alasannya, dan RUNBOOK menjelaskan jalan keluarnya.
+- Email konfirmasi diketik ulang dan dicocokkan DI SERVER dengan email akun target;
+  salah ketik → nol penghapusan. Email ditampilkan sebagai `placeholder`, bukan nilai
+  bawaan — menyalinnya dari layar tetap menuntut tindakan sadar.
+- Kegagalan storage TIDAK membatalkan penghapusan yang sudah commit di DB; dilaporkan
+  (`area: admin.delete-account.storage`). Kegagalan `deleteUser` menyisakan HANYA baris
+  login dan dijawab pesan khusus, bukan "gagal" yang menyesatkan.
+- `copy.marketing.legal.privacy` diselaraskan: menyebut verifikasi ke alamat email akun
+  dan pengecualian retensi catatan pesanan. Janji di halaman publik kini cocok dengan
+  yang benar-benar dilakukan kode.
+- Kolom `user_id` yang kini nullable berarti kode baru TIDAK boleh menganggapnya selalu
+  terisi. Tipe DB sudah mencerminkannya setelah regen berikutnya; sementara ini hanya
+  jalur admin yang membaca baris yatim.
+
+Uji unit: 13 tes aksi hapus akun. `pnpm test:db` (pgTAP) masih belum di CI — RPC ini,
+seperti `admin_refund_order`, belum punya penjaga regresi otomatis.
+
+---
+
 ---
 
 ## Template entri baru
