@@ -44,7 +44,7 @@ jobs:
       # ini bersih hari ini (AUDIT-2026-10-01); yang belum ada adalah mekanisme
       # yang menjaganya tetap bersih. Gratis untuk repo privat.
       - name: Pindai secret (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
