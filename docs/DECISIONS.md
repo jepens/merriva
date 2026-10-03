@@ -1801,10 +1801,19 @@ satu-satunya justru yang direfund.
   dashboard Pakasir berdasarkan bacaan itu, jadi pesan yang salah di sini berisiko
   refund ganda. Ditemukan dengan membaca pemetaannya, bukan oleh typecheck.
 
+**Sisa: `plan(N)` pgTAP kini dijaga unit test** (`tests/unit/pgtap-plan.test.ts`). Push
+pertama B3 memerahkan CI dengan "Bad plan. You planned 20 tests but ran 21" — ke-21
+assertion-nya LULUS, yang salah hanya angkanya. Job `db` adalah satu-satunya bagian CI
+yang tak bisa dijalankan dari mesin pengembang (butuh `supabase start`), jadi salah
+hitung baru terlihat setelah push: satu putaran CI untuk satu angka. Test itu
+menghitung assertion di setiap berkas, membandingkannya dengan `plan()`, dan sekalian
+memastikan tiap berkas ditutup `finish()` + `rollback`.
+
 Uji mutasi: 22 mutan, 22 merah (13 jalur checkout/katalog/label + 6 poller + 2 rute
-lanjut-bayar + 1 pemetaan hasil refund). Satu mutan ekuivalen (urutan pemeriksaan
-`purpose` vs `kind` pada kombinasi tak terjangkau) dibunuh dengan memaku aturan
-presedensinya, karena aturan itu sama di `orderKindLabel` dan kedua RPC.
+lanjut-bayar + 1 pemetaan hasil refund), ditambah 3 mutan penjaga plan pgTAP. Satu mutan
+ekuivalen (urutan pemeriksaan `purpose` vs `kind` pada kombinasi tak terjangkau) dibunuh
+dengan memaku aturan presedensinya, karena aturan itu sama di `orderKindLabel` dan kedua
+RPC.
 Uji langsung RPC terhadap skema cloud (blok rollback) sebelum ada satu baris TypeScript.
 
 ---

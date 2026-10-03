@@ -11,7 +11,7 @@
 -- penuh seharga selisih harga, dan tak ada satu pun galat yang muncul.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(21);
 
 -- Fixture ---------------------------------------------------------------------
 -- Timestamp DITULIS LITERAL supaya "tidak berubah" bisa diuji dengan
