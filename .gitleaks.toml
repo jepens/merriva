@@ -1,0 +1,24 @@
+# Konfigurasi gitleaks (AUDIT-2026-10-01, DECISIONS #57).
+#
+# Seluruh aturan bawaan tetap aktif; berkas ini HANYA mempersempit satu aturan
+# yang paling berisik di satu tempat.
+[extend]
+useDefault = true
+
+# `generic-api-key` adalah aturan heuristik berbasis entropi: ia menandai string
+# apa pun yang "berbentuk kunci". Fixture test di repo ini memang penuh token
+# tamu palsu (`guests.token` berupa string acak), dan dua di antaranya langsung
+# tertangkap pada pemindaian pertama.
+#
+# `targetRules` dipakai, BUKAN allowlist global ber-path: allowlist global akan
+# mematikan SELURUH aturan di `tests/`, sehingga JWT sungguhan — termasuk
+# `SUPABASE_SERVICE_ROLE_KEY` yang mem-bypass RLS di semua tabel — bisa lolos
+# bila kelak tertempel di sebuah fixture. Aturan ber-keyakinan tinggi (jwt,
+# private-key, aws-*, dsb.) TETAP berlaku di `tests/`.
+#
+# Kalau suatu saat aturan ini dipersempit lebih jauh, persempit PATH-nya, jangan
+# daftar aturannya.
+[[allowlists]]
+targetRules = ["generic-api-key"]
+description = "Token tamu palsu di fixture test memicu heuristik entropi"
+paths = ['''^tests/''']

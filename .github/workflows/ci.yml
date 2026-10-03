@@ -42,6 +42,9 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          # `.gitleaks.toml` mempersempit SATU aturan berisik di `tests/` saja —
+          # aturan ber-keyakinan tinggi tetap berlaku di sana.
+          GITLEAKS_CONFIG: .gitleaks.toml
 
       - name: Lint
         run: pnpm lint
