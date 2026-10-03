@@ -78,3 +78,29 @@ jobs:
       # Membaca manifest resmi Next; harus SESUDAH build.
       - name: Anggaran bundle
         run: pnpm bundle:report --check
+
+  # pgTAP menjalankan RPC & RLS SUNGGUHAN di Postgres — kelas cacat yang tak
+  # terjangkau unit test, yang me-MOCK setiap RPC. Dipisah dari `verify` dan
+  # TIDAK menahannya: stack lokal perlu ~2 menit untuk hidup, dan kegagalan
+  # menyalakan Docker tak boleh menyamar jadi kode yang rusak.
+  #
+  # Alasan jobnya ada: `admin_refund_order` sempat lolos review, typecheck, dan
+  # seluruh unit test dengan bug yang membuat SETIAP refund add-on gagal
+  # (parameter OUT menaungi nama kolom). Hanya menjalankannya yang menemukan itu.
+  db:
+    name: Test DB (pgTAP)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Hanya layanan yang dibutuhkan pgTAP — studio/realtime/storage tak perlu
+      # dan memangkas waktu nyala secara berarti.
+      - name: Nyalakan Postgres lokal
+        run: supabase db start
+
+      - name: pgTAP
+        run: supabase test db

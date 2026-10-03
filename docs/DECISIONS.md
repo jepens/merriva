@@ -1350,6 +1350,44 @@ seperti `admin_refund_order`, belum punya penjaga regresi otomatis.
 
 ---
 
+## #54 — 2026-10-03 · pgTAP masuk CI sebagai job terpisah
+
+**Keputusan:** job `db` baru di `ci.yml` menjalankan `supabase db start` + `supabase test db`.
+Tiga berkas pgTAP ditambahkan: `admin_refund_order`, `admin_delete_account`, dan RLS
+`orders`. Job ini **tidak** menahan `verify`.
+
+**Alasan.** Unit test di repo ini me-MOCK setiap RPC, jadi tak satu pun menyentuh SQL-nya.
+Konsekuensinya bukan teoretis: `admin_refund_order` (#52) lolos review, lolos `typecheck`,
+dan lolos seluruh unit test dengan bug yang membuat **setiap refund add-on gagal** —
+parameter OUT bernama `invitation_id` menaungi kolom `momen_albums.invitation_id`. Hanya
+menjalankan fungsinya yang menemukan itu. `admin_delete_account` (#53) punya risiko sejenis
+dengan taruhan lebih tinggi: bila FK dikembalikan ke `CASCADE`, riwayat pesanan lenyap
+tanpa satu pun test merah.
+
+`orders` ikut diuji karena ia tabel uang yang sampai audit ini tak punya test DB sama
+sekali, dan karena §6b migrasi awal mencabut hak per-kolom untuk `profiles`/`invitations`/
+`rsvps` tetapi MELEWATKAN `orders` — grant kolomnya masih terbuka, jadi yang menahan
+pelanggan menulis ulang `status`/`amount_idr` miliknya sendiri hanyalah ketiadaan policy
+UPDATE. Itu perlu dijaga sungguhan, bukan diasumsikan.
+
+**Ditolak:**
+- *Menggabungkan ke job `verify`* — `supabase db start` perlu ~2 menit dan menyalakan
+  Docker; kegagalan infrastruktur akan menyamar jadi kode yang rusak dan menahan lint,
+  typecheck, serta build yang tak ada hubungannya.
+- *Menguji hanya lewat blok rollback manual* (metode yang menemukan bug #52) — itu
+  pengujian SATU KALI, bukan regresi. Berguna saat merancang, tak berguna enam bulan lagi.
+- *Menguji `anon` saja pada RLS* — kebocoran yang sesungguhnya adalah antar-PELANGGAN.
+  Berkas RLS menguji tiga identitas: pemilik, pengguna lain yang LOGIN, dan anon.
+
+**Konsekuensi:**
+- Repo ini tak punya branch protection, jadi job merah tetap tak menghalangi push. Nilainya
+  ada pada `gh run list` sesudah push — yang memang sudah jadi kebiasaan wajib di sini.
+- Baris yatim (`orders.user_id` NULL pasca-hapus-akun) ikut diuji TIDAK terlihat klien mana
+  pun — konsekuensi langsung dari #53 yang sebelumnya hanya diyakini lewat penalaran
+  `NULL = uuid` menghasilkan NULL.
+
+---
+
 ---
 
 ## Template entri baru
