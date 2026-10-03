@@ -21,6 +21,13 @@ export const copy = {
     title: "Halaman tidak ditemukan",
     body: "Tautan yang Anda buka mungkin salah ketik, kedaluwarsa, atau undangannya sudah tidak aktif.",
     cta: "Ke beranda Merriva",
+    // Varian untuk PEMILIK di dalam dashboard (AUDIT-2026-10-01). Teks di atas
+    // ditulis untuk TAMU undangan ("undangannya sudah tidak aktif") dan
+    // menanamkan kecemasan palsu saat pemilik sekadar salah menyalin id.
+    ownerTitle: "Halaman ini tidak ada",
+    ownerBody:
+      "Undangan yang Anda cari mungkin sudah dihapus, atau tautannya salah salin. Undangan Anda yang lain tidak terpengaruh.",
+    ownerCta: "Kembali ke daftar undangan",
   },
   common: {
     loading: "Memuat…",

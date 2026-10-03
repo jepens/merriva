@@ -34,6 +34,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # Secret yang ter-commit tak bisa "dibatalkan" — sejarah git permanen, dan
+      # SUPABASE_SERVICE_ROLE_KEY mem-bypass RLS di SELURUH tabel. Sejarah repo
+      # ini bersih hari ini (AUDIT-2026-10-01); yang belum ada adalah mekanisme
+      # yang menjaganya tetap bersih. Gratis untuk repo privat.
+      - name: Pindai secret (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Lint
         run: pnpm lint
 

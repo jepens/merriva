@@ -1,0 +1,28 @@
+# Pemantauan kerentanan dependency (AUDIT-2026-10-01).
+#
+# Sebelum ini jarak antara "CVE kritis diumumkan" dan "kami tahu" tak terbatas:
+# penemuannya bergantung pada kebetulan seseorang menjalankan audit manual.
+# Aplikasi membawa 45+ dependency runtime (Next, Supabase, Sentry, GSAP, Lenis,
+# aws4fetch, client-zip) dan berjalan sebagai satu kontainer yang memegang
+# service_role.
+#
+# Mingguan, bukan harian: PR yang terlalu sering justru berakhir diabaikan, dan
+# pembaruan KEAMANAN tetap dibuka Dependabot segera di luar jadwal ini.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Satu PR per kelompok — menelaah 20 PR terpisah tiap minggu tak realistis
+      # untuk tim satu orang, dan yang tak tertelaah sama saja dengan tak ada.
+      minor-dan-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly

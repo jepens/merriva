@@ -20,6 +20,19 @@ const baseSecurityHeaders = [
   // Halaman undangan & `/preview/*` sengaja SAMEORIGIN: `PreviewFrame` +
   // `appearance-editor` membingkainya dari dashboard (same-origin).
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  // CSP PARSIAL — sengaja tanpa `script-src`/`connect-src` (DECISIONS #27 & #57).
+  // Ketiga direktif ini tak menyentuh skrip inline maupun ISR, jadi gratis:
+  //   object-src  — tak ada <object>/<embed> di produk ini; menutup plugin lawas
+  //   base-uri    — mencegah <base> suntikan mengalihkan SELURUH URL relatif
+  //   form-action — mengurung ke mana formulir boleh dikirim
+  // Dua terakhir menutup jalur eskalasi/eksfiltrasi PASCA-XSS tanpa perlu
+  // `script-src` sama sekali. Aman: redirect Pakasir memakai
+  // `window.location.assign` (navigasi, bukan form) dan tak ada form
+  // lintas-origin di repo ini.
+  {
+    key: "Content-Security-Policy",
+    value: "object-src 'none'; base-uri 'self'; form-action 'self'",
+  },
   ...(isProd
     ? [
         {

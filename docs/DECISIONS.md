@@ -1475,6 +1475,49 @@ pembeli yang berubah jadi "—" pada kuitansi yang gunanya membuktikan pembayara
 
 ---
 
+## #57 — 2026-10-03 · Tiga sisa audit: CSP parsial, pemindai secret & dependency, 404 pemilik
+
+Tiga temuan kecil yang bertahan setelah verifikasi membantah bentuk aslinya. Digabung
+karena ketiganya murah, tak saling bergantung, dan masing-masing terlalu kecil untuk ADR
+sendiri.
+
+**1. CSP: tiga direktif yang gratis.** Verifikasi membantah temuan "CSP setengah jadi"
+(#27 sudah menolak CSP penuh secara sadar): `script-src` ber-nonce menuntut render
+per-request, sementara `/[slug]` ISR karena mandat Lighthouse ≥90 / LCP <2,5 dtk. CSP
+yang BISA dipasang di sana (`script-src 'self' 'unsafe-inline'`) tak mengurung XSS sama
+sekali.
+
+Yang tersisa benar dan tetap dikerjakan: `object-src 'none'`, `base-uri 'self'`,
+`form-action 'self'`. Ketiganya tak menyentuh skrip inline maupun ISR — nol risiko
+performa — dan dua terakhir menutup jalur eskalasi/eksfiltrasi **pasca-XSS** tanpa perlu
+`script-src`. Diverifikasi aman lebih dulu: redirect Pakasir memakai
+`window.location.assign` (navigasi, bukan form) dan tak ada satu pun form lintas-origin di
+repo. `script-src`/`connect-src` TETAP ditolak — jangan ditambahkan tanpa mengukur ulang
+dampaknya pada ISR.
+
+**2. Pemindai secret & dependency di CI.** Sejarah git repo ini bersih hari ini
+(diverifikasi audit); yang belum ada adalah mekanisme yang menjaganya tetap bersih. Satu
+salah-tempel `SUPABASE_SERVICE_ROLE_KEY` ke berkas ter-commit akan masuk permanen ke
+sejarah — dan kunci itu mem-bypass RLS di seluruh tabel. `gitleaks` menangkapnya di PR,
+bukan enam bulan kemudian. Dependabot mingguan menutup sisi lain: jarak antara "CVE
+diumumkan" dan "kami tahu" sebelumnya tak terbatas.
+
+Pembaruan minor/patch DIKELOMPOKKAN jadi satu PR. Alasannya operasional, bukan teknis:
+20 PR terpisah tiap minggu tak akan tertelaah oleh tim satu orang, dan yang tak tertelaah
+sama saja dengan tak ada. Pembaruan KEAMANAN tetap dibuka Dependabot segera di luar jadwal.
+
+**3. 404 bernada pemilik di dashboard.** Ada 20 pemanggilan `notFound()` di pohon
+`/dashboard`, semuanya mendarat di `src/app/not-found.tsx` yang teksnya ditulis untuk
+TAMU undangan — "undangannya sudah tidak aktif", dengan tombol ke beranda MARKETING.
+Pemilik yang sekadar salah menyalin id dibuang keluar dari sesi kerjanya sambil diberi
+kecemasan palsu bahwa undangannya mati. `(dashboard)/not-found.tsx` memakai salinan teks
+sendiri dan mengembalikannya ke daftar undangan.
+
+**Ditolak:** `(admin)/not-found.tsx` — panel admin memakai `redirect()` ke daftar, bukan
+`notFound()`, pada hampir semua jalurnya; menambahkannya akan jadi kode mati.
+
+---
+
 ---
 
 ## Template entri baru

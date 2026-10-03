@@ -84,3 +84,17 @@ describe("copy.dashboard.orders", () => {
     expect(cara).toContain("Pesanan");
   });
 });
+
+describe("404 dashboard memakai nada PEMILIK, bukan tamu", () => {
+  it("teks pemilik tak menyiratkan undangannya mati", () => {
+    // Teks 404 global ditulis untuk TAMU ("undangannya sudah tidak aktif") dan
+    // menanamkan kecemasan palsu saat pemilik sekadar salah menyalin id.
+    expect(copy.notFoundPage.ownerBody).not.toContain("tidak aktif");
+    expect(copy.notFoundPage.ownerBody).toContain("tidak terpengaruh");
+  });
+
+  it("CTA mengembalikan pemilik ke pekerjaannya, bukan ke halaman jualan", () => {
+    expect(copy.notFoundPage.cta).toContain("beranda");
+    expect(copy.notFoundPage.ownerCta).toContain("daftar undangan");
+  });
+});
