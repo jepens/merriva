@@ -509,8 +509,6 @@ export const copy = {
       "Naik ke paket yang lebih lengkap untuk sisa masa aktif undangan Anda. Anda hanya membayar selisih harganya.",
     back: "Kembali ke dashboard",
     currentLabel: "Paket sekarang",
-    currentPrice: "Harga paket sekarang",
-    targetPrice: "Harga paket tujuan",
     payLabel: "Yang Anda bayar",
     payHint: "Selisih harga",
     activeUntilLabel: "Masa aktif berakhir",

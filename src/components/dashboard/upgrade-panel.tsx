@@ -123,9 +123,13 @@ export function UpgradePanel({
                   <p className="text-2xl font-bold tracking-tight">
                     {formatIdr(choice.differenceIdr)}
                   </p>
+                  {/* Dibaca sebagai aritmetika, bukan dua label berdampingan:
+                      "Selisih harga: Premium Rp199.000 − Basic Rp99.000". Nama
+                      paket yang menerangkan angkanya, bukan kata "harga paket
+                      tujuan" yang justru menenggelamkannya. */}
                   <p className="text-muted-foreground text-xs">
-                    {u.payHint} · {u.targetPrice} {formatIdr(choice.priceIdr)} −{" "}
-                    {u.currentPrice} {formatIdr(currentPriceIdr)}
+                    {u.payHint}: {choice.name} {formatIdr(choice.priceIdr)} −{" "}
+                    {currentName} {formatIdr(currentPriceIdr)}
                   </p>
                 </div>
                 <div className="space-y-1.5">
