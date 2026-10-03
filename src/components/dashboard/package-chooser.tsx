@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -135,6 +137,21 @@ export function PackageChooser({
           {error}
         </p>
       ) : null}
+
+      {/* Titik tempat uang berpindah — pelanggan tak boleh bisa berargumen tak
+          pernah diberi tahu bahwa masa aktif berbatas dan refund diatur
+          terpisah (AUDIT-2026-10-01 A2). */}
+      <p className="text-muted-foreground text-center text-xs">
+        {copy.checkout.termsNoticeBefore}{" "}
+        <Link href="/syarat" className="underline underline-offset-4">
+          {copy.marketing.legal.terms.title}
+        </Link>{" "}
+        {copy.checkout.termsNoticeAnd}{" "}
+        <Link href="/refund" className="underline underline-offset-4">
+          {copy.marketing.legal.refund.title}
+        </Link>
+        .
+      </p>
 
       <p className="text-muted-foreground text-center text-xs">
         {copy.checkout.securedBy}

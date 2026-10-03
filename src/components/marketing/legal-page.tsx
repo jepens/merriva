@@ -21,6 +21,18 @@ export function LegalPage({
   sections: readonly LegalSection[];
 }) {
   const l = copy.marketing.legal;
+  // Dilebarkan ke `string` secara eksplisit: `copy` ber-`as const`, sehingga
+  // field yang masih kosong bertipe literal `""` dan setiap pengecekan di sini
+  // akan dianggap selalu-salah oleh TypeScript. Begitu pemilik mengisinya,
+  // tipenya berubah dan kode ini tetap sama.
+  const m: Record<"form" | "name" | "owner" | "address" | "taxId", string> =
+    l.merchant;
+  const identitas = [
+    m.name && `${m.form}: ${m.name}`,
+    m.owner && `${l.merchantOwner}: ${m.owner}`,
+    m.address && `${l.merchantAddress}: ${m.address}`,
+    m.taxId && `${l.merchantTaxId}: ${m.taxId}`,
+  ].filter((v) => v !== "");
 
   return (
     <section className="mrv-section">
@@ -47,6 +59,22 @@ export function LegalPage({
             )}
           </div>
         ))}
+
+        {/* Identitas pelaku usaha — WAJIB tampil sebelum pembayaran (PP 80/2019,
+            Permendag 31/2020 PMSE), dan aggregator pembayaran rutin
+            menangguhkan merchant yang tak punya. Hanya field yang TERISI yang
+            dirender: halaman tetap benar sebelum pemilik mengisinya, tetapi
+            `name` + `address` wajib ada sebelum menerima uang pertama. */}
+        {identitas.length > 0 ? (
+          <>
+            <h2>{l.merchantHeading}</h2>
+            <ul>
+              {identitas.map((baris) => (
+                <li key={baris}>{baris}</li>
+              ))}
+            </ul>
+          </>
+        ) : null}
 
         <h2>{l.contactHeading}</h2>
         <p>

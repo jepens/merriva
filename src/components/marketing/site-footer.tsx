@@ -48,6 +48,7 @@ export function SiteFooter() {
           <div>
             <h4>{f.colLegal}</h4>
             <div className="mrv-footer__links">
+              <Link href="/syarat">{copy.marketing.legal.terms.title}</Link>
               <Link href="/privasi">{copy.marketing.legal.privacy.title}</Link>
               <Link href="/refund">{copy.marketing.legal.refund.title}</Link>
             </div>

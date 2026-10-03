@@ -136,7 +136,13 @@ export const copy = {
     // Chrome layout auth (split-screen)
     backHome: "Kembali ke beranda",
     footerRights: (year: number) => `© ${year} Merriva`,
+    footerTerms: "Syarat",
     footerPrivacy: "Privasi",
+    // Baris persetujuan (AUDIT-2026-10-01 A2). Keputusan pemilik: NOTIS, bukan
+    // checkbox — dasar pemrosesannya perjanjian (bukan persetujuan), jadi
+    // centang tak diwajibkan hukum dan hanya menambah friksi di funnel.
+    termsNoticeBefore: "Dengan mendaftar, Anda menyetujui",
+    termsNoticeAnd: "dan",
     footerHelp: "Bantuan",
     // Messages
     signupSuccess:
@@ -419,6 +425,9 @@ export const copy = {
     popular: "Terpopuler",
     choose: "Pilih paket ini",
     redirecting: "Mengalihkan ke pembayaran…",
+    // Ditampilkan tepat di atas tombol bayar — titik tempat uang berpindah.
+    termsNoticeBefore: "Dengan melanjutkan pembayaran, Anda menyetujui",
+    termsNoticeAnd: "dan",
     securedBy: "Pembayaran diproses oleh Pakasir (QRIS & Virtual Account).",
     perDuration: (months: number) => `Masa aktif ${months} bulan`,
     notPayable: "Undangan ini tidak dapat dibayar saat ini.",
@@ -1719,6 +1728,26 @@ export const copy = {
     // pemilik wajib meninjau/menyesuaikan (SPEC §11: refund kasus per kasus).
     legal: {
       contactEmail: SUPPORT_EMAIL,
+      // Identitas pelaku usaha (AUDIT-2026-10-01 A2). PP 80/2019 & Permendag
+      // 31/2020 mewajibkan identitas ditampilkan SEBELUM pembayaran, dan
+      // aggregator pembayaran rutin menangguhkan merchant yang tak punya.
+      //
+      // Keputusan pemilik (2026-10-03): jalan dulu sebagai USAHA PERSEORANGAN.
+      // SATU sumber untuk /syarat, /privasi, /refund, dan kuitansi — mengisi di
+      // sini mengisi semuanya. Nilai kosong TIDAK dirender (halaman tetap benar),
+      // tetapi `name` + `address` WAJIB terisi sebelum menerima uang pertama;
+      // butirnya ada di LAUNCH-CHECKLIST Fase 8.
+      merchantHeading: "Identitas pelaku usaha",
+      merchantOwner: "Penanggung jawab",
+      merchantAddress: "Alamat",
+      merchantTaxId: "NPWP/NIB",
+      merchant: {
+        form: "Usaha perseorangan",
+        name: "", // mis. "Merriva" atau nama usaha terdaftar
+        owner: "", // nama pemilik usaha perseorangan
+        address: "", // alamat usaha lengkap (kota & provinsi minimal)
+        taxId: "", // NPWP/NIB bila ada — opsional, tampil hanya bila diisi
+      },
       updated: "Terakhir diperbarui 31 Juli 2026",
       backHome: "Kembali ke beranda",
       contactHeading: "Hubungi kami",
@@ -1811,6 +1840,116 @@ export const copy = {
             heading: "Perubahan kebijakan",
             body: [
               "Kebijakan ini dapat diperbarui dari waktu ke waktu. Perubahan penting akan kami beritahukan melalui layanan atau email.",
+            ],
+          },
+        ],
+      },
+      // Syarat & Ketentuan (AUDIT-2026-10-01 A2). Sebelum ini TIDAK ADA sama
+      // sekali: tak ada dasar kontraktual untuk hal yang kodenya sudah kerjakan
+      // — masa aktif berakhir, purge 6 bulan, penangguhan konten oleh admin,
+      // dan penolakan refund setelah aktivasi.
+      //
+      // Setiap klausul di bawah MENCERMINKAN perilaku kode yang sudah ada.
+      // Bila kelak perilakunya berubah, teks ini ikut diubah — kebijakan yang
+      // menjanjikan hal yang tak dilakukan produknya adalah masalah yang lebih
+      // besar daripada tak punya kebijakan (pelajaran dari /privasi, #58).
+      terms: {
+        title: "Syarat & Ketentuan",
+        intro:
+          "Dengan membuat akun atau membeli paket di Merriva, Anda menyetujui ketentuan di bawah ini. Mohon dibaca sebelum melakukan pembayaran.",
+        sections: [
+          {
+            heading: "Layanan yang kami sediakan",
+            body: [
+              "Merriva menyediakan undangan digital yang dapat Anda isi sendiri, beserta halaman publik, buku tamu (RSVP & ucapan), amplop digital, dan — bila dibeli terpisah — add-on Album Momen.",
+              "Layanan diberikan apa adanya pada saat Anda membelinya. Fitur dapat bertambah atau berubah; kami tidak mengurangi fitur yang sudah melekat pada paket yang telah Anda bayar selama masa aktifnya.",
+            ],
+          },
+          {
+            heading: "Akun Anda",
+            body: [
+              "Anda bertanggung jawab menjaga kerahasiaan kata sandi akun Anda. Seluruh aktivitas dari akun Anda dianggap dilakukan oleh Anda.",
+              "Satu akun untuk satu orang atau satu usaha. Beri tahu kami segera bila Anda menduga akun Anda diakses pihak lain.",
+            ],
+          },
+          {
+            heading: "Masa aktif & kedaluwarsa",
+            body: [
+              "Masa aktif dihitung sejak pembayaran dikonfirmasi, dengan durasi sesuai paket yang Anda beli.",
+              "Setelah masa aktif berakhir, halaman undangan berhenti tayang untuk tamu dan statusnya menjadi kedaluwarsa. Isi undangan tetap tersimpan dan dapat Anda aktifkan kembali dengan memperpanjang.",
+              "Enam bulan setelah masa aktif berakhir, data pribadi pada undangan tersebut — daftar tamu, RSVP, ucapan, catatan amplop, foto galeri, dan foto Album Momen — dihapus permanen dan tidak dapat dipulihkan. Unduh yang Anda perlukan sebelum tenggat itu.",
+            ],
+          },
+          {
+            heading: "Batas paket",
+            body: [
+              "Setiap paket memiliki batas jumlah tamu dan jumlah foto yang ditegakkan sistem, bukan sekadar ditampilkan di layar.",
+              "Batas itu berlaku pada undangan yang bersangkutan selama masa aktifnya. Lihat halaman Harga untuk rincian paket yang berlaku saat ini.",
+            ],
+          },
+          {
+            heading: "Konten Anda",
+            body: [
+              "Isi undangan tetap milik Anda. Kami hanya menyimpan dan menampilkannya untuk menjalankan layanan Anda, dan tidak memakainya untuk tujuan lain.",
+              "Anda menjamin berhak menggunakan setiap foto, musik, dan teks yang Anda unggah. Musik berhak cipta hanya boleh dipakai bila Anda memegang izinnya.",
+              "Dilarang mengunggah konten yang melanggar hukum Indonesia, menyinggung SARA, bermuatan pornografi, menipu, atau menyamar sebagai orang atau lembaga lain.",
+            ],
+          },
+          {
+            heading: "Data tamu Anda",
+            body: [
+              "Anda bertindak sebagai pengendali data atas nama, nomor WhatsApp, RSVP, ucapan, catatan amplop, dan foto Album Momen milik tamu Anda; Merriva bertindak sebagai pemroses.",
+              "Anda bertanggung jawab memastikan Anda berhak membagikan data tamu kepada kami untuk keperluan undangan Anda. Rinciannya ada di Kebijakan Privasi.",
+            ],
+          },
+          {
+            heading: "Penangguhan & penghentian",
+            body: [
+              "Kami dapat menangguhkan undangan yang dilaporkan atau kami temukan melanggar ketentuan konten di atas. Penangguhan membuat halaman berhenti tayang; isinya tidak dihapus.",
+              "Sedapat mungkin kami memberi tahu Anda lebih dulu dan memberi kesempatan memperbaiki, kecuali bila konten tersebut melanggar hukum atau membahayakan pihak lain.",
+              "Anda dapat berhenti kapan saja dengan tidak memperpanjang, atau meminta penghapusan akun lewat alamat kontak kami.",
+            ],
+          },
+          {
+            heading: "Pembayaran",
+            body: [
+              "Harga yang berlaku adalah yang tertera saat Anda melakukan pembayaran. Seluruh nominal dalam Rupiah.",
+              "Pembayaran diproses penyedia pembayaran pihak ketiga. Kami tidak menyimpan data kartu atau rekening Anda.",
+              "Undangan menjadi aktif setelah pembayaran terkonfirmasi. Bila dana sudah terdebit tetapi undangan belum aktif, hubungi kami dengan menyertakan kode order Anda.",
+            ],
+          },
+          {
+            heading: "Pengembalian dana",
+            body: [
+              "Ketentuan pengembalian dana diatur terpisah di halaman Kebijakan Refund dan merupakan bagian tak terpisahkan dari Syarat & Ketentuan ini.",
+            ],
+          },
+          {
+            heading: "Ketersediaan layanan",
+            body: [
+              "Kami berusaha menjaga layanan tetap tersedia, tetapi tidak menjanjikan layanan bebas gangguan. Pemeliharaan terjadwal akan kami beritahukan bila memungkinkan.",
+              "Gangguan dapat berasal dari pihak ketiga yang kami gunakan — penyedia hosting, pembayaran, atau jaringan — yang berada di luar kendali kami.",
+            ],
+          },
+          {
+            heading: "Batas tanggung jawab",
+            body: [
+              "Tanggung jawab Merriva atas klaim apa pun yang timbul dari layanan ini dibatasi paling banyak sebesar biaya paket yang Anda bayarkan untuk undangan yang bersangkutan.",
+              "Kami tidak bertanggung jawab atas kerugian tidak langsung, termasuk kerugian akibat terganggunya acara, kehilangan kesempatan, atau kerugian reputasi.",
+              "Batasan ini tidak mengurangi hak Anda yang dijamin peraturan perundang-undangan yang bersifat memaksa.",
+            ],
+          },
+          {
+            heading: "Perubahan ketentuan",
+            body: [
+              "Ketentuan ini dapat diperbarui. Perubahan yang berdampak material akan kami beritahukan melalui layanan atau email sebelum berlaku.",
+              "Pembelian yang sudah berjalan tetap tunduk pada ketentuan yang berlaku saat pembayaran dilakukan.",
+            ],
+          },
+          {
+            heading: "Hukum yang berlaku",
+            body: [
+              "Ketentuan ini tunduk pada hukum Republik Indonesia. Setiap perselisihan diupayakan diselesaikan secara musyawarah lebih dulu melalui alamat kontak kami.",
             ],
           },
         ],

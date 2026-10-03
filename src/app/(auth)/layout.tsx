@@ -78,6 +78,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <footer className="mrv-auth__foot">
           <span>{a.footerRights(year)}</span>
           <div className="mrv-auth__foot-links">
+            <Link href="/syarat">{a.footerTerms}</Link>
             <Link href="/privasi">{a.footerPrivacy}</Link>
             <Link href="/faq">{a.footerHelp}</Link>
           </div>

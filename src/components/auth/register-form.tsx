@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useActionState, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -98,6 +100,23 @@ export function RegisterForm() {
       <Button type="submit" className="w-full" disabled={pending || done}>
         {copy.auth.registerCta}
       </Button>
+
+      {/* Notis, bukan checkbox: dasar pemrosesannya PERJANJIAN, bukan
+          persetujuan (DECISIONS #58), jadi centang tak diwajibkan hukum dan
+          hanya menambah satu langkah di funnel akuisisi. Yang wajib adalah
+          pemberitahuannya — dan tautannya harus hidup di sini, bukan hanya di
+          footer. */}
+      <p className="text-muted-foreground text-center text-xs">
+        {copy.auth.termsNoticeBefore}{" "}
+        <Link href="/syarat" className="underline underline-offset-4">
+          {copy.marketing.legal.terms.title}
+        </Link>{" "}
+        {copy.auth.termsNoticeAnd}{" "}
+        <Link href="/privasi" className="underline underline-offset-4">
+          {copy.marketing.legal.privacy.title}
+        </Link>
+        .
+      </p>
     </form>
   );
 }

@@ -1594,6 +1594,60 @@ yang sah.
 
 ---
 
+## #59 — 2026-10-03 · Syarat & Ketentuan, identitas pelaku usaha satu sumber, notis persetujuan
+
+**Keputusan:** halaman `/syarat` dibuat dari `copy.marketing.legal.terms` (13 bagian),
+identitas pelaku usaha hidup di SATU objek `copy.marketing.legal.merchant` yang dirender
+di seluruh halaman legal, dan baris notis persetujuan dipasang di `/daftar` serta tepat di
+atas tombol bayar.
+
+**Alasan.** Audit A2, pemblokir launch terakhir di gelombang A. Tidak ada dokumen Syarat &
+Ketentuan SAMA SEKALI — bukan tertunda, melainkan tak pernah direncanakan (nol butir di
+LAUNCH-CHECKLIST maupun ROADMAP). Akibatnya tak ada dasar kontraktual untuk hal yang
+**kodenya sudah kerjakan**: masa aktif berakhir (`cron/expire-invitations`), penghapusan
+permanen 6 bulan (`cron/purge-expired`), penangguhan konten (`adminSuspendInvitation`),
+dan penolakan refund setelah aktivasi. Pelanggan yang undangannya disuspend di hari-H
+bisa menuntut dan Merriva tak punya satu klausul pun untuk berdiri di atasnya.
+
+**Keputusan pemilik (2026-10-03):**
+- **Usaha perseorangan** — bukan PT/CV. Blok identitas menyebut bentuk usahanya apa adanya.
+- **Batas tanggung jawab = sebesar yang dibayarkan**, kerugian tidak langsung dikecualikan.
+  Jujur dan bisa dipertahankan: produk ini menjual undangan Rp99–299 ribu, bukan asuransi
+  acara. Klausulnya ditutup kalimat bahwa ia tidak mengurangi hak yang dijamin peraturan
+  bersifat memaksa — tanpa itu, klausul pembatas justru batal demi hukum dan melemahkan
+  seluruh dokumen.
+- **Notis, bukan checkbox.** Dasar pemrosesannya perjanjian (#58), bukan persetujuan, jadi
+  centang tak diwajibkan hukum; yang wajib adalah pemberitahuannya. Ini juga menghindari
+  migrasi `tos_accepted_at` yang penguji audit nilai sebagai memenuhi kewajiban yang tak ada.
+
+**Setiap klausul mencerminkan perilaku kode yang SUDAH ada** — retensi enam bulan,
+penangguhan tanpa penghapusan isi, batas paket yang ditegakkan DB, pembagian peran
+pengendali/pemroses. Itu disengaja dan diuji: kebijakan yang menjanjikan hal yang tak
+dilakukan produknya adalah masalah yang lebih besar daripada tak punya kebijakan — persis
+cacat yang ditemukan di `/privasi` (#58).
+
+**Identitas pelaku usaha: satu sumber, kosong tetap benar.** `merchant` dirender oleh
+`LegalPage`, dan hanya field yang TERISI yang muncul. Halaman tetap sah hari ini, dan
+begitu pemilik mengisi `name` + `address`, satu suntingan mengisi /syarat, /privasi,
+/refund, dan kuitansi sekaligus. Dua butir ditambahkan ke LAUNCH-CHECKLIST: mengisi
+identitas (wajib sebelum menerima uang — PP 80/2019 & Permendag 31/2020, dan aggregator
+pembayaran rutin menangguhkan merchant tanpa itu), dan peninjauan isi S&K oleh pemilik.
+
+**Ditolak:**
+- *Anchor biasa untuk tautan legal di /daftar & checkout* — lint `@next/next/
+  no-html-link-for-pages` menolaknya, dan benar: argumen anggaran bundel 64 KB hanya
+  berlaku untuk `/[slug]`, bukan permukaan dashboard/auth. `next/link` dipakai di sana;
+  `GuestPrivacyNote` di halaman tamu tetap anchor (#58).
+- *Menunggu keputusan badan usaha sebelum menulis S&K* — isi kontraknya tak bergantung
+  padanya; hanya dua baris identitas yang bergantung, dan itu sudah dibuat satu sumber.
+
+**Konsekuensi — batas yang jujur:** isi `/syarat` adalah draf yang disusun dari perilaku
+kode, BUKAN dari penasihat hukum. Ia jauh lebih baik daripada tak ada dokumen sama sekali,
+tetapi butir "ditinjau pemilik" di LAUNCH-CHECKLIST bukan formalitas — terutama batas
+tanggung jawab dan klausul konten.
+
+---
+
 ---
 
 ## Template entri baru

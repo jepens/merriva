@@ -98,3 +98,53 @@ describe("404 dashboard memakai nada PEMILIK, bukan tamu", () => {
     expect(copy.notFoundPage.ownerCta).toContain("daftar undangan");
   });
 });
+
+describe("Syarat & Ketentuan mencerminkan perilaku kode, bukan sebaliknya", () => {
+  const t = copy.marketing.legal.terms;
+  const teks = t.sections
+    .flatMap((s) => [s.heading, ...s.body])
+    .join(" ")
+    .toLowerCase();
+
+  it("menyebut retensi 6 bulan yang benar-benar dijalankan cron purge", () => {
+    // Klausul yang tak cocok dengan kode adalah masalah yang lebih besar
+    // daripada tak punya klausul — pelajaran dari /privasi (DECISIONS #58).
+    expect(teks).toContain("enam bulan");
+    expect(teks).toContain("dihapus permanen");
+  });
+
+  it("menyebut penangguhan konten — hak yang adminSuspendInvitation sudah jalankan", () => {
+    expect(teks).toContain("menangguhkan");
+  });
+
+  it("membatasi tanggung jawab sebesar yang dibayarkan", () => {
+    // Keputusan pemilik 2026-10-03. Tanpa batas tertulis, acara pernikahan yang
+    // gagal adalah kerugian yang bisa dinilai sangat besar.
+    expect(teks).toContain("sebesar biaya paket yang anda bayarkan");
+    expect(teks).toContain("kerugian tidak langsung");
+  });
+
+  it("tidak mengurangi hak konsumen yang dijamin undang-undang", () => {
+    // Klausul pembatas yang mengklaim meniadakan hak memaksa justru batal
+    // demi hukum dan melemahkan seluruh dokumen.
+    expect(teks).toContain("bersifat memaksa");
+  });
+
+  it("merujuk Kebijakan Refund sebagai bagian tak terpisahkan", () => {
+    expect(teks).toContain("kebijakan refund");
+  });
+
+  it("identitas penjual punya SATU sumber, dipakai seluruh halaman legal", () => {
+    // Nilai boleh kosong sebelum pemilik mengisinya — halaman tetap benar —
+    // tetapi kuncinya harus ada supaya satu suntingan mengisi semuanya.
+    const m = copy.marketing.legal.merchant;
+    expect(Object.keys(m).sort()).toEqual([
+      "address",
+      "form",
+      "name",
+      "owner",
+      "taxId",
+    ]);
+    expect(m.form).toBe("Usaha perseorangan");
+  });
+});

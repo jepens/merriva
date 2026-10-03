@@ -85,6 +85,8 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 
 ## Fase 8 — Kepatuhan (sebelum promosi besar)
 
+- [ ] **Identitas pelaku usaha diisi** — `copy.marketing.legal.merchant`: `name` + `address` WAJIB (PP 80/2019 & Permendag 31/2020 mewajibkan identitas tampil sebelum pembayaran; aggregator rutin menangguhkan merchant tanpa itu). Satu sumber → mengisinya mengisi /syarat, /privasi, /refund, dan kuitansi sekaligus. Keputusan pemilik 2026-10-03: usaha perseorangan.
+- [ ] **Syarat & Ketentuan ditinjau pemilik** — `/syarat` sudah tayang (DECISIONS #59) tetapi isinya draf yang disusun dari perilaku kode, bukan dari penasihat hukum. Tinjau terutama batas tanggung jawab dan klausul konten.
 - [ ] Daftar **PSE Kominfo** via OSS
 - [ ] Kebijakan **privasi & refund** tayang (`/privasi`, `/refund` sudah ada — review isi & data kontak)
 - [ ] Pastikan **cron `purge-expired`** (Fase 3) terjadwal & jalan — menghapus permanen data tamu/RSVP/media/gift_notes **6 bulan pasca-expired** (UU PDP 27/2022); baris undangan tinggal kerangka statistik, `orders` (retensi keuangan) dipertahankan. Verify di staging: undangan `expired` dengan `active_until` > 6 bln lalu → panggil cron → data pribadi terhapus, `purged_at` terisi. Klien juga bisa "hapus undangan" non-aktif kapan saja dari dashboard.
