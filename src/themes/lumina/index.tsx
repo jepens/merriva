@@ -1,4 +1,4 @@
-import { Karla, Spectral } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -56,18 +56,40 @@ const isLegacyToggle = (id: string): id is SectionKey =>
 // `@font-face` CSS RENDER-BLOCKING di setiap undangan, padahal konten Merriva
 // seluruhnya Latin. Spectral menyampaikan karakter serif-buku yang sama dengan
 // 4 berkas. `preload:false` — lihat catatan PER-1 di tema lain.
-const display = Spectral({
-  subsets: ["latin"],
-  weight: ["400", "700"],
+const display = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/spectral-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/spectral-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--lm-display",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const body = Karla({
-  subsets: ["latin"],
-  weight: ["400", "600"],
+const body = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/karla-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/karla-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--lm-body",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 

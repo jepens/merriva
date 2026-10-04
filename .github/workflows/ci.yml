@@ -118,3 +118,47 @@ jobs:
 
       - name: pgTAP
         run: supabase test db
+
+  # Gerbang deploy (AUDIT-2026-10-01, gelombang C).
+  #
+  # MASALAHNYA: Easypanel auto-build saat push ke `main` (DEPLOYMENT.md §Build),
+  # dan webhook-nya berjalan PARALEL dengan CI — bukan sesudahnya. Commit yang
+  # CI-nya merah karena itu sudah hidup di produksi beberapa menit kemudian, dan
+  # satu-satunya yang mengetahuinya adalah orang yang mengecek `gh run list`
+  # SETELAHNYA. Itu deteksi, bukan pencegahan.
+  #
+  # Gerbang yang sebenarnya cocok — required status check — terkunci di balik
+  # GitHub Pro untuk repo privat: `gh api repos/:owner/:repo/branches/main/protection`
+  # menjawab 403 "Upgrade to GitHub Pro or make this repository public".
+  #
+  # Karena itu PEMICUNYA yang dipindah, bukan gerbangnya yang ditambahkan:
+  # Easypanel mengawasi branch `production`, dan HANYA job ini yang
+  # menggerakkannya — setelah `verify` DAN `db` hijau. CI merah = `production`
+  # sekadar tak bergerak, dan produksi tetap pada versi hijau terakhir.
+  #
+  # ⚠ Belum berlaku sampai pemilik mengubah branch yang diawasi Easypanel dari
+  # `main` ke `production` (LAUNCH-CHECKLIST Fase 1). Sebelum itu job ini hanya
+  # memelihara cermin yang tak dipakai siapa pun — aman, tetapi bukan gerbang.
+  promote:
+    name: Promosikan ke production
+    needs: [verify, db]
+    # WAJIB. Tanpa penjaga ini job akan ikut jalan pada setiap PR hijau
+    # (termasuk Dependabot), dan pada event `pull_request` `github.sha` adalah
+    # merge commit yang BERINDUK `main` — jadi fast-forward-nya SAH dan
+    # BERHASIL. Hasilnya: kode yang belum di-merge naik ke produksi otomatis.
+    # Itu memperluas celah, bukan menutupnya.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      # Menimpa `contents: read` tingkat workflow — job ini perlu mendorong.
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Job punya workspace sendiri; fast-forward butuh riwayatnya.
+          fetch-depth: 0
+
+      # TANPA --force, sengaja: server GitHub menolak bila bukan fast-forward,
+      # sehingga `production` tak pernah bisa mundur atau bercabang diam-diam.
+      - name: Fast-forward `production` ke commit yang hijau
+        run: git push origin ${{ github.sha }}:refs/heads/production

@@ -1,4 +1,4 @@
-import { Instrument_Serif, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { appearanceStyle } from "@/lib/customizer/appearance-style";
@@ -39,19 +39,40 @@ import {
 // `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
-const serif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: ["400"],
-  style: ["normal", "italic"],
+const serif = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/instrument-serif-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/instrument-serif-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+  ],
   variable: "--ar-serif",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const sans = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500"],
+const sans = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/inter-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/inter-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+  ],
   variable: "--ar-sans",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 

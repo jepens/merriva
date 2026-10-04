@@ -1,9 +1,4 @@
-import {
-  Cormorant_Upright,
-  Figtree,
-  Karla,
-  Playfair_Display,
-} from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -58,34 +53,122 @@ const isLegacyToggle = (id: string): id is SectionKey =>
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
 // a: Cormorant Upright (display serif tegak) + Figtree (humanist sans).
-const dispA = Cormorant_Upright({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const dispA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/cormorant-upright-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-upright-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-upright-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--kr-disp-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = Figtree({
-  subsets: ["latin"],
-  weight: ["400", "600"],
+const bodyA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/figtree-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/figtree-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--kr-body-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 // b: Playfair Display (serif editorial elegan, italic) + Karla (grotesque bersih).
-const dispB = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+const dispB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/playfair-display-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-500-italic.woff2",
+      weight: "500",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-600-italic.woff2",
+      weight: "600",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-700-italic.woff2",
+      weight: "700",
+      style: "italic",
+    },
+  ],
   variable: "--kr-disp-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = Karla({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const bodyB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/karla-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/karla-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/karla-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/karla-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--kr-body-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 

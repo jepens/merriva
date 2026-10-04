@@ -1,4 +1,4 @@
-import { Bricolage_Grotesque, Figtree } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -53,18 +53,45 @@ const isLegacyToggle = (id: string): id is SectionKey =>
 // `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
-const display = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["500", "700", "800"],
+const display = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/bricolage-grotesque-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/bricolage-grotesque-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/bricolage-grotesque-800.woff2",
+      weight: "800",
+      style: "normal",
+    },
+  ],
   variable: "--ft-disp",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const body = Figtree({
-  subsets: ["latin"],
-  weight: ["400", "600"],
+const body = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/figtree-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/figtree-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--ft-body",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 

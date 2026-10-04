@@ -1,9 +1,4 @@
-import {
-  Cormorant_Garamond,
-  EB_Garamond,
-  Karla,
-  Nunito_Sans,
-} from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -60,34 +55,121 @@ const isLegacyToggle = (id: string): id is SectionKey =>
 // = grotesque humanis (teks/label). Nuansa buku sketsa botani.
 // b) Cormorant Garamond = serif display high-contrast anggun; Nunito Sans = sans
 // humanis hangat, mudah dibaca di WebView WhatsApp.
-const dispA = EB_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  style: ["normal", "italic"],
+const dispA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/eb-garamond-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/eb-garamond-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/eb-garamond-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/eb-garamond-500-italic.woff2",
+      weight: "500",
+      style: "italic",
+    },
+  ],
   variable: "--vd-disp-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = Karla({
-  subsets: ["latin"],
-  weight: ["400", "600"],
+const bodyA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/karla-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/karla-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--vd-body-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const dispB = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+const dispB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/cormorant-garamond-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-500-italic.woff2",
+      weight: "500",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-600-italic.woff2",
+      weight: "600",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-700-italic.woff2",
+      weight: "700",
+      style: "italic",
+    },
+  ],
   variable: "--vd-disp-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = Nunito_Sans({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
+const bodyB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/nunito-sans-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/nunito-sans-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/nunito-sans-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--vd-body-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 

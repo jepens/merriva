@@ -1,4 +1,4 @@
-import { Bodoni_Moda, Italiana, Jost } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { appearanceStyle } from "@/lib/customizer/appearance-style";
@@ -50,35 +50,113 @@ const isLegacyToggle = (id: string): id is SectionKey =>
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
 // a: Italiana (display seni-deco renggang) + Jost (geometric sans).
-const dispA = Italiana({
-  subsets: ["latin"],
-  weight: ["400"],
+const dispA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/italiana-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+  ],
   variable: "--mrd-disp-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = Jost({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
+const bodyA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/jost-300.woff2",
+      weight: "300",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/jost-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/jost-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+  ],
   variable: "--mrd-body-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 // b: Bodoni Moda (display serif Didone kontras-tinggi, set italic lengkap) +
 // Jost (sans geometris) — pasangan editorial/high-fashion, DNA premium Meridian.
-const dispB = Bodoni_Moda({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+const dispB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/bodoni-moda-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/bodoni-moda-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/bodoni-moda-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/bodoni-moda-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/bodoni-moda-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/bodoni-moda-500-italic.woff2",
+      weight: "500",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/bodoni-moda-600-italic.woff2",
+      weight: "600",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/bodoni-moda-700-italic.woff2",
+      weight: "700",
+      style: "italic",
+    },
+  ],
   variable: "--mrd-disp-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = Jost({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const bodyB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/jost-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/jost-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/jost-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--mrd-body-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 

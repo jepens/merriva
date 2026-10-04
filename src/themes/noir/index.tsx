@@ -1,9 +1,4 @@
-import {
-  Cormorant_Garamond,
-  Jost,
-  Montserrat,
-  Playfair_Display,
-} from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -46,34 +41,136 @@ import {
 // browser hanya mengunduh slice yang benar-benar dipakai. Cormorant Garamond (serif Garalde sinematik) + Jost
 // (geometric sans). Pasangan b: Playfair Display (serif high-contrast) +
 // Montserrat (grotesk geometris) — kontras tinggi & monokrom, cocok DNA noir.
-const dispA = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  style: ["normal", "italic"],
+const dispA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/cormorant-garamond-300.woff2",
+      weight: "300",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-300-italic.woff2",
+      weight: "300",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-500-italic.woff2",
+      weight: "500",
+      style: "italic",
+    },
+  ],
   variable: "--nr-disp-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = Jost({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
+const bodyA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/jost-300.woff2",
+      weight: "300",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/jost-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/jost-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+  ],
   variable: "--nr-body-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const dispB = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+const dispB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/playfair-display-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-500-italic.woff2",
+      weight: "500",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-600-italic.woff2",
+      weight: "600",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/playfair-display-700-italic.woff2",
+      weight: "700",
+      style: "italic",
+    },
+  ],
   variable: "--nr-disp-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = Montserrat({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const bodyB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/montserrat-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/montserrat-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/montserrat-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--nr-body-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 

@@ -1,4 +1,4 @@
-import { Cormorant_Garamond, Figtree, Jost, Marcellus } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -55,33 +55,106 @@ const isLegacyToggle = (id: string): id is SectionKey =>
 // a: Marcellus = serif display bertakik lembut (nama & judul); Figtree = sans
 // humanis bersih (teks). b: Cormorant Garamond = serif kontras-tinggi bergaya
 // Garamond (nama & ayat); Jost = sans geometris bersih (keterbacaan body).
-const dispA = Marcellus({
-  subsets: ["latin"],
-  weight: ["400"],
+const dispA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/marcellus-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+  ],
   variable: "--bk-disp-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = Figtree({
-  subsets: ["latin"],
-  weight: ["400", "600"],
+const bodyA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/figtree-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/figtree-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--bk-body-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const dispB = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+const dispB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/cormorant-garamond-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-500-italic.woff2",
+      weight: "500",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-600-italic.woff2",
+      weight: "600",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-700-italic.woff2",
+      weight: "700",
+      style: "italic",
+    },
+  ],
   variable: "--bk-disp-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = Jost({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const bodyB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/jost-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/jost-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/jost-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--bk-body-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 

@@ -1,4 +1,4 @@
-import { Space_Grotesk, Space_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { appearanceStyle } from "@/lib/customizer/appearance-style";
@@ -40,18 +40,45 @@ import {
 // `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
-const disp = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+const disp = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/space-grotesk-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/space-grotesk-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/space-grotesk-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--pr-disp",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const mono = Space_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
+const mono = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/space-mono-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/space-mono-700.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--pr-mono",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 

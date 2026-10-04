@@ -1893,6 +1893,13 @@ catch; pengingat: status error + catch) dan di `admin/log.ts`.
 
 ### 3. Font lepas dari jaringan saat build
 
+> **Ralat (commit berikutnya, hari yang sama):** bagian ini mula-mula hanya
+> memindahkan DUA font marketing, dan saya menyatakan build "tak lagi butuh
+> jaringan ke Google". Itu **salah cakupan**: sepuluh tema memakai 20 keluarga
+> font Google lain, dan kegagalan build berikutnya justru datang dari sana
+> (`src/themes/aria/index.tsx` → Inter). Ketergantungannya baru benar-benar
+> hilang setelah ke-20 keluarga ikut di-self-host — lihat #64.
+
 `next/font/google` self-hosted bagi PERAMBAN, tetapi Next mengunduh berkasnya dari Google
 **saat build** — jadi `pnpm build` di CI dan di Docker build yang jadi deploy Easypanel
 sama-sama bergantung pada `fonts.googleapis.com`. Ketergantungan itu gagal nyata pada
@@ -1984,6 +1991,68 @@ ekuivalen, kondisinya disederhanakan menjadi `if (!inv)` — `error`-nya tetap d
 DIAGNOSIS (`invErr ?? new Error(...)`), bukan untuk DETEKSI. Berlaku untuk keempat bacaan.
 
 Uji mutasi: 10 mutan, 10 merah (setelah dua perbaikan test dan satu penyederhanaan kode).
+
+---
+
+## #64 — 2026-10-04 · Seluruh font tema ikut di-repo; build benar-benar lepas dari Google + gerbang deploy
+
+### Ralat atas #62 bagian 3
+
+#62 memindahkan dua font MARKETING ke `next/font/local` dan menyatakan build tak lagi
+butuh jaringan ke Google. **Itu salah cakupan.** Sepuluh tema memakai **20 keluarga font
+Google lain**, dan kegagalan build berikutnya datang persis dari sana
+(`src/themes/aria/index.tsx` → Inter). Tiga kegagalan dalam satu hari, semuanya
+`next/font/google`, semuanya lolos saat di-re-run tanpa perubahan apa pun — jadi ini
+bukan gangguan jaringan sesekali, melainkan ketergantungan yang memang rapuh.
+
+**Keputusan pemilik (2026-10-04):** self-host ke-20 keluarga. 75 berkas woff2 subset
+`latin`, 1,4 MB di repo.
+
+**Instance STATIS per bobot, bukan font variabel.** Google CSS2 mengembalikan file
+variabel bila diminta rentang bobot, tetapi di sini tiap (keluarga, bobot, style) diminta
+terpisah sehingga yang turun adalah instance statis — SAMA dengan yang selama ini diunduh
+`next/font/google` untuk tema. Alasannya menghindari regresi visual: instance statis
+di-hint per bobot, sementara interpolasi variabel di bobot 500 bisa berbeda tipis. Pada
+halaman undangan, peramban juga hanya mengunduh bobot yang benar-benar dipakai.
+
+**`preload: false` WAJIB terbawa.** `next/font/local` default-nya `true`, sementara
+seluruh tema sengaja `false` (AUDIT-2026-09-04 PER-1): `next/font` meng-emit
+`<link rel=preload as=font>` untuk SETIAP tema yang tergabung di graph modul `/[slug]` —
+bukan hanya tema yang dipakai — yaitu 116 berkas / 2,03 MB per pembukaan undangan.
+Diverifikasi ulang setelah migrasi: `/andi-sinta-demo` mengembalikan **nol** tautan
+preload font.
+
+Diverifikasi di peramban pada undangan nyata: `--er-disp-a`/`--er-body-a` terpasang,
+Fraunces (300/400/500 + italic) dan Instrument Sans (400/500/600) berstatus `loaded`,
+tampilan tak berubah.
+
+### Gerbang deploy: pemicu yang dipindah, bukan `needs:` yang ditambahkan
+
+Butir audit "gerbang deploy `needs: verify`" ternyata **tak berlaku apa adanya**: tak ada
+job deploy di GitHub Actions sama sekali. Easypanel auto-build saat push ke `main`, dan
+webhook-nya berjalan PARALEL dengan CI — jadi commit ber-CI-merah sudah hidup di produksi
+beberapa menit kemudian, dan satu-satunya yang mengetahuinya adalah orang yang mengecek
+`gh run list` SESUDAHNYA. Itu deteksi, bukan pencegahan. Gerbang yang sebenarnya cocok
+(required status check) terkunci: `gh api …/branches/main/protection` → 403 "Upgrade to
+GitHub Pro".
+
+**Keputusan pemilik (2026-10-04):** branch `production` yang dipromosikan CI.
+
+**Penjaga `if:` WAJIB, dan ketiadaannya akan membuat obatnya lebih berbahaya daripada
+penyakitnya.** `ci.yml` juga terpicu `pull_request:` tanpa filter branch. Job promote yang
+hanya ber-`needs: [verify, db]` akan ikut jalan pada SETIAP PR hijau — termasuk PR
+Dependabot — dan pada event `pull_request` `github.sha` adalah merge commit yang BERINDUK
+`main`, sehingga `git push <sha>:refs/heads/production` SAH sebagai fast-forward dan
+BERHASIL. Hasilnya: kode yang belum di-merge naik ke produksi otomatis. Karena itu
+`if: github.event_name == 'push' && github.ref == 'refs/heads/main'`.
+
+Didorong **tanpa `--force`**, sengaja: server GitHub menolak bila bukan fast-forward,
+sehingga `production` tak pernah bisa mundur atau bercabang diam-diam.
+
+**Belum berlaku sampai pemilik mengubah branch yang diawasi Easypanel** dari `main` ke
+`production` (LAUNCH-CHECKLIST Fase 1). Sebelum itu job ini hanya memelihara cermin yang
+tak dipakai — aman, tetapi bukan gerbang. Itu dicatat sebagai butir checklist, bukan
+diasumsikan selesai.
 
 ---
 

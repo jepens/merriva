@@ -1,11 +1,4 @@
-import {
-  Cormorant_Garamond,
-  Figtree,
-  Fraunces,
-  Instrument_Sans,
-  Jost,
-  Marcellus,
-} from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -48,48 +41,162 @@ import {
 // `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
-const dispA = Fraunces({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  style: ["normal", "italic"],
+const dispA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/fraunces-300.woff2",
+      weight: "300",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/fraunces-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/fraunces-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/fraunces-300-italic.woff2",
+      weight: "300",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/fraunces-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/fraunces-500-italic.woff2",
+      weight: "500",
+      style: "italic",
+    },
+  ],
   variable: "--er-disp-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = Instrument_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const bodyA = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/instrument-sans-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/instrument-sans-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/instrument-sans-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--er-body-a",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const dispB = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+const dispB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/cormorant-garamond-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-500-italic.woff2",
+      weight: "500",
+      style: "italic",
+    },
+    {
+      path: "../../fonts/themes/cormorant-garamond-600-italic.woff2",
+      weight: "600",
+      style: "italic",
+    },
+  ],
   variable: "--er-disp-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = Jost({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const bodyB = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/jost-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/jost-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/jost-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--er-body-b",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const dispC = Marcellus({
-  subsets: ["latin"],
-  weight: ["400"],
+const dispC = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/marcellus-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+  ],
   variable: "--er-disp-c",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyC = Figtree({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const bodyC = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/figtree-400.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/figtree-500.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../fonts/themes/figtree-600.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--er-body-c",
   display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
 

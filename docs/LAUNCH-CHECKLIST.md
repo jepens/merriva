@@ -24,6 +24,8 @@ uji lapangan). Checklist ini mengurutkannya dari nol → go-live.
 - [ ] Domain + SSL (Easypanel/Traefik), DNS Cloudflare **proxy ON**, redirect `www` → apex
 - [ ] Verify: `curl https://merriva.id/api/health` → `{"status":"ok","db":"up"}`
 
+- [ ] **Easypanel mengawasi branch `production`, bukan `main`** (DECISIONS #64). CI mem-fast-forward `production` hanya setelah `verify` + pgTAP hijau, jadi commit ber-CI-merah tak pernah sampai ke produksi. Sebelum butir ini dikerjakan, gerbangnya **belum berlaku**: deploy tetap jalan paralel dengan CI seperti sekarang.
+
 ## Fase 2 — Konfigurasi layanan pihak ketiga
 
 - [ ] **Pakasir**: project production; set webhook URL → `https://merriva.id/api/webhooks/pakasir`; isi `PAKASIR_PROJECT_SLUG` + `PAKASIR_API_KEY`
