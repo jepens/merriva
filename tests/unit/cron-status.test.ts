@@ -40,15 +40,17 @@ describe("hitungHealth", () => {
   it("melewati DUA kali jadwalnya → basi", () => {
     // expire-orders dijadwalkan tiap jam.
     expect(hitungHealth(baris(3), "expire-orders", NOW)).toBe("basi");
-    // purge-expired harian → basi setelah 48 jam.
-    expect(hitungHealth(baris(49), "purge-expired", NOW)).toBe("basi");
+    // purge-expired tiap 12 jam (ia juga mengirim peringatan pra-purge, B7) →
+    // basi setelah 24 jam. expire-invitations harian → basi setelah 48 jam.
+    expect(hitungHealth(baris(25), "purge-expired", NOW)).toBe("basi");
+    expect(hitungHealth(baris(49), "expire-invitations", NOW)).toBe("basi");
   });
 
   it("satu kali lewat jadwal BELUM dianggap basi", () => {
     // Jitter penjadwal atau redeploy yang kebetulan bertepatan tak boleh
     // memerahkan panel — alarm yang terlalu sering berakhir diabaikan.
     expect(hitungHealth(baris(1.5), "expire-orders", NOW)).toBe("ok");
-    expect(hitungHealth(baris(30), "purge-expired", NOW)).toBe("ok");
+    expect(hitungHealth(baris(30), "expire-invitations", NOW)).toBe("ok");
   });
 
   it("basi MENGALAHKAN sukses terakhir — job mati tak boleh tampak hijau", () => {
@@ -61,6 +63,16 @@ describe("hitungHealth", () => {
     // 3 jam: basi untuk job per-jam, sehat untuk job harian.
     expect(hitungHealth(baris(3), "expire-orders", NOW)).toBe("basi");
     expect(hitungHealth(baris(3), "expiry-reminders", NOW)).toBe("ok");
+  });
+
+  it("purge-expired dijadwalkan 12 jam, bukan 24 — ia juga mengirim email", () => {
+    // Job ini kini mengirim peringatan pra-purge (B7), dan `idempotencyKey`
+    // Resend hanya berlaku 24 jam: kadens di bawah itu mencegah peringatan
+    // ganda bila penandaan gagal setelah email terkirim. Angka ini HARUS sama
+    // dengan perintah cron di panel Easypanel (LAUNCH-CHECKLIST Fase 3) —
+    // kalau tidak, panel admin menuduh job yang sehat.
+    expect(hitungHealth(baris(20), "purge-expired", NOW)).toBe("ok");
+    expect(hitungHealth(baris(25), "purge-expired", NOW)).toBe("basi");
   });
 
   it("keempat job terdaftar — tak ada yang luput dari panel", () => {

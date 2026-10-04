@@ -267,6 +267,8 @@ export type Database = {
           id: string;
           package_id: string | null;
           published_at: string | null;
+          purge_final_warned_at: string | null;
+          purge_warned_at: string | null;
           purged_at: string | null;
           reminder_sent_at: string | null;
           settings: Json;
@@ -285,6 +287,8 @@ export type Database = {
           id?: string;
           package_id?: string | null;
           published_at?: string | null;
+          purge_final_warned_at?: string | null;
+          purge_warned_at?: string | null;
           purged_at?: string | null;
           reminder_sent_at?: string | null;
           settings?: Json;
@@ -303,6 +307,8 @@ export type Database = {
           id?: string;
           package_id?: string | null;
           published_at?: string | null;
+          purge_final_warned_at?: string | null;
+          purge_warned_at?: string | null;
           purged_at?: string | null;
           reminder_sent_at?: string | null;
           settings?: Json;

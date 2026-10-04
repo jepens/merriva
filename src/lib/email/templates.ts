@@ -227,6 +227,72 @@ ${detailRows(rows)}
   };
 }
 
+export interface PurgeWarningEmailData {
+  name: string | null;
+  slug: string;
+  /** Sudah diformat, mis. "3 April 2027". */
+  purgeDateLabel: string;
+  daysLeft: number;
+  /** Tahap terakhir (~H-7): urutan tombol dibalik & outro berubah. */
+  final: boolean;
+  renewUrl: string;
+  dashboardUrl: string;
+}
+
+/**
+ * Peringatan pra-purge (AUDIT-2026-10-01 B7).
+ *
+ * SATU templat untuk kedua tahap: "H-30" dan "H-7" adalah nama TAHAP, bukan isi
+ * email — angkanya dihitung per baris dari tanggal purge yang sebenarnya, jadi
+ * baris yang masuk antrean terlambat tak pernah mengaku "30 hari" saat sisanya
+ * tiga. `final` mengubah subjek, urutan tombol, dan outro: pada H-30
+ * memperpanjang masih wajar dipikirkan; pada H-7 menyelamatkan data jauh lebih
+ * realistis daripada memutuskan membeli.
+ */
+export function renderPurgeWarningEmail(
+  data: PurgeWarningEmailData,
+): RenderedEmail {
+  const r = C.purgeWarning;
+  const utama = data.final
+    ? button(data.dashboardUrl, r.ctaUnduh)
+    : button(data.renewUrl, r.ctaPerpanjang);
+  const kedua = data.final
+    ? { url: data.renewUrl, label: r.ctaPerpanjang }
+    : { url: data.dashboardUrl, label: r.ctaUnduh };
+  const outro = data.final ? r.outroFinal : r.outroPertama;
+
+  const inner = `<p style="margin:0 0 16px">${escapeHtml(r.greeting(data.name))}</p>
+<p style="margin:0 0 16px">${escapeHtml(r.intro(data.slug, data.purgeDateLabel, data.daysLeft))}</p>
+<p style="margin:0 0 8px;font-size:14px">${escapeHtml(r.yangHilang)}</p>
+<p style="margin:0 0 20px;font-size:14px;color:${MUTED}">${escapeHtml(r.yangTetap)}</p>
+<p style="margin:0 0 12px">${utama}</p>
+<p style="margin:0 0 20px;font-size:14px"><a href="${escapeHtml(kedua.url)}" style="color:${BRAND}">${escapeHtml(kedua.label)}</a></p>
+<p style="margin:0 0 20px;font-size:13px;color:${MUTED}">${escapeHtml(r.unduhHint)}</p>
+<p style="margin:0;font-size:13px;color:${MUTED}">${escapeHtml(outro)}</p>`;
+
+  const text = [
+    r.greeting(data.name),
+    "",
+    r.intro(data.slug, data.purgeDateLabel, data.daysLeft),
+    "",
+    r.yangHilang,
+    r.yangTetap,
+    "",
+    `${r.ctaPerpanjang}: ${data.renewUrl}`,
+    `${r.ctaUnduh}: ${data.dashboardUrl}`,
+    "",
+    r.unduhHint,
+    "",
+    outro,
+  ].join("\n");
+
+  return {
+    subject: r.subject(data.daysLeft, data.slug),
+    html: layout(r.preheader(data.purgeDateLabel), r.heading, inner),
+    text,
+  };
+}
+
 export function renderExpiryReminderEmail(
   data: ReminderEmailData,
 ): RenderedEmail {

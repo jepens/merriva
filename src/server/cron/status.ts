@@ -37,7 +37,10 @@ const JADWAL_JAM: Record<CronJobName, number> = {
   "expire-orders": 1,
   "expire-invitations": 24,
   "expiry-reminders": 24,
-  "purge-expired": 24,
+  // 12 jam, bukan 24: job ini kini juga mengirim peringatan pra-purge (B7),
+  // dan `idempotencyKey` Resend hanya berlaku 24 jam — kadens di bawah itu
+  // mencegah peringatan ganda bila penandaan gagal setelah email terkirim.
+  "purge-expired": 12,
 };
 
 export const CRON_JOBS = Object.keys(JADWAL_JAM) as CronJobName[];

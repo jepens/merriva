@@ -6,11 +6,13 @@ import { sendTransactionalEmail, type SendEmailResult } from "@/lib/email/send";
 import {
   renderExpiryReminderEmail,
   renderMomenReceiptEmail,
+  renderPurgeWarningEmail,
   renderReceiptEmail,
   renderUpgradeReceiptEmail,
 } from "@/lib/email/templates";
 import { appUrl } from "@/lib/env";
 import { reportHandledError } from "@/lib/observability";
+import { daysUntilPurge, purgeDueMs } from "@/server/cron/retention";
 import type { Database } from "@/types/database";
 
 type Admin = SupabaseClient<Database>;
@@ -287,6 +289,85 @@ export async function sendExpiryReminder(
     reportHandledError(err, "email.expiry-reminder", {
       invitationId: target.id,
     });
+    return "error";
+  }
+}
+
+export interface PurgeWarningTarget {
+  id: string;
+  slug: string;
+  user_id: string;
+  active_until: string;
+  /** Tahap terakhir (~H-7). */
+  final: boolean;
+}
+
+/**
+ * Kirim peringatan pra-purge (AUDIT-2026-10-01 B7).
+ *
+ * Mengembalikan status kirim agar cron menandai kolom tahapnya HANYA pada
+ * `sent` — pola yang sama dengan `sendExpiryReminder`, dan alasannya sama: baris
+ * yang gagal kirim harus terpilih lagi, bukan dianggap sudah diperingatkan.
+ * Gerbang purge menolak menghapus tanpa penanda itu, jadi menandai terlalu dini
+ * berarti menghapus data yang pemiliknya tak pernah diberi tahu.
+ *
+ * `now` disuntik agar `daysLeft` deterministik saat diuji.
+ */
+export async function sendPurgeWarning(
+  admin: Admin,
+  target: PurgeWarningTarget,
+  now: number = Date.now(),
+): Promise<SendEmailResult["status"] | "nodata"> {
+  try {
+    const { data: userRes, error: authErr } =
+      await admin.auth.admin.getUserById(target.user_id);
+    const email = userRes?.user?.email;
+    if (authErr || !email) {
+      if (authErr) {
+        reportHandledError(authErr, "email.purge-warning", {
+          invitationId: target.id,
+        });
+      }
+      return "nodata";
+    }
+
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", target.user_id)
+      .maybeSingle();
+
+    const due = purgeDueMs(target.active_until);
+    const rendered = renderPurgeWarningEmail({
+      name: profile?.full_name ?? null,
+      slug: target.slug,
+      purgeDateLabel:
+        (due === null ? null : fmtDate(new Date(due).toISOString())) ??
+        target.active_until,
+      daysLeft: daysUntilPurge(target.active_until, now),
+      final: target.final,
+      renewUrl: `${appUrl}/dashboard/undangan/${target.id}/aktifkan`,
+      dashboardUrl: `${appUrl}/dashboard/undangan/${target.id}/tamu`,
+    });
+    const res = await sendTransactionalEmail({
+      to: email,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      // Per TAHAP, bukan per undangan: H-30 dan H-7 adalah dua kiriman berbeda,
+      // dan kunci yang sama akan membuat Resend menelan yang kedua.
+      idempotencyKey: `purge-warning/${target.final ? "final" : "first"}/${target.id}`,
+    });
+    if (res.status === "error") {
+      reportHandledError(
+        new Error(`resend:${res.code}`),
+        "email.purge-warning",
+        { invitationId: target.id, statusCode: res.statusCode },
+      );
+    }
+    return res.status;
+  } catch (err) {
+    reportHandledError(err, "email.purge-warning", { invitationId: target.id });
     return "error";
   }
 }

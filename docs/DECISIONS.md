@@ -2161,6 +2161,78 @@ serupa.
 
 ---
 
+## #67 — 2026-10-05 · Peringatan pra-purge: data pribadi tak lagi dihapus tanpa pemberitahuan
+
+`docs/DATA-MODEL.md` sudah **menjanjikan** "email pengingat sebelum penghapusan" yang tak
+pernah dibuat, dan `/syarat` menyuruh pelanggan mengunduh datanya sebelum tenggat — tanpa
+pernah memberi tahu kapan tenggat itu tiba. Cron `purge-expired` menghapus permanen tamu,
+RSVP, `gift_notes`, `invitation_events`, objek media, dan foto Album Momen **tanpa satu pun
+import email**.
+
+### Jendela dihitung dengan MEMBALIK arahnya
+
+Tanggal purge per baris TIDAK dihitung dengan `active_until + 6 bulan`: penjumlahan itu tak
+simetris dengan `retentionCutoffIso` yang memakai `setUTCMonth(m - 6)` dan meluber (31
+Agustus − 6 bulan → 3 Maret; 3 Maret + 6 bulan → 3 September ≠ 31 Agustus). Sebagai
+gantinya `now` yang digeser ke depan lalu dilewatkan ke fungsi cutoff yang SAMA:
+
+    baris jatuh tempo dalam ≤ d hari  ⟺  active_until < dueWithinIso(now, d)
+
+Dengan itu peringatan dan purge mustahil bergeser satu terhadap yang lain. Rumusnya pindah
+ke `src/server/cron/retention.ts` — satu definisi, dua fase.
+
+### Penanda terikat SIKLUS, tanpa satu pun RPC perlu me-resetnya
+
+Dua kolom (`purge_warned_at`, `purge_final_warned_at`), dan **tak ada kolom "siklus"**.
+Penanda dianggap milik siklus berjalan bila nilainya > `active_until`; perpanjangan selalu
+memajukan `active_until`, jadi penanda lama basi dengan sendirinya.
+
+Itu disengaja dan alasannya empiris: pola "ingat reset di setiap RPC" sudah **terbukti
+membusuk di repo ini** — `reminder_sent_at` hilang dua kali saat `activate_paid_order`
+dibuat ulang (#65). Rancangan yang mengandalkan reset manual akan mengulang kesalahan yang
+sama; rancangan yang basi sendiri tidak bisa.
+
+### Gerbang purge: dua janji yang saling tarik
+
+`bolehPurge` adalah fungsi MURNI yang diuji, bukan filter query:
+- belum diperingatkan (atau penandanya dari siklus lama) → **tunggu**, jangan hapus —
+  itu janji `/syarat` & `/privasi`;
+- baru diperingatkan, jedanya belum lewat → **tunggu**, beri waktu menindaklanjuti;
+- jauh lewat tenggat (21 hari) → **backstop**: hapus meski peringatan tak pernah terkirim.
+
+Backstop-nya bukan kelalaian melainkan keseimbangan: pipeline email yang rusak tak boleh
+menahan kewajiban retensi selamanya, karena **menyimpan data melewati batas adalah
+pelanggaran yang berlawanan arah**. Jumlahnya dihitung terpisah di `cron_runs.stats` supaya
+terlihat di `/admin`, bukan hilang di antara angka lain.
+
+### Keputusan kecil yang menentukan
+
+- **Menumpang `purge-expired`, bukan cron kelima.** Populasinya persis sama, dan dua baris
+  `cron_runs` untuk satu rangkaian akan membuat kartu kesehatan di `/admin` ambigu.
+- **Kadens 12 jam, bukan 24.** `idempotencyKey` Resend hanya berlaku 24 jam; kadens di
+  bawah itu mencegah peringatan ganda bila penandaan gagal setelah email terkirim.
+  `JADWAL_JAM` + LAUNCH-CHECKLIST diubah dalam commit yang sama, dan satu test mengunci
+  angkanya beserta alasannya.
+- **Tahap FINAL didahulukan.** Baris yang masuk antrean terlambat — cron mati beberapa
+  hari, atau rilis pertama fitur ini — tak boleh menerima "30 hari lagi" saat sisanya tiga,
+  dan tak boleh menerima dua email dalam satu run.
+- **Satu templat, dua nada.** "H-30"/"H-7" adalah nama TAHAP, bukan isi: `daysLeft` dihitung
+  per baris dari tanggal purge sebenarnya. `final` membalik urutan tombol — pada H-30
+  memperpanjang masih wajar dipikirkan; pada H-7 menyelamatkan data lebih realistis
+  daripada memutuskan membeli.
+- **Pemilik tanpa akun (`user_id` NULL) DIHITUNG**, bukan dilewati diam-diam.
+- **Penanda ditulis HANYA saat email benar-benar `sent`.** Menandai terlalu dini berarti
+  gerbang purge meloloskan penghapusan untuk orang yang tak pernah diberi tahu.
+
+Uji mutasi: 8 mutan, 8 merah — termasuk "gerbang purge jalan tanpa peringatan" dan
+"backstop dibuang". Seleksi kandidatnya diuji langsung terhadap skema cloud.
+
+**Belum dikerjakan dari B7:** email saat `expire-invitations`, kuitansi untuk aktivasi
+manual admin, dan email alasan+banding saat suspend. Rancangannya sudah ada; ketiganya
+lebih kecil dan berdiri sendiri.
+
+---
+
 ---
 
 ## Template entri baru

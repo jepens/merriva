@@ -4,6 +4,13 @@ import { reportHandledError } from "@/lib/observability";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { recordCronRun } from "@/server/cron/record";
 import { isAuthorizedCron } from "@/server/cron/auth";
+import {
+  bolehPurge,
+  dueWithinIso,
+  retentionCutoffIso,
+  tahapPeringatan,
+} from "@/server/cron/retention";
+import { sendPurgeWarning } from "@/server/email/notify";
 
 /**
  * Cron: HAPUS PERMANEN data pribadi undangan yang expired > 6 bulan (retensi
@@ -37,18 +44,109 @@ function json(body: unknown, status: number): Response {
   });
 }
 
-/** Cutoff: 6 bulan kalender sebelum `now` (UTC). Diekspor untuk diuji. */
-export function retentionCutoffIso(now: Date): string {
-  const cutoff = new Date(now);
-  cutoff.setUTCMonth(cutoff.getUTCMonth() - 6);
-  return cutoff.toISOString();
-}
+/**
+ * Rumus cutoff pindah ke `@/server/cron/retention` (B7): fase PERINGATAN dan
+ * fase PURGE wajib memakai garis yang persis sama. Re-export supaya test lama
+ * dan pemanggil lain tak perlu tahu perpindahannya.
+ */
+export { retentionCutoffIso };
 
 export async function POST(req: Request) {
   if (!isAuthorizedCron(req)) return json({ ok: false }, 401);
 
   const admin = createSupabaseAdminClient();
-  const cutoff = retentionCutoffIso(new Date());
+  const now = new Date();
+  const cutoff = retentionCutoffIso(now);
+
+  // === FASE 1 — PERINGATAN =====================================================
+  // Satu job, dua kewajiban berurutan: "peringatkan, lalu hapus yang sudah lewat
+  // masa peringatannya". Sengaja BUKAN cron kelima — populasinya persis sama
+  // (expired/suspended, belum dipurge), dan dua baris `cron_runs` untuk satu
+  // rangkaian akan membuat kartu kesehatan di `/admin` ambigu.
+  //
+  // Kandidatnya dibatasi jendela TERLUAR (30 hari) lalu tahapnya diputuskan
+  // fungsi murni `tahapPeringatan` — yang juga memastikan satu baris tak pernah
+  // menerima dua email dalam satu run.
+  const { data: calon, error: calonErr } = await admin
+    .from("invitations")
+    .select(
+      "id, slug, user_id, active_until, purge_warned_at, purge_final_warned_at",
+    )
+    .in("status", ["expired", "suspended"])
+    .is("purged_at", null)
+    .not("active_until", "is", null)
+    .lt("active_until", dueWithinIso(now, 30))
+    .order("active_until", { ascending: true })
+    .limit(BATCH);
+  if (calonErr) {
+    reportHandledError(calonErr, "cron.purge-expired.warn");
+    await recordCronRun("purge-expired", false, {}, calonErr);
+    return json({ ok: false }, 503);
+  }
+
+  let warned = 0;
+  let warnFinal = 0;
+  let warnNoOwner = 0;
+  let warnFailed = 0;
+
+  for (const row of calon ?? []) {
+    if (!row.active_until) continue;
+    const tahap = tahapPeringatan(
+      {
+        active_until: row.active_until,
+        purge_warned_at: row.purge_warned_at,
+        purge_final_warned_at: row.purge_final_warned_at,
+      },
+      now,
+    );
+    if (!tahap) continue;
+    // Akun pemilik sudah dihapus (`user_id` NULL): tak ada alamat tujuan. Tetap
+    // DIHITUNG, bukan dilewati diam-diam — barisnya akan terpilih lagi setiap
+    // jalan, dan satu angka di `cron_runs.stats` lebih baik daripada lingkaran
+    // tak terlihat. Backstop di fase purge yang akhirnya melepaskannya.
+    if (!row.user_id) {
+      warnNoOwner += 1;
+      continue;
+    }
+
+    const status = await sendPurgeWarning(
+      admin,
+      {
+        id: row.id,
+        slug: row.slug,
+        user_id: row.user_id,
+        active_until: row.active_until,
+        final: tahap === "final",
+      },
+      now.getTime(),
+    );
+    if (status !== "sent") {
+      warnFailed += 1;
+      continue;
+    }
+    // Penanda ditulis HANYA saat email benar-benar terkirim (pola
+    // `expiry-reminders`). Kolomnya mengikuti tahap, dan nilainya `now` —
+    // yang > `active_until`, sehingga ia menandai SIKLUS INI.
+    // Dicabang EKSPLISIT, bukan kunci terhitung `{ [kolom]: ... }`: kunci
+    // terhitung membuat tipe kolom Supabase runtuh jadi index signature, dan
+    // dengan itu hilang pula jaring yang menangkap salah ketik nama kolom.
+    const patch =
+      tahap === "final"
+        ? { purge_final_warned_at: now.toISOString() }
+        : { purge_warned_at: now.toISOString() };
+    const { error: markErr } = await admin
+      .from("invitations")
+      .update(patch)
+      .eq("id", row.id);
+    if (markErr) {
+      warnFailed += 1;
+      continue;
+    }
+    warned += 1;
+    if (tahap === "final") warnFinal += 1;
+  }
+
+  // === FASE 2 — PURGE ==========================================================
 
   // Kandidat: kedaluwarsa ATAU DITANGGUHKAN, belum dipurge, active_until lewat
   // cutoff. Indeks parsial `invitations_purge_scan_v2_idx` melayani scan ini.
@@ -62,7 +160,7 @@ export async function POST(req: Request) {
   // memang tak disentuh suspend.
   const { data: due, error } = await admin
     .from("invitations")
-    .select("id")
+    .select("id, active_until, purge_final_warned_at")
     .in("status", ["expired", "suspended"])
     .is("purged_at", null)
     .not("active_until", "is", null)
@@ -79,8 +177,27 @@ export async function POST(req: Request) {
   let purged = 0;
   let skipped = 0; // race: keburu dipurge/diperpanjang antar-select & RPC
   let storageFailed = 0; // objek storage gagal dihapus (baris DB sudah bersih)
+  let heldForWarning = 0; // menunggu peringatan terkirim & jedanya lewat
+  let backstop = 0; // dihapus TANPA peringatan karena sudah jauh lewat tenggat
 
   for (const row of due ?? []) {
+    // Data pribadi tak dihapus permanen tanpa peringatan yang BENAR-BENAR
+    // terkirim — itu janji `/syarat` & `/privasi`. `backstop` tetap ada karena
+    // pipeline email yang rusak tak boleh menahan kewajiban retensi selamanya:
+    // menyimpan data melewati batas adalah pelanggaran yang berlawanan arah.
+    const keputusan = bolehPurge(
+      {
+        active_until: row.active_until ?? "",
+        purge_final_warned_at: row.purge_final_warned_at,
+      },
+      now,
+    );
+    if (keputusan === "tunggu-peringatan") {
+      heldForWarning += 1;
+      continue;
+    }
+    if (keputusan === "backstop") backstop += 1;
+
     const { data: res, error: rpcErr } = await admin.rpc(
       "purge_invitation_data",
       { p_invitation_id: row.id },
@@ -113,6 +230,12 @@ export async function POST(req: Request) {
     purged,
     skipped,
     storageFailed,
+    heldForWarning,
+    backstop,
+    warned,
+    warnFinal,
+    warnNoOwner,
+    warnFailed,
   });
   return json(
     {
@@ -121,6 +244,12 @@ export async function POST(req: Request) {
       purged,
       skipped,
       storageFailed,
+      heldForWarning,
+      backstop,
+      warned,
+      warnFinal,
+      warnNoOwner,
+      warnFailed,
       // Batch penuh → mungkin masih ada sisa; observabilitas backlog.
       truncated: scanned === BATCH,
     },

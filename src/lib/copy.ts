@@ -1307,6 +1307,40 @@ export const copy = {
       cta: "Lihat undangan",
       outro: "Simpan email ini sebagai bukti pembayaran.",
     },
+    // Peringatan pra-purge (AUDIT-2026-10-01 B7). `docs/DATA-MODEL.md` sudah
+    // MENJANJIKAN email ini sejak lama; ia tak pernah dibuat.
+    //
+    // Nada: lugas, tanpa menakut-nakuti dan tanpa menghaluskan. Yang dibaca
+    // orang di sini adalah kabar bahwa foto pernikahannya akan hilang — jadi
+    // kalimat pertama menyebut tanggalnya, bukan basa-basi, dan tombolnya
+    // menawarkan jalan keluar yang nyata.
+    purgeWarning: {
+      subject: (hari: number, slug: string) =>
+        hari <= 7
+          ? `${hari} hari lagi: data undangan ${slug} dihapus permanen`
+          : `Data undangan ${slug} akan dihapus ${hari} hari lagi`,
+      preheader: (tanggal: string) =>
+        `Setelah ${tanggal}, data tamu dan foto undangan ini tidak dapat dipulihkan.`,
+      heading: "Sebelum datanya dihapus",
+      greeting: (name: string | null) => (name ? `Halo ${name},` : "Halo,"),
+      intro: (slug: string, tanggal: string, hari: number) =>
+        `Masa aktif undangan /${slug} sudah berakhir. Sesuai kebijakan retensi kami, data pribadinya dihapus permanen pada ${tanggal} — ${hari} hari lagi — dan setelah itu tidak dapat dipulihkan.`,
+      yangHilang:
+        "Yang dihapus: daftar tamu beserta nomor dan link personalnya, seluruh RSVP dan ucapan, catatan amplop, foto galeri, dan foto Album Momen.",
+      yangTetap:
+        "Yang tidak terhapus: riwayat pembayaran Anda, akun Anda, dan alamat undangan ini.",
+      // Dua jalan keluar, urutannya berbeda per tahap: pada H-30 memperpanjang
+      // masih keputusan yang wajar dipikirkan; pada H-7 menyelamatkan data jauh
+      // lebih realistis daripada memutuskan membeli.
+      ctaPerpanjang: "Perpanjang undangan",
+      ctaUnduh: "Unduh data saya",
+      unduhHint:
+        "Dari dashboard Anda dapat mengunduh daftar tamu beserta RSVP, catatan amplop, dan foto Album Momen. Foto galeri adalah berkas yang Anda unggah sendiri — simpan aslinya.",
+      outroPertama:
+        "Kami akan mengingatkan sekali lagi menjelang tenggat. Bila Anda tak memerlukan datanya lagi, Anda tak perlu melakukan apa pun.",
+      outroFinal:
+        "Ini pengingat terakhir dari kami. Setelah tanggal di atas, data tersebut tidak dapat dikembalikan.",
+    },
     // Kuitansi UPGRADE paket (B3). Berbeda dari kuitansi aktivasi: tak boleh
     // mengaku "undangan Anda kini aktif" (ia sudah aktif sebelum ini) dan tak
     // boleh menyiratkan masa aktif baru — nominalnya hanya selisih harga.
