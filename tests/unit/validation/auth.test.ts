@@ -107,3 +107,49 @@ describe("profileSchema", () => {
     ).toBe(true);
   });
 });
+
+describe("kata sandi yang terlalu mudah ditebak (B5)", () => {
+  const dasar = {
+    full_name: "Andi Pratama",
+    email: "andi@contoh.test",
+    phone: "",
+  };
+
+  it("menolak kata sandi yang memuat nama merek", () => {
+    // HIBP tak akan menangkap ini: `merriva2026` boleh jadi tak pernah bocor ke
+    // mana pun, tetapi ia tetap tebakan pertama penyerang akun di domain ini.
+    for (const p of ["merriva2026", "MerrivaKu!", "undangan123"]) {
+      const r = registerSchema.safeParse({ ...dasar, password: p });
+      expect(r.success, p).toBe(false);
+    }
+  });
+
+  it("menolak kata sandi yang memuat bagian lokal alamat email", () => {
+    const r = registerSchema.safeParse({
+      ...dasar,
+      email: "budisantoso@contoh.test",
+      password: "budisantoso99",
+    });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.path).toEqual(["password"]);
+  });
+
+  it("bagian lokal yang sangat pendek TIDAK memblokir apa pun", () => {
+    // `a@contoh.test` → nyaris semua kata sandi memuat huruf "a". Aturan yang
+    // memblokirnya akan menolak kata sandi yang sebenarnya kuat.
+    const r = registerSchema.safeParse({
+      ...dasar,
+      email: "a@contoh.test",
+      password: "Jangkrik-Pagi-7712",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("kata sandi kuat yang kebetulan panjang tetap diterima", () => {
+    const r = registerSchema.safeParse({
+      ...dasar,
+      password: "Kopi-Tubruk-Pagi-88",
+    });
+    expect(r.success).toBe(true);
+  });
+});

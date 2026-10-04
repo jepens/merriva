@@ -85,7 +85,32 @@ menukar `code` di `/auth/callback`.
   Reset kata sandi tetap melewati GoTrue walau `Confirm email` dimatikan, jadi
   Custom SMTP tidak bisa dihindari dengan mematikan verifikasi.
 
-## 5. Uji cepat
+## 5. Kebijakan kata sandi (Authentication → Policies)
+
+> Setelan dashboard **tidak ter-versioning di repo**. Bagian ini adalah satu-satunya
+> jejaknya — perbarui di sini bila diubah di sana (AUDIT-2026-10-01 B5).
+
+| Setelan | Nilai | Kenapa |
+|---|---|---|
+| Minimum password length | **8** | Disamakan dengan `passwordField` (`src/lib/validation/auth.ts`) dan `supabase/config.toml`. Bila dashboard lebih longgar, aturan aplikasi hanya berlaku selama setiap penulisan kata sandi melewati form Merriva — padahal jalur reset Supabase tidak. |
+| Leaked Password Protection | **aktif** | Cek HIBP (k-anonymity) menolak kata sandi yang sudah bocor. Tanpa ini, `password`, `12345678`, dan `qwerty123` lolos hanya karena panjangnya cukup. |
+| Password requirements (komposisi) | **biarkan kosong** | Syarat "harus ada simbol & angka" terbukti mendorong pola `Password1!` yang justru mudah ditebak. Panjang + cek kebocoran lebih efektif, dan NIST SP 800-63B sejak 2017 menyarankan meninggalkan aturan komposisi. |
+
+**Yang ditegakkan di kode, bukan di dashboard** (`src/lib/validation/auth.ts`, dijaga
+`tests/unit/validation/auth.test.ts`) — keduanya TIDAK bisa dilakukan HIBP:
+
+- kata sandi tak boleh memuat `merriva` atau `undangan`: kombinasi seperti
+  `merriva2026` boleh jadi tak pernah bocor ke mana pun, tetapi tetap tebakan pertama
+  penyerang akun di domain ini;
+- saat **mendaftar**, kata sandi tak boleh memuat bagian lokal alamat emailnya sendiri.
+  Hanya di jalur daftar: form reset & ganti kata sandi tak memegang alamat email —
+  keterbatasan yang diterima sadar, bukan yang terlupa.
+
+Ganti kata sandi dari dalam akun memverifikasi kata sandi lama lewat `signInWithPassword`
+pada klien anon terpisah — `updateUser({ current_password })` DIABAIKAN diam-diam oleh
+GoTrue kecuali flag project-nya aktif (DECISIONS #53).
+
+## 6. Uji cepat
 
 1. Daftar di `/daftar` → cek email → klik tautan → mendarat login di `/dashboard`.
 2. `/masuk` dengan Google → kembali ke `/dashboard`.

@@ -36,7 +36,7 @@ uji lapangan). Checklist ini mengurutkannya dari nol → go-live.
   - Kegagalannya SENYAP di sisi pengguna: `requestPasswordResetAction` sengaja selalu menjawab sukses generik (anti-enumerasi), jadi pengguna melihat "tautan sudah dikirim" walau tak ada yang terkirim. Jejaknya hanya ada di Sentry (`area: auth.signup` / `auth.reset`) → **isi `NEXT_PUBLIC_SENTRY_DSN` sebelum fase ini**, kalau tidak kegagalannya tetap tak terlihat.
   - Verify: daftar **3 akun uji dengan alamat di luar anggota tim project** dalam satu jam → ketiganya menerima email dari domain sendiri → klik tautan → berhasil masuk. Lalu `select confirmation_sent_at, email_confirmed_at from auth.users` — keduanya harus terisi. (Per 2026-10-01 `auth.users` hanya berisi 1 admin buatan manual: jalur ini **belum pernah** berhasil — AUDIT-2026-10-01 A1.)
 - [ ] **Confirm email** aktif (Auth → Providers → Email) — prasyarat SPEC §4.2; setel SETELAH Custom SMTP jalan.
-- [ ] **Leaked Password Protection** aktif (Supabase → Auth → Policies) — tolak password yang pernah bocor (HaveIBeenPwned). _Temuan security advisor; toggle dashboard, bukan kode._
+- [ ] **Kebijakan kata sandi** (Supabase → Auth → Policies), kebijakan final + alasannya di [`AUTH-SETUP.md` §5](AUTH-SETUP.md): **Leaked Password Protection aktif** (tolak kata sandi yang pernah bocor, HaveIBeenPwned) · **minimum length 8** (samakan dengan aplikasi & `supabase/config.toml`; bila dashboard lebih longgar, aturan aplikasi hanya berlaku selama setiap penulisan kata sandi melewati form Merriva — jalur reset Supabase tidak) · **password requirements dibiarkan kosong** (aturan komposisi mendorong pola `Password1!`). _Toggle dashboard, bukan kode._
 
 ## Fase 3 — Cron (Easypanel scheduled jobs)
 
