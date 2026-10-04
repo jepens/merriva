@@ -108,6 +108,16 @@ describe("profileSchema", () => {
   });
 });
 
+/**
+ * Dua kata sandi di bawah ber-`gitleaks:allow` karena entropinya tinggi dan
+ * letaknya tepat setelah `password:` — gitleaks menandainya `generic-api-key`,
+ * dan kecurigaan itu wajar. Penanda dipasang PER BARIS, bukan sebagai allowlist
+ * sejalur berkas: allowlist sejalur akan meloloskan rahasia sungguhan bila
+ * kelak ada yang tertempel di berkas uji ini.
+ *
+ * Kata sandinya memang harus kuat: inti test-nya justru membuktikan aturan baru
+ * TIDAK menolak kata sandi yang baik.
+ */
 describe("kata sandi yang terlalu mudah ditebak (B5)", () => {
   const dasar = {
     full_name: "Andi Pratama",
@@ -140,7 +150,7 @@ describe("kata sandi yang terlalu mudah ditebak (B5)", () => {
     const r = registerSchema.safeParse({
       ...dasar,
       email: "a@contoh.test",
-      password: "Jangkrik-Pagi-7712",
+      password: "Jangkrik-Pagi-7712", // gitleaks:allow — kata sandi UJI
     });
     expect(r.success).toBe(true);
   });
@@ -148,7 +158,7 @@ describe("kata sandi yang terlalu mudah ditebak (B5)", () => {
   it("kata sandi kuat yang kebetulan panjang tetap diterima", () => {
     const r = registerSchema.safeParse({
       ...dasar,
-      password: "Kopi-Tubruk-Pagi-88",
+      password: "Kopi-Tubruk-Pagi-88", // gitleaks:allow — kata sandi UJI
     });
     expect(r.success).toBe(true);
   });
