@@ -2056,6 +2056,48 @@ diasumsikan selesai.
 
 ---
 
+## #65 — 2026-10-05 · Reset pengingat H-14 yang hilang dua kali, dan test yang menghentikannya
+
+**Temuan:** `activate_paid_order` tidak lagi me-reset `reminder_sent_at`. Diverifikasi di DB
+PRODUKSI, bukan hanya di berkas: fungsi itu tak memuat `reminder_sent_at` sama sekali,
+sementara `admin_extend_invitation` masih.
+
+**Riwayatnya — dua kali hilang, keduanya diam:**
+- `20260730130000` menambahkan `reminder_sent_at = null` ("siklus aktif baru → pengingat
+  H-14 baru");
+- `20260826130000` (FASE H) membuat ulang fungsi itu untuk cabang add-on dan menjatuhkan
+  barisnya;
+- `20261004130000` (B3, upgrade paket — **commit saya sendiri kemarin**) membuat ulang lagi
+  dan meneruskan kelalaian yang sama.
+
+**Akibatnya menimpa pelanggan yang paling berharga.** Cron `expiry-reminders` menyaring
+`.is("reminder_sent_at", null)`. Undangan yang pernah diperingatkan H-14 lalu DIPERPANJANG
+membawa penanda lama selamanya → tak pernah diperingatkan lagi → masa aktifnya habis tanpa
+satu pun email. Tak ada galat, tak ada angka di `cron_runs.stats`. Yaitu: justru orang yang
+sudah terbukti mau membayar yang kehilangan undangannya diam-diam. `docs/ARCHITECTURE.md`
+selama itu menjanjikan "di-reset saat perpanjangan" — janji yang sudah tidak benar.
+
+**Asimetri yang disengaja, dan itu yang mudah salah:**
+- cabang UNDANGAN (aktivasi, bayar ulang, perpanjangan, aktivasi manual admin) → **reset**,
+  karena `active_until` dimajukan: siklus baru butuh pengingat baru;
+- cabang UPGRADE → **tidak**, karena `active_until` tak berubah. Me-reset-nya akan mengirim
+  pengingat KEDUA untuk periode yang sama;
+- cabang ADD-ON → tidak menyentuh baris undangan sama sekali;
+- hasil `held` (undangan ditangguhkan) → tidak, karena tak ada siklus baru yang dimulai.
+
+**Kenapa ia bisa hilang dua kali: tak ada satu pun test yang menyentuhnya.** Lolos review,
+typecheck, dan 1300+ unit test — karena unit test me-MOCK RPC ini.
+`supabase/tests/database/reminder_reset.test.sql` (8 assertion) kini menguji keempat cabang
+di atas; pembuatan-ulang berikutnya akan memerahkan CI, bukan diam.
+
+**Cara menemukannya patut dicatat:** ia muncul sebagai temuan SAMPINGAN dari workflow
+perancangan B7 (peringatan pra-purge), ketika penyerang menolak usul "pakai penanda monoton
+tanpa reset" dengan menunjukkan bahwa pola `reminder_sent_at` yang dikutip sebagai preseden
+**idempoten justru karena ada resetnya** — lalu memeriksa dan menemukan resetnya sudah tak
+ada. Rancangan yang dibantah menyelamatkan bug yang sudah hidup di produksi.
+
+---
+
 ---
 
 ## Template entri baru
