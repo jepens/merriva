@@ -1136,6 +1136,19 @@ export const copy = {
     // Dashboard host — aktivasi add-on (gratis / berbayar).
     activate: {
       title: "Album Momen",
+      // Foto Album Momen adalah SATU-SATUNYA foto di produk ini yang tak bisa
+      // dibuat ulang — tamu yang memotretnya, dan tak ada salinan di tempat
+      // lain. Sebelum ini, begitu undangan tak lagi aktif, satu-satunya tautan
+      // ZIP-nya hidup di dalam `MomenManager` yang tak pernah dirender di
+      // halaman ini, sehingga pemiliknya mendarat di "aktifkan dulu" dan
+      // menyimpulkan fotonya terkunci di balik perpanjangan — lalu retensi
+      // menghapusnya. Route ZIP-nya sendiri tak pernah memeriksa status
+      // undangan, jadi datanya selalu terjangkau; yang hilang hanya pintunya.
+      archivedTitle:
+        "Undangan ini tidak aktif — unduh fotonya selagi masih ada",
+      archivedBody:
+        "Album Momen tidak bisa dikelola saat undangan tidak aktif, tetapi foto yang sudah terkumpul masih bisa Anda unduh. Foto ini hanya ada di sini: tamu Anda yang memotretnya.",
+      archivedCta: "Unduh semua foto (ZIP)",
       needActiveTitle: "Aktifkan undangan dulu",
       needActiveBody:
         "Album Momen hanya bisa diaktifkan untuk undangan yang sudah aktif.",
@@ -2022,7 +2035,12 @@ export const copy = {
             body: [
               "Masa aktif dihitung sejak pembayaran dikonfirmasi, dengan durasi sesuai paket yang Anda beli.",
               "Setelah masa aktif berakhir, halaman undangan berhenti tayang untuk tamu dan statusnya menjadi kedaluwarsa. Isi undangan tetap tersimpan dan dapat Anda aktifkan kembali dengan memperpanjang.",
-              "Enam bulan setelah masa aktif berakhir, data pribadi pada undangan tersebut — daftar tamu, RSVP, ucapan, catatan amplop, foto galeri, dan foto Album Momen — dihapus permanen dan tidak dapat dipulihkan. Unduh yang Anda perlukan sebelum tenggat itu.",
+              // Kalimat ini sebelumnya menyuruh "unduh yang Anda perlukan" untuk SEMUA
+              // butir termasuk foto galeri — padahal tak ada tombol unduh galeri di
+              // produk ini. Menyuruh pelanggan melakukan sesuatu yang mustahil, untuk
+              // data yang lalu kami hapus, memperburuk posisi kami dan bukan
+              // memperbaikinya. Kini hanya menyebut yang BENAR-BENAR bisa diunduh.
+              "Enam bulan setelah masa aktif berakhir, data pribadi pada undangan tersebut — daftar tamu, RSVP, ucapan, catatan amplop, foto galeri, dan foto Album Momen — dihapus permanen dan tidak dapat dipulihkan. Sebelum tenggat itu Anda dapat mengunduh daftar tamu beserta RSVP, catatan amplop, dan foto Album Momen dari dashboard. Foto galeri adalah foto yang Anda unggah sendiri — simpan berkas aslinya, karena Merriva belum menyediakan unduhan untuk foto galeri.",
             ],
           },
           {

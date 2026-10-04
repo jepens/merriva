@@ -50,12 +50,20 @@ export async function POST(req: Request) {
   const admin = createSupabaseAdminClient();
   const cutoff = retentionCutoffIso(new Date());
 
-  // Kandidat: expired, belum dipurge, active_until lewat cutoff. Index parsial
-  // `invitations_purge_scan_idx` melayani scan ini.
+  // Kandidat: kedaluwarsa ATAU DITANGGUHKAN, belum dipurge, active_until lewat
+  // cutoff. Indeks parsial `invitations_purge_scan_v2_idx` melayani scan ini.
+  //
+  // `suspended` IKUT sejak 2026-10-05 (keputusan pemilik): sebelumnya undangan
+  // yang ditangguhkan tak pernah sampai ke `expired` — `admin_suspend_invitation`
+  // tak menyentuh `active_until` dan cron `expire-invitations` hanya membalik
+  // `active` → `expired` — sehingga nama tamu, nomor HP, dan isi ucapan tersimpan
+  // SELAMANYA, di luar retensi yang dijanjikan `/privasi`. Yang menanggungnya
+  // tamu, yang tak melakukan apa pun. Jam retensinya tetap `active_until`, yang
+  // memang tak disentuh suspend.
   const { data: due, error } = await admin
     .from("invitations")
     .select("id")
-    .eq("status", "expired")
+    .in("status", ["expired", "suspended"])
     .is("purged_at", null)
     .not("active_until", "is", null)
     .lt("active_until", cutoff)

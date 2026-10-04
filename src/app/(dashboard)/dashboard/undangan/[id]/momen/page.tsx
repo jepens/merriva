@@ -63,17 +63,41 @@ export default async function MomenManagePage({
     </Link>
   );
 
-  // Add-on hanya untuk undangan aktif.
+  // Add-on hanya bisa DIKELOLA saat undangan aktif — tetapi bila albumnya sudah
+  // ada, fotonya harus tetap bisa DIUNDUH. Lihat catatan `archivedTitle` di
+  // copy.ts: foto Album Momen tak bisa dibuat ulang, dan retensi akan
+  // menghapusnya.
   if (inv.status !== "active") {
+    const admin = createSupabaseAdminClient();
+    const { data: arsip } = await admin
+      .from("momen_albums")
+      .select("id, photo_count")
+      .eq("invitation_id", id)
+      .maybeSingle();
+    const adaFoto = (arsip?.photo_count ?? 0) > 0;
+
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <h1 className="text-xl font-semibold tracking-tight">{a.title}</h1>
         <Card>
-          <CardContent className="space-y-2 py-8 text-center">
-            <h2 className="text-lg font-medium">{a.needActiveTitle}</h2>
+          <CardContent className="space-y-3 py-8 text-center">
+            <h2 className="text-lg font-medium">
+              {adaFoto ? a.archivedTitle : a.needActiveTitle}
+            </h2>
             <p className="text-muted-foreground mx-auto max-w-md text-sm">
-              {a.needActiveBody}
+              {adaFoto ? a.archivedBody : a.needActiveBody}
             </p>
+            {adaFoto ? (
+              // Tautan biasa, bukan Link: ini unduhan berkas, bukan navigasi.
+              // Route ZIP memeriksa kepemilikan sendiri dan TIDAK memeriksa
+              // status undangan — jadi tautan ini sah justru di keadaan ini.
+              <a
+                href={`/dashboard/undangan/${id}/momen/zip`}
+                className={buttonVariants()}
+              >
+                {a.archivedCta}
+              </a>
+            ) : null}
           </CardContent>
         </Card>
         {back}

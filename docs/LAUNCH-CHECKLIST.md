@@ -94,6 +94,8 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 - [ ] Kebijakan **privasi & refund** tayang (`/privasi`, `/refund` sudah ada — review isi & data kontak)
 - [ ] Pastikan **cron `purge-expired`** (Fase 3) terjadwal & jalan — menghapus permanen data tamu/RSVP/media/gift_notes **6 bulan pasca-expired** (UU PDP 27/2022); baris undangan tinggal kerangka statistik, `orders` (retensi keuangan) dipertahankan. Verify di staging: undangan `expired` dengan `active_until` > 6 bln lalu → panggil cron → data pribadi terhapus, `purged_at` terisi. Klien juga bisa "hapus undangan" non-aktif kapan saja dari dashboard.
 
+- [ ] **Unduhan ZIP foto galeri** (backlog, DECISIONS #66): `/syarat` kini menyatakan terus terang bahwa Merriva belum menyediakannya dan foto galeri adalah berkas yang pemilik unggah sendiri. Begitu ZIP galeri ada, kembalikan kalimatnya agar janji & produk kembali sejajar.
+
 ## Fase 9 — Go-live
 
 - [ ] **10 undangan uji lintas 3 kategori** (wedding/corporate/family) — Definition of Done M4

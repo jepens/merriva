@@ -2098,6 +2098,69 @@ ada. Rancangan yang dibantah menyelamatkan bug yang sudah hidup di produksi.
 
 ---
 
+## #66 — 2026-10-05 · Tiga kebocoran retensi yang ditemukan saat merancang email, bukan saat menulisnya
+
+Workflow perancangan B7 (peringatan pra-purge) menghasilkan tiga temuan yang lebih besar
+daripada emailnya sendiri. Ketiganya diverifikasi langsung di kode & DB sebelum disentuh.
+
+### 1. Undangan DITANGGUHKAN tak pernah dipurge — data tamu tersimpan selamanya
+
+Rantainya tertutup rapat dan tak ada yang melingkupinya: `admin_suspend_invitation` hanya
+menyetel `status='suspended'` **tanpa menyentuh `active_until`**; `cron/expire-invitations`
+hanya membalik `active` → `expired`; `purge_invitation_data` menolak apa pun selain
+`expired`. Jadi nama tamu, nomor HP, isi ucapan, dan catatan amplop tersimpan **tanpa batas
+waktu** — di luar retensi 6 bulan yang dijanjikan `/privasi` dan di luar UU PDP 27/2022.
+Yang menanggungnya TAMU, yang tak melakukan apa pun; yang bermasalah host-nya.
+
+**Keputusan pemilik (2026-10-05):** ikutkan ke retensi yang sama.
+
+Jam retensinya **tidak berubah**: tetap `active_until`, yang justru tak disentuh suspend —
+jadi tak ada tanggal baru yang perlu dikarang dan tak ada kolom baru. Indeks parsial
+`invitations_purge_scan_idx` hanya mencakup `status='expired'` sehingga TIDAK melayani scan
+yang diperlebar; diganti `invitations_purge_scan_v2_idx` dan yang lama di-drop karena
+sepenuhnya tercakup.
+
+**Batas cakupan dijaga DUA ARAH** (`purge_suspended.test.sql`): `suspended` harus ikut, dan
+`active` harus tetap ditolak. Arah kedua jauh lebih berbahaya — `active` yang ikut terpurge
+berarti menghapus data undangan yang sedang tayang untuk tamunya.
+
+**Konsekuensi yang diterima sadar:** bila sengketa konten muncul >6 bulan setelah masa aktif
+berakhir, bukti isinya sudah tiada. `admin_logs` (alasan suspend + admin pelakunya) dan
+`orders` TETAP tersimpan; yang hilang hanya data pribadi tamu.
+
+### 2. `/syarat` menjanjikan unduhan foto galeri yang tidak ada
+
+Dokumen legal yang kami terbitkan menyuruh pelanggan "unduh yang Anda perlukan" untuk —
+antara lain — **foto galeri**, padahal produk ini hanya punya tiga jalur unduh: XLSX tamu,
+XLSX amplop, dan ZIP Album Momen. Menyuruh orang melakukan yang mustahil, untuk data yang
+lalu kami hapus permanen, **memperburuk posisi kami secara hukum, bukan memperbaikinya**.
+
+**Keputusan pemilik:** perbaiki kalimatnya sekarang, unduhan ZIP galeri masuk backlog.
+Kalimatnya kini menyebut persis apa yang bisa diunduh, dan mengatakan terus terang bahwa
+foto galeri adalah berkas yang pemilik unggah sendiri sehingga aslinya perlu disimpan.
+
+### 3. Foto Album Momen tak terjangkau justru saat akan dihapus
+
+`/dashboard/undangan/[id]/momen` me-`return` kartu "aktifkan undangan dulu" SEBELUM
+merender `MomenManager` — satu-satunya tempat tautan ZIP berada. Begitu undangan tak lagi
+aktif, pemilik mendarat di layar itu dan menyimpulkan foto tamunya terkunci di balik
+perpanjangan. Lalu retensi menghapusnya.
+
+Yang membuatnya paling mahal: **foto Album Momen satu-satunya yang tak bisa dibuat ulang** —
+tamu yang memotretnya, tak ada salinan di mana pun. Route ZIP-nya sendiri TIDAK pernah
+memeriksa status undangan (hanya kepemilikan + status album), jadi datanya selalu
+terjangkau; yang hilang hanya PINTUNYA.
+
+Kartu itu kini menawarkan unduhan bila albumnya punya foto, dan tetap berbunyi "aktifkan
+dulu" bila kosong — diverifikasi kedua cabangnya di peramban.
+
+**Pola yang berulang hari ini:** ketiganya ditemukan saat MERANCANG sesuatu yang lain.
+Penyerang rancangan menolak usul "tautkan ke halaman kelola Momen" dengan memeriksa halaman
+itu sendiri — dan menemukan pintunya tertutup. Lihat juga #65, yang lahir dari penolakan
+serupa.
+
+---
+
 ---
 
 ## Template entri baru
