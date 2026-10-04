@@ -1,63 +1,26 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
+import { securityHeaderRules } from "./config/security-headers";
+
 /**
  * Header keamanan (AUDIT-2026-09-04 KEA-5 — sebelumnya TIDAK ADA satu pun).
  *
- * `Permissions-Policy: camera=(self)` WAJIB: Album Momen memakai `getUserMedia`
- * di `/[slug]/momen` (same-origin). HSTS hanya di production — mengirimnya dari
- * `next dev` akan memaksa https pada `localhost` dan mematikan dev server.
+ * Daftarnya hidup di `config/security-headers.ts` supaya unit test bisa
+ * mengimpornya tanpa menarik `@sentry/nextjs` ke graph jsdom. Di sanalah juga
+ * tercatat jebakannya: aturan header Next MENIMPA per-kunci, tidak menggabung —
+ * dan itu pernah menghapus CSP dasar dari seluruh permukaan ter-auth.
  */
 const isProd = process.env.NODE_ENV === "production";
-
-const baseSecurityHeaders = [
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  {
-    key: "Permissions-Policy",
-    value: "camera=(self), microphone=(), geolocation=(), payment=()",
-  },
-  // Halaman undangan & `/preview/*` sengaja SAMEORIGIN: `PreviewFrame` +
-  // `appearance-editor` membingkainya dari dashboard (same-origin).
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
-  // CSP PARSIAL — sengaja tanpa `script-src`/`connect-src` (DECISIONS #27 & #57).
-  // Ketiga direktif ini tak menyentuh skrip inline maupun ISR, jadi gratis:
-  //   object-src  — tak ada <object>/<embed> di produk ini; menutup plugin lawas
-  //   base-uri    — mencegah <base> suntikan mengalihkan SELURUH URL relatif
-  //   form-action — mengurung ke mana formulir boleh dikirim
-  // Dua terakhir menutup jalur eskalasi/eksfiltrasi PASCA-XSS tanpa perlu
-  // `script-src` sama sekali. Aman: redirect Pakasir memakai
-  // `window.location.assign` (navigasi, bukan form) dan tak ada form
-  // lintas-origin di repo ini.
-  {
-    key: "Content-Security-Policy",
-    value: "object-src 'none'; base-uri 'self'; form-action 'self'",
-  },
-  ...(isProd
-    ? [
-        {
-          key: "Strict-Transport-Security",
-          value: "max-age=63072000; includeSubDomains",
-        },
-      ]
-    : []),
-];
-
-// Permukaan ter-auth: aksi destruktif (hapus undangan, reveal album) tak boleh
-// bisa di-clickjack → larang pembingkaian sepenuhnya. `frame-ancestors`
-// mengalahkan `X-Frame-Options` di browser yang mendukung keduanya.
-const noFrameHeaders = [
-  { key: "X-Frame-Options", value: "DENY" },
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
-];
 
 const nextConfig: NextConfig = {
   // Image kecil untuk Docker/Easypanel — runtime hanya `.next/standalone`.
   output: "standalone",
   reactStrictMode: true,
   async headers() {
+    const [baseRule, ...authRules] = securityHeaderRules(isProd);
     return [
-      { source: "/:path*", headers: baseSecurityHeaders },
+      baseRule,
       // CSS tema = aset ber-HASH ISI (`/themes/{slug}.{hash}.css`, dihasilkan
       // `scripts/build-theme-css.mjs`) → nama berubah saat isinya berubah,
       // jadi aman di-cache selamanya. Tanpa ini `public/` default-nya
@@ -72,8 +35,9 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      { source: "/dashboard/:path*", headers: noFrameHeaders },
-      { source: "/admin/:path*", headers: noFrameHeaders },
+      // Aturan permukaan ter-auth SETELAH aturan global: urutannya yang
+      // menentukan, dan nilainya sudah memuat ulang CSP dasar.
+      ...authRules,
     ];
   },
   images: {

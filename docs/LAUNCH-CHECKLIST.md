@@ -50,7 +50,7 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 
 - [ ] **Pustaka lagu**: unggah trek **berlisensi/bebas-royalti** di `/admin/lagu` ([`MUSIC-LIBRARY.md`](MUSIC-LIBRARY.md)) — kalau kosong, musik latar undangan **senyap**.
 - [ ] **Paket & harga** di `/admin/paket` sesuai rencana jual (berlaku langsung tanpa deploy)
-- [ ] **Keputusan harga upgrade** (DECISIONS #61): upgrade menagih **selisih harga penuh** (Basic 99rb → Premium 199rb = 100rb) tetapi **tidak** membawa durasi Premium yang lebih panjang (12 bulan vs 6). Halaman upgrade menyatakannya eksplisit, jadi tak ada yang tersembunyi — tetapi tinjau apakah angkanya adil, atau setel durasi kedua paket sama. Mengubahnya = struktur harga (boundary "TANYA DULU").
+- [x] **Keputusan harga upgrade** (DECISIONS #61) — DIPUTUSKAN 2026-10-04: biarkan apa adanya. Upgrade menagih **selisih harga penuh** (Basic 99rb → Premium 199rb = 100rb) dan **tidak** membawa durasi Premium yang lebih panjang (12 bulan vs 6). Dasarnya: halaman upgrade menyatakan masa aktif tidak diperpanjang secara eksplisit beserta tanggal berakhir + sisa hari, jadi pelanggan memutuskan dengan tahu. Bila kelak jadi sumber keluhan, dua jalan keluarnya ada di #61 (samakan durasi paket, atau prorata).
 - [ ] **Tema aktif** di `/admin/tema` sesuai yang ditawarkan
 - [ ] **Akun admin**: set `profiles.role = 'admin'` untuk akun pemilik via SQL (tak ada signup admin — DATA-MODEL §1). Selanjutnya kelola peran/suspend user lewat `/admin/pengguna`.
 

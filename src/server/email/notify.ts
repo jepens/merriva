@@ -10,6 +10,7 @@ import {
   renderUpgradeReceiptEmail,
 } from "@/lib/email/templates";
 import { appUrl } from "@/lib/env";
+import { reportHandledError } from "@/lib/observability";
 import type { Database } from "@/types/database";
 
 type Admin = SupabaseClient<Database>;
@@ -136,13 +137,28 @@ export async function notifyOrderPaid(
       idempotencyKey: `receipt/${orderCode}`,
     });
     // Kuitansi dikirim SEKALI (transisi `activated`) TANPA retry → kegagalan =
-    // kuitansi hilang permanen. Catat (hanya orderCode; tanpa PII/rahasia) agar
-    // terdeteksi (Sentry menangkap console). Tetap best-effort (tak melempar).
+    // kuitansi hilang permanen bagi pelanggan yang SUDAH membayar.
+    //
+    // DUA tujuan, sengaja: `reportHandledError` adalah jejak yang bertahan
+    // (Sentry) begitu `NEXT_PUBLIC_SENTRY_DSN` diisi, dan `console` adalah
+    // satu-satunya yang berfungsi SEBELUM itu — Sentry kini masih no-op (DSN
+    // kosong + `enabled: NODE_ENV === "production"`). Komentar lama di sini
+    // mengklaim "Sentry menangkap console"; itu TIDAK benar, tak ada
+    // `captureConsoleIntegration` di ketiga `Sentry.init`, dan klaim itulah yang
+    // membuat celah ini terlihat sudah tertutup selama ini.
+    //
+    // Yang dilaporkan hanya kode galat + `orderCode`. TIDAK PERNAH: alamat
+    // email, nama pembeli, isi `rendered`, atau pesan mentah Resend.
     if (result.status === "error") {
+      reportHandledError(new Error(`resend:${result.code}`), "email.receipt", {
+        orderCode,
+        statusCode: result.statusCode,
+      });
       console.warn(`[receipt] Resend gagal untuk order ${orderCode}`);
     }
   } catch (err) {
     // Best-effort: email TAK boleh menggagalkan aktivasi; tetap laporkan.
+    reportHandledError(err, "email.receipt", { orderCode });
     console.error(`[receipt] gagal untuk order ${orderCode}`, err);
   }
 }
@@ -195,8 +211,26 @@ export async function sendExpiryReminder(
       text: rendered.text,
       idempotencyKey: `expiry-reminder/${target.id}`,
     });
+    // Pengingat H-14 adalah kewajiban kontraktual: pemilik yang tak diingatkan
+    // kehilangan undangannya tanpa peringatan. Kegagalannya sebelumnya hanya
+    // menjadi satu angka `failed` di `cron_runs.stats`, bersama DUA sebab lain
+    // (pemilik tanpa alamat email, dan UPDATE `reminder_sent_at` yang gagal) —
+    // tak mungkin dibedakan. `target.id` = id undangan, bukan PII; `target.slug`
+    // dan alamat emailnya sengaja TIDAK disertakan.
+    if (res.status === "error") {
+      reportHandledError(
+        new Error(`resend:${res.code}`),
+        "email.expiry-reminder",
+        { invitationId: target.id, statusCode: res.statusCode },
+      );
+    }
     return res.status;
-  } catch {
+  } catch (err) {
+    // Sebelumnya `catch { return "error"; }` — objek galatnya hilang total,
+    // lebih buta daripada cabang di atas.
+    reportHandledError(err, "email.expiry-reminder", {
+      invitationId: target.id,
+    });
     return "error";
   }
 }

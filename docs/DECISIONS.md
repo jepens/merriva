@@ -1818,6 +1818,111 @@ Uji langsung RPC terhadap skema cloud (blok rollback) sebelum ada satu baris Typ
 
 ---
 
+## #62 — 2026-10-04 · Aturan header Next MENIMPA, bukan menggabung; email berhenti gagal diam-diam; font lepas dari jaringan saat build
+
+Empat sisa gelombang C audit, diverifikasi adversarial lebih dulu (12 temuan bertahan,
+0 terbantah) sebelum satu baris pun diubah.
+
+### 1. CSP hilang justru di `/dashboard` dan `/admin`
+
+**Temuan:** aturan `headers()` Next diterapkan berurutan dengan **penugasan biasa per
+kunci** (`resHeaders[key] = value`) — yang terakhir menang, tidak digabung. Aturan
+`/dashboard/:path*` yang hanya menyetel `frame-ancestors` karena itu MENGHAPUS
+`object-src`, `base-uri`, dan `form-action` dari seluruh permukaan ter-auth. Dibuktikan
+dengan `curl -D -`:
+
+```
+/          → object-src 'none'; base-uri 'self'; form-action 'self'
+/dashboard → frame-ancestors 'none'          ← semua yang lain lenyap
+/admin/order → frame-ancestors 'none'
+```
+
+**Kenapa ini lebih buruk daripada sekadar celah:** `base-uri` dan `form-action` adalah
+penutup jalur eksfiltrasi PASCA-XSS, dan yang bisa dieksfiltrasi justru ada di
+dashboard — cookie sesi, token tamu, `gift_notes`, tombol refund admin. Sementara
+komentar di `next.config.ts` DAN DECISIONS #57 sama-sama menyatakan perlindungan ini
+global, jadi siapa pun yang membaca repo menyimpulkan ia terpasang. Tak ada satu test
+pun yang menyentuh security header.
+
+**Keputusan:** aturan dipindah ke `config/security-headers.ts` (modul polos, tanpa
+dependensi) dengan `BASE_CSP` sebagai SATU sumber dan `AUTH_CSP = \`${BASE_CSP}; frame-ancestors 'none'\``
+— diturunkan, bukan disalin: menyalin literalnya akan menciptakan ulang drift yang sama
+begitu satu direktif ditambahkan.
+
+**Ditolak:**
+- *Menulis ulang string lengkap di `noFrameHeaders`* — persis drift yang sedang ditambal.
+- *Test "setiap aturan ber-kunci CSP memuat ketiga direktif"* — tidak menguji
+  penimpaannya sama sekali, dan akan lolos pada aturan masa depan yang menimpa
+  `Referrer-Policy` atau `Permissions-Policy` (kelas cacat sama, kunci beda). Testnya
+  meniru perilaku Next lalu meng-assert header EFEKTIF per jalur perwakilan.
+- *Mengimpor `next.config.ts` dari Vitest* — berkas itu meng-import `@sentry/nextjs` di
+  baris pertama; seluruh SDK akan terseret ke graph jsdom tanpa guna.
+
+**Catatan jujur:** tiruan `source → regex` di test MULA-MULA salah — ia menuntut garis
+miring sehingga menyimpulkan `/dashboard` polos tak terkena aturan ter-auth. Yang
+membantahnya bukan penalaran melainkan `curl` ke server nyata. Pada `:name*`,
+path-to-regexp membuat garis miring di DEPANNYA ikut opsional.
+
+### 2. Kegagalan email tak terlihat siapa pun
+
+`src/server/email/notify.ts` adalah SATU-SATUNYA berkas di `src/server/` yang tak memakai
+`reportHandledError` (16 berkas lain memakainya), dan komentarnya mengklaim "Sentry
+menangkap console" — **tidak benar**: tak ada `captureConsoleIntegration` di ketiga
+`Sentry.init`. Klaim itulah yang membuat celahnya terlihat sudah tertutup. Kuitansi
+dikirim SEKALI pada transisi `activated` tanpa retry, jadi satu kegagalan Resend =
+bukti pembayaran hilang permanen bagi pelanggan yang SUDAH membayar. `sendExpiryReminder`
+lebih buta lagi: `catch { return "error"; }` membuang objek galatnya.
+
+**Keputusan:** `reportHandledError` ditambahkan di empat titik (kuitansi: status error +
+catch; pengingat: status error + catch) dan di `admin/log.ts`.
+
+**Ditolak:**
+- *MENGGANTI `console.*` dengan `reportHandledError`* — meski itu bunyi harfiah temuan
+  audit. `NEXT_PUBLIC_SENTRY_DSN` masih kosong dan `Sentry.init` ber-`enabled: NODE_ENV
+  === "production"`, jadi `reportHandledError` **no-op hari ini**; mengganti akan
+  menghapus satu-satunya tujuan yang berfungsi (stdout → log Easypanel) dan membuka
+  jendela tanpa sinyal sama sekali sampai Fase 6. Keduanya dipasang berdampingan; tak
+  ada aturan `no-console` di ESLint sehingga biayanya nol.
+- *Mengirim `message` galat Resend ke Sentry* — pesan `validation_error` rutin mengutip
+  isi field `to`, yaitu alamat email pelanggan, dan `scrubSentryEvent` hanya meredaksi
+  token tamu. Komentar bukan gerbang: **field `message` dihapus dari `SendEmailResult`**
+  sehingga tak ada yang bisa dilaporkan secara tak sengaja. Yang dibawa `code`
+  (`error.name` Resend — enum tertutup) + `statusCode`, karena `application_error` lahir
+  dari tiga jalur runtime berbeda yang hanya dibedakan olehnya. Aman dihapus: `grep`
+  membuktikan `message` tak pernah dikonsumsi siapa pun.
+
+### 3. Font lepas dari jaringan saat build
+
+`next/font/google` self-hosted bagi PERAMBAN, tetapi Next mengunduh berkasnya dari Google
+**saat build** — jadi `pnpm build` di CI dan di Docker build yang jadi deploy Easypanel
+sama-sama bergantung pada `fonts.googleapis.com`. Ketergantungan itu gagal nyata pada
+2026-10-04: CI merah pada commit yang tak menyentuh font, hijau pada re-run tanpa
+perubahan. Di CI = satu re-run; di deploy produksi = deploy gagal saat perbaikan mendesak
+perlu dikirim.
+
+**Keputusan pemilik (2026-10-04):** self-host berkasnya. Dua font variabel subset `latin`
+di `src/fonts/` (~112 KB), `next/font/local`, rentang bobot sama seperti sebelumnya.
+Diverifikasi di peramban: kedua font `loaded`, `--mrv-display`/`--mrv-body` terpasang,
+tampilan identik.
+
+### 4. Ikon situs — dan kenapa TIDAK di root
+
+Tak ada favicon sama sekali (`/favicon.ico` → 404). Satu `icon.svg` memakai warna mark
+`opengraph-image.tsx`.
+
+**Diletakkan per route group, BUKAN di `src/app/`.** Ikon di root diwarisi `/[slug]`,
+yaitu halaman undangan TAMU — dan **"Tanpa watermark Merriva" adalah fitur yang dijual di
+paket Premium**. Menaruh merek kami di tab undangan pelanggan Premium akan menggerusnya
+dari pintu belakang. Diverifikasi: `/harga`, `/masuk`, `/dashboard` masing-masing dapat
+ikon ber-hash sendiri; `/andi-sinta-demo` nol tautan ikon. Konsekuensi yang diterima:
+tab `not-found.tsx` global dan `global-error.tsx` tetap tanpa ikon.
+
+Butir "empat direktif CSP gratis" ditutup sebagai **tak berlaku**: direktif keempat itu
+tak pernah ada — tiga yang disebut #57 memang sudah terpasang, hanya tersapu di
+permukaan ter-auth (bagian 1 di atas).
+
+---
+
 ---
 
 ## Template entri baru

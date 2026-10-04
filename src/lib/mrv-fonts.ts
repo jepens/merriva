@@ -1,16 +1,44 @@
-import { Bricolage_Grotesque, Hanken_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 
-// Self-hosted (next/font) → tanpa request eksternal, aman untuk LCP & WebView WA.
-// Bricolage Grotesque = display berkarakter; Hanken Grotesk = teks humanis.
-const display = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["600", "700"],
+/**
+ * Font marketing & auth — berkasnya ADA DI REPO (`src/fonts/*.woff2`).
+ *
+ * KENAPA BUKAN `next/font/google`: varian itu sudah self-hosted bagi PERAMBAN
+ * (berkas disajikan dari domain sendiri), tetapi Next mengunduhnya dari Google
+ * **saat build**. Artinya setiap `pnpm build` — di CI DAN di Docker build yang
+ * menjadi deploy Easypanel — bergantung pada `fonts.googleapis.com` bisa
+ * dihubungi. Ketergantungan itu BENAR-BENAR gagal pada 2026-10-04:
+ * "Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'"
+ * memerahkan CI pada commit yang tak menyentuh satu pun berkas font, dan lolos
+ * pada re-run tanpa perubahan apa pun. Di CI akibatnya satu re-run; di deploy
+ * produksi akibatnya deploy gagal — kemungkinan tepat saat perbaikan mendesak
+ * perlu dikirim. `next/font/local` menghapus jaringan dari jalur build.
+ *
+ * Keduanya FONT VARIABEL, subset `latin` saja (produk berbahasa Indonesia;
+ * blok latin-ext/vietnamese/cyrillic menambah berat tanpa dipakai) — rentang
+ * bobotnya sama dengan yang dulu diminta dari Google: display 600–700, teks
+ * 400–600. Satu berkas per keluarga, ~112 KB total.
+ *
+ * Memperbarui berkasnya (jarang): ambil CSS dari
+ * `https://fonts.googleapis.com/css2?family=...&display=swap` dengan User-Agent
+ * peramban modern, ambil URL `.woff2` dari blok komentar `/* latin *\/` saja,
+ * lalu timpa berkas di `src/fonts/`.
+ */
+
+// Bricolage Grotesque — display berkarakter.
+const display = localFont({
+  src: "../fonts/bricolage-grotesque-latin.woff2",
+  weight: "600 700",
+  style: "normal",
   variable: "--mrv-display",
   display: "swap",
 });
-const body = Hanken_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+
+// Hanken Grotesk — teks humanis.
+const body = localFont({
+  src: "../fonts/hanken-grotesk-latin.woff2",
+  weight: "400 600",
+  style: "normal",
   variable: "--mrv-body",
   display: "swap",
 });

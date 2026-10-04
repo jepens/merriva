@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Merriva">
+  <!--
+    Ikon situs Merriva (AUDIT-2026-10-01, gelombang C).
+
+    Warnanya diambil dari mark yang sudah ada di `(marketing)/opengraph-image.tsx`
+    supaya tab, pratinjau tautan, dan halaman marketing bercerita sama:
+    kertas #fbf9f6, tinta #241f2b, aksen emas #9a6a22.
+
+    SVG, bukan .ico/.png: nol dependensi, tajam di semua kerapatan piksel, dan
+    cukup satu berkas. Next menyuntikkan <link rel="icon"> sendiri lewat
+    konvensi berkas — tak ada yang perlu ditulis di `metadata`.
+
+    SENGAJA TIDAK diletakkan di `src/app/` (root): ikon di sana diwarisi
+    `/[slug]`, yaitu halaman undangan TAMU — dan "Tanpa watermark Merriva"
+    adalah fitur yang DIJUAL di paket Premium. Menaruh merek kami di tab
+    undangan pelanggan Premium akan menggerusnya dari pintu belakang. Karena itu
+    berkas ini hidup di tiap route group permukaan KAMI.
+  -->
+  <rect width="64" height="64" rx="14" fill="#fbf9f6" />
+  <path
+    d="M16 45V20.5c0-.6.75-.86 1.11-.38L31.2 38.6c.4.53 1.2.53 1.6 0l14.09-18.48c.36-.48 1.11-.22 1.11.38V45"
+    fill="none"
+    stroke="#241f2b"
+    stroke-width="5.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="48" cy="17" r="4.5" fill="#9a6a22" />
+</svg>
