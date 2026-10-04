@@ -829,7 +829,22 @@ export type Database = {
         }[];
       };
       admin_suspend_invitation: {
-        Args: { p_admin_id: string; p_invitation_id: string; p_reason: string };
+        // `p_public_reason`: alasan yang dikirim ke pemilik lewat email, terpisah
+        // dari `p_reason` yang hanya masuk audit log internal (DECISIONS #68).
+        //
+        // WAJIB di sini meski SQL-nya `default null`. Alasannya empiris: dengan
+        // satu properti saja ditandai `?`, TypeScript BERHENTI menolak properti
+        // berlebih pada argumen `rpc()` untuk fungsi ini — `p_public_reason_SALAH`
+        // lolos typecheck dan baru gagal saat dijalankan. Default di SQL ada demi
+        // urutan deploy (DB baru + app lama), bukan demi pemanggil di repo ini,
+        // dan setiap pemanggil di sini memang selalu mengirimnya.
+        // Koreksi manual — pertahankan saat regen.
+        Args: {
+          p_admin_id: string;
+          p_invitation_id: string;
+          p_reason: string;
+          p_public_reason: string | null;
+        };
         Returns: {
           result: string;
           slug: string;

@@ -43,7 +43,7 @@ uji lapangan). Checklist ini mengurutkannya dari nol → go-live.
 Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 
 - [ ] `POST /api/cron/expire-orders` — tiap ~1 jam (rekonsiliasi + batalkan order > 24 jam + `transactioncancel`)
-- [ ] `POST /api/cron/expire-invitations` — harian (undangan `active` lewat masa aktif → `expired` + revalidate ISR)
+- [ ] `POST /api/cron/expire-invitations` — harian (undangan `active` lewat masa aktif → `expired` + revalidate ISR + **email notis "masa aktif berakhir"** ke pemiliknya). Emailnya dibatasi 100 per jalan; bila `notifyTruncated` di `/admin` pernah > 0, naikkan kadensnya.
 - [ ] `POST /api/cron/expiry-reminders` — harian (email pengingat H-14)
 - [ ] `POST /api/cron/purge-expired` — **tiap 12 jam** (bukan harian: job ini juga mengirim peringatan pra-purge H-30 & H-7, dan `idempotencyKey` Resend hanya 24 jam — kadens di bawah itu mencegah peringatan ganda. `JADWAL_JAM` di `src/server/cron/status.ts` HARUS cocok, kalau tidak panel admin menuduh job yang sehat). Retensi UU PDP: hapus permanen data tamu/RSVP/media/gift_notes undangan `expired` > 6 bulan; baris undangan tinggal kerangka, `orders` dipertahankan)
 - Verify: panggil manual dengan Bearer benar → `200`; tanpa/ salah secret → `401`.

@@ -76,7 +76,18 @@ Resend: verifikasi akun, kuitansi + link aktif, pengingat H-14 expiry, (opsional
 - `/api/cron/expiry-reminders` (M3.5) — undangan `active` dengan `active_until` ≤14 hari & `reminder_sent_at is null` → email pengingat (Resend), tandai `reminder_sent_at` saat terkirim (idempoten). **Di-reset saat siklus aktif BARU dimulai** — cabang undangan `activate_paid_order` (aktivasi, bayar ulang, perpanjangan, aktivasi manual admin) dan `admin_extend_invitation`. SENGAJA TIDAK di-reset oleh upgrade paket & add-on Album Momen: keduanya tak mengubah `active_until`, jadi pengingat siklus berjalan masih sah. Baris reset itu pernah HILANG dua kali saat fungsinya dibuat ulang — `supabase/tests/database/reminder_reset.test.sql` yang menjaganya sekarang. Sarankan tiap **~12 jam** (bukan 24 jam): "tandai saat terkirim" at-least-once — bila email terkirim tetapi mark gagal, retry mengandalkan `idempotencyKey` Resend yang hanya 24 jam, jadi cadence <24 jam mencegah pengingat ganda.
 - Pembersihan retensi (hapus data tamu 6 bln pasca-expired): menyusul (pasca-MVP).
 
-**Email transaksional (M3.5).** App mengirim langsung via Resend (`lib/email/`): **kuitansi + link aktif** saat order→`paid` (dipicu jalur aktivasi webhook/poll/cron pada transisi `activated`, `idempotencyKey=receipt/{orderCode}`), dan **pengingat H-14** (cron di atas). Tanpa `RESEND_API_KEY` → no-op (dev/CI aman). `from` = `EMAIL_FROM` (domain wajib terverifikasi di Resend). **Email verifikasi akun & reset kata sandi tetap dikirim Supabase Auth** — arahkan ke Resend dengan mengatur **Custom SMTP = Resend** di dashboard Supabase (tugas konfigurasi, bukan kode). Email di sini transaksional (tanpa unsubscribe); rekap RSVP mingguan (non-transaksional, opsional) menyusul pasca-MVP.
+**Email transaksional (M3.5 + B7).** App mengirim langsung via Resend (`lib/email/`). Inventaris lengkapnya — satu baris per peristiwa, karena setiap kali daftar ini tak lengkap ada orang yang tak dikabari:
+
+| Peristiwa | Pemicu | `idempotencyKey` |
+|---|---|---|
+| Kuitansi + link aktif | transisi order→`paid` dari webhook/poller/cron **dan aktivasi manual admin** | `receipt/{orderCode}` |
+| Pengingat masa aktif H-14 | cron `expiry-reminders` | `expiry-reminder/{invitationId}` |
+| Masa aktif BERAKHIR | cron `expire-invitations`, pada transisi `active`→`expired` | `expired/{invitationId}/{epoch active_until}` |
+| Peringatan pra-purge H-30 & H-7 | cron `purge-expired`, fase peringatan | `purge-warning/{first\|final}/{invitationId}` |
+| Penangguhan oleh tim | `adminSuspendInvitationAction`, transisi `suspended` | `suspended/{invitationId}/{menit}` |
+| Pencabutan penangguhan | `adminReinstateInvitationAction`, hasil `reinstated` | `reinstated/{invitationId}/{menit}` |
+
+Tiga hal yang berlaku untuk seluruh baris di atas: (1) **best-effort** — tak ada yang boleh menggagalkan aksi yang memicunya, dan masing-masing mengembalikan status kirim; (2) **aktivasi manual admin, suspend, dan reinstate MENAMPILKAN kegagalan itu ke admin** (`*_no_email`), karena di sana ada manusia yang bisa mengabari pelanggan sendiri — pemanggil otomatis sengaja mengabaikannya; (3) **alasan penangguhan yang dikirim berasal dari kolom terpisah** (`p_public_reason`), bukan dari catatan internal `p_reason` yang hanya masuk `admin_logs` (DECISIONS #68). Tanpa `RESEND_API_KEY` → no-op (dev/CI aman). `from` = `EMAIL_FROM` (domain wajib terverifikasi di Resend). **Email verifikasi akun & reset kata sandi tetap dikirim Supabase Auth** — arahkan ke Resend dengan mengatur **Custom SMTP = Resend** di dashboard Supabase (tugas konfigurasi, bukan kode). Email di sini transaksional (tanpa unsubscribe); rekap RSVP mingguan (non-transaksional, opsional) menyusul pasca-MVP.
 
 ## 8. Deployment (VPS + Easypanel)
 

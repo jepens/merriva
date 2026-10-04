@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
+import { SUSPEND_REASON_LIMIT } from "@/lib/validation/admin";
 import { wibDate } from "@/lib/admin/display";
 import { formatIdr } from "@/lib/format";
 import { isUuid } from "@/lib/id";
@@ -292,17 +293,36 @@ export default async function AdminInvitationDetailPage({
               className="space-y-2"
             >
               <p className="text-sm font-medium">{d.suspendTitle}</p>
-              <div className="flex gap-2">
-                <input
-                  name="reason"
-                  placeholder={d.suspendReason}
-                  className={`${fieldClass} flex-1`}
-                  required
-                />
-                <Button type="submit" size="sm" variant="destructive">
-                  {d.suspendCta}
-                </Button>
-              </div>
+              {/*
+                `maxLength` memakai angka yang SAMA dengan skema server: tanpa itu
+                alasan kelewat panjang hanya berbuah redirect `suspend_invalid`
+                yang tak menyebut apa yang salah, dan admin kehilangan teks yang
+                sudah diketiknya.
+
+                Dua kolom, sengaja terpisah: `reason` masuk audit log internal,
+                `publicReason` dikirim ke pemilik lewat email (DECISIONS #68).
+                Urutannya internal dulu — itu yang wajib diisi — dan labelnya
+                menyebut tujuan masing-masing, bukan hanya "Alasan".
+              */}
+              <input
+                name="reason"
+                placeholder={d.suspendReason}
+                className={`${fieldClass} w-full`}
+                maxLength={SUSPEND_REASON_LIMIT}
+                required
+              />
+              <input
+                name="publicReason"
+                placeholder={d.suspendPublicReason}
+                className={`${fieldClass} w-full`}
+                maxLength={SUSPEND_REASON_LIMIT}
+              />
+              <p className="text-muted-foreground text-xs">
+                {d.suspendPublicHint}
+              </p>
+              <Button type="submit" size="sm" variant="destructive">
+                {d.suspendCta}
+              </Button>
             </form>
           ) : (
             <form

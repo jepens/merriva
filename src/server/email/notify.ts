@@ -2,12 +2,16 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { copy } from "@/lib/copy";
 import { sendTransactionalEmail, type SendEmailResult } from "@/lib/email/send";
 import {
+  renderExpiredNoticeEmail,
   renderExpiryReminderEmail,
   renderMomenReceiptEmail,
   renderPurgeWarningEmail,
   renderReceiptEmail,
+  renderReinstatedEmail,
+  renderSuspendedEmail,
   renderUpgradeReceiptEmail,
 } from "@/lib/email/templates";
 import { appUrl } from "@/lib/env";
@@ -46,15 +50,21 @@ function fmtDateTime(iso: string | null): string | null {
 
 /**
  * Kirim kuitansi + link aktif setelah order → paid (M3.5). Dipanggil dari jalur
- * aktivasi (webhook/poll/cron) HANYA saat RPC mengembalikan `activated` (transisi
- * sekali). BEST-EFFORT: kegagalan (data hilang / Resend error) TIDAK melempar —
- * aktivasi tak boleh gagal karena email. `idempotencyKey=receipt/{orderCode}`
- * = jaring pengaman kirim-ganda 24 jam.
+ * aktivasi (webhook/poll/cron/aktivasi manual admin) HANYA saat RPC
+ * mengembalikan `activated` (transisi sekali). BEST-EFFORT: kegagalan (data
+ * hilang / Resend error) TIDAK melempar — aktivasi tak boleh gagal karena email.
+ * `idempotencyKey=receipt/{orderCode}` = jaring pengaman kirim-ganda 24 jam.
+ *
+ * Mengembalikan status kirim (pola `sendExpiryReminder`). Pemanggil otomatis —
+ * webhook, poller, cron — mengabaikannya, dan memang seharusnya: tak ada manusia
+ * di sana yang bisa menindaklanjuti, laporan Sentry-lah jejaknya. Yang MEMAKAI
+ * nilai ini adalah aktivasi manual admin, di mana ada admin yang sedang menatap
+ * layar dan bisa mengabari pelanggan sendiri bila kuitansinya tak terkirim.
  */
 export async function notifyOrderPaid(
   admin: Admin,
   orderCode: string,
-): Promise<void> {
+): Promise<SendEmailResult["status"] | "nodata"> {
   try {
     // SETIAP bacaan di bawah mengambil `error`-nya — untuk DIAGNOSIS, bukan
     // untuk DETEKSI. supabase-js tak pernah mengembalikan baris berbarengan
@@ -84,13 +94,13 @@ export async function notifyOrderPaid(
         "email.receipt.lookup",
         { orderCode, step: "order" },
       );
-      return;
+      return "nodata";
     }
     // Pemilik order bisa TAK ADA: akun yang dihapus meninggalkan baris `orders`
     // ber-`user_id` NULL demi kewajiban pembukuan (A6). Tak ada alamat tujuan —
     // dan itu bukan galat, jadi sengaja TANPA laporan. Sebelum tipe DB-nya
     // dibetulkan, cabang ini tak terpikirkan dan `getUserById(null)` yang jalan.
-    if (!order.user_id) return;
+    if (!order.user_id) return "nodata";
 
     const { data: userRes, error: authErr } =
       await admin.auth.admin.getUserById(order.user_id);
@@ -101,7 +111,7 @@ export async function notifyOrderPaid(
         "email.receipt.lookup",
         { orderCode, step: "auth" },
       );
-      return;
+      return "nodata";
     }
 
     const [
@@ -133,7 +143,7 @@ export async function notifyOrderPaid(
         "email.receipt.lookup",
         { orderCode, step: "invitation" },
       );
-      return;
+      return "nodata";
     }
     // `pkg` BUKAN hiasan: ia yang memilih template di bawah. Bila bacaannya
     // gagal, order add-on Album Momen akan diam-diam dikirimi kuitansi aktivasi
@@ -214,10 +224,12 @@ export async function notifyOrderPaid(
       });
       console.warn(`[receipt] Resend gagal untuk order ${orderCode}`);
     }
+    return result.status;
   } catch (err) {
     // Best-effort: email TAK boleh menggagalkan aktivasi; tetap laporkan.
     reportHandledError(err, "email.receipt", { orderCode });
     console.error(`[receipt] gagal untuk order ${orderCode}`, err);
+    return "error";
   }
 }
 
@@ -287,6 +299,224 @@ export async function sendExpiryReminder(
     // Sebelumnya `catch { return "error"; }` — objek galatnya hilang total,
     // lebih buta daripada cabang di atas.
     reportHandledError(err, "email.expiry-reminder", {
+      invitationId: target.id,
+    });
+    return "error";
+  }
+}
+
+type StatusKirim = SendEmailResult["status"] | "nodata";
+
+/**
+ * Pemilik + slug sebuah undangan, untuk email lifecycle yang dipicu admin.
+ *
+ * Pencariannya ada DI SINI, bukan di Server Action, dengan alasan yang sama
+ * seperti `notifyOrderPaid`: aksi admin cukup menyerahkan id, dan satu tempat
+ * sajalah yang perlu tahu bahwa `user_id` boleh NULL (akun dihapus, A6).
+ */
+async function pemilikUndangan(
+  admin: Admin,
+  invitationId: string,
+  area: string,
+): Promise<{ email: string; name: string | null; slug: string } | null> {
+  const { data: inv, error: invErr } = await admin
+    .from("invitations")
+    .select("slug, user_id")
+    .eq("id", invitationId)
+    .maybeSingle();
+  if (!inv) {
+    // Barisnya baru saja diubah oleh pemanggil — ketiadaannya anomali.
+    reportHandledError(invErr ?? new Error("undangan hilang"), area, {
+      invitationId,
+    });
+    return null;
+  }
+  // Undangan tanpa pemilik: bukan galat, tak ada alamat tujuan, tanpa laporan.
+  if (!inv.user_id) return null;
+
+  const { data: userRes, error: authErr } = await admin.auth.admin.getUserById(
+    inv.user_id,
+  );
+  const email = userRes?.user?.email;
+  if (!email) {
+    if (authErr) reportHandledError(authErr, area, { invitationId });
+    return null;
+  }
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("full_name")
+    .eq("id", inv.user_id)
+    .maybeSingle();
+
+  return { email, name: profile?.full_name ?? null, slug: inv.slug };
+}
+
+/**
+ * Pemberitahuan penangguhan (AUDIT-2026-10-01 B7).
+ *
+ * `publicReason` datang dari kolom form yang terpisah dari catatan internal — dan
+ * fungsi ini TIDAK pernah membaca `admin_logs`, supaya tak ada jalan bagi catatan
+ * internal untuk sampai ke pelanggan walau kelak kodenya diubah (DECISIONS #68).
+ *
+ * `idempotencyKey` memakai cap waktu menit: dua penangguhan berbeda atas undangan
+ * yang sama (ditangguhkan → dipulihkan → ditangguhkan lagi) berhak atas dua email,
+ * sementara klik ganda dalam menit yang sama tidak.
+ */
+export async function sendSuspendedNotice(
+  admin: Admin,
+  invitationId: string,
+  publicReason: string | null,
+  now: number = Date.now(),
+): Promise<StatusKirim> {
+  const AREA = "email.suspended";
+  try {
+    const target = await pemilikUndangan(admin, invitationId, AREA);
+    if (!target) return "nodata";
+
+    const rendered = renderSuspendedEmail({
+      name: target.name,
+      slug: target.slug,
+      publicReason,
+      supportEmail: copy.support.email,
+      dashboardUrl: `${appUrl}/dashboard/undangan/${invitationId}`,
+    });
+    const res = await sendTransactionalEmail({
+      to: target.email,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      idempotencyKey: `suspended/${invitationId}/${Math.floor(now / 60_000)}`,
+    });
+    if (res.status === "error") {
+      reportHandledError(new Error(`resend:${res.code}`), AREA, {
+        invitationId,
+        statusCode: res.statusCode,
+      });
+    }
+    return res.status;
+  } catch (err) {
+    reportHandledError(err, AREA, { invitationId });
+    return "error";
+  }
+}
+
+/**
+ * Pemberitahuan pencabutan penangguhan (B7).
+ *
+ * `tampilKembali` berasal dari `new_status` yang dikembalikan RPC, bukan dari
+ * asumsi: reinstate memulihkan status dari `active_until`, jadi undangan yang
+ * masa aktifnya sudah lewat menjadi `expired` dan belum tampil.
+ */
+export async function sendReinstatedNotice(
+  admin: Admin,
+  invitationId: string,
+  tampilKembali: boolean,
+  now: number = Date.now(),
+): Promise<StatusKirim> {
+  const AREA = "email.reinstated";
+  try {
+    const target = await pemilikUndangan(admin, invitationId, AREA);
+    if (!target) return "nodata";
+
+    const rendered = renderReinstatedEmail({
+      name: target.name,
+      slug: target.slug,
+      tampilKembali,
+      invitationUrl: `${appUrl}/${target.slug}`,
+      renewUrl: `${appUrl}/dashboard/undangan/${invitationId}/aktifkan`,
+    });
+    const res = await sendTransactionalEmail({
+      to: target.email,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      idempotencyKey: `reinstated/${invitationId}/${Math.floor(now / 60_000)}`,
+    });
+    if (res.status === "error") {
+      reportHandledError(new Error(`resend:${res.code}`), AREA, {
+        invitationId,
+        statusCode: res.statusCode,
+      });
+    }
+    return res.status;
+  } catch (err) {
+    reportHandledError(err, AREA, { invitationId });
+    return "error";
+  }
+}
+
+export interface ExpiredNoticeTarget {
+  id: string;
+  slug: string;
+  user_id: string;
+  active_until: string;
+}
+
+/**
+ * Kirim notis "masa aktif berakhir" pada transisi active → expired (B7).
+ *
+ * Mengembalikan status kirim seperti saudara-saudaranya, tetapi pemanggilnya
+ * memakainya HANYA untuk statistik: tak ada penanda yang perlu ditahan, karena
+ * UPDATE status di cron sudah memindahkan barisnya dan ia takkan terpilih lagi.
+ * Tanggal purge dihitung dengan `purgeDueMs` — fungsi yang sama yang dipakai
+ * peringatan pra-purge, supaya dua email tak pernah menyebut dua tanggal.
+ */
+export async function sendExpiredNotice(
+  admin: Admin,
+  target: ExpiredNoticeTarget,
+): Promise<SendEmailResult["status"] | "nodata"> {
+  try {
+    const { data: userRes, error: authErr } =
+      await admin.auth.admin.getUserById(target.user_id);
+    const email = userRes?.user?.email;
+    if (!email) {
+      if (authErr) {
+        reportHandledError(authErr, "email.expired-notice", {
+          invitationId: target.id,
+        });
+      }
+      return "nodata";
+    }
+
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", target.user_id)
+      .maybeSingle();
+
+    const due = purgeDueMs(target.active_until);
+    const rendered = renderExpiredNoticeEmail({
+      name: profile?.full_name ?? null,
+      slug: target.slug,
+      expiredAtLabel: fmtDate(target.active_until) ?? target.active_until,
+      purgeDateLabel:
+        (due === null ? null : fmtDate(new Date(due).toISOString())) ??
+        target.active_until,
+      renewUrl: `${appUrl}/dashboard/undangan/${target.id}/aktifkan`,
+      dashboardUrl: `${appUrl}/dashboard/undangan/${target.id}`,
+    });
+    const res = await sendTransactionalEmail({
+      to: email,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      // Per SIKLUS, bukan per undangan: undangan yang diperpanjang lalu
+      // kedaluwarsa lagi berhak atas notis kedua. `active_until` bergeser maju
+      // setiap perpanjangan, jadi ia penanda siklus yang sudah tersedia —
+      // epoch-nya dipakai agar kuncinya bebas karakter waktu.
+      idempotencyKey: `expired/${target.id}/${Date.parse(target.active_until)}`,
+    });
+    if (res.status === "error") {
+      reportHandledError(
+        new Error(`resend:${res.code}`),
+        "email.expired-notice",
+        { invitationId: target.id, statusCode: res.statusCode },
+      );
+    }
+    return res.status;
+  } catch (err) {
+    reportHandledError(err, "email.expired-notice", {
       invitationId: target.id,
     });
     return "error";

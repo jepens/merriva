@@ -15,6 +15,11 @@ import {
   adminSuspendSchema,
 } from "@/lib/validation/admin";
 import { orderCodeSchema } from "@/lib/validation/order";
+import {
+  notifyOrderPaid,
+  sendReinstatedNotice,
+  sendSuspendedNotice,
+} from "@/server/email/notify";
 import { requireAdmin } from "@/server/guards/auth";
 
 /**
@@ -70,12 +75,19 @@ export async function adminActivateInvitationAction(
 
   let result: string | undefined;
   let slug: string | null = null;
+  // Kodenya di-hoist, bukan dipakai inline: `admin_activate_invitation`
+  // mengembalikan `(result, slug)` SAJA, jadi kode order yang baru saja dibuat
+  // terbuang begitu loop selesai — dan tanpa kode itu tak ada kuitansi yang bisa
+  // dikirim. Sesudah loop, isinya adalah percobaan TERAKHIR, yaitu percobaan yang
+  // sama yang menghasilkan `result`/`slug`.
+  let orderCode: string | null = null;
   for (let attempt = 0; attempt < ORDER_CODE_RETRIES; attempt += 1) {
+    orderCode = generateOrderCode();
     const { data, error } = await admin.rpc("admin_activate_invitation", {
       p_invitation_id: invitationId,
       p_package_id: pkg.id,
       p_admin_id: adminUser.id,
-      p_order_code: generateOrderCode(),
+      p_order_code: orderCode,
     });
     if (error) {
       // Aktivasi manual berarti uang SUDAH diterima di luar sistem
@@ -90,9 +102,38 @@ export async function adminActivateInvitationAction(
   }
 
   revalidateAfter(slug);
-  if (result === "activated" || result === "already_paid") {
-    detail(invitationId, "activate_ok");
+  // Kuitansi untuk pembayar di luar sistem (transfer bank). Sampai sini merekalah
+  // satu-satunya pelanggan yang membayar PENUH dan tak menerima bukti apa pun:
+  // webhook, poller, dan cron semuanya mengirim kuitansi — jalur manual tidak.
+  //
+  // Gerbangnya `activated` SAJA, tidak menumpang cabang di bawahnya. Secara
+  // analitis `already_paid` tak terjangkau di sini (RPC baru saja meng-`insert`
+  // order `pending` ber-kode segar dalam transaksi yang sama), tetapi
+  // ketakterjangkauan itu properti implementasi RPC, bukan kontraknya — webhook
+  // dan poller pun memisahkan gerbang emailnya dengan cara yang sama.
+  //
+  // `await`, bukan `void`: `detail()` memanggil `redirect()` yang melempar
+  // `NEXT_REDIRECT`, responsnya langsung dikirim, dan promise yang menggantung
+  // bisa mati bersama request-nya. SESUDAH `revalidateAfter`, agar tak pernah ada
+  // kuitansi untuk aktivasi yang cache-nya belum disegarkan. Tanpa try/catch:
+  // `notifyOrderPaid` sudah best-effort di dalam dan tak pernah melempar,
+  // sementara `catch` di sekitar `detail()` justru akan menelan `NEXT_REDIRECT`
+  // dan menjebak admin di halaman tanpa umpan balik.
+  if (result === "activated") {
+    const kuitansi = orderCode
+      ? await notifyOrderPaid(admin, orderCode)
+      : "nodata";
+    // Undangan SUDAH aktif; yang gagal hanya kuitansinya — karena itu pesannya
+    // tetap "aktif", bukan "gagal". Admin perlu tahu agar bisa mengabari
+    // pelanggan sendiri, termasuk pada kasus yang paling mudah terlewat:
+    // undangan tanpa pemilik (akun sudah dihapus) menghasilkan order ber-
+    // `user_id` NULL, dan untuk itu `notifyOrderPaid` memang diam by design.
+    detail(
+      invitationId,
+      kuitansi === "sent" ? "activate_ok" : "activate_ok_no_email",
+    );
   }
+  if (result === "already_paid") detail(invitationId, "activate_ok");
   if (result === "draft_slug") detail(invitationId, "activate_draft_slug");
   if (result === "not_payable") detail(invitationId, "activate_not_payable");
   if (result === "package_unavailable") detail(invitationId, "activate_pkg");
@@ -160,6 +201,7 @@ export async function adminSuspendInvitationAction(
 
   const parsed = adminSuspendSchema.safeParse({
     reason: formData.get("reason"),
+    publicReason: formData.get("publicReason") ?? undefined,
   });
   if (!parsed.success) detail(invitationId, "suspend_invalid");
 
@@ -168,6 +210,7 @@ export async function adminSuspendInvitationAction(
     p_invitation_id: invitationId,
     p_admin_id: adminUser.id,
     p_reason: parsed.data.reason,
+    p_public_reason: parsed.data.publicReason,
   });
   if (error) {
     reportHandledError(error, "admin.suspend", { invitationId });
@@ -176,9 +219,26 @@ export async function adminSuspendInvitationAction(
 
   const row = data?.[0];
   revalidateAfter(row?.slug);
-  if (row?.result === "suspended" || row?.result === "already_suspended") {
-    detail(invitationId, "suspend_ok");
+  // Penangguhan adalah satu-satunya tindakan PENEGAKAN di produk ini, dan sampai
+  // sini ia berlangsung tanpa sepatah kata pun kepada pemiliknya: halaman
+  // publiknya berubah, dan pemilik mengetahuinya dari tamunya sendiri.
+  //
+  // Hanya pada transisi `suspended`. `already_suspended` berarti emailnya sudah
+  // pernah dikirim — mengirim ulang untuk klik kedua admin akan terbaca sebagai
+  // penangguhan kedua. `parsed.data.publicReason` yang dikirim, BUKAN
+  // `parsed.data.reason`: yang terakhir itu catatan internal.
+  if (row?.result === "suspended") {
+    const kabar = await sendSuspendedNotice(
+      admin,
+      invitationId,
+      parsed.data.publicReason,
+    );
+    detail(
+      invitationId,
+      kabar === "sent" ? "suspend_ok" : "suspend_ok_no_email",
+    );
   }
+  if (row?.result === "already_suspended") detail(invitationId, "suspend_ok");
   detail(invitationId, "suspend_failed");
 }
 
@@ -272,7 +332,22 @@ export async function adminReinstateInvitationAction(
 
   const row = data?.[0];
   revalidateAfter(row?.slug);
-  if (row?.result === "reinstated") detail(invitationId, "reinstate_ok");
+  // Pasangan wajib dari email penangguhan: pemilik yang bandingnya DITERIMA tak
+  // boleh dibiarkan menebak. `new_status` dari RPC yang menentukan isinya —
+  // reinstate memulihkan status dari `active_until`, jadi undangan yang masa
+  // aktifnya sudah lewat menjadi `expired` dan BELUM tampil; mengabarkan "tampil
+  // kembali" di kasus itu adalah keterangan yang salah.
+  if (row?.result === "reinstated") {
+    const kabar = await sendReinstatedNotice(
+      admin,
+      invitationId,
+      row.new_status === "active",
+    );
+    detail(
+      invitationId,
+      kabar === "sent" ? "reinstate_ok" : "reinstate_ok_no_email",
+    );
+  }
   if (row?.result === "not_suspended") {
     detail(invitationId, "reinstate_not_suspended");
   }

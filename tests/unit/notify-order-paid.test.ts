@@ -13,7 +13,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *    yang memang bukan galat (akun pemilik sudah dihapus);
  *  - tak ada PII yang ikut ke telemetri: alamat email, nama pembeli, isi
  *    kuitansi, maupun pesan mentah Resend;
- *  - kegagalan Resend tak lagi hilang: kuitansi dikirim SEKALI tanpa retry.
+ *  - kegagalan Resend tak lagi hilang: kuitansi dikirim SEKALI tanpa retry;
+ *  - NILAI BALIK-nya (B7): aktivasi manual admin memakainya untuk memberi tahu
+ *    admin bahwa kuitansinya tak terkirim. Pemanggil otomatis mengabaikannya,
+ *    jadi tanpa test ini salah satu cabang `return` bisa menjawab status yang
+ *    keliru tanpa satu pun gejala di jalur webhook/poller/cron.
  */
 
 const { sendTransactionalEmail, reportHandledError } = vi.hoisted(() => ({
@@ -241,9 +245,66 @@ describe("kegagalan pengiriman", () => {
   it("lemparan tak terduga tetap dilaporkan dan TIDAK menggagalkan aktivasi", async () => {
     sendTransactionalEmail.mockRejectedValue(new Error("jaringan putus"));
 
-    await expect(jalankan()).resolves.toBeUndefined();
+    // `resolves`, bukan `rejects`: itu bagian pentingnya — aktivasi tak boleh
+    // gagal karena email. Nilainya `"error"` sejak B7.
+    await expect(jalankan()).resolves.toBe("error");
 
     expect(laporan().some((c) => c[1] === "email.receipt")).toBe(true);
+  });
+});
+
+describe("nilai balik: status kirim untuk pemanggil yang punya admin di layar", () => {
+  it("terkirim → `sent`", async () => {
+    expect(await jalankan()).toBe("sent");
+  });
+
+  it("RESEND_API_KEY tak di-set → `skipped`, bukan `sent`", async () => {
+    // Di dev/CI email memang no-op. Aktivasi manual melaporkannya sebagai
+    // "kuitansi tidak terkirim" — dan itu JUJUR, bukan alarm palsu.
+    sendTransactionalEmail.mockResolvedValue({ status: "skipped" });
+    expect(await jalankan()).toBe("skipped");
+  });
+
+  it("Resend gagal → `error`", async () => {
+    sendTransactionalEmail.mockResolvedValue({
+      status: "error",
+      code: "rate_limit_exceeded",
+      statusCode: 429,
+    });
+    expect(await jalankan()).toBe("error");
+  });
+
+  it("akun pemilik sudah dihapus → `nodata`, dan tetap TANPA laporan", async () => {
+    // Order tanpa pemilik bukan galat (A6: baris `orders` ditahan demi
+    // pembukuan). Yang berubah di B7 hanya ini: diamnya kini TERLIHAT oleh
+    // admin yang baru saja mengaktifkan undangan tanpa pemilik.
+    k.orders = {
+      data: { ...(k.orders.data as object), user_id: null },
+      error: null,
+    };
+    expect(await jalankan()).toBe("nodata");
+    expect(reportHandledError).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["orders", "order hilang"],
+    ["invitations", "undangan hilang"],
+  ])("prasyarat %s hilang → `nodata`", async (tabel) => {
+    k[tabel as "orders" | "invitations"] = { data: null, error: null };
+    expect(await jalankan()).toBe("nodata");
+  });
+
+  it("pemilik tanpa alamat email → `nodata`", async () => {
+    k.auth = { data: { user: {} }, error: null };
+    expect(await jalankan()).toBe("nodata");
+  });
+
+  it("paket hilang → TETAP `sent`: kuitansinya memang tetap dikirim", async () => {
+    // Satu-satunya prasyarat yang gagal TANPA menghentikan kiriman. Kalau cabang
+    // ini ikut mengembalikan `nodata`, admin akan dikabari "kuitansi tak
+    // terkirim" untuk kuitansi yang justru sudah di kotak masuk pelanggan.
+    k.packages = { data: null, error: null };
+    expect(await jalankan()).toBe("sent");
   });
 });
 

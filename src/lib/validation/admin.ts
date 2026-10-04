@@ -15,8 +15,31 @@ export const adminExtendSchema = z.object({
   months: z.coerce.number().int().min(1).max(24),
 });
 
+/** Batas kedua isian alasan suspend — diekspor agar form admin memakai angka yang SAMA. */
+export const SUSPEND_REASON_LIMIT = 500;
+
 export const adminSuspendSchema = z.object({
-  reason: z.string().trim().min(1, "Alasan wajib diisi").max(500),
+  reason: z
+    .string()
+    .trim()
+    .min(1, "Alasan wajib diisi")
+    .max(SUSPEND_REASON_LIMIT),
+  /**
+   * Alasan yang DIKIRIM ke pemilik lewat email — terpisah dari `reason`, yang
+   * ditulis admin untuk admin dan wajar memuat nama pelapor atau nomor pihak
+   * ketiga (DECISIONS #68). Opsional: admin boleh menangguhkan tanpa penjelasan
+   * publik, dan emailnya tetap mengarahkan ke jalur banding.
+   *
+   * `""` dinormalkan ke `undefined` sebelum validasi panjang: input teks yang tak
+   * diisi mengirim string kosong, bukan `null`, dan `.min(1)` opsional akan
+   * menolaknya alih-alih memperlakukannya sebagai "tidak diisi".
+   */
+  publicReason: z
+    .string()
+    .trim()
+    .max(SUSPEND_REASON_LIMIT)
+    .optional()
+    .transform((v) => (v ? v : null)),
 });
 
 /**

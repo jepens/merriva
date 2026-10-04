@@ -2227,9 +2227,131 @@ terlihat di `/admin`, bukan hilang di antara angka lain.
 Uji mutasi: 8 mutan, 8 merah — termasuk "gerbang purge jalan tanpa peringatan" dan
 "backstop dibuang". Seleksi kandidatnya diuji langsung terhadap skema cloud.
 
-**Belum dikerjakan dari B7:** email saat `expire-invitations`, kuitansi untuk aktivasi
-manual admin, dan email alasan+banding saat suspend. Rancangannya sudah ada; ketiganya
-lebih kecil dan berdiri sendiri.
+Ketiga sisa B7 — notis kedaluwarsa, kuitansi aktivasi manual, email suspend — dikerjakan
+di #68.
+
+---
+
+## #68 — 2026-10-05 · Tiga titik bisu terakhir: aktivasi manual, kedaluwarsa, penangguhan
+
+Penutup B7. Tiga peristiwa yang mengubah keadaan pelanggan secara nyata dan sampai hari ini
+berlangsung **tanpa sepatah kata pun** kepada orang yang terkena. Ketiganya tak punya
+hubungan teknis satu sama lain; yang menyatukannya adalah bentuk cacatnya.
+
+### 1. Kuitansi untuk aktivasi manual — pembayar transfer bank
+
+Webhook, poller, dan cron semuanya memanggil `notifyOrderPaid`. `adminActivateInvitationAction`
+tidak. Akibatnya pembayar di luar sistem — transfer bank, justru pelanggan yang paling butuh
+bukti karena tak punya jejak gateway — adalah **satu-satunya** yang membayar penuh dan tidak
+menerima apa pun.
+
+Perbaikannya tiga baris, tetapi satu di antaranya menyingkap kenapa ia tak pernah ada:
+`generateOrderCode()` ditulis **inline** ke argumen RPC, dan `admin_activate_invitation`
+mengembalikan `(result, slug)` saja — jadi kode order yang baru dibuat **terbuang** begitu
+loop selesai. Tak ada kode, tak ada kuitansi. Kodenya kini di-hoist, dan setelah loop ia
+memegang percobaan TERAKHIR, yaitu percobaan yang sama yang menghasilkan `result`.
+
+- **Gerbangnya `activated` SAJA**, tidak menumpang cabang `already_paid` di bawahnya. Secara
+  analitis `already_paid` tak terjangkau di sini — RPC baru saja meng-`insert` order `pending`
+  ber-kode segar dalam transaksi yang sama — tetapi ketakterjangkauan itu properti
+  implementasi RPC, bukan kontraknya.
+- **`await`, bukan `void`.** `detail()` memanggil `redirect()` yang melempar `NEXT_REDIRECT`;
+  responsnya langsung dikirim dan promise yang menggantung bisa mati bersama request-nya.
+- **`notifyOrderPaid` sekarang mengembalikan status kirim.** Pemanggil otomatis
+  mengabaikannya — tak ada manusia di sana yang bisa menindaklanjuti. Aktivasi manual
+  memakainya: hasil ≠ `sent` menjadi `activate_ok_no_email`, "Undangan aktif, kuitansi TIDAK
+  terkirim, kabari pelanggan manual". Pesannya tetap "aktif", bukan "gagal" — admin yang
+  membacanya sebagai kegagalan akan mengaktifkan ulang undangan yang sudah aktif. Ini
+  sekaligus menutup kasus nyata: undangan tanpa pemilik (akun dihapus, A6) menghasilkan order
+  ber-`user_id` NULL yang membuat `notifyOrderPaid` diam **by design**, tanpa laporan.
+
+### 2. Notis "masa aktif berakhir"
+
+Cron `expire-invitations` membalik status dan merevalidasi ISR. Halaman publiknya berubah
+menjadi notis kedaluwarsa — dan pemilik mengetahuinya **dari tamunya**.
+
+- **Satu kiriman, tanpa penanda dan tanpa retry.** UPDATE-nya sudah memindahkan status, jadi
+  baris yang sama takkan terpilih lagi. Asimetri dengan peringatan pra-purge disengaja:
+  peringatan itu MENGGERBANGI penghapusan permanen sehingga wajib ditandai hanya saat benar
+  terkirim; notis ini tak menggerbangi apa pun — pengingat H-14 sudah terkirim, datanya utuh
+  enam bulan, peringatan pra-purge masih menyusul. Kehilangannya merugikan, bukan merusak.
+- **Yang dibatasi hanya emailnya (`NOTIFY_BATCH = 100`), bukan UPDATE-nya.** Membiarkan
+  undangan yang masa aktifnya habis tetap tampil adalah cacat berbayar, dan memecah UPDATE
+  per batch berarti sebagian undangan hidup sehari lebih lama dari yang dibeli. Resend
+  berjalan ~2 permintaan/detik: 500 kiriman berurutan membuat job ini berjalan beberapa menit
+  dan berisiko dibunuh runner cron SEBELUM `recordCronRun` — dan job sehat yang tak pernah
+  melapor **dituduh mati** di `/admin`, kerusakan yang lebih besar daripada email yang hilang.
+  Sisanya dilaporkan sebagai `notifyTruncated`: terlihat, bukan terpotong diam-diam.
+- **Tanggal purge dari `purgeDueMs`**, fungsi yang sama yang dipakai peringatan pra-purge,
+  sehingga dua email mustahil menyebut dua tanggal. Satu test menjaga tepat itu.
+- **`idempotencyKey` per SIKLUS** (`expired/{id}/{epoch active_until}`): undangan yang
+  diperpanjang lalu kedaluwarsa lagi berhak atas notis kedua, dan `active_until` selalu maju
+  setiap perpanjangan — penanda siklus yang sudah tersedia tanpa kolom tambahan.
+
+### 3. Penangguhan: dua kolom alasan, dan jalur banding
+
+Penangguhan adalah satu-satunya tindakan **penegakan** di produk ini, dan ia berlangsung
+paling bisu dari ketiganya.
+
+**Keputusan pemilik (ditanyakan, bukan diasumsikan): dua kolom terpisah.** Kolom `reason`
+sejak awal ditulis admin UNTUK admin dan hanya pernah mendarat di `admin_logs.detail`; isinya
+wajar memuat nama pelapor, nomor telepon pihak ketiga, atau dugaan yang belum pasti. Memakai
+teks itu sebagai isi email berarti satu-satunya pengaman adalah kehati-hatian admin saat
+mengetik. Migrasi `20261005140000` menambah `p_public_reason`:
+
+- **Di-drop lalu dibuat ulang, bukan `create or replace`** — menambah parameter mengubah
+  signature, dan membiarkan versi 3-argumen hidup berdampingan membuat panggilan 3-argumen
+  **ambigu**. REVOKE/GRANT dipasang ulang; diverifikasi bahwa hanya `postgres` + `service_role`
+  yang boleh `execute` setelahnya.
+- **`default null` ada demi urutan deploy**, bukan demi pemanggil di repo ini: migrasi
+  mendahului deploy, jadi untuk sesaat DB baru dipanggil aplikasi lama.
+- **`public_reason` tetap dicatat di `admin_logs`, termasuk saat kosong.** Tindakan penegakan
+  harus meninggalkan rekam jejak tentang apa yang **dikatakan** kepada pelanggan, bukan hanya
+  apa yang diputuskan secara internal.
+- **Jalur banding selalu dicetak**, ada alasannya maupun tidak. Penangguhan tanpa cara
+  membantahnya bukan moderasi.
+- **Email pencabutan ikut dibuat.** Tanpanya, pelanggan yang bandingnya DITERIMA tak pernah
+  diberi tahu — ia hanya bisa menebak dengan membuka tautannya sendiri, dan itu lebih merusak
+  kepercayaan daripada tak pernah mengirim email penangguhan sejak awal. Isinya mengikuti
+  `new_status` dari RPC, bukan asumsi: reinstate memulihkan status dari `active_until`,
+  sehingga undangan yang masa aktifnya sudah lewat menjadi `expired` dan **belum tampil**.
+
+### Temuan sampingan: satu `?` mematikan pemeriksaan tipe argumen RPC
+
+Diverifikasi empiris, bukan dibaca dari dokumen. `src/types/database.ts` awalnya diberi
+`p_public_reason?: string | null`. Dengan satu properti saja ditandai opsional, TypeScript
+**berhenti menolak properti berlebih** pada argumen `rpc()` untuk fungsi itu —
+`p_public_reason_SALAH` lolos `tsc --noEmit` sepenuhnya, dan baru gagal saat dijalankan.
+Pada fungsi tanpa properti opsional (`admin_extend_invitation`) nama ngawur tetap ditolak.
+Karena itu tipenya dibuat **wajib** meski SQL-nya `default null`: setiap pemanggil di repo ini
+memang selalu mengirimnya, dan pengamannya kembali menyala — dibuktikan dengan memasang nama
+parameter yang salah lalu memastikan `tsc` memerah.
+
+### Verifikasi
+
+- **33 mutan, 33 mati** (15 + 18). Yang paling berharga: "catatan internal dikirim ke
+  pelanggan", "email dikirim ulang untuk `already_suspended`", "kuitansi dirakit dari kode
+  order BARU", "tanggal purge notis ditebak +6 bulan", "reinstate selalu mengaku tampil
+  kembali".
+- **Dua lubang di test saya sendiri ditemukan oleh mutan, bukan oleh review:** `indexOf` yang
+  mengembalikan −1 membuat perbandingan urutan tombol kebetulan menjawab benar (email yang
+  kehilangan satu jalan keluar akan lolos sebagai lulus), dan assertion jalur banding yang
+  hanya membaca versi teks sehingga penghapusan dari versi HTML tak terlihat.
+- **Satu test saya ternyata menegaskan properti yang justru sengaja ditolak** — bahwa subjek
+  peringatan berbeda antar-tahap. Subjeknya memang mengikuti SISA HARI, bukan nama tahap;
+  testnya diganti untuk menjaga yang benar.
+- **Migrasi + 9 assertion pgTAP diuji terhadap skema cloud** dalam blok yang di-rollback,
+  karena job `db` adalah satu-satunya bagian CI yang tak bisa dijalankan dari mesin ini.
+  Dalam prosesnya terbentur lagi: `now()` **stabil per-transaksi**, sehingga dua baris
+  `admin_logs` dalam satu transaksi bercap waktu identik dan `order by created_at desc limit 1`
+  tidak menentukan. Assertion-nya dibaca lewat isi, bukan urutan.
+- Version drift MCP pada `purge_suspended` (tercatat `20261004175937`, berkasnya
+  `20261005100000`) sekaligus dirapikan — bila dibiarkan, `supabase db push` kelak menerapkan
+  ulang berkas yang sudah jalan.
+
+**Konsekuensi:** seluruh email di atas tetap no-op sampai `RESEND_API_KEY` + domain terverifikasi
+siap, dan `/admin` akan menampilkan `notified: 0` dengan `notifyFailed` terisi sampai saat itu —
+itu jujur, bukan alarm palsu.
 
 ---
 

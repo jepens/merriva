@@ -293,6 +293,156 @@ export function renderPurgeWarningEmail(
   };
 }
 
+export interface ExpiredNoticeEmailData {
+  name: string | null;
+  slug: string;
+  /** Sudah diformat, mis. "3 April 2027". */
+  expiredAtLabel: string;
+  /** Tanggal purge, sudah diformat — SATU sumber dgn `renderPurgeWarningEmail`. */
+  purgeDateLabel: string;
+  renewUrl: string;
+  dashboardUrl: string;
+}
+
+/**
+ * Notis masa aktif berakhir (AUDIT-2026-10-01 B7).
+ *
+ * Satu-satunya email yang menyebut apa yang DILIHAT TAMU sekarang — itu fakta
+ * yang paling mengagetkan bagi pemilik, dan selama ini ia harus menemukannya
+ * sendiri (atau dikabari tamunya). Kebalikan dari `renderPurgeWarningEmail`:
+ * tekanannya pada apa yang masih bisa dipulihkan, bukan pada tenggat.
+ */
+export function renderExpiredNoticeEmail(
+  data: ExpiredNoticeEmailData,
+): RenderedEmail {
+  const r = C.expired;
+  const inner = `<p style="margin:0 0 16px">${escapeHtml(r.greeting(data.name))}</p>
+<p style="margin:0 0 16px">${escapeHtml(r.intro(data.slug, data.expiredAtLabel))}</p>
+<p style="margin:0 0 20px;font-size:14px;color:${MUTED}">${escapeHtml(r.dataAman(data.purgeDateLabel))}</p>
+<p style="margin:0 0 12px">${button(data.renewUrl, r.ctaRenew)}</p>
+<p style="margin:0 0 24px;font-size:14px"><a href="${escapeHtml(data.dashboardUrl)}" style="color:${BRAND}">${escapeHtml(r.ctaDashboard)}</a></p>
+<p style="margin:0;font-size:13px;color:${MUTED}">${escapeHtml(r.outro)}</p>`;
+
+  const text = [
+    r.greeting(data.name),
+    "",
+    r.intro(data.slug, data.expiredAtLabel),
+    "",
+    r.dataAman(data.purgeDateLabel),
+    "",
+    `${r.ctaRenew}: ${data.renewUrl}`,
+    `${r.ctaDashboard}: ${data.dashboardUrl}`,
+    "",
+    r.outro,
+  ].join("\n");
+
+  return {
+    subject: r.subject(data.slug),
+    html: layout(r.preheader, r.heading, inner),
+    text,
+  };
+}
+
+export interface SuspendedEmailData {
+  name: string | null;
+  slug: string;
+  /** Alasan yang DITULIS UNTUK PELANGGAN, atau null bila admin tak menulisnya. */
+  publicReason: string | null;
+  supportEmail: string;
+  dashboardUrl: string;
+}
+
+/**
+ * Pemberitahuan penangguhan (AUDIT-2026-10-01 B7, DECISIONS #68).
+ *
+ * `publicReason` sengaja berasal dari kolom terpisah, bukan dari catatan internal
+ * yang masuk `admin_logs`: catatan itu ditulis admin untuk admin dan wajar memuat
+ * nama pelapor atau nomor pihak ketiga. Jalur banding dicetak baik alasannya ada
+ * maupun tidak — penangguhan tanpa cara membantahnya bukan moderasi.
+ */
+export function renderSuspendedEmail(data: SuspendedEmailData): RenderedEmail {
+  const r = C.suspended;
+  const alasan = data.publicReason?.trim() || r.alasanKosong;
+  const inner = `<p style="margin:0 0 16px">${escapeHtml(r.greeting(data.name))}</p>
+<p style="margin:0 0 20px">${escapeHtml(r.intro(data.slug))}</p>
+<p style="margin:0 0 4px;font-size:13px;font-weight:700;color:${MUTED}">${escapeHtml(r.alasanJudul)}</p>
+<p style="margin:0 0 20px;padding:12px 16px;background:#f9fafb;border-radius:10px;font-size:14px">${escapeHtml(alasan)}</p>
+<p style="margin:0 0 20px;font-size:14px;color:${MUTED}">${escapeHtml(r.dataAman)}</p>
+<p style="margin:0 0 4px;font-size:13px;font-weight:700;color:${MUTED}">${escapeHtml(r.bandingJudul)}</p>
+<p style="margin:0 0 20px;font-size:14px">${escapeHtml(r.banding(data.supportEmail))}</p>
+<p style="margin:0">${button(data.dashboardUrl, r.ctaDashboard)}</p>`;
+
+  const text = [
+    r.greeting(data.name),
+    "",
+    r.intro(data.slug),
+    "",
+    `${r.alasanJudul}: ${alasan}`,
+    "",
+    r.dataAman,
+    "",
+    r.bandingJudul,
+    r.banding(data.supportEmail),
+    "",
+    `${r.ctaDashboard}: ${data.dashboardUrl}`,
+  ].join("\n");
+
+  return {
+    subject: r.subject(data.slug),
+    html: layout(r.preheader, r.heading, inner),
+    text,
+  };
+}
+
+export interface ReinstatedEmailData {
+  name: string | null;
+  slug: string;
+  /** `true` hanya bila statusnya pulih menjadi `active`. */
+  tampilKembali: boolean;
+  invitationUrl: string;
+  renewUrl: string;
+}
+
+/**
+ * Pencabutan penangguhan (B7). Pasangan wajib dari `renderSuspendedEmail`:
+ * pelanggan yang bandingnya diterima harus diberi tahu, bukan dibiarkan menebak.
+ *
+ * `tampilKembali` bukan hiasan — reinstate memulihkan status dari `active_until`,
+ * jadi undangan yang masa aktifnya sudah lewat menjadi `expired` dan BELUM tampil.
+ */
+export function renderReinstatedEmail(
+  data: ReinstatedEmailData,
+): RenderedEmail {
+  const r = C.reinstated;
+  const pokok = data.tampilKembali
+    ? r.tampil(data.slug)
+    : r.belumTampil(data.slug);
+  const cta = data.tampilKembali
+    ? { url: data.invitationUrl, label: r.ctaView }
+    : { url: data.renewUrl, label: r.ctaRenew };
+
+  const inner = `<p style="margin:0 0 16px">${escapeHtml(r.greeting(data.name))}</p>
+<p style="margin:0 0 20px">${escapeHtml(pokok)}</p>
+<p style="margin:0 0 20px">${button(cta.url, cta.label)}</p>
+<p style="margin:0;font-size:13px;color:${MUTED}">${escapeHtml(r.outro)}</p>`;
+
+  const text = [
+    r.greeting(data.name),
+    "",
+    pokok,
+    "",
+    `${cta.label}: ${cta.url}`,
+    "",
+    r.outro,
+  ].join("\n");
+
+  return {
+    subject: r.subject(data.slug),
+    html: layout(r.preheader, r.heading, inner),
+    text,
+  };
+}
+
 export function renderExpiryReminderEmail(
   data: ReminderEmailData,
 ): RenderedEmail {

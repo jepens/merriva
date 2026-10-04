@@ -1389,6 +1389,76 @@ export const copy = {
       ctaView: "Lihat undangan",
       outro: "Abaikan email ini bila undangan memang tak perlu diperpanjang.",
     },
+    // Notis "sudah berakhir" — dikirim cron `expire-invitations` pada TRANSISI
+    // active → expired (AUDIT-2026-10-01 B7). Posisinya di antara dua email yang
+    // sudah ada, dan bedanya penting: `reminder` dikirim saat undangan MASIH
+    // aktif, `purgeWarning` saat datanya akan DIHAPUS. Di sini layanannya sudah
+    // berhenti sementara datanya masih utuh — satu-satunya email yang boleh
+    // berkata "tamu Anda sudah tidak bisa membukanya".
+    expired: {
+      subject: (slug: string) => `Masa aktif undangan ${slug} sudah berakhir`,
+      preheader:
+        "Tautannya kini menampilkan pemberitahuan masa aktif berakhir. Data Anda masih tersimpan.",
+      heading: "Masa aktif undangan sudah berakhir",
+      greeting: (name: string | null) => (name ? `Halo ${name},` : "Halo,"),
+      intro: (slug: string, tanggal: string) =>
+        `Masa aktif undangan /${slug} berakhir pada ${tanggal}. Tamu yang membuka tautannya sekarang melihat pemberitahuan masa aktif berakhir, bukan undangan Anda.`,
+      dataAman: (tanggal: string) =>
+        `Datanya tidak hilang: daftar tamu, RSVP, ucapan, catatan amplop, dan foto tetap tersimpan sampai ${tanggal}. Perpanjang kapan saja dan undangan kembali tampil persis seperti sebelumnya.`,
+      ctaRenew: "Perpanjang undangan",
+      ctaDashboard: "Buka dashboard",
+      // Kalimat kedua baru boleh ditulis sejak peringatan pra-purge H-30/H-7 ada
+      // (DECISIONS #67). Sebelum itu ia akan menjadi janji yang tak ditepati.
+      outro:
+        "Bila Anda tak lagi memerlukannya, tak ada yang perlu dilakukan. Kami akan mengingatkan lebih dulu sebelum data tersebut dihapus.",
+    },
+    // Penangguhan oleh tim (AUDIT-2026-10-01 B7, DECISIONS #68).
+    //
+    // Satu-satunya email di produk ini yang mengabarkan tindakan PENEGAKAN. Dua
+    // hal karenanya tidak bisa dikompromikan: alasannya datang dari kolom
+    // terpisah yang memang ditulis untuk dibaca pelanggan (catatan internal tak
+    // pernah ikut), dan jalur banding selalu disebut — penangguhan tanpa cara
+    // membantahnya adalah penghakiman, bukan moderasi.
+    suspended: {
+      subject: (slug: string) => `Undangan ${slug} ditangguhkan sementara`,
+      preheader:
+        "Halaman undangan tidak dapat dibuka tamu sampai hal ini diselesaikan.",
+      heading: "Undangan Anda ditangguhkan",
+      greeting: (name: string | null) => (name ? `Halo ${name},` : "Halo,"),
+      intro: (slug: string) =>
+        `Undangan /${slug} kami tangguhkan sementara. Selama ditangguhkan, tamu yang membuka tautannya tidak dapat melihat undangan Anda.`,
+      alasanJudul: "Alasan penangguhan",
+      // Dipakai saat admin menangguhkan tanpa menulis penjelasan publik. Tetap
+      // menyebut jalur banding — ketiadaan alasan bukan alasan untuk diam.
+      alasanKosong:
+        "Alasan rincinya akan kami sampaikan lewat email balasan. Silakan hubungi kami dan kami jelaskan.",
+      dataAman:
+        "Data Anda tidak terhapus: daftar tamu, RSVP, ucapan, catatan amplop, dan foto tetap tersimpan, dan masa aktif undangan tidak dipotong karena penangguhan ini.",
+      bandingJudul: "Tidak setuju dengan keputusan ini?",
+      banding: (email: string) =>
+        `Balas email ini atau kirim pesan ke ${email}. Sertakan alamat undangan Anda, dan kami akan meninjau ulang. Bila penangguhannya keliru, kami pulihkan.`,
+      ctaDashboard: "Buka dashboard",
+    },
+    // Pasangan dari `suspended`. Tanpa email ini, pelanggan yang bandingnya
+    // DITERIMA tak pernah diberi tahu — ia hanya bisa menebak dengan membuka
+    // tautannya sendiri, dan itu lebih merusak kepercayaan daripada tak pernah
+    // mengirim email penangguhan sejak awal.
+    reinstated: {
+      subject: (slug: string) => `Penangguhan undangan ${slug} dicabut`,
+      preheader: "Undangan Anda sudah tidak ditangguhkan.",
+      heading: "Penangguhan sudah dicabut",
+      greeting: (name: string | null) => (name ? `Halo ${name},` : "Halo,"),
+      tampil: (slug: string) =>
+        `Penangguhan undangan /${slug} sudah dicabut. Undangan Anda kembali dapat dibuka tamu seperti biasa.`,
+      // Reinstate memulihkan status dari `active_until`: bila masa aktifnya sudah
+      // lewat, undangan jadi `expired` — belum tampil. Mengabarkan "sudah tampil
+      // kembali" di kasus itu adalah keterangan yang salah.
+      belumTampil: (slug: string) =>
+        `Penangguhan undangan /${slug} sudah dicabut. Masa aktif undangan ini sendiri sudah berakhir, jadi tautannya belum dapat dibuka tamu — perpanjang untuk menampilkannya kembali.`,
+      ctaView: "Lihat undangan",
+      ctaRenew: "Perpanjang undangan",
+      outro: "Terima kasih atas kesabaran Anda.",
+    },
   },
   admin: {
     brand: "Merriva Admin",
@@ -1572,7 +1642,13 @@ export const copy = {
       extendMonths: "Jumlah bulan (1–24)",
       extendCta: "Perpanjang",
       suspendTitle: "Suspend (konten bermasalah)",
-      suspendReason: "Alasan",
+      suspendReason: "Catatan internal (tidak dikirim ke pelanggan)",
+      // Dua kolom, bukan satu yang dipakai dua kali: `reason` ditulis admin untuk
+      // admin dan wajar memuat nama pelapor atau nomor pihak ketiga, sementara
+      // kolom ini yang dikirim lewat email (DECISIONS #68).
+      suspendPublicReason: "Alasan untuk pelanggan (dikirim via email)",
+      suspendPublicHint:
+        "Kosongkan bila belum ingin menjelaskan — emailnya tetap mengarahkan pelanggan untuk menghubungi kami.",
       suspendCta: "Suspend",
       reinstateTitle: "Batalkan suspend",
       reinstateHint: "Kembalikan undangan dari status ditangguhkan.",
@@ -1672,6 +1748,8 @@ export const copy = {
       user_reinstate_ok: "Penangguhan akun dibatalkan.",
       user_reinstate_failed: "Gagal memulihkan akun.",
       activate_ok: "Undangan berhasil diaktifkan.",
+      activate_ok_no_email:
+        "Undangan berhasil diaktifkan, tetapi kuitansi TIDAK terkirim. Kabari pelanggan secara manual.",
       activate_invalid: "Pilihan paket tidak valid.",
       activate_draft_slug: "Atur alamat undangan (slug) dulu sebelum aktivasi.",
       activate_not_payable: "Undangan tidak dalam status yang bisa diaktifkan.",
@@ -1682,7 +1760,9 @@ export const copy = {
       extend_not_extendable:
         "Hanya undangan aktif/kedaluwarsa yang bisa diperpanjang.",
       extend_failed: "Gagal memperpanjang masa aktif.",
-      suspend_ok: "Undangan ditangguhkan.",
+      suspend_ok: "Undangan ditangguhkan. Email pemberitahuan terkirim.",
+      suspend_ok_no_email:
+        "Undangan ditangguhkan, tetapi email pemberitahuan TIDAK terkirim. Kabari pemilik secara manual.",
       refund_ok_revoked:
         "Order ditandai refund. Undangan dicabut (kedaluwarsa). Kembalikan uangnya di dashboard Pakasir bila belum.",
       refund_ok_still_paid:
@@ -1697,7 +1777,9 @@ export const copy = {
       refund_failed: "Gagal menandai refund. Coba lagi.",
       suspend_invalid: "Alasan wajib diisi.",
       suspend_failed: "Gagal menangguhkan undangan.",
-      reinstate_ok: "Penangguhan dibatalkan.",
+      reinstate_ok: "Penangguhan dibatalkan. Email pemberitahuan terkirim.",
+      reinstate_ok_no_email:
+        "Penangguhan dibatalkan, tetapi email pemberitahuan TIDAK terkirim. Kabari pemilik secara manual.",
       reinstate_not_suspended: "Undangan tidak sedang ditangguhkan.",
       reinstate_failed: "Gagal membatalkan penangguhan.",
       owner_ok: "Kepemilikan diperbarui.",
