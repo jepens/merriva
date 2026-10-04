@@ -8,6 +8,10 @@ import {
 } from "@/components/dashboard/guestbook-moderation";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  GiftNotesExport,
+  type GiftNoteRow,
+} from "@/components/dashboard/gift-notes-export";
 import { copy } from "@/lib/copy";
 import { formatEventDateTime } from "@/lib/datetime";
 import { isUuid } from "@/lib/id";
@@ -59,6 +63,17 @@ export default async function GuestbookModerationPage({
 
   const rsvps = rsvpData ?? [];
   const gifts = giftData ?? [];
+
+  // Baris yang SAMA dengan yang dirender di layar, dibentuk sekali untuk
+  // unduhan Excel-nya. Waktu diformat di server memakai timezone acara supaya
+  // berkasnya tak pernah bergantung pada setelan perangkat pengunduh.
+  const giftRows: GiftNoteRow[] = gifts.map((g) => ({
+    guestName: g.guest_name,
+    type: g.type,
+    amountIdr: g.amount,
+    note: g.note,
+    createdAtLabel: formatEventDateTime(g.created_at, tz)?.date ?? "",
+  }));
 
   const rows: RsvpRow[] = rsvps.map((r) => ({
     id: r.id,
@@ -127,9 +142,14 @@ export default async function GuestbookModerationPage({
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-medium">{t.giftTitle}</h2>
-          <span className="text-muted-foreground text-xs">{t.giftPrivate}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-muted-foreground text-xs">
+              {t.giftPrivate}
+            </span>
+            <GiftNotesExport rows={giftRows} />
+          </div>
         </div>
         {gifts.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t.giftEmpty}</p>

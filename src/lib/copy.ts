@@ -313,6 +313,18 @@ export const copy = {
       giftTransfer: "Transfer",
       giftGift: "Kado / Hadiah",
       giftPrivate: "Privat — hanya Anda yang melihat daftar ini.",
+      // Buku amplop adalah satu-satunya daftar berisi UANG, dan ia ikut
+      // terhapus permanen saat retensi berjalan — pemilik harus bisa
+      // memindahkannya keluar (AUDIT-2026-10-01, gelombang C).
+      giftExportCta: "Unduh Excel",
+      giftExporting: "Menyiapkan…",
+      giftCol: {
+        name: "Nama tamu",
+        type: "Jenis",
+        amount: "Nominal (Rp)",
+        note: "Catatan",
+        date: "Waktu",
+      },
       noMessage: "(tanpa ucapan)",
     },
     cardGuests: "Tamu",
