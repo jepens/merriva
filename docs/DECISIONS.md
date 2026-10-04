@@ -1923,6 +1923,70 @@ permukaan ter-auth (bagian 1 di atas).
 
 ---
 
+## #63 — 2026-10-04 · Setiap `return` senyap di jalur uang & email kini meninggalkan jejak
+
+Lanjutan #62 untuk tiga temuan gelombang C yang tersisa di dimensi observabilitas.
+
+### Prasyarat kuitansi yang dibuang tanpa jejak
+
+`notifyOrderPaid` punya empat `return` sebelum email terkirim, dan SETIAP query-nya
+membuang `error` lewat destrukturisasi. `.maybeSingle()` menjawab `data: null, error:
+null` untuk 0 baris — bentuk yang **identik** dengan `data: null, error: <gangguan DB>`.
+Jadi "kuitansi tak terkirim karena ordernya hilang" dan "Postgres sedang bermasalah"
+terlihat sama persis: tidak terlihat sama sekali.
+
+Satu cabang yang paling mahal ditemukan skeptis, bukan oleh temuan aslinya: bacaan
+`packages` memilih TEMPLATE (`pkg?.kind === "addon_momen"`). Bila gagal, order add-on
+Album Momen diam-diam dikirimi **kuitansi aktivasi undangan** — "undangan Anda kini
+aktif", lengkap dengan masa aktif dan link undangan. Kuitansi yang SALAH, terkirim, tanpa
+jejak. Karena itu cabang ini melapor tetapi **tetap mengirim**: kehilangan kuitansi
+sepenuhnya lebih buruk daripada nama paket yang kosong.
+
+`!order.user_id` sengaja TETAP senyap: akun yang dihapus meninggalkan `orders` ber-`user_id`
+NULL demi pembukuan (A6) — itu bukan galat, dan melaporkannya hanya menjadi derau tetap.
+`profiles` juga diabaikan: `full_name` memang nullable dan kegagalannya kosmetik.
+
+### Aksi uang admin tanpa satu pun telemetri
+
+`src/server/actions/admin.ts`: nol `reportHandledError`. Galat RPC refund menjadi
+`?msg=refund_failed` lalu lenyap. Kini 12 titik: galat RPC pada aktivasi manual,
+perpanjang, suspend, refund, reinstate, ganti-pemilik — plus cabang **fallthrough** tiap
+aksi.
+
+**Fallthrough itu yang paling berharga,** dan alasannya konkret: `refunded_downgraded`
+(B3) pernah jatuh ke sana dan terbaca "gagal" oleh admin padahal refundnya BERHASIL di
+DB — dengan risiko refund ganda manual di dashboard Pakasir. TypeScript tak bisa
+menangkapnya (`result` bertipe `string`). Di titik itu `error` bernilai null, jadi
+pesannya dirakit sendiri; `toError(null)` hanya akan menghasilkan "unknown error".
+
+**Ditolak:** *melaporkan cabang `!parsed.success`* — itu validasi FORMAT, bukan kerusakan
+sistem. Melaporkannya berarti satu isu Sentry tiap salah ketik, sekaligus memasukkan
+input mentah tak tervalidasi ke `extra` yang tak disaring `sentry-scrub`. Konsisten dengan
+repo: tak satu pun dari 16 pemakai `reportHandledError` duduk di cabang validasi.
+
+### `notify.ts` akhirnya punya test — dan uji mutasi mengubah kodenya
+
+Berkas itu **nol test** sebelum ini. 21 test baru mengunci pemilihan template, tiap
+`return` senyap, dan larangan PII.
+
+Dua mutan BERTAHAN pada putaran pertama, keduanya celah nyata di test, bukan di kode:
+- *hasil RPC refund tak dikenal tak dilaporkan* — tak ada test yang menyentuhnya;
+- *galat DB diganti `Error` generik* — test hanya memastikan "ada laporan", bukan **objek
+  galat mana**. Itu penting: `reportHandledError` menyusun nama isu Sentry dari `code`
+  Postgres (`SupabaseError:57014`), jadi melaporkan `Error("undangan hilang")` menyatukan
+  seluruh gangguan DB menjadi satu isu yang tak bisa didiagnosis. Test kini meng-assert
+  identitas objeknya.
+
+**Satu mutan EKUIVALEN mengubah kodenya.** `if (invErr || !inv)` tak bisa dibunuh: supabase-js
+tak pernah mengembalikan baris berbarengan dengan galat, jadi `!inv` sudah menangkap kedua
+keadaan dan `invErr ||` adalah cabang yang tak pernah dieksekusi. Alih-alih menerima mutan
+ekuivalen, kondisinya disederhanakan menjadi `if (!inv)` — `error`-nya tetap dipakai untuk
+DIAGNOSIS (`invErr ?? new Error(...)`), bukan untuk DETEKSI. Berlaku untuk keempat bacaan.
+
+Uji mutasi: 10 mutan, 10 merah (setelah dua perbaikan test dan satu penyederhanaan kode).
+
+---
+
 ---
 
 ## Template entri baru

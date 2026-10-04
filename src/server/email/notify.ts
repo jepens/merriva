@@ -54,44 +54,100 @@ export async function notifyOrderPaid(
   orderCode: string,
 ): Promise<void> {
   try {
-    const { data: order } = await admin
+    // SETIAP bacaan di bawah mengambil `error`-nya — untuk DIAGNOSIS, bukan
+    // untuk DETEKSI. supabase-js tak pernah mengembalikan baris berbarengan
+    // dengan galat, jadi `data === null` sudah menangkap kedua keadaan;
+    // `error`-nya yang menentukan laporannya bisa didiagnosis atau tidak
+    // (`reportHandledError` menyusun nama isu Sentry dari `code` Postgres).
+    // Memeriksa `error` lagi di kondisinya hanya menambah cabang yang tak
+    // pernah dieksekusi. `.maybeSingle()`
+    // mengembalikan `data: null, error: null` untuk 0 baris — bentuk yang
+    // IDENTIK dengan `data: null, error: <gangguan DB>`. Membuang `error`
+    // berarti "kuitansi tak terkirim" dan "Postgres sedang bermasalah" terlihat
+    // sama persis, yaitu tidak terlihat sama sekali.
+    //
+    // Yang dilaporkan hanya `orderCode` + `step`. TIDAK PERNAH: alamat email,
+    // nama pembeli, atau isi kuitansinya.
+    const { data: order, error: orderErr } = await admin
       .from("orders")
       .select(
         "order_code, amount_idr, paid_at, user_id, invitation_id, package_id, purpose",
       )
       .eq("order_code", orderCode)
       .maybeSingle();
-    if (!order) return;
+    if (!order) {
+      // Order ini BARU SAJA diaktifkan oleh pemanggil — ketiadaannya anomali.
+      reportHandledError(
+        orderErr ?? new Error("order hilang pasca-aktivasi"),
+        "email.receipt.lookup",
+        { orderCode, step: "order" },
+      );
+      return;
+    }
     // Pemilik order bisa TAK ADA: akun yang dihapus meninggalkan baris `orders`
     // ber-`user_id` NULL demi kewajiban pembukuan (A6). Tak ada alamat tujuan —
-    // dan itu bukan galat. Sebelum tipe DB-nya dibetulkan, cabang ini tak
-    // terpikirkan dan `getUserById(null)` yang jalan.
+    // dan itu bukan galat, jadi sengaja TANPA laporan. Sebelum tipe DB-nya
+    // dibetulkan, cabang ini tak terpikirkan dan `getUserById(null)` yang jalan.
     if (!order.user_id) return;
 
-    const { data: userRes } = await admin.auth.admin.getUserById(order.user_id);
+    const { data: userRes, error: authErr } =
+      await admin.auth.admin.getUserById(order.user_id);
     const email = userRes?.user?.email;
-    if (!email) return;
+    if (!email) {
+      reportHandledError(
+        authErr ?? new Error("pemilik order tanpa alamat email"),
+        "email.receipt.lookup",
+        { orderCode, step: "auth" },
+      );
+      return;
+    }
 
-    const [{ data: profile }, { data: pkg }, { data: inv }] = await Promise.all(
-      [
-        admin
-          .from("profiles")
-          .select("full_name")
-          .eq("id", order.user_id)
-          .maybeSingle(),
-        admin
-          .from("packages")
-          .select("name, kind")
-          .eq("id", order.package_id)
-          .maybeSingle(),
-        admin
-          .from("invitations")
-          .select("slug, active_until")
-          .eq("id", order.invitation_id)
-          .maybeSingle(),
-      ],
-    );
-    if (!inv) return;
+    const [
+      { data: profile },
+      { data: pkg, error: pkgErr },
+      { data: inv, error: invErr },
+    ] = await Promise.all([
+      // `profiles` sengaja tanpa penanganan galat: `full_name` memang nullable
+      // dan kegagalannya kosmetik (sapaan jatuh ke "Halo,").
+      admin
+        .from("profiles")
+        .select("full_name")
+        .eq("id", order.user_id)
+        .maybeSingle(),
+      admin
+        .from("packages")
+        .select("name, kind")
+        .eq("id", order.package_id)
+        .maybeSingle(),
+      admin
+        .from("invitations")
+        .select("slug, active_until")
+        .eq("id", order.invitation_id)
+        .maybeSingle(),
+    ]);
+    if (!inv) {
+      reportHandledError(
+        invErr ?? new Error("undangan hilang pasca-aktivasi"),
+        "email.receipt.lookup",
+        { orderCode, step: "invitation" },
+      );
+      return;
+    }
+    // `pkg` BUKAN hiasan: ia yang memilih template di bawah. Bila bacaannya
+    // gagal, order add-on Album Momen akan diam-diam dikirimi kuitansi aktivasi
+    // undangan — "undangan Anda kini aktif", lengkap dengan masa aktif dan link
+    // undangan. Kuitansi yang SALAH, terkirim, tanpa jejak.
+    //
+    // Tetap LANJUT mengirim (bukan `return`): kehilangan kuitansi sepenuhnya
+    // lebih buruk daripada nama paket yang kosong, dan `package_id` NOT NULL +
+    // FK membuat kasus ini hanya mungkin saat DB benar-benar bermasalah.
+    if (!pkg) {
+      reportHandledError(
+        pkgErr ?? new Error("paket hilang pasca-aktivasi"),
+        "email.receipt.lookup",
+        { orderCode, step: "package" },
+      );
+    }
 
     // Tiga bentuk kuitansi, dipilih dari jenis ORDER — bukan dari nominalnya.
     //  * upgrade  → paket naik, masa aktif TIDAK berubah (B3). Paketnya paket

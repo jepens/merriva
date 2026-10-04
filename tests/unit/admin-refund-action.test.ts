@@ -27,6 +27,11 @@ const { requireAdmin } = vi.hoisted(() => ({
 }));
 vi.mock("@/server/guards/auth", () => ({ requireAdmin }));
 
+const { reportHandledError } = vi.hoisted(() => ({
+  reportHandledError: vi.fn(),
+}));
+vi.mock("@/lib/observability", () => ({ reportHandledError }));
+
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => ({ rpc }),
@@ -62,6 +67,7 @@ function hasil(result: string) {
 beforeEach(() => {
   redirect.mockClear();
   requireAdmin.mockClear();
+  reportHandledError.mockClear();
   rpc.mockReset();
   hasil("refunded_revoked");
 });
@@ -141,9 +147,41 @@ describe("pemetaan hasil RPC", () => {
     expect(await jalankan()).toContain("refund_failed");
   });
 
-  it("galat RPC → gagal", async () => {
-    rpc.mockResolvedValue({ data: null, error: { message: "boom" } });
+  it("galat RPC → gagal, DAN galat aslinya dilaporkan", async () => {
+    const galat = { message: "boom", code: "57014" };
+    rpc.mockResolvedValue({ data: null, error: galat });
+
     expect(await jalankan()).toContain("refund_failed");
+
+    expect(reportHandledError).toHaveBeenCalledWith(galat, "admin.refund", {
+      orderCode: KODE,
+    });
+  });
+
+  it("hasil RPC TAK DIKENAL dilaporkan — inilah detektor bug seperti B3", async () => {
+    // `refunded_downgraded` pernah jatuh ke cabang ini dan terbaca "gagal" oleh
+    // admin padahal refundnya BERHASIL di DB. Pada aksi yang mendampingi
+    // perpindahan uang nyata di dashboard Pakasir, pesan salah itu berisiko
+    // refund ganda. TypeScript tak bisa menangkapnya: `result` bertipe `string`.
+    hasil("sesuatu_yang_belum_pernah_ada");
+
+    expect(await jalankan()).toContain("refund_failed");
+
+    const [err, area, extra] = reportHandledError.mock.calls[0];
+    expect((err as Error).message).toContain("sesuatu_yang_belum_pernah_ada");
+    expect(area).toBe("admin.refund.unknown-result");
+    expect(extra).toMatchObject({ orderCode: KODE });
+  });
+
+  it("alasan refund TIDAK ikut ke telemetri", async () => {
+    // Teks bebas isian admin — bisa memuat nama atau alamat email pelanggan.
+    rpc.mockResolvedValue({ data: null, error: { message: "boom" } });
+
+    await jalankan(KODE, form("pelanggan budi@contoh.test minta refund"));
+
+    expect(JSON.stringify(reportHandledError.mock.calls)).not.toContain(
+      "budi@contoh.test",
+    );
   });
 });
 

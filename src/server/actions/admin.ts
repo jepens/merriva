@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { isUuid } from "@/lib/id";
+import { reportHandledError } from "@/lib/observability";
 import { generateOrderCode } from "@/lib/order";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
@@ -76,7 +77,12 @@ export async function adminActivateInvitationAction(
       p_admin_id: adminUser.id,
       p_order_code: generateOrderCode(),
     });
-    if (error) detail(invitationId, "activate_failed");
+    if (error) {
+      // Aktivasi manual berarti uang SUDAH diterima di luar sistem
+      // (docblock aksi ini). Gagalnya sama mahalnya dengan gagalnya webhook.
+      reportHandledError(error, "admin.activate", { invitationId });
+      detail(invitationId, "activate_failed");
+    }
     const row = data?.[0];
     slug = row?.slug ?? null;
     result = row?.result;
@@ -90,6 +96,16 @@ export async function adminActivateInvitationAction(
   if (result === "draft_slug") detail(invitationId, "activate_draft_slug");
   if (result === "not_payable") detail(invitationId, "activate_not_payable");
   if (result === "package_unavailable") detail(invitationId, "activate_pkg");
+  // Fallthrough: hasil RPC yang tak dikenal, ATAU `order_code_conflict` yang
+  // bertahan setelah seluruh percobaan kode habis. Keduanya tak punya pesan
+  // sendiri dan karenanya tak terbedakan di layar admin.
+  reportHandledError(
+    new Error(
+      `admin_activate_invitation: hasil tak dikenal: ${result ?? "kosong"}`,
+    ),
+    "admin.activate.unknown-result",
+    { invitationId },
+  );
   detail(invitationId, "activate_failed");
 }
 
@@ -112,7 +128,10 @@ export async function adminExtendInvitationAction(
     p_months: parsed.data.months,
     p_admin_id: adminUser.id,
   });
-  if (error) detail(invitationId, "extend_failed");
+  if (error) {
+    reportHandledError(error, "admin.extend", { invitationId });
+    detail(invitationId, "extend_failed");
+  }
 
   const row = data?.[0];
   revalidateAfter(row?.slug);
@@ -121,6 +140,13 @@ export async function adminExtendInvitationAction(
     detail(invitationId, "extend_not_extendable");
   }
   if (row?.result === "invalid_months") detail(invitationId, "extend_invalid");
+  reportHandledError(
+    new Error(
+      `admin_extend_invitation: hasil tak dikenal: ${row?.result ?? "kosong"}`,
+    ),
+    "admin.extend.unknown-result",
+    { invitationId },
+  );
   detail(invitationId, "extend_failed");
 }
 
@@ -143,7 +169,10 @@ export async function adminSuspendInvitationAction(
     p_admin_id: adminUser.id,
     p_reason: parsed.data.reason,
   });
-  if (error) detail(invitationId, "suspend_failed");
+  if (error) {
+    reportHandledError(error, "admin.suspend", { invitationId });
+    detail(invitationId, "suspend_failed");
+  }
 
   const row = data?.[0];
   revalidateAfter(row?.slug);
@@ -183,7 +212,14 @@ export async function adminRefundOrderAction(
     p_admin_id: adminUser.id,
     p_reason: parsed.data.reason,
   });
-  if (error) orders("refund_failed");
+  if (error) {
+    // Refund mendampingi perpindahan uang NYATA di dashboard Pakasir. Admin
+    // yang membaca "gagal" akan memutuskan berdasarkan bacaan itu.
+    // `parsed.data.reason` sengaja TIDAK ikut: teks bebas isian admin, bisa
+    // memuat nama atau alamat email pelanggan.
+    reportHandledError(error, "admin.refund", { orderCode: code });
+    orders("refund_failed");
+  }
 
   const row = data?.[0];
   revalidateAfter(row?.slug);
@@ -201,6 +237,18 @@ export async function adminRefundOrderAction(
   if (row?.result === "not_found") orders("refund_not_found");
   // RPC mengembalikan 'not_paid:<status>' agar jejaknya jelas di log server.
   if (row?.result?.startsWith("not_paid")) orders("refund_not_paid");
+  // Cabang PALING berharga di berkas ini: inilah yang akan menangkap hasil RPC
+  // baru yang belum dipetakan. `refunded_downgraded` (B3) pernah jatuh ke sini
+  // dan terbaca "gagal" oleh admin padahal refundnya BERHASIL — dengan risiko
+  // refund ganda manual di dashboard Pakasir. `error` null di titik ini, jadi
+  // pesannya dirakit sendiri; tanpa itu laporannya hanya "unknown error".
+  reportHandledError(
+    new Error(
+      `admin_refund_order: hasil tak dikenal: ${row?.result ?? "kosong"}`,
+    ),
+    "admin.refund.unknown-result",
+    { orderCode: code },
+  );
   orders("refund_failed");
 }
 
@@ -217,7 +265,10 @@ export async function adminReinstateInvitationAction(
     p_invitation_id: invitationId,
     p_admin_id: adminUser.id,
   });
-  if (error) detail(invitationId, "reinstate_failed");
+  if (error) {
+    reportHandledError(error, "admin.reinstate", { invitationId });
+    detail(invitationId, "reinstate_failed");
+  }
 
   const row = data?.[0];
   revalidateAfter(row?.slug);
@@ -225,6 +276,13 @@ export async function adminReinstateInvitationAction(
   if (row?.result === "not_suspended") {
     detail(invitationId, "reinstate_not_suspended");
   }
+  reportHandledError(
+    new Error(
+      `admin_reinstate_invitation: hasil tak dikenal: ${row?.result ?? "kosong"}`,
+    ),
+    "admin.reinstate.unknown-result",
+    { invitationId },
+  );
   detail(invitationId, "reinstate_failed");
 }
 
@@ -247,12 +305,20 @@ export async function adminChangeOwnerAction(
     p_new_user_id: parsed.data.newUserId,
     p_admin_id: adminUser.id,
   });
-  if (error) detail(invitationId, "owner_failed");
+  if (error) {
+    reportHandledError(error, "admin.change-owner", { invitationId });
+    detail(invitationId, "owner_failed");
+  }
 
   const result = data?.[0]?.result;
   revalidateAfter(null);
   if (result === "changed" || result === "noop")
     detail(invitationId, "owner_ok");
   if (result === "user_not_found") detail(invitationId, "owner_user_not_found");
+  reportHandledError(
+    new Error(`admin_change_owner: hasil tak dikenal: ${result ?? "kosong"}`),
+    "admin.change-owner.unknown-result",
+    { invitationId },
+  );
   detail(invitationId, "owner_failed");
 }
