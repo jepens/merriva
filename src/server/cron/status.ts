@@ -36,7 +36,17 @@ export interface CronStatus {
 const JADWAL_JAM: Record<CronJobName, number> = {
   "expire-orders": 1,
   "expire-invitations": 24,
-  "expiry-reminders": 24,
+  // 12 jam, bukan 24 — alasannya sudah tertulis di docstring route-nya sendiri
+  // (`src/app/api/cron/expiry-reminders/route.ts`) jauh sebelum angka ini dibuat:
+  // "tandai hanya saat terkirim" bersifat at-least-once, jadi email yang berhasil
+  // dikirim tetapi gagal menandai `reminder_sent_at` akan terpilih lagi — dan
+  // satu-satunya penjaga kirim-ganda adalah `idempotencyKey` Resend yang HANYA
+  // berlaku 24 jam. Kadens 24 jam menaruh retry-nya persis di tepi jendela itu.
+  //
+  // Angka ini sebelumnya 24 dan BERTENTANGAN dengan route-nya selama berbulan-
+  // bulan; terlewat saat `purge-expired` dinaikkan (DECISIONS #67) walau
+  // argumennya identik. Keduanya kini sejalan.
+  "expiry-reminders": 12,
   // 12 jam, bukan 24: job ini kini juga mengirim peringatan pra-purge (B7),
   // dan `idempotencyKey` Resend hanya berlaku 24 jam — kadens di bawah itu
   // mencegah peringatan ganda bila penandaan gagal setelah email terkirim.

@@ -2355,6 +2355,127 @@ itu jujur, bukan alarm palsu.
 
 ---
 
+## #69 — 2026-10-12 · Audit kesiapan konfigurasi: dokumen yang akan diikuti pemilik ternyata menyesatkan di sembilan titik
+
+Pemilik meminta dipandu melalui konfigurasi go-live. Jawaban yang benar bukan menulis
+panduan baru — `LAUNCH-CHECKLIST.md` (9 fase), `DEPLOYMENT.md`, dan `AUTH-SETUP.md`
+sudah ada dan `AUTH-SETUP.md` terbukti akurat. Yang dibutuhkan adalah **memeriksa
+apakah panduan yang akan diikuti itu masih benar**, karena dokumen yang salah lebih
+berbahaya daripada dokumen yang tak ada: ia dipercaya.
+
+Dipetakan 147 kebutuhan konfigurasi dari kode oleh lima agen (env · Supabase ·
+Pakasir+Turnstile · Resend · deploy/cron/Sentry/storage), tiap irisan lalu DIBANTAH
+oleh peninjau skeptis, ditutup satu kritikus kelengkapan. Hasil: **25 koreksi** atas
+pemetaan dan **51 kebutuhan yang tak tercatat di dokumen mana pun**.
+
+### Satu cacat kode: kadens `expiry-reminders` bertentangan dengan dirinya sendiri
+
+`src/app/api/cron/expiry-reminders/route.ts` menuntut kadens **≤12 jam** di
+docstring-nya sendiri, dengan alasan yang benar: "tandai hanya saat terkirim" bersifat
+at-least-once, jadi email yang terkirim tetapi gagal menandai `reminder_sent_at` akan
+terpilih lagi — dan satu-satunya penjaga kirim-ganda adalah `idempotencyKey` Resend
+yang hanya berlaku **24 jam**. Kadens 24 jam menaruh retry-nya persis di tepi jendela
+itu.
+
+Sementara `JADWAL_JAM` menulis `24` dan LAUNCH-CHECKLIST menulis "harian". Pemilik yang
+mengikuti checklist memasang kadens yang kode sendiri sebut berisiko pengingat ganda.
+
+Ini kelalaian **#67**: argumennya identik dengan yang dipakai menaikkan `purge-expired`
+24→12, dan saudara kembarnya terlewat walau alasannya sudah tertulis di repo berbulan-
+bulan. Diperbaiki, dan satu test kini mengunci angkanya (mutan "kembali ke 24" merah).
+
+### Yang paling berbahaya bukan yang hilang, melainkan yang hijau saat rusak
+
+Pola yang berulang di hampir semua temuan: salah-konfigurasi terburuk justru **tidak
+menghasilkan galat**.
+
+- **`/api/health` menjawab `200 ok` ketika env Supabase KOSONG SAMA SEKALI.** Sehat
+  dihitung `db !== "down"`, dan env kosong menghasilkan `"not_configured"`. Container
+  tanpa env Supabase dinilai sehat oleh HEALTHCHECK Docker dan UptimeRobot sementara
+  setiap halaman melempar 500. Restart loop yang didokumentasikan hanya terjadi pada
+  "ada kunci tapi salah" — "tidak ada kunci" justru lolos hijau.
+- **`NEXT_PUBLIC_APP_URL` kosong tak menimbulkan galat apa pun** (default
+  `http://localhost:3000`) tetapi dari situ diturunkan daftar hostname sah token
+  Turnstile. Semua form Turnstile tertolak, dengan gejala yang MENYESATKAN: RSVP
+  berbunyi "Terlalu banyak percobaan" (pesan rate limit), dan reset kata sandi
+  menjawab **sukses palsu** "tautan sudah dikirim" — tanpa galat dan tanpa Sentry.
+- **Allow list redirect auth yang kurang** tidak menolak apa pun: GoTrue mem-fallback
+  ke Site URL, pengguna mendarat di beranda dengan `?code=` yang tak pernah ditukar →
+  tetap tidak login, tanpa pesan, tanpa jejak. Diverifikasi langsung di sumber
+  `@supabase/auth-js`: `signInWithOAuth` merakit URL secara LOKAL tanpa request
+  jaringan dan SELALU mengembalikan `error: null`, sehingga cabang penanganan galat
+  di `auth.ts` tak pernah tereksekusi karena allow list.
+- **`TURNSTILE_SECRET_KEY` kosong = gagal-tutup total** dengan satu `console.error`
+  per permintaan dan **nol event Sentry** (tak lewat `reportHandledError`).
+
+### Album Momen sudah dijual sekarang, dan tak ada tombol mematikannya
+
+Migrasi `20260826110000` men-seed kelima paket add-on `is_active = true`, dan `momen_5`
+**gratis + self-service tanpa pembayaran**. `MOMEN-SPEC.md` §94 melarang menjual add-on
+sebelum media pindah R2 (Supabase free 1 GB ≈ 7 album penuh). Tetapi `/admin/paket`
+menyaring `kind='invitation'` dan tak ada route admin untuk add-on — satu-satunya cara
+mematikannya adalah SQL. Pelanggan pertama bisa mengisi kuota 1 GB lewat tier gratis,
+tanpa satu rupiah masuk.
+
+### Dua janji produk yang belum punya infrastrukturnya
+
+- **`halo@merriva.id` belum bisa MENERIMA email.** Verifikasi domain Resend hanya
+  memberi hak mengirim; SPF/DKIM tidak membuat kotak masuk. Alamat itu sudah tercetak
+  di `/syarat`, `/privasi`, `/refund` sebagai kanal resmi permintaan hapus data UU PDP,
+  dan sejak #68 juga sebagai **jalur banding** email penangguhan. Butuh record MX.
+  Terkait: `send.ts` mengirim tanpa `reply_to` dengan `EMAIL_FROM` default `noreply@` —
+  untuk email pra-purge ("data Anda akan dihapus") ketidakmampuan membalas adalah soal
+  kepatuhan, bukan layanan.
+- **Objek media tidak punya backup apa pun.** Supabase Pro mem-backup Postgres, bukan
+  Storage; R2 juga tidak. Karena path media disimpan RELATIF dan URL dibangun saat
+  render, restore DB mengembalikan baris `media` yang menunjuk objek yang tak ada
+  salinannya di mana pun. Untuk produk yang menyimpan foto pernikahan pelanggan, itu
+  keputusan yang harus sadar sebelum klien berbayar pertama.
+
+### Uji terima Fase 7 yang tak bisa dieksekusi sebagaimana tertulis
+
+"Bayar production nominal kecil (Rp10.000, **paket uji**)" mustahil: `/admin/paket`
+hanya meng-UPDATE (tak ada INSERT paket di seluruh repo) dan checkout memvalidasi kode
+paket terhadap `z.enum(["basic","premium"])`. Satu-satunya cara adalah **menurunkan
+harga `basic` sementara** — yang terbit ke publik SEKETIKA karena aksinya me-revalidate
+`/` dan `/harga`, dan checkout mengambil harga otoritatif dari DB. Selama jendela uji
+siapa pun bisa membeli Basic pada harga itu.
+
+### Koreksi angka yang akan memicu alarm palsu
+
+`DEPLOYMENT.md` dan checklist menyuruh memverifikasi "**12 tabel**, `packages` **2
+baris**". Nyatanya **15 tabel** (semuanya ber-RLS) dan **7 baris** packages. Pemilik yang
+menghitung 15 lalu menyangka migrasi gagal akan menerapkannya ulang tanpa perlu. Dan
+`/api/health` tak bisa dipakai sebagai bukti migrasi masuk: probe-nya sengaja tak
+bergantung skema, jadi project yang terjangkau tapi KOSONG tetap menjawab `db: up`.
+
+### Yang ternyata SUDAH tertangani — sama berharganya untuk dicatat
+
+- Tabel **kosong** aman: `/harga` dan `/tema` punya empty state eksplisit. Yang
+  mematikan adalah tabel yang **belum ada** — PostgREST galat → pra-render `throw` →
+  `pnpm build` berhenti. Jadi "migrasi dulu, baru build" adalah syarat agar image bisa
+  lahir, bukan preferensi urutan.
+- Tema (10) dan paket undangan ter-seed migrasi dan cocok 1:1 dengan `themeRegistry`:
+  butir Fase 4 "paket & harga" + "tema aktif" adalah penyesuaian, bukan prasyarat.
+  Yang benar-benar kosong di project prod baru hanya `songs` dan `profiles.role=admin`.
+- Font tidak butuh jaringan saat build (#64 terbukti bertahan), CSS tema digenerate
+  saat build, CSP tak akan memblokir host CDN, middleware tak menyentuh halaman tamu,
+  dan aktivasi pembayaran menyegarkan ISR di SEMUA jalur (bukan hanya webhook).
+- `cron_runs` "RLS tanpa policy" di advisor Supabase adalah **INFO yang benar by
+  design** — `revoke all from anon, authenticated` + grant hanya `service_role`.
+  Menambahkan policy justru melonggarkannya.
+
+**Keputusan:** `DEPLOYMENT.md` dikoreksi di tempatnya dengan penanda revisi (bukan
+ditulis ulang — pemilik mungkin sudah membaca versi lama dan perlu melihat APA yang
+berubah), `LAUNCH-CHECKLIST.md` ditambah 23 butir beserta sebab-kerusakannya, dan
+`JADWAL_JAM` disamakan dengan route-nya. `AUTH-SETUP.md` tidak disentuh — ia akurat.
+
+**Konsekuensi:** `MOMEN_SESSION_SECRET` dan penanda 🏗️ build-arg kini ada di tabel
+lampiran, yaitu tabel yang benar-benar disalin pemilik saat mengisi Environment
+Easypanel. Keduanya sebelumnya hanya ada di `.env.example`.
+
+---
+
 ---
 
 ## Template entri baru

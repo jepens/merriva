@@ -60,9 +60,20 @@ describe("hitungHealth", () => {
   });
 
   it("ambang per-job mengikuti jadwalnya masing-masing", () => {
-    // 3 jam: basi untuk job per-jam, sehat untuk job harian.
+    // 3 jam: basi untuk job per-jam, sehat untuk job ber-kadens 12/24 jam.
     expect(hitungHealth(baris(3), "expire-orders", NOW)).toBe("basi");
     expect(hitungHealth(baris(3), "expiry-reminders", NOW)).toBe("ok");
+  });
+
+  it("expiry-reminders dijadwalkan 12 jam — SAMA alasannya dgn purge-expired", () => {
+    // Angka ini pernah 24 di sini sementara docstring route-nya menuntut ≤12
+    // jam, dan LAUNCH-CHECKLIST menulis "harian": pemilik yang mengikuti
+    // checklist memasang kadens yang kode sendiri sebut berisiko pengingat
+    // ganda. "Tandai hanya saat terkirim" bersifat at-least-once, dan satu-
+    // satunya penjaga kirim-ganda adalah `idempotencyKey` Resend yang hanya
+    // berlaku 24 jam.
+    expect(hitungHealth(baris(20), "expiry-reminders", NOW)).toBe("ok");
+    expect(hitungHealth(baris(25), "expiry-reminders", NOW)).toBe("basi");
   });
 
   it("purge-expired dijadwalkan 12 jam, bukan 24 — ia juga mengirim email", () => {
