@@ -176,7 +176,8 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 - [ ] Kebijakan **privasi & refund** tayang (`/privasi`, `/refund` sudah ada — review isi & data kontak)
 - [ ] Pastikan **cron `purge-expired`** (Fase 3) terjadwal & jalan — menghapus permanen data tamu/RSVP/media/gift_notes **6 bulan pasca-expired** (UU PDP 27/2022); baris undangan tinggal kerangka statistik, `orders` (retensi keuangan) dipertahankan. Verify di staging: undangan `expired` dengan `active_until` > 6 bln lalu → panggil cron → data pribadi terhapus, `purged_at` terisi. Klien juga bisa "hapus undangan" non-aktif kapan saja dari dashboard.
 
-- [ ] **Unduhan ZIP foto galeri** (backlog, DECISIONS #66): `/syarat` kini menyatakan terus terang bahwa Merriva belum menyediakannya dan foto galeri adalah berkas yang pemilik unggah sendiri. Begitu ZIP galeri ada, kembalikan kalimatnya agar janji & produk kembali sejajar.
+- [x] **Unduhan ZIP foto galeri** — DIBANGUN 2026-10-13 (DECISIONS #70). Tombolnya di `/dashboard/undangan/{id}/tamu`, yaitu halaman yang DIRUJUK email peringatan pra-purge — sebelum ini tautan email itu mendarat di halaman tanpa unduhan foto. Kalimat `/syarat` dikembalikan menyebut galeri, **dengan batas yang tetap benar**: yang bisa diberikan adalah varian 1600 px, karena foto dikompres di browser dan berkas kamera asli tak pernah sampai ke server (SPEC §4.4).
+  - Sekalian diperbaiki: ZIP Album Momen dulu menolak album `archived` padahal halamannya menawarkan tombol unduh — refund add-on mengarsipkan album, jadi pemilik melihat tombol lalu mendapat 404.
 
 ## Fase 9 — Go-live
 

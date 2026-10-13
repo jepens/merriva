@@ -335,6 +335,19 @@ export const copy = {
       back: "Kembali ke undangan",
       count: "tamu",
       limitOf: "dari",
+      // Kartu "unduh data undangan" (DECISIONS #70). Ditaruh di halaman TAMU
+      // karena ke sinilah email peringatan pra-purge mengarahkan pemilik —
+      // sebelum ini tautannya mendarat di halaman yang tak punya unduhan foto.
+      dataTitle: "Unduh data undangan",
+      dataBody:
+        "Simpan salinan sebelum masa retensi berakhir. Daftar tamu beserta RSVP diunduh dari tabel di atas; foto galeri sebagai satu berkas ZIP.",
+      dataFotoCta: (n: number) => `Unduh ${n} foto galeri (ZIP)`,
+      // Jujur, dan harus tetap begini: foto dikompres di browser menjadi dua
+      // varian WebP sebelum diunggah (SPEC §4.4) — server tidak pernah menerima
+      // berkas kamera aslinya, jadi kami tak bisa mengembalikannya.
+      dataFotoHint:
+        "Yang diunduh adalah versi 1600 piksel yang tampil di undangan — bukan berkas asli dari kamera Anda, karena foto dikompres di perangkat Anda sebelum diunggah dan aslinya tak pernah sampai ke kami. Simpan aslinya sendiri.",
+      dataFotoKosong: "Belum ada foto galeri yang diunggah.",
       unlimited: "tanpa batas",
       limitReached:
         // "Tingkatkan paket" dulu adalah instruksi tanpa tombol: tak ada satu
@@ -1334,8 +1347,13 @@ export const copy = {
       // lebih realistis daripada memutuskan membeli.
       ctaPerpanjang: "Perpanjang undangan",
       ctaUnduh: "Unduh data saya",
+      // Diperbarui setelah ZIP galeri ada (DECISIONS #70). Kalimat lamanya
+      // menyuruh pemilik "simpan aslinya" karena memang tak ada unduhan galeri;
+      // sekarang ada, tetapi yang bisa kami berikan tetap versi 1600 px — berkas
+      // kamera aslinya tak pernah sampai ke kami. Keduanya harus disebut, kalau
+      // tidak kalimat ini berubah dari kurang-berguna menjadi menyesatkan.
       unduhHint:
-        "Dari dashboard Anda dapat mengunduh daftar tamu beserta RSVP, catatan amplop, dan foto Album Momen. Foto galeri adalah berkas yang Anda unggah sendiri — simpan aslinya.",
+        "Dari dashboard Anda dapat mengunduh daftar tamu beserta RSVP, catatan amplop, foto Album Momen, dan foto galeri sebagai berkas ZIP. Foto galeri yang kami simpan adalah versi 1600 piksel yang tampil di undangan — berkas asli dari kamera Anda tak pernah diunggah, jadi simpan aslinya sendiri.",
       outroPertama:
         "Kami akan mengingatkan sekali lagi menjelang tenggat. Bila Anda tak memerlukan datanya lagi, Anda tak perlu melakukan apa pun.",
       outroFinal:
@@ -2151,12 +2169,17 @@ export const copy = {
             body: [
               "Masa aktif dihitung sejak pembayaran dikonfirmasi, dengan durasi sesuai paket yang Anda beli.",
               "Setelah masa aktif berakhir, halaman undangan berhenti tayang untuk tamu dan statusnya menjadi kedaluwarsa. Isi undangan tetap tersimpan dan dapat Anda aktifkan kembali dengan memperpanjang.",
-              // Kalimat ini sebelumnya menyuruh "unduh yang Anda perlukan" untuk SEMUA
-              // butir termasuk foto galeri — padahal tak ada tombol unduh galeri di
-              // produk ini. Menyuruh pelanggan melakukan sesuatu yang mustahil, untuk
-              // data yang lalu kami hapus, memperburuk posisi kami dan bukan
-              // memperbaikinya. Kini hanya menyebut yang BENAR-BENAR bisa diunduh.
-              "Enam bulan setelah masa aktif berakhir, data pribadi pada undangan tersebut — daftar tamu, RSVP, ucapan, catatan amplop, foto galeri, dan foto Album Momen — dihapus permanen dan tidak dapat dipulihkan. Sebelum tenggat itu Anda dapat mengunduh daftar tamu beserta RSVP, catatan amplop, dan foto Album Momen dari dashboard. Foto galeri adalah foto yang Anda unggah sendiri — simpan berkas aslinya, karena Merriva belum menyediakan unduhan untuk foto galeri.",
+              // Riwayat kalimat ini layak disimpan karena ia dua kali hampir menjadi
+              // janji yang tak ditepati. Versi pertama menyuruh "unduh yang Anda
+              // perlukan" untuk SEMUA butir termasuk foto galeri — padahal tak ada
+              // tombol unduh galeri. #66 membuatnya jujur dengan mengakui ketiadaan
+              // itu. #70 akhirnya membangun unduhannya, jadi kalimatnya kembali
+              // menyebut galeri — TETAPI dengan batas yang tetap benar: yang kami
+              // simpan hanya varian 1600 px, karena foto dikompres di browser dan
+              // berkas kamera aslinya tak pernah sampai ke server (SPEC §4.4).
+              // Menyebut "foto galeri bisa diunduh" tanpa batas itu akan menjadi
+              // janji ketiga yang salah.
+              "Enam bulan setelah masa aktif berakhir, data pribadi pada undangan tersebut — daftar tamu, RSVP, ucapan, catatan amplop, foto galeri, dan foto Album Momen — dihapus permanen dan tidak dapat dipulihkan. Sebelum tenggat itu Anda dapat mengunduh seluruhnya dari dashboard: daftar tamu beserta RSVP, catatan amplop, foto Album Momen, dan foto galeri sebagai berkas ZIP. Khusus foto galeri, yang kami simpan dan berikan adalah versi 1600 piksel yang tampil di undangan — foto dikompres di perangkat Anda sebelum diunggah sehingga berkas asli dari kamera tidak pernah kami terima; simpan aslinya sendiri.",
             ],
           },
           {

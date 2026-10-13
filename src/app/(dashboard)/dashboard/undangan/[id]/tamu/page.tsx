@@ -33,16 +33,26 @@ export default async function GuestsPage({
 
   const t = copy.dashboard.guests;
 
-  const [{ data: guestRows }, limits] = await Promise.all([
-    supabase
-      .from("guests")
-      .select(
-        "id, name, phone, group_label, pax_allocated, notes, token, wa_clicked_at, first_viewed_at",
-      )
-      .eq("invitation_id", inv.id)
-      .order("created_at", { ascending: false }),
-    getEffectiveLimits(supabase, inv.package_id),
-  ]);
+  const [{ data: guestRows }, limits, { count: fotoCount }] = await Promise.all(
+    [
+      supabase
+        .from("guests")
+        .select(
+          "id, name, phone, group_label, pax_allocated, notes, token, wa_clicked_at, first_viewed_at",
+        )
+        .eq("invitation_id", inv.id)
+        .order("created_at", { ascending: false }),
+      getEffectiveLimits(supabase, inv.package_id),
+      // Hanya JUMLAHNYA (head) — barisnya tak dipakai di halaman ini, dan route
+      // ZIP membacanya sendiri. RLS `media_select` membatasi ke pemilik.
+      supabase
+        .from("media")
+        .select("id", { count: "exact", head: true })
+        .eq("invitation_id", inv.id)
+        .eq("type", "photo"),
+    ],
+  );
+  const foto = fotoCount ?? 0;
 
   const guests: GuestView[] = (guestRows ?? []).map((g) => ({
     id: g.id,
@@ -85,6 +95,35 @@ export default async function GuestsPage({
         initial={guests}
         maxGuests={limits.maxGuests}
       />
+
+      {/*
+        Kartu unduhan data. Ditaruh DI SINI karena email peringatan pra-purge
+        H-30/H-7 mengarahkan pemilik ke halaman ini (`sendPurgeWarning` →
+        `/dashboard/undangan/{id}/tamu`) — sebelum ada kartu ini, tautan itu
+        mendarat di halaman yang tak punya unduhan foto sama sekali.
+        Tautan biasa, bukan `Link`: ini unduhan berkas, bukan navigasi.
+      */}
+      <div className="rounded-lg border p-4">
+        <h2 className="text-sm font-medium">{t.dataTitle}</h2>
+        <p className="text-muted-foreground mt-1 text-sm">{t.dataBody}</p>
+        {foto > 0 ? (
+          <>
+            <a
+              href={`/dashboard/undangan/${inv.id}/galeri/zip`}
+              className={`${buttonVariants({ variant: "outline", size: "sm" })} mt-3`}
+            >
+              {t.dataFotoCta(foto)}
+            </a>
+            <p className="text-muted-foreground mt-2 text-xs">
+              {t.dataFotoHint}
+            </p>
+          </>
+        ) : (
+          <p className="text-muted-foreground mt-3 text-sm">
+            {t.dataFotoKosong}
+          </p>
+        )}
+      </div>
 
       <Link
         href="/dashboard"

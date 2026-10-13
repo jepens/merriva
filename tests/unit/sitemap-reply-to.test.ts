@@ -15,7 +15,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 const { send } = vi.hoisted(() => ({
-  send: vi.fn(async () => ({ data: { id: "em_1" }, error: null })),
+  // Parameter dituliskan walau tak dipakai: tanpa itu `mock.calls[0][0]` di bawah
+  // bertipe tuple KOSONG dan `tsc` menolaknya — kelas galat yang sama pernah
+  // terjadi pada mock `notifyOrderPaid`.
+  send: vi.fn(
+    async (
+      _payload: { from: string; replyTo?: string | string[] },
+      _opts?: { idempotencyKey?: string },
+    ) => ({ data: { id: "em_1" }, error: null }),
+  ),
 }));
 vi.mock("resend", () => ({
   Resend: class {

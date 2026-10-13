@@ -2476,6 +2476,85 @@ Easypanel. Keduanya sebelumnya hanya ada di `.env.example`.
 
 ---
 
+## #70 — 2026-10-13 · Unduhan ZIP foto galeri, dan satu tombol yang selama ini 404
+
+Backlog #66 ditutup. `/syarat` dan email peringatan pra-purge H-30/H-7 menyuruh pemilik
+mengunduh datanya sebelum retensi menghapusnya, sementara foto galeri adalah satu-satunya
+data yang **tak punya jalan unduh**: daftar tamu punya ekspor `.xlsx`, Album Momen punya
+ZIP, galeri tidak. #66 membuat teksnya jujur mengakui itu; entri ini membangun unduhannya.
+
+### Dibangun dari preseden, bukan dari nol
+
+Route ZIP Album Momen sudah memecahkan bagian yang sulit: `client-zip` dengan generator
+async yang menarik satu foto pada satu waktu, STORE tanpa kompres ulang (WebP sudah
+terkompres), sehingga memori VPS tetap ~1 foto untuk album berapa pun. Route galeri
+mengikuti bentuk yang sama. Dua perbedaan yang disengaja:
+
+- **Klien RLS, bukan `service_role`.** Policy `media_select` sudah membatasi ke
+  `owns_invitation`, jadi kepemilikan ditegakkan dua kali — cek eksplisit di route plus
+  lantai RLS — dan route ini tak memerlukan kunci yang mem-bypass RLS sama sekali. Route
+  Momen butuh admin karena `momen_albums`; route galeri tidak, jadi tak diberi.
+- **`purged_at` → 410 Gone, bukan 404.** Barisnya ada, isinya yang sudah tidak ada.
+  Bedanya penting bagi pemilik yang bertanya kenapa unduhannya gagal; 404 akan terbaca
+  "salah alamat".
+
+Keduanya SENGAJA tidak memeriksa `invitations.status`: undangan `expired` justru pelanggan
+yang paling membutuhkan route ini, karena itulah keadaan yang menuju purge.
+
+### Cacat yang ditemukan sambil membangun: tombol Momen yang 404
+
+Route ZIP Momen menolak apa pun selain `momen_albums.status = 'active'`. Tetapi halaman
+`/dashboard/undangan/[id]/momen` menawarkan tombol "Unduh semua foto (ZIP)" begitu
+`photo_count > 0`, **tanpa** memeriksa status album. Refund add-on mengarsipkan album
+(`admin_refund_order` → `refunded_album_archived`), jadi kombinasi "add-on direfund +
+undangan tidak aktif" membuat pemilik melihat tombol yang dijanjikan `archivedBody` —
+*"foto yang sudah terkumpul masih bisa Anda unduh. Foto ini hanya ada di sini: tamu Anda
+yang memotretnya"* — lalu mendapat 404.
+
+Arah perbaikannya ditentukan oleh teks yang **sudah dibaca pelanggan**, bukan oleh selera:
+`archived` adalah keadaan PENAGIHAN, bukan pernyataan bahwa datanya tak ada lagi. Yang
+benar-benar menghapus data adalah purge, dan itu kini dijaga `purged_at` di kedua route.
+
+### Batas yang tak bisa dihilangkan, dan karena itu harus dikatakan
+
+ZIP-nya berisi **varian 1600 px, bukan berkas asli pemilik**. Foto dikompres di browser
+menjadi dua varian WebP sebelum diunggah (SPEC §4.4) — server tidak pernah menerima,
+apalagi menyimpan, berkas kamera aslinya. Tak ada arsitektur di repo ini yang bisa
+mengembalikannya.
+
+Kalimat `/syarat` karena itu kini menyebut galeri **beserta batas itu**. Riwayatnya
+disimpan di komentar kode karena ia dua kali hampir menjadi janji yang tak ditepati:
+versi pertama menyuruh "unduh yang Anda perlukan" untuk semua butir termasuk galeri yang
+tak bisa diunduh; #66 mengakui ketiadaannya; #70 membangunnya. Menyebut "foto galeri bisa
+diunduh" tanpa menyebut 1600 px akan menjadi janji ketiga yang salah.
+
+`copy.email.purgeWarning.unduhHint` diperbarui dengan batas yang sama — tanpa itu
+kalimatnya berubah dari kurang-berguna menjadi menyesatkan.
+
+### Tombolnya ditaruh di halaman TAMU, dan itu bukan sembarang pilihan
+
+`sendPurgeWarning` mengarahkan pemilik ke `/dashboard/undangan/{id}/tamu`. Sebelum ini
+tautan email itu mendarat di halaman yang **tak punya unduhan foto sama sekali** — jadi
+email yang berbunyi "unduh data Anda" mengirim orang ke tempat yang tak bisa
+melakukannya. Kartu unduhan di halaman itu yang menutup lingkaran tersebut.
+
+### Verifikasi
+
+14 test, dan **7 mutan 7 mati** — termasuk "galeri mengunduh thumbnail 400 px" (memberi
+pemilik berkas yang tak berguna untuk apa pun), "penjaga `purged_at` dibuang", "foto gagal
+TIDAK dilewati" (satu foto rusak menggagalkan seluruh unduhan menjelang purge), dan
+"album terarsip ditolak lagi" — mutan terakhir itu adalah regresi cacat yang baru
+diperbaiki, jadi testnya memang menahannya.
+
+**Catatan proses:** commit sebelumnya (`4d2b013`) mendarat dengan CI **merah** karena
+`pnpm typecheck` dijalankan SEBELUM berkas test terakhir ditulis dan tidak diulang —
+`lint` dan `test` hijau menutupi tipe mock yang salah. Gerbang `production` menahannya
+(branch itu tetap di commit hijau sebelumnya), dan itu pertama kalinya gerbang #64
+benar-benar menghentikan sesuatu. Ketiga pemeriksaan dijalankan ulang bersamaan di entri
+ini.
+
+---
+
 ---
 
 ## Template entri baru
