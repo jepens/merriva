@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { MerrivaLogo } from "@/components/brand/merriva-logo";
 import { copy } from "@/lib/copy";
 
 /**
@@ -17,8 +18,7 @@ export function SiteFooter() {
         <div className="mrv-footer__grid">
           <div>
             <Link href="/" className="mrv-brand" aria-label={copy.brand.name}>
-              {copy.brand.name}
-              <span className="mrv-brand__dot" aria-hidden="true" />
+              <MerrivaLogo />
             </Link>
             <p
               className="mrv-lead"

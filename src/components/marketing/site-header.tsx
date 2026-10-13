@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Menu } from "lucide-react";
 
+import { MerrivaLogo } from "@/components/brand/merriva-logo";
 import { copy } from "@/lib/copy";
 
 const NAV = [
@@ -19,8 +20,7 @@ export function SiteHeader() {
     <header className="mrv-header">
       <div className="mrv-container mrv-header__inner">
         <Link href="/" className="mrv-brand" aria-label={copy.brand.name}>
-          {copy.brand.name}
-          <span className="mrv-brand__dot" aria-hidden="true" />
+          <MerrivaLogo />
         </Link>
 
         <nav className="mrv-nav" aria-label={m.menu}>

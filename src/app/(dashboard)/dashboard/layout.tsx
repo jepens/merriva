@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { MerrivaLogo } from "@/components/brand/merriva-logo";
 import { SupportContact } from "@/components/support-contact";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
@@ -18,8 +19,12 @@ export default async function DashboardLayout({
     <div className="bg-muted/20 min-h-dvh">
       <header className="bg-background border-b">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <Link href="/dashboard" className="font-semibold tracking-tight">
-            {copy.brand.name}
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center"
+            aria-label={copy.brand.name}
+          >
+            <MerrivaLogo height={26} />
           </Link>
           {/* `flex-wrap`: brand + 3 tautan + Keluar meluber di lebar 360px,
               ukuran layar mayoritas pengguna produk ini. */}

@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { MerrivaLogo } from "@/components/brand/merriva-logo";
 import { ThemeMockup } from "@/components/theme-mockup";
 import { copy } from "@/lib/copy";
 import { mrvFontVars } from "@/lib/mrv-fonts";
@@ -24,8 +25,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     <div className={`mrv ${mrvFontVars} mrv-auth`}>
       <aside className="mrv-auth__panel mrv-band-dark">
         <Link href="/" className="mrv-brand" aria-label={copy.brand.name}>
-          {copy.brand.name}
-          <span className="mrv-brand__dot" aria-hidden="true" />
+          <MerrivaLogo />
         </Link>
 
         <div className="mrv-auth__lead">
@@ -62,8 +62,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             className="mrv-brand mrv-auth__brand-mobile"
             aria-label={copy.brand.name}
           >
-            {copy.brand.name}
-            <span className="mrv-brand__dot" aria-hidden="true" />
+            <MerrivaLogo />
           </Link>
           <Link href="/" className="mrv-auth__back">
             <ArrowLeft size={15} aria-hidden="true" />

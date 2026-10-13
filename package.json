@@ -14,6 +14,7 @@
     "format": "prettier --write .",
     "demo:photos": "node scripts/fetch-demo-photos.mjs",
     "thumbs": "node scripts/capture-theme-thumbs.mjs",
+    "brand:assets": "node scripts/build-brand-assets.mjs",
     "migrate:media": "node scripts/migrate-media-to-r2.mjs",
     "loadtest": "k6 run scripts/k6/invitation-load.js",
     "typecheck": "node scripts/build-theme-css.mjs && tsc --noEmit",

@@ -67,3 +67,7 @@ handoff/music/mp3/
 
 # Laporan gitleaks di runner CI — jangan pernah ikut ter-commit.
 results.sarif
+
+# Folder keluaran perkakas (spasi di namanya, muncul di root repo). Berkas yang
+# layak disimpan dipindahkan ke handoff/, bukan dibiarkan menumpuk di sini.
+Claude outputs/

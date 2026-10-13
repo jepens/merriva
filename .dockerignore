@@ -24,6 +24,12 @@ supabase
 docs
 *.md
 
+# arsip & deliverable (master audio, konsep merek) — tak pernah dipakai saat
+# build maupun runtime; stage `runner` hanya menyalin .next + public. Tanpa baris
+# ini, `docker build` lokal mengirim ±90 MB konteks yang langsung dibuang.
+handoff
+prototypes
+
 # env & secret — JANGAN pernah masuk image
 .env
 .env.*

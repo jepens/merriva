@@ -39,6 +39,7 @@ pnpm test                 # unit test (Vitest)
 pnpm env:check            # periksa .env.local  — sebut yang kosong + akibatnya
 pnpm env:check --prod     # periksa .env.production.local (nilai utk Easypanel)
 pnpm test:e2e             # Playwright (butuh env staging)
+pnpm brand:assets         # regenerasi favicon/ikon/OG/banner dari master SVG public/brand/ (Chromium Playwright)
 pnpm test:db              # pgTAP supabase/tests/ (butuh stack lokal `supabase start`; job `db` terpisah di CI)
 supabase migration new <nama>   # migrasi baru (folder supabase/migrations)
 supabase db push          # terapkan migrasi ke project cloud yang ter-link

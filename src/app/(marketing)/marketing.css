@@ -194,22 +194,26 @@
   height: 4rem;
   gap: 1rem;
 }
+/* Brand = <MerrivaLogo/> (SVG inline, public/brand/README.md). Wordmark ikut
+   `color`; tile/goresan/titik lewat token --mrv-logo-* agar satu komponen benar
+   di latar terang maupun band gelap. */
 .mrv-brand {
-  font-family: var(--mrv-display), Georgia, serif;
-  font-weight: 700;
-  font-size: 1.32rem;
-  letter-spacing: -0.02em;
-  color: var(--mrv-ink);
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  color: var(--mrv-ink);
+  --mrv-logo-tile: var(--mrv-ink);
+  --mrv-logo-stroke: var(--mrv-dark-ink);
+  --mrv-logo-dot: var(--mrv-accent);
 }
-.mrv-brand__dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 999px;
-  background-color: var(--mrv-accent);
-  margin-bottom: 0.55rem;
+.mrv-brand svg {
+  display: block;
+  height: 1.75rem;
+  width: auto;
+}
+.mrv-band-dark .mrv-brand {
+  color: var(--mrv-dark-ink);
+  --mrv-logo-tile: var(--mrv-dark-ink);
+  --mrv-logo-stroke: var(--mrv-dark);
 }
 .mrv-nav {
   display: none;
@@ -1165,9 +1169,8 @@ a.mrv-theme-card:hover .mrv-theme-card__demo {
   position: relative;
   z-index: 1;
 }
-.mrv-auth__panel .mrv-brand {
-  color: var(--mrv-dark-ink);
-  font-size: 1.5rem;
+.mrv-auth__panel .mrv-brand svg {
+  height: 2rem;
 }
 .mrv-auth__lead {
   max-width: 30rem;

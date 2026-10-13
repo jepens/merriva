@@ -70,6 +70,9 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  /* <MerrivaLogo/> (src/components/brand): tile dibalik krem di mode gelap. */
+  --mrv-logo-tile: #efe7da;
+  --mrv-logo-stroke: #211a27;
 }
 
 @theme inline {

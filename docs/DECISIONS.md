@@ -2884,6 +2884,79 @@ membaca `stats` lewat SQL. Tak ada lagi angka cron yang hanya hidup di DB.
 
 ---
 
+## #75 — 2026-10-13 · Identitas visual: mark "Gerbang", satu sumber logo, ikon tetap di luar `/[slug]`
+
+**Keputusan:** Logo Merriva ditetapkan: **mark "Gerbang"** — dua lengkungan (huruf `m`
+kecil) sebagai gerbang/pelaminan acara dengan **titik marigold** yang terbit di antaranya —
+plus **wordmark** `merriva` (Bricolage Grotesque 700, opsz 64, huruf kecil, tittle `i`
+marigold). Palet tetap token `.mrv` yang sudah ada (plum `#241f2b`, krem `#efe7da`,
+kertas `#fbf9f6`, marigold `#c68a3c`). Master SVG hidup di `public/brand/` (README di sana =
+aturan pakai); semua turunan — favicon/ICO, ikon PWA + `site.webmanifest`, `apple-icon`,
+OG, `og-default.png`, banner hero, kit sosial, PNG email — di-generate `pnpm brand:assets`
+(Chromium Playwright). Di kode, brand dirender `<MerrivaLogo/>` (SVG inline, huruf
+di-outline, warna via `currentColor` + token `--mrv-logo-*`) di header/footer marketing,
+panel auth, dan dashboard. OG marketing beralih dari `opengraph-image.tsx` (font bawaan
+`next/og`) ke `opengraph-image.png` statis berfont merek.
+
+**Alasan:** PRD §"terbuka" sejak awal mencantumkan identitas visual sebagai pekerjaan
+rumah; ikon lama adalah monogram M darurat gelombang audit, OG memakai sans-serif generik,
+email masih memakai rose dari iterasi merek sebelumnya. Lengkungan dipilih (dibanding M
+amplop/segel dan penyempurnaan monogram) oleh pemilik dari tiga konsep karena paling
+bercerita untuk pernikahan DAN tetap netral untuk korporat/keluarga. Huruf di-outline agar
+logo tidak bergantung font termuat (WebView WhatsApp sering memakai fallback) dan identik di
+SVG, PNG, email, dan komponen. Varian favicon bergoresan lebih tebal ditambahkan karena di
+16 px titik dan tiang tengah menyatu pada gambar master.
+
+**Ditolak:** `favicon.ico` di `public/` root dan ikon di `src/app/` root — keduanya
+diwarisi/diminta otomatis oleh halaman undangan tamu, padahal "tanpa watermark Merriva"
+dijual di Premium; ikon tetap per route group (5 salinan kecil, disengaja). Rasterisasi
+dengan `sharp` di skrip — build-script-nya dimatikan di `pnpm-workspace.yaml` dan ia bukan
+dependency langsung; Chromium Playwright sudah ada dan merender SVG persis seperti peramban.
+Menyisipkan logo gambar ke templat email — templat itu murni (tanpa `appUrl`); PNG email
+disediakan di `public/brand/png/`, pemasangannya keputusan terpisah bersama penyelarasan
+warna email (masih rose `#b8446a`).
+
+**Konsekuensi:** `copy.brand.name` tetap sumber nama (aria-label tautan brand); teks
+"Merriva" di header tidak lagi berupa teks DOM — smoke test E2E yang mencari heading
+"Merriva" karenanya gagal, dan tak ada yang tahu karena **E2E belum dijalankan di CI
+sama sekali**; test itu diganti menjadi dua: judul hero (dari `copy`) dan nama aksesibel
+tautan brand. Manifest memakai `display: "browser"` (hanya ikon + warna tema, tanpa prompt
+instal PWA) — naikkan ke `standalone` bila dashboard kelak sengaja dijadikan PWA. Badge
+"Dibuat dengan merriva" tersedia sebagai SVG; pemakaiannya di tema menunggu keputusan
+kontrak props tema.
+
+### Yang diperbaiki saat aset diperiksa ulang
+
+Tiga hal lolos pada gelombang pertama, dan ketiganya **senyap** — tak ada yang gagal
+mem-build:
+
+1. **Metadata C2PA ikut tersaji.** Tiap master membawa manifest content-credentials
+   (±8,5 KB base64 di SVG, chunk `caBX` 5,7 KB di PNG) dan skrip meneruskannya ke
+   turunan: `icon.svg` yang diminta setiap pengunjung berisi 95% metadata (8.955 B untuk
+   gambar ±400 B), dan `favicon-16x16.png` 93% metadata (6.197 B → **385 B** setelah
+   dibuang). Skrip kini memanggil `stripMeta()` sebelum merender; **master dibiarkan
+   utuh** — provenans berkas arsip itu sah, yang tidak sah adalah menyajikannya ke
+   peramban. Efek sampingnya `og-default.png` justru ikut mengecil.
+2. **Salinan logo di `handoff/brand/`.** Dua PNG di sana dirender dari ikon monogram "M"
+   darurat sebelum logo resmi ada, dan tidak ikut berganti — nyaris terunggah ke layar
+   consent Google sebagai logo resmi. Dihapus; `handoff/brand/` kini arsip konsep saja,
+   dan kebutuhan pihak ketiga diarahkan ke aset yang di-generate. Pelajaran yang
+   dijadikan test: **tiap salinan logo di luar satu sumber kebenaran akan membusuk.**
+3. **`theme_color` manifest (plum) ≠ `viewport.themeColor` (kertas).** Mewarnai permukaan
+   yang sama lewat dua jalur; disamakan ke kertas, mengikuti header.
+
+**Ditambahkan:** `tests/unit/brand-assets.test.tsx` menjaga yang tak terlihat — batas
+paket Premium (**tak ada ikon di `src/app/` root, `[slug]`, maupun `/public/favicon.ico`
+dan `/public/apple-touch-icon.png`**, dua berkas terakhir karena peramban memintanya dari
+ROOT domain untuk halaman tanpa `<link rel=icon>`), daftar route group di test sama persis
+dengan yang ditulis skrip, ikon manifest ada dan seukuran klaimnya, turunan bebas chunk
+metadata, dan **geometri `<MerrivaLogo/>` (path, tebal goresan, titik, radius, warna
+cadangan token) identik dengan `public/brand/merriva-mark.svg`**. `handoff` dan
+`prototypes` ditambahkan ke `.dockerignore`: ±90 MB konteks build yang stage `runner`
+memang tak pernah salin.
+
+---
+
 ## Template entri baru
 
 ```

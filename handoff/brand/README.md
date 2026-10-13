@@ -1,40 +1,26 @@
-# handoff/brand — logo raster Merriva
+# handoff/brand — arsip konsep merek
 
-Dirender dari **`src/app/(marketing)/icon.svg`**, yang tetap menjadi sumber
-kebenaran. Berkas di sini hanya turunan untuk tempat-tempat yang **tidak
-menerima SVG**.
+Folder ini **bukan** sumber aset. Sumber kebenaran logo Merriva ada di
+[`public/brand/`](../../public/brand/README.md); di sinilah bahan mentah dan
+dokumen penyerahan disimpan supaya tidak hilang, bukan supaya dipakai.
 
-| Berkas | Dipakai di |
-|---|---|
-| `merriva-logo-120.png` | **Google OAuth consent screen** (minimal 120×120, PNG/JPG, harus kotak) |
-| `merriva-logo-512.png` | cadangan untuk Search Console, profil pihak ketiga, dsb. |
+| Berkas                            | Isi                                                        |
+| --------------------------------- | ---------------------------------------------------------- |
+| `konsep/merriva-logo-konsep.png`   | Tiga konsep mark yang diajukan; "Gerbang" yang dipilih pemilik (DECISIONS #75) |
+| `konsep/merriva-brand-overview.png`| Lembar ikhtisar identitas: mark, wordmark, palet, penerapan  |
 
-Warnanya mengikuti mark yang sudah ada: kertas `#fbf9f6`, tinta `#241f2b`,
-aksen emas `#9a6a22` — sama dengan `(marketing)/opengraph-image.tsx`, supaya
-tab, pratinjau tautan, halaman marketing, dan layar login Google bercerita sama.
+## Logo untuk layanan pihak ketiga
 
-## Merender ulang
+Jangan merender ulang logo untuk keperluan satu kali — itu persis yang membuat
+berkas di folder ini pernah **basi tanpa ketahuan**: dua PNG di sini dibuat dari
+ikon monogram "M" darurat, lalu logo resminya berganti dan PNG-nya tidak.
+Keduanya sudah dihapus. Ambil dari aset yang di-generate `pnpm brand:assets`:
 
-Bila `icon.svg` berubah, render ulang keduanya. `sharp` sudah ada sebagai
-dependensi transitif Next, jadi tak perlu memasang apa pun:
+| Keperluan                            | Pakai berkas ini                        |
+| ------------------------------------ | --------------------------------------- |
+| **Google OAuth consent screen**      | `public/icons/apple-touch-icon.png` — 180×180, persegi, **tanpa transparansi** (Google menampilkannya di latar terang maupun gelap; minimal 120×120) |
+| Avatar / foto profil media sosial    | `public/brand/social/profile-1080.png`  |
+| Favicon untuk formulir vendor (.ico) | `public/icons/favicon.ico`              |
+| Logo di dokumen & lampiran           | `public/brand/png/merriva-logo-1200.png` |
 
-```bash
-node --input-type=module -e "
-import { readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
-const p = 'node_modules/.pnpm/sharp@0.34.5/node_modules/sharp/lib/index.js';
-const { default: sharp } = await import(pathToFileURL(p).href);
-const svg = readFileSync('src/app/(marketing)/icon.svg');
-for (const size of [120, 512]) {
-  await sharp(svg, { density: 384 })
-    .resize(size, size, { fit: 'contain', background: '#fbf9f6' })
-    .png()
-    .toFile('handoff/brand/merriva-logo-' + size + '.png');
-}
-"
-```
-
-`density: 384` penting: tanpa itu `sharp` meraster SVG pada 72 dpi lalu
-memperbesarnya, dan hasilnya buram pada 512 px. `background` diisi karena logo
-ini **tidak transparan** — Google menampilkannya di atas latar gelap maupun
-terang, dan monogram tinta di atas transparan akan hilang di tema gelap.
+Daftar lengkap beserta aturan pakainya: [`public/brand/README.md`](../../public/brand/README.md).
