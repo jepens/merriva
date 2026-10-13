@@ -2,6 +2,8 @@ import "server-only";
 
 import { Resend } from "resend";
 
+import { copy } from "@/lib/copy";
+
 export interface SendEmailParams {
   to: string;
   subject: string;
@@ -35,6 +37,26 @@ export type SendEmailResult =
 const DEFAULT_FROM = "Merriva <noreply@merriva.id>";
 
 /**
+ * Alamat balasan — SELALU dipasang (AUDIT-2026-10-12, DECISIONS #69).
+ *
+ * `EMAIL_FROM` default-nya `noreply@`, dan tanpa `replyTo` setiap balasan
+ * pelanggan atas kuitansi, pengingat masa aktif, notis kedaluwarsa, peringatan
+ * pra-purge, dan pemberitahuan penangguhan **tidak menuju ke mana pun**. Untuk
+ * email pra-purge yang berbunyi "data Anda akan dihapus", dan untuk email
+ * penangguhan yang menawarkan jalur banding, ketidakmampuan membalas adalah soal
+ * KEPATUHAN, bukan sekadar layanan.
+ *
+ * Satu sumber dengan alamat yang sudah dicetak di `/syarat`, `/privasi`,
+ * `/refund`, dan halaman pesanan — jadi tak ada env baru yang harus diingat
+ * pemilik, dan tak ada kemungkinan dua alamat dukungan yang berbeda.
+ *
+ * PRASYARAT OPS: alamat ini butuh record MX + mailbox yang benar-benar dibaca
+ * manusia. Verifikasi domain di Resend hanya memberi hak MENGIRIM
+ * (LAUNCH-CHECKLIST Fase 8).
+ */
+const REPLY_TO = copy.support.email;
+
+/**
  * Kirim satu email transaksional via Resend (M3.5). DEV-SAFE: tanpa
  * `RESEND_API_KEY` → no-op (`skipped`) agar dev/CI tanpa kredensial tak gagal.
  * SDK Resend mengembalikan `{data,error}` (TIDAK throw) → cek `error` eksplisit.
@@ -56,6 +78,7 @@ export async function sendTransactionalEmail(
       subject: params.subject,
       html: params.html,
       text: params.text,
+      replyTo: REPLY_TO,
     },
     { idempotencyKey: params.idempotencyKey },
   );

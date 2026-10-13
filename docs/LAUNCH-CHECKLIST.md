@@ -109,13 +109,16 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 
 ## Fase 4 — Konten & data awal (via panel admin)
 
-- [ ] **Pustaka lagu**: unggah trek **berlisensi/bebas-royalti** di `/admin/lagu` ([`MUSIC-LIBRARY.md`](MUSIC-LIBRARY.md)) — kalau kosong, musik latar undangan **senyap**.
+- [~] **Pustaka lagu**: keenam trek `handoff/music/mp3/` **sudah diunggah ke storage + terdaftar di `songs`** (2026-10-12), tetapi **`is_active = false`** — sengaja. `handoff/music/README.md` menyatakan trek-trek ini disintesis secara prosedural dan **"belum pernah didengar oleh telinga manusia"**, dan melarang menyeednya sebagai library default sebelum diaudisi.
+  - **Yang tinggal Anda lakukan:** buka `/admin/lagu`, putar keenamnya dengan speaker DAN earphone di HP, lalu aktifkan yang lolos. `/admin/lagu` memutar lagu nonaktif juga; picker pemilik dan halaman publik menolaknya sampai aktif, jadi tak ada yang sampai ke pelanggan sebelum Anda setuju.
+  - Sampai minimal satu lagu aktif, musik latar undangan tetap **senyap**. Lisensi keenamnya 100% milik Merriva ([`LICENSES.md`](../handoff/music/LICENSES.md)).
+  - Generator ada di `handoff/music/generator/make_music.py` bila ada yang perlu dirender ulang.
 - [ ] **Paket & harga** di `/admin/paket` sesuai rencana jual (berlaku langsung tanpa deploy)
 - [x] **Keputusan harga upgrade** (DECISIONS #61) — DIPUTUSKAN 2026-10-04: biarkan apa adanya. Upgrade menagih **selisih harga penuh** (Basic 99rb → Premium 199rb = 100rb) dan **tidak** membawa durasi Premium yang lebih panjang (12 bulan vs 6). Dasarnya: halaman upgrade menyatakan masa aktif tidak diperpanjang secara eksplisit beserta tanggal berakhir + sisa hari, jadi pelanggan memutuskan dengan tahu. Bila kelak jadi sumber keluhan, dua jalan keluarnya ada di #61 (samakan durasi paket, atau prorata).
 - [ ] **Tema aktif** di `/admin/tema` sesuai yang ditawarkan
 - [ ] **Akun admin**: set `profiles.role = 'admin'` untuk akun pemilik via SQL (tak ada signup admin — DATA-MODEL §1). Selanjutnya kelola peran/suspend user lewat `/admin/pengguna`.
   - ⚠️ **Kerjakan ini LEBIH DULU dari butir Fase 4 lainnya**: tanpa admin, `/admin/lagu`, `/admin/paket`, `/admin/tema`, kartu kesehatan cron, aktivasi manual, dan penandaan refund semuanya tak terjangkau — termasuk satu-satunya jalan keluar manual dari order yang macet.
-- [ ] **Nonaktifkan kelima paket add-on Album Momen sampai media pindah ke R2.** Migrasi `20260826110000` men-seed `momen_5`, `momen_50`, `momen_100`, `momen_200`, `momen_unlimited` dengan `is_active = true`, dan `momen_5` **gratis + self-service tanpa pembayaran**. [`MOMEN-SPEC.md`](MOMEN-SPEC.md) §94 melarang menjualnya sebelum media pindah R2 (Supabase free 1 GB ≈ 7 album penuh). **Tidak ada tombolnya di panel** — `/admin/paket` menyaring `kind='invitation'` dan tak ada route admin untuk add-on. Satu-satunya cara:
+- [x] **Nonaktifkan kelima paket add-on Album Momen sampai media pindah ke R2** — DIKERJAKAN 2026-10-12 (kelimanya `is_active = false`; verifikasi: `select count(*) from packages where kind='addon_momen' and is_active` → 0). Aktifkan kembali setelah `STORAGE_DRIVER=r2` berjalan. Migrasi `20260826110000` men-seed `momen_5`, `momen_50`, `momen_100`, `momen_200`, `momen_unlimited` dengan `is_active = true`, dan `momen_5` **gratis + self-service tanpa pembayaran**. [`MOMEN-SPEC.md`](MOMEN-SPEC.md) §94 melarang menjualnya sebelum media pindah R2 (Supabase free 1 GB ≈ 7 album penuh). **Tidak ada tombolnya di panel** — `/admin/paket` menyaring `kind='invitation'` dan tak ada route admin untuk add-on. Satu-satunya cara:
   ```sql
   update public.packages set is_active = false where kind = 'addon_momen';
   ```
@@ -168,7 +171,7 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 - [ ] **Identitas pelaku usaha diisi** — `src/lib/copy.ts` `copy.marketing.legal.merchant`: `name` + `address` masih **string kosong** di kode hari ini. Ini **edit kode + deploy**, bukan setelan dashboard. WAJIB (PP 80/2019 & Permendag 31/2020 mewajibkan identitas tampil sebelum pembayaran; aggregator rutin menangguhkan merchant tanpa itu). Satu sumber → mengisinya mengisi /syarat, /privasi, /refund, dan kuitansi sekaligus. Keputusan pemilik 2026-10-03: usaha perseorangan.
 - [ ] **Syarat & Ketentuan ditinjau pemilik** — `/syarat` sudah tayang (DECISIONS #59) tetapi isinya draf yang disusun dari perilaku kode, bukan dari penasihat hukum. Tinjau terutama batas tanggung jawab dan klausul konten.
 - [ ] **`halo@merriva.id` harus bisa MENERIMA email.** Verifikasi domain di Resend hanya memberi hak **mengirim** — SPF/DKIM tidak membuat kotak masuk. Butuh record **MX** + mailbox nyata (mis. Cloudflare Email Routing → inbox Anda). Alamat itu sudah tercetak di `/syarat`, `/privasi`, `/refund` sebagai kanal resmi **permintaan hapus data UU PDP**, di halaman pesanan pelanggan, dan sebagai **jalur banding** di email penangguhan. Tanpa MX, setiap keluhan, sengketa pembayaran, dan permintaan hapus data memantul atau hilang.
-  - Terkait: `src/lib/email/send.ts` mengirim **tanpa `reply_to`** dan `EMAIL_FROM` default-nya `noreply@`. Balasan pelanggan atas kuitansi/pengingat/peringatan pra-purge tidak menuju ke mana pun. Untuk email pra-purge ("data Anda akan dihapus") ketidakmampuan membalas adalah soal kepatuhan, bukan sekadar layanan.
+  - `replyTo` SUDAH dipasang di `src/lib/email/send.ts` (2026-10-12) dan menunjuk alamat yang sama dengan halaman hukum — jadi begitu MX + mailbox aktif, balasan pelanggan langsung berfungsi tanpa perubahan kode lagi. Sebelum MX ada, balasan tetap memantul.
 - [ ] Daftar **PSE Kominfo** via OSS
 - [ ] Kebijakan **privasi & refund** tayang (`/privasi`, `/refund` sudah ada — review isi & data kontak)
 - [ ] Pastikan **cron `purge-expired`** (Fase 3) terjadwal & jalan — menghapus permanen data tamu/RSVP/media/gift_notes **6 bulan pasca-expired** (UU PDP 27/2022); baris undangan tinggal kerangka statistik, `orders` (retensi keuangan) dipertahankan. Verify di staging: undangan `expired` dengan `active_until` > 6 bln lalu → panggil cron → data pribadi terhapus, `purged_at` terisi. Klien juga bisa "hapus undangan" non-aktif kapan saja dari dashboard.
@@ -178,7 +181,8 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 ## Fase 9 — Go-live
 
 - [ ] **10 undangan uji lintas 3 kategori** (wedding/corporate/family) — Definition of Done M4
-- [ ] **`/sitemap.xml` belum ada** (tak ada `src/app/sitemap.ts`) — murni penemuan halaman marketing, bukan soal privasi: halaman undangan sudah mengirim `robots: { index: false }` dan `robots`/`sitemap` memang slug terpesan sehingga keduanya kini 404. Satu berkas `src/app/sitemap.ts` berisi 6 halaman publik + pendaftaran Search Console bila SEO dipedulikan.
+- [x] **`/sitemap.xml`** — DIBUAT 2026-10-12 (`src/app/sitemap.ts`, 7 halaman marketing). Halaman undangan sengaja TIDAK didaftarkan: ia `noindex`, dan memasukkannya ke sitemap akan membocorkan daftar klien beserta nama mempelainya ke indeks publik — satu test menjaga itu.
+- [ ] Daftarkan `https://merriva.id/sitemap.xml` di **Google Search Console** (tindakan Anda; sitemapnya sudah tayang).
 - [ ] Semua fase di atas hijau → umumkan
 - [ ] Pantau Sentry + UptimeRobot intensif di hari-hari pertama; siapkan RUNBOOK bila insiden
 
