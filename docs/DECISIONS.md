@@ -2827,6 +2827,61 @@ dan "area laporan putus & transien disatukan". 1536 test hijau.
 
 ---
 
+## #74 — 2026-10-13 · Angka cron akhirnya dirender, setelah dua kali dicatat sebagai titik buta
+
+`recordCronRun` sudah lama menulis kolom `cron_runs.stats`, dan `fetchCronStatus` sudah lama
+TIDAK membacanya. Akibatnya `notified`, `notifyTruncated`, `budgetHabis`, `tanpaTxn`,
+`cancelFailed`, `warnFailed`, `heldForWarning`, dan `backstop` hanya bisa dilihat lewat SQL.
+
+Yang membuat entri ini layak dicatat bukan ukurannya, melainkan riwayatnya: celah ini
+dicatat **dua kali** sebagai titik buta — #69 ("panel `/admin` TIDAK menampilkan satu pun
+angka email") dan #73 ("semuanya hanya terbaca lewat SQL, keterbatasan yang sudah dicatat
+di #69 dan belum diperbaiki") — dan dua kali jawabannya adalah menyuruh pemilik menjalankan
+query. Itu jawaban yang buruk untuk sesuatu yang bisa dirender, terutama karena angka-angka
+itu dibuat justru supaya kegagalan senyap menjadi terlihat. Angka yang hanya bisa dibaca
+lewat SQL oleh orang yang sudah curiga tidak menyelesaikan masalah "tak ada yang curiga".
+
+### Dua keputusan bentuk
+
+**`Record<string, number>`, bukan tipe per-job yang ketat.** Tiap job punya kunci sendiri
+dan kuncinya bertambah setiap kali ada fitur baru — tiga kali dalam dua hari terakhir saja
+(#67, #72, #73). Tipe ketat akan menuntut perubahan kode untuk setiap angka baru, dan angka
+yang lupa didaftarkan akan **hilang dari panel**: justru kegagalan yang panel ini ada untuk
+mencegah.
+
+**Kunci tanpa label tampil apa adanya** (`statLabel[k] ?? k`). Label Indonesia disediakan
+untuk 23 kunci yang ditulis keempat cron hari ini, tetapi fallback-nya bukan kelonggaran —
+ia yang membuat panel tak membusuk. Statistik yang ditambahkan kelak langsung muncul tanpa
+perubahan kode, hanya dengan nama mentahnya. Satu test menjaga bahwa label yang sudah ada
+tak terhapus, dan satu lagi menolak label yang hanya menyalin nama kuncinya — "label" yang
+sama dengan kuncinya terlihat seperti sudah dilabeli padahal tidak, yang lebih buruk
+daripada tak dilabeli.
+
+### Nol ditampilkan, dan itu disengaja
+
+`activated: 0` BERMAKNA — ia berbeda dari "tak ada angkanya". Nol ditampilkan dengan opasitas
+rendah, bukan dibuang. Sebaliknya hanya angka yang > 0 DAN termasuk `STAT_PERHATIAN`
+(`*Failed`, `*Truncated`, `budgetHabis`, `tanpaTxn`, `backstop`, `*NoOwner`) yang ditandai
+amber. Sisanya (`scanned`, `activated`, `notified`) justru sehat bila besar; menandainya
+akan membuat panel tampak merah setiap hari sampai orang berhenti mempercayainya — kegagalan
+yang sama yang membuat ambang "basi" di `status.ts` dipasang pada DUA kali jadwal, bukan satu.
+
+### Penyaring yang tampak berlebihan tetapi tidak
+
+`stats` bertipe `jsonb`, jadi isinya bisa apa pun. `angkaSaja()` membuang non-angka,
+`NaN`, `Infinity`, array, string, dan `null` — tanpa itu, satu job yang kelak menulis objek
+bersarang akan merender `[object Object]` ke halaman admin. Lima dari tujuh mutan di berkas
+ini menyerang penyaring itu, dan semuanya mati.
+
+**Verifikasi:** 11 test, 7 mutan 7 mati — termasuk "nol dibuang", "non-angka diteruskan",
+"stats tak diambil dari DB sama sekali", "satu label dihapus", dan "label disalin dari
+kuncinya". 1547 test hijau.
+
+**Konsekuensi:** `docs/LAUNCH-CHECKLIST.md` dikoreksi di dua tempat yang menyuruh pemilik
+membaca `stats` lewat SQL. Tak ada lagi angka cron yang hanya hidup di DB.
+
+---
+
 ---
 
 ## Template entri baru

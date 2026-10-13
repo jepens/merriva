@@ -38,6 +38,30 @@ function Metric({
 }
 
 /** Ringkasan admin (SPEC §4.9): metrik utama + aktivitas admin terakhir. */
+/**
+ * Angka yang BUKAN sekadar informasi: nilainya > 0 berarti ada yang perlu
+ * diperiksa manusia, jadi ditandai.
+ *
+ * Sisanya (dipindai, diaktifkan, terkirim) justru sehat bila besar, dan
+ * menandainya akan membuat panel tampak merah setiap hari sampai orang berhenti
+ * mempercayainya — kegagalan yang sama dengan ambang "basi" di `status.ts`.
+ */
+const STAT_PERHATIAN = new Set([
+  "failed",
+  "notifyFailed",
+  "warnFailed",
+  "cancelFailed",
+  "storageFailed",
+  "truncated",
+  "notifyTruncated",
+  "budgetHabis",
+  "tanpaTxn",
+  "noOwner",
+  "notifyNoOwner",
+  "warnNoOwner",
+  "backstop",
+]);
+
 const cronBadge: Record<CronHealth, string> = {
   ok: "bg-emerald-100 text-emerald-800",
   gagal: "bg-red-100 text-red-800",
@@ -135,6 +159,30 @@ export default async function AdminOverviewPage() {
                     <> · {c.cron.failuresOf(j.failures, j.runs)}</>
                   ) : null}
                 </p>
+                {Object.keys(j.stats).length > 0 ? (
+                  <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
+                    {Object.entries(j.stats)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([k, v]) => (
+                        <span
+                          key={k}
+                          className={cn(
+                            v > 0 && STAT_PERHATIAN.has(k)
+                              ? "font-medium text-amber-700"
+                              : v === 0
+                                ? "opacity-50"
+                                : undefined,
+                          )}
+                        >
+                          {/* Kunci tanpa label tetap TAMPIL apa adanya — angka
+                              yang hilang dari panel karena lupa diberi label
+                              adalah kegagalan yang panel ini cegah. */}
+                          {c.cron.statLabel[k] ?? k}{" "}
+                          <span className="tabular-nums">{v}</span>
+                        </span>
+                      ))}
+                  </div>
+                ) : null}
                 {j.health === "basi" || j.health === "belum-pernah" ? (
                   <p className="text-xs text-amber-700">{c.cron.staleHint}</p>
                 ) : null}

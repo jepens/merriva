@@ -26,6 +26,23 @@ export interface CronStatus {
   lastError: string | null;
   runs: number;
   failures: number;
+  /**
+   * Angka yang ditulis tiap job ke `cron_runs.stats` — dipersempit ke nilai
+   * NUMERIK saja.
+   *
+   * Kolomnya sudah lama diisi (`recordCronRun`) tetapi TAK PERNAH dirender,
+   * sehingga `notified`, `notifyTruncated`, `budgetHabis`, `tanpaTxn`,
+   * `cancelFailed`, `warnFailed`, `heldForWarning`, dan `backstop` hanya bisa
+   * dibaca lewat SQL. DECISIONS #69 dan #73 mencatatnya sebagai titik buta dua
+   * kali sebelum akhirnya ditutup (#74).
+   *
+   * Bentuknya `Record<string, number>` dan BUKAN tipe per-job yang ketat: tiap
+   * job punya kunci sendiri dan kuncinya bertambah setiap kali ada fitur baru.
+   * Tipe ketat akan menuntut perubahan kode untuk setiap angka baru, dan angka
+   * yang lupa didaftarkan akan HILANG dari panel — justru kegagalan yang panel
+   * ini ada untuk mencegah.
+   */
+  stats: Record<string, number>;
 }
 
 /**
@@ -72,6 +89,23 @@ export function hitungHealth(
   return row.ok ? "ok" : "gagal";
 }
 
+/**
+ * Saring `cron_runs.stats` (kolom `jsonb`) menjadi angka saja.
+ *
+ * Kolomnya bertipe Json, jadi isinya bisa apa pun — termasuk objek bersarang
+ * atau string bila kelak ada job yang menulis sembarangan. Panel hanya
+ * menampilkan angka; apa pun selain itu dibuang daripada merender `[object
+ * Object]` ke halaman admin.
+ */
+function angkaSaja(stats: unknown): Record<string, number> {
+  if (!stats || typeof stats !== "object" || Array.isArray(stats)) return {};
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(stats as Record<string, unknown>)) {
+    if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
+  }
+  return out;
+}
+
 export async function fetchCronStatus(
   admin: SupabaseClient<Database>,
   nowMs: number = Date.now(),
@@ -81,7 +115,9 @@ export async function fetchCronStatus(
   // memang perlu diperiksa manusia.
   const { data } = await admin
     .from("cron_runs")
-    .select("name, last_run_at, last_ok_at, ok, last_error, runs, failures");
+    .select(
+      "name, last_run_at, last_ok_at, ok, last_error, runs, failures, stats",
+    );
 
   const byName = new Map((data ?? []).map((r) => [r.name, r]));
 
@@ -95,6 +131,7 @@ export async function fetchCronStatus(
       lastError: row?.last_error ?? null,
       runs: row?.runs ?? 0,
       failures: row?.failures ?? 0,
+      stats: angkaSaja(row?.stats),
     };
   });
 }

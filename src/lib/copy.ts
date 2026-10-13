@@ -1527,6 +1527,44 @@ export const copy = {
         never: "—",
         failuresOf: (failures: number, runs: number) =>
           `${failures} gagal dari ${runs} jalan`,
+        statsHeading: "Angka jalan terakhir",
+        // Label untuk kunci `cron_runs.stats`. Kunci yang TIDAK ada di sini tetap
+        // ditampilkan apa adanya — sengaja. Statistik baru ditambahkan tiap kali
+        // ada fitur cron baru, dan angka yang hilang dari panel karena lupa
+        // diberi label adalah kegagalan yang panel ini ada untuk mencegah.
+        statLabel: {
+          // expire-orders
+          scanned: "dipindai",
+          activated: "diaktifkan",
+          keptPaid: "lunas, tak di-expire",
+          expired: "dikedaluwarsakan",
+          skipped: "dilewati (transien)",
+          cancelFailed: "gagal batalkan di Pakasir",
+          tanpaTxn: "tanpa txn_id",
+          mudaScanned: "muda: dipindai",
+          mudaActivated: "muda: diaktifkan",
+          mudaPending: "muda: masih pending",
+          budgetHabis: "anggaran Pakasir habis",
+          // expire-invitations
+          notified: "notis terkirim",
+          notifyNoOwner: "notis: tanpa pemilik",
+          notifyFailed: "notis gagal",
+          notifyTruncated: "notis terpotong",
+          // expiry-reminders
+          sent: "pengingat terkirim",
+          failed: "pengingat gagal",
+          noOwner: "tanpa pemilik",
+          truncated: "terpotong batas",
+          // purge-expired
+          purged: "dipurge",
+          storageFailed: "objek storage gagal dihapus",
+          heldForWarning: "ditahan menunggu peringatan",
+          backstop: "dipurge via backstop",
+          warned: "peringatan terkirim",
+          warnFinal: "peringatan final",
+          warnNoOwner: "peringatan: tanpa pemilik",
+          warnFailed: "peringatan gagal",
+        } as Record<string, string>,
         staleHint:
           "Melewati dua kali jadwalnya. Periksa scheduled job di panel Easypanel — job yang terhapus atau salah ketik tidak mengirim galat apa pun.",
       },
