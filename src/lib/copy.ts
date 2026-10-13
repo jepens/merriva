@@ -154,6 +154,11 @@ export const copy = {
     turnstileFailed:
       "Verifikasi anti-bot gagal. Muat ulang halaman lalu coba lagi.",
     errorOauthLogin: "Gagal masuk dengan Google. Silakan coba lagi.",
+    // Dibedakan dari pesan di atas DENGAN SENGAJA: "coba lagi" adalah saran yang
+    // keliru untuk salah konfigurasi — berapa kali pun dicoba hasilnya sama, dan
+    // pengguna menyalahkan dirinya sendiri atau akun Google-nya.
+    errorOauthConfig:
+      "Masuk dengan Google sedang tidak tersedia karena konfigurasi server belum lengkap. Tim kami sudah diberi tahu. Sementara ini silakan masuk dengan email dan kata sandi.",
     errorVerifyLink:
       "Tautan tidak valid atau sudah kedaluwarsa. Silakan minta ulang.",
   },

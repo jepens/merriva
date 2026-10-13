@@ -2957,6 +2957,66 @@ memang tak pernah salin.
 
 ---
 
+## #76 — 2026-10-14 · Login Google gagal senyap di produksi: gerbang yang menolak memulai
+
+**Kejadian.** Login Google di produksi berakhir di halaman depan tanpa sesi. Tak ada galat
+di peramban, tak ada galat di server, tak ada entri di Sentry. Satu-satunya petunjuk
+terlihat di bilah alamat: `merriva.id/?code=192629c1-…`.
+
+**Sebab.** `NEXT_PUBLIC_APP_URL` tak diisi sebagai build-arg di Easypanel, jadi `appUrl`
+jatuh ke default `http://localhost:3000` dan `redirect_to` yang dikirim ke Supabase
+menunjuk localhost. GoTrue menolaknya (tak ada di allow list) lalu **mem-fallback ke Site
+URL**, sehingga `?code=` mendarat di beranda alih-alih `/auth/callback`. Tak ada yang
+menukarnya menjadi sesi.
+
+Jejak di `auth_logs` memastikan setiap mata rantai lain SEHAT, dan ini penting karena
+menghemat jam-jam mencari di tempat yang salah: `/authorize` → "Redirecting to external
+provider" (google) → `/callback` 302 dengan `auth_event.action: user_signedup`, lalu dua
+kali `login`. Barisnya di `auth.users` ada, `email_confirmed`, dan **trigger profil ikut
+jalan** (`profiles.full_name = "Abdul M"`). Yang membuktikan penukaran kode tak pernah
+terjadi: `last_sign_in_at` **tetap NULL** setelah tiga kali login — dengan PKCE, kolom itu
+baru terisi saat `exchangeCodeForSession`. Google dan Supabase tidak salah apa pun.
+
+**Yang membuat ini layak dicatat:** kegagalan ini SUDAH DIRAMALKAN, kata per kata, di
+`LAUNCH-CHECKLIST.md` — *"kegagalannya paling senyap dari semua: … pengguna mendarat di
+BERANDA dengan `?code=…` yang tak pernah ditukar → tetap tidak login, tanpa pesan galat,
+tanpa jejak Sentry"* — dan tetap terjadi. **Dokumen yang meramalkan kegagalan tidak
+mencegahnya.** Hanya sesuatu yang dieksekusi yang mencegah.
+
+### Keputusan
+
+`signInWithGoogleAction` BERHENTI sebelum memulai tarian OAuth bila
+`appUrlMasihDefault() && NODE_ENV === "production"`: melapor ke `auth.oauth.config` (area
+terpisah dari `auth.oauth`, yang berarti "Google/Supabase menolak") lalu redirect ke
+`/masuk?error=config`.
+
+Pesannya **berbeda** dari "Gagal masuk dengan Google. Silakan coba lagi." dengan sengaja.
+Menyuruh mencoba lagi pada salah konfigurasi adalah saran yang keliru: berapa kali pun
+dicoba hasilnya sama, dan pengguna berakhir menyalahkan akun Google-nya sendiri.
+
+Predikatnya `!process.env.NEXT_PUBLIC_APP_URL`, **bukan** perbandingan host permintaan
+dengan `appUrl`. Perbandingan host terdengar lebih pintar tetapi dibaca dari header `Host`
+di belakang Cloudflare + Easypanel, dan satu false positive di sana **mematikan login
+Google untuk semua orang**. Variabel yang tak pernah diisi adalah fakta, bukan tebakan.
+
+### Ditolak
+
+**Meneruskan `?code=` dari beranda ke `/auth/callback`** (middleware). Ia akan membuat
+login berhasil MESKIPUN konfigurasinya salah — menyembunyikan persis hal yang baru saja
+kita bayar mahal untuk temukan, dan menambah permukaan di batas auth demi kasus yang tak
+boleh ada setelah konfigurasinya benar. Menangani `searchParams` di halaman beranda juga
+ditolak: itu membuat halaman paling penting menjadi dinamis dan menggugurkan ISR-nya.
+
+**Melempar galat saat `appUrl` default di produksi.** Build CI tidak menyetel
+`NEXT_PUBLIC_APP_URL` (job `Build` hanya memberi dua variabel Supabase), jadi gerbang
+build-time akan memerahkan CI untuk alasan yang salah.
+
+**Konsekuensi:** `appUrlMasihDefault()` tersedia untuk pemakai `appUrl` lain yang sama
+rapuhnya — hostname Turnstile, tautan email, `metadataBase` — bila kelak ingin dipagari
+juga. 7 test, 11 mutan 11 mati.
+
+---
+
 ## Template entri baru
 
 ```

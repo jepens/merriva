@@ -20,6 +20,7 @@ export const metadata: Metadata = { title: "Masuk" };
 
 const errorCopy: Record<string, string> = {
   oauth: copy.auth.errorOauthLogin,
+  config: copy.auth.errorOauthConfig,
   verify: copy.auth.errorVerifyLink,
 };
 

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { isFreshEmailGrant } from "@/lib/auth/email-grant";
 import { copy } from "@/lib/copy";
-import { appUrl } from "@/lib/env";
+import { appUrl, appUrlMasihDefault } from "@/lib/env";
 import { reportHandledError } from "@/lib/observability";
 import { normalizeIndonesianPhone } from "@/lib/phone";
 import {
@@ -180,6 +180,24 @@ export async function signInWithGoogleAction(
   formData: FormData,
 ): Promise<void> {
   const next = safeNextPath(formData.get("next")?.toString());
+
+  // Berhenti SEBELUM memulai tarian OAuth bila `redirect_to` yang akan dikirim
+  // menunjuk localhost. Tanpa ini kegagalannya sunyi dan menyesatkan: Supabase
+  // menolak `redirect_to` yang tak ada di daftar izin lalu jatuh ke Site URL,
+  // sehingga `?code=` mendarat di HALAMAN DEPAN — bukan di `/auth/callback` —
+  // tak ada yang menukarnya menjadi sesi, dan pengguna hanya melihat beranda
+  // lagi seolah tak terjadi apa-apa. Tak ada galat di mana pun.
+  if (appUrlMasihDefault() && process.env.NODE_ENV === "production") {
+    reportHandledError(
+      new Error(
+        "NEXT_PUBLIC_APP_URL kosong di produksi — redirect_to OAuth menunjuk localhost",
+      ),
+      "auth.oauth.config",
+      { redirectTo: `${appUrl}/auth/callback` },
+    );
+    redirect("/masuk?error=config");
+  }
+
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase.auth.signInWithOAuth({

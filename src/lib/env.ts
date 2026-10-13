@@ -45,6 +45,25 @@ export function getSupabaseServiceRoleKey(): string {
 export const appUrl =
   process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+/**
+ * `NEXT_PUBLIC_APP_URL` tak pernah diisi, sehingga `appUrl` jatuh ke default
+ * localhost.
+ *
+ * Di produksi itu bukan kekurangan kecil. Nilai ini menjadi `redirect_to` OAuth,
+ * hostname yang diperiksa Turnstile, tautan di setiap email, `metadataBase`, dan
+ * URL di sitemap. Karena punya default, TIDAK ADA yang gagal: aplikasinya
+ * menyala normal dan baru terlihat rusak jauh dari sebabnya — login Google
+ * berakhir di halaman depan tanpa sesi, dan tak ada satu pun galat yang tercatat.
+ *
+ * Variabel ini WAJIB build-arg, bukan env runtime: Next menyisipkan
+ * `NEXT_PUBLIC_*` saat build, jadi mengisinya di panel tanpa build ulang tidak
+ * mengubah apa pun — jebakan kedua di atas jebakan pertama. Dibaca sebagai
+ * fungsi (bukan konstanta) agar bisa diuji kedua cabangnya.
+ */
+export function appUrlMasihDefault(): boolean {
+  return !process.env.NEXT_PUBLIC_APP_URL;
+}
+
 export const storageDriver = (process.env.STORAGE_DRIVER ?? "supabase") as
   "supabase" | "r2";
 
