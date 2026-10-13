@@ -10,7 +10,7 @@ import {
   MOMEN_FREE_CODE,
 } from "@/lib/momen/package-codes";
 import { generateOrderCode } from "@/lib/order";
-import { getPaymentGateway } from "@/lib/payment";
+import { terbitkanLink } from "@/server/payment/link";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { CheckoutState } from "@/server/actions/checkout";
@@ -128,11 +128,12 @@ export async function createMomenCheckoutAction(
   revalidatePath("/dashboard");
   revalidatePath(momenManagePath(invitationId));
 
-  const url = getPaymentGateway().createPaymentLink({
+  const url = await terbitkanLink(admin, {
     orderCode,
     amountIdr: pkg.price_idr,
     redirectUrl: `${appUrl}${momenManagePath(invitationId)}`,
   });
+  if (!url) return { status: "error", message: copy.checkout.linkFailed };
   return { status: "redirect", url };
 }
 

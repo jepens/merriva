@@ -13,12 +13,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const { createPaymentLink } = vi.hoisted(() => ({
-  createPaymentLink: vi.fn(() => "https://pakasir.test/pay/XYZ"),
+// `createPaymentLink` menjadi ASINKRON sejak Pakasir API v2 dan kini dibungkus
+// `terbitkanLink` (`src/server/payment/link.ts`), yang juga MENYIMPAN `txn_id` ke
+// baris order sebelum pelanggan diarahkan. Mock dipasang di lapisan itu: yang
+// relevan bagi aksi ini adalah "dapat URL atau tidak", sementara urutan
+// terbitkan-lalu-simpan diuji terpisah di tests/unit/payment-link.test.ts.
+const { terbitkanLink } = vi.hoisted(() => ({
+  terbitkanLink: vi.fn(async () => "https://pakasir.test/pay/XYZ"),
 }));
-vi.mock("@/lib/payment", () => ({
-  getPaymentGateway: () => ({ createPaymentLink, verifyTransaction: vi.fn() }),
-}));
+vi.mock("@/server/payment/link", () => ({ terbitkanLink }));
 
 const { storage } = vi.hoisted(() => ({
   storage: {
@@ -107,7 +110,7 @@ let calls: TableCall[];
 
 beforeEach(() => {
   calls = [];
-  createPaymentLink.mockClear();
+  terbitkanLink.mockClear();
   storage.delete.mockClear();
   findPendingMomenOrder.mockResolvedValue(null);
 });
@@ -137,7 +140,7 @@ describe("createMomenCheckoutAction — jalur uang add-on", () => {
 
     expect(res.status).toBe("error");
     expect(calls.some((c) => c.table === "orders")).toBe(false);
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
   });
 
   it("kode tier GRATIS ditolak di jalur bayar", async () => {
@@ -181,7 +184,7 @@ describe("createMomenCheckoutAction — jalur uang add-on", () => {
 
     expect(res.status).toBe("error");
     expect(calls.some((c) => c.table === "orders")).toBe(false);
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
   });
 
   it("sukses: order pakai harga DB, undangan TIDAK disentuh, redirect Pakasir", async () => {

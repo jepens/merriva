@@ -11,6 +11,13 @@ import type { Database, Json } from "@/types/database";
 export interface PendingOrder {
   order_code: string;
   amount_idr: number;
+  /**
+   * Rujukan transaksi gateway (Pakasir v2 `txn_id`). WAJIB diisi pemanggil sejak
+   * v2: status transaksi berkunci `txn_id`, bukan `order_code`. `null` berarti
+   * transaksi belum pernah berhasil dibuat → verifikasi melempar, dan itu
+   * disengaja (lihat `verifyTransaction`).
+   */
+  txn_id?: string | null;
 }
 
 /**
@@ -58,6 +65,7 @@ export async function verifyAndActivate(
     verification = await getPaymentGateway().verifyTransaction(
       order.order_code,
       order.amount_idr,
+      order.txn_id ?? null,
     );
   } catch (err) {
     // JALUR UANG: kegagalan verifikasi tak boleh senyap — tanpa sinyal ini,

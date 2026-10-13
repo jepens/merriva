@@ -7,7 +7,7 @@ import { appUrl } from "@/lib/env";
 import { isUuid } from "@/lib/id";
 import { UPGRADABLE_STATUSES } from "@/lib/invitation-status";
 import { generateOrderCode } from "@/lib/order";
-import { getPaymentGateway } from "@/lib/payment";
+import { terbitkanLink } from "@/server/payment/link";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { upgradeDifference } from "@/lib/upgrade";
@@ -148,10 +148,11 @@ export async function createUpgradeCheckoutAction(
   revalidatePath("/dashboard");
   revalidatePath(upgradePath(invitationId));
 
-  const url = getPaymentGateway().createPaymentLink({
+  const url = await terbitkanLink(admin, {
     orderCode,
     amountIdr: differenceIdr,
     redirectUrl: `${appUrl}${upgradePath(invitationId)}`,
   });
+  if (!url) return { status: "error", message: copy.checkout.linkFailed };
   return { status: "redirect", url };
 }

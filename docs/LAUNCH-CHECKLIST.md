@@ -75,7 +75,10 @@ pengumuman apa pun**, bukan sebelum langkah teknis lain:
 
 ## Fase 2 — Konfigurasi layanan pihak ketiga
 
-- [ ] **Pakasir**: project production; set webhook URL → `https://merriva.id/api/webhooks/pakasir`; isi `PAKASIR_PROJECT_SLUG` + `PAKASIR_API_KEY`
+- [ ] **Pakasir (API v2)**: project production; set webhook URL → `https://merriva.id/api/webhooks/pakasir`; isi `PAKASIR_PROJECT_SLUG` + `PAKASIR_API_KEY` + **`PAKASIR_WEBHOOK_SECRET`**
+  - ⚠️ **API v1 dihentikan 20 Oktober 2026.** Kode sudah dimigrasi ke v2 (DECISIONS #72). Yang perlu Anda lakukan: salin **secret webhook** dari BAGIAN BAWAH halaman detail project Pakasir ke `PAKASIR_WEBHOOK_SECRET`. Kosongnya tidak menolak webhook (menolak akan mematikan seluruh aktivasi bila belum disalin) tetapi dilaporkan ke Sentry sebagai `payment.webhook.secret-unset`.
+  - ⚠️ **Tanyakan ke dukungan Pakasir**: apakah `transaction-status` dan `cancel-transaction` v2 adalah endpoint RESMI yang didukung. Keduanya **tidak ada di dokumen mana pun** — ditemukan dengan menebak URL lalu dibedakan dari route yang tak ada lewat bentuk pesan galatnya. Verifikasi pembayaran bergantung pada yang pertama; satu jawaban dari mereka menghilangkan risiko ini.
+  - ⚠️ `paymentsimulation` tetap endpoint v1 (tak ada padanan v2). Hanya dipakai E2E/dev, dan sudah dilarang di production — tetapi bila v1 benar-benar dimatikan seluruhnya, suite E2E jalur bayar kehilangan satu-satunya cara melunasi transaksi uji.
 - [ ] **Resend**: verifikasi domain (SPF/DKIM); `RESEND_API_KEY` + `EMAIL_FROM` (alamat di domain terverifikasi)
 - [ ] **Turnstile**: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (build-arg!) + `TURNSTILE_SECRET_KEY` (runtime)
   - `TURNSTILE_SECRET_KEY` kosong di produksi = **GAGAL-TUTUP total**: RSVP, buku ucapan, konfirmasi hadiah, sesi tamu Album Momen, daftar akun, dan reset kata sandi semuanya ditolak, dengan satu `console.error` per permintaan dan **nol event Sentry**.

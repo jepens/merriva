@@ -179,7 +179,9 @@ Distribusi: halaman "Sebar Undangan" berisi template pesan yang bisa diedit deng
 1. Klien pilih paket → server membuat `order` (`pending`, `order_id` unik, `amount` integer).
 2. Redirect ke `https://app.pakasir.com/pay/{project_slug}/{amount}?order_id={order_id}&redirect={URL_dashboard_sukses}` (opsi `qris_only=1` bila ingin QRIS saja).
 3. Pakasir mengirim **webhook POST** ke URL yang dikonfigurasi, payload: `{amount, order_id, project, status, payment_method, completed_at}`.
-4. **PENTING — webhook Pakasir tidak memiliki signature.** Verifikasi wajib dua lapis: (a) cocokkan `order_id` + `amount` + `project` dengan order di database; (b) panggil `GET /api/transactiondetail?project=&amount=&order_id=&api_key=` dan **hanya aktifkan bila API mengonfirmasi status lunas**. Payload webhook diperlakukan sebagai sinyal, bukan bukti.
+4. **PENTING — payload webhook adalah SINYAL, bukan bukti.** Diperbarui 2026-10-13 untuk **API v2** (v1 dihentikan 20 Okt 2026, DECISIONS #72). Verifikasi wajib dua lapis: (a) autentikasi pemanggil lewat header **`X-Secret`** terhadap `PAKASIR_WEBHOOK_SECRET`, lalu cocokkan `order_id` + `amount` dengan order di database — pencocokan `project` DIBUANG karena payload v2 tak lagi mengirim field itu; (b) panggil `GET /api/v2/transaction-status/{slug}/{txn_id}` (header `X-Api-Key`) dan **hanya aktifkan bila API mengonfirmasi status lunas** DAN nominalnya cocok dengan order.
+
+   Premis lama "webhook Pakasir tidak memiliki signature" hanya benar untuk v1; v2 membawa `X-Secret`. Yang TIDAK berubah adalah kesimpulannya: header itu menyaring pemanggil palsu lebih awal dan lebih murah, bukan menggantikan bukti lunas. `txn_id` wajib tersimpan di `orders` — status v2 berkunci padanya, bukan pada `order_id`.
 5. Order `paid` → undangan `active`, `active_until` dihitung → email kuitansi.
 
 Halaman "cek status pembayaran" di dashboard mem-poll `transactiondetail` — untuk klien yang kembali sebelum webhook tiba. Order `pending` > 24 jam di-expire oleh cron + `POST /api/transactioncancel`. Testing memakai `POST /api/paymentsimulation` (mode sandbox Pakasir) untuk memicu webhook.
@@ -423,7 +425,7 @@ Definisi selesai per fitur: kriteria terima §4 terpenuhi + test terkait hijau +
 
 ## 11. Batasan (Boundaries)
 
-**Selalu (always):** validasi server-side di setiap mutasi · RLS aktif untuk tabel baru sebelum migrasi di-push · verifikasi setiap webhook Pakasir dengan memanggil `transactiondetail` sebelum aktivasi (webhook tanpa signature) · rate limit semua endpoint publik · jalankan `lint + typecheck + test` sebelum merge · backup/snapshot sebelum migrasi production · pakai `paymentsimulation` (bukan uang asli) di luar production · kredensial hanya lewat env Easypanel.
+**Selalu (always):** validasi server-side di setiap mutasi · RLS aktif untuk tabel baru sebelum migrasi di-push · verifikasi setiap webhook Pakasir dengan memanggil status transaksi sebelum aktivasi (payload = sinyal, bukan bukti; v2 menambah header `X-Secret` sebagai lapis ADITIF) · rate limit semua endpoint publik · jalankan `lint + typecheck + test` sebelum merge · backup/snapshot sebelum migrasi production · pakai `paymentsimulation` (bukan uang asli) di luar production · kredensial hanya lewat env Easypanel.
 
 **Tanya dulu (ask first):** mengubah harga/struktur paket · migrasi yang mengubah/menghapus kolom berisi data production · menghapus data user · menambah dependency besar atau layanan berbayar baru · mengubah kontrak props tema (berdampak ke semua tema) · kebijakan refund kasus per kasus.
 

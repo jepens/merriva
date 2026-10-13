@@ -11,7 +11,7 @@ import { PAYABLE_STATUSES } from "@/lib/invitation-status";
 import { appUrl } from "@/lib/env";
 import { isUuid } from "@/lib/id";
 import { generateOrderCode } from "@/lib/order";
-import { getPaymentGateway } from "@/lib/payment";
+import { terbitkanLink } from "@/server/payment/link";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { packageCodeSchema } from "@/lib/validation/checkout";
@@ -141,7 +141,7 @@ export async function createCheckoutAction(
   // dua arah — `findPendingUpgradeOrder` memfilter ke sisi sebaliknya.
   const { data: pending } = await admin
     .from("orders")
-    .select("order_code, amount_idr")
+    .select("order_code, amount_idr, txn_id")
     .eq("invitation_id", invitationId)
     .eq("package_id", pkg.id)
     .eq("status", "pending")
@@ -150,14 +150,17 @@ export async function createCheckoutAction(
     .limit(1)
     .maybeSingle();
   if (pending) {
-    return {
-      status: "redirect",
-      url: getPaymentGateway().createPaymentLink({
-        orderCode: pending.order_code,
-        amountIdr: pending.amount_idr,
-        redirectUrl: `${appUrl}/dashboard/undangan/${invitationId}/bayar`,
-      }),
-    };
+    // `createPaymentLink` kini panggilan jaringan yang bisa gagal (Pakasir v2).
+    // `find-or-create` berkunci `order_code`, jadi memanggilnya ulang untuk order
+    // pending yang sama mengembalikan transaksi yang SAMA — percobaan ulang aman
+    // dan sekaligus mengisi `txn_id` yang mungkin gagal tersimpan sebelumnya.
+    const link = await terbitkanLink(admin, {
+      orderCode: pending.order_code,
+      amountIdr: pending.amount_idr,
+      redirectUrl: `${appUrl}/dashboard/undangan/${invitationId}/bayar`,
+    });
+    if (!link) return { status: "error", message: copy.checkout.linkFailed };
+    return { status: "redirect", url: link };
   }
 
   let orderCode = "";
@@ -197,10 +200,14 @@ export async function createCheckoutAction(
   // Pakasir mengembalikan klien ke halaman "cek status pembayaran" (M3.3): bila
   // ia kembali sebelum webhook tiba, poller mem-verifikasi via `transactiondetail`
   // dan mengaktifkan (jalur OTORITATIF kedua, pendamping webhook M3.2).
-  const url = getPaymentGateway().createPaymentLink({
+  const url = await terbitkanLink(admin, {
     orderCode,
     amountIdr: pkg.price_idr,
     redirectUrl: `${appUrl}/dashboard/undangan/${invitationId}/bayar`,
   });
+  // Order sudah ter-insert. Gagal menerbitkan link TIDAK mengunci pelanggan:
+  // percobaan berikutnya menemukan order `pending` yang sama dan memanggil
+  // `find-or-create` lagi, yang mengembalikan transaksi yang sama.
+  if (!url) return { status: "error", message: copy.checkout.linkFailed };
   return { status: "redirect", url };
 }

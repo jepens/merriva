@@ -470,6 +470,12 @@ export const copy = {
     perDuration: (months: number) => `Masa aktif ${months} bulan`,
     notPayable: "Undangan ini tidak dapat dibayar saat ini.",
     packageUnavailable: "Paket tidak tersedia. Silakan coba lagi.",
+    // Sejak Pakasir v2, penerbitan tautan adalah panggilan jaringan yang bisa
+    // gagal (mis. plafon 2 permintaan/detik). Pesannya menenangkan dengan
+    // fakta yang benar: order-nya SUDAH tersimpan, dan percobaan ulang memakai
+    // order yang sama karena `find-or-create` Pakasir berkunci `order_id`.
+    linkFailed:
+      "Gagal membuat tautan pembayaran. Coba lagi sebentar lagi — pesanan Anda tersimpan dan tidak terduplikasi.",
     // Add-on Album Momen (dibeli untuk undangan yang sudah aktif).
     momenNeedsActive:
       "Album Momen hanya bisa diaktifkan untuk undangan yang sudah aktif.",

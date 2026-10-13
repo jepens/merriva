@@ -15,31 +15,70 @@ export interface CreatePaymentLinkInput {
   qrisOnly?: boolean;
 }
 
+export interface CreatedPaymentLink {
+  /** URL yang dibuka pelanggan. */
+  url: string;
+  /**
+   * Rujukan transaksi di sisi gateway, WAJIB disimpan ke `orders.txn_id`.
+   *
+   * Pakasir menyebutnya `txn_id`, dan sejak API v2 ia menjadi SATU-SATUNYA kunci
+   * untuk memeriksa status maupun membatalkan transaksi — `order_id` dijawab 404.
+   * Tanpa nilai ini tersimpan, order yang sudah dibayar tak bisa diverifikasi.
+   *
+   * Nama `txnId` dipilih sadar, meski "txn" adalah istilah Pakasir dan abstraksi
+   * ini ada agar bisa pindah gateway. Alasannya: ketika jalur uang bermasalah,
+   * yang menelusuri butuh nama kolom DB kita COCOK dengan nama di dashboard
+   * Pakasir dan di payload webhook-nya. Nama netral (`providerRef`) membeli
+   * portabilitas hipotetis dengan harga kebingungan nyata di jalur yang paling
+   * mahal bila salah dibaca. Seam abstraksinya tetap antarmuka ini.
+   */
+  txnId: string;
+}
+
 export type PaymentStatus = "pending" | "paid" | "failed" | "expired";
 
 export interface PaymentVerification {
   orderCode: string;
   amountIdr: number;
   status: PaymentStatus;
+  /** `null` pada Pakasir v2 — API-nya tak lagi mengirim metode pembayaran. */
   paymentMethod: string | null;
   paidAt: string | null;
 }
 
 export interface PaymentGateway {
-  /** Bangun URL payment link untuk redirect klien. */
-  createPaymentLink(input: CreatePaymentLinkInput): string;
+  /**
+   * Buat/temukan transaksi di gateway lalu kembalikan URL bayar + `txnId`.
+   *
+   * ASINKRON sejak Pakasir v2 (AUDIT-2026-10-13): v1 cukup merakit URL di klien,
+   * v2 menuntut panggilan API. Konsekuensi yang harus dipegang pemanggil:
+   * operasi ini BISA GAGAL, jadi `txnId` wajib ditulis ke baris order SEBELUM
+   * pelanggan diarahkan — jangan pernah mengarahkan ke link yang rujukannya
+   * belum tersimpan.
+   */
+  createPaymentLink(input: CreatePaymentLinkInput): Promise<CreatedPaymentLink>;
   /**
    * Verifikasi OTORITATIF ke API gateway — WAJIB sebelum aktivasi.
-   * Webhook = sinyal, bukan bukti (webhook Pakasir tanpa signature). Lihat SPEC §4.8.
+   * Payload webhook = SINYAL, bukan bukti (SPEC §4.8). Sejak v2 webhook Pakasir
+   * membawa header `X-Secret` sehingga bisa diautentikasi, tetapi itu ADITIF:
+   * bukti lunas tetap hanya dari pemanggilan ini.
+   *
+   * Operasi BACA saja. `txnId` wajib ada; yang hilang adalah galat yang
+   * dilaporkan, bukan sesuatu yang ditambal dengan membuat transaksi baru.
    */
   verifyTransaction(
     orderCode: string,
     amountIdr: number,
+    txnId?: string | null,
   ): Promise<PaymentVerification>;
   /**
-   * Batalkan payment link yang belum terbayar (cron expire order >24 jam, SPEC §4.8).
+   * Batalkan transaksi yang belum terbayar (cron expire order >24 jam, SPEC §4.8).
    * Best-effort: melempar bila API menolak. Panggil HANYA setelah verifikasi
    * memastikan order belum lunas (jangan batalkan yang sudah dibayar).
    */
-  cancelTransaction(orderCode: string, amountIdr: number): Promise<void>;
+  cancelTransaction(
+    orderCode: string,
+    amountIdr: number,
+    txnId?: string | null,
+  ): Promise<void>;
 }

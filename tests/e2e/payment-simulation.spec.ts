@@ -1,3 +1,4 @@
+import { createClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
 
 import { PakasirGateway } from "../../src/lib/payment/pakasir";
@@ -28,6 +29,40 @@ const SANDBOX =
   process.env.E2E_EMAIL &&
   process.env.E2E_PASSWORD &&
   process.env.E2E_INVITATION_ID;
+
+/**
+ * Order `pending` TERBARU milik satu undangan, dibaca dari DB.
+ *
+ * URL `pay-v2` tak lagi memuat `order_id` maupun nominal (API v2), jadi kedua
+ * nilai itu diambil dari sumber otoritatifnya. `txn_id` ikut dikembalikan supaya
+ * spec bisa membuktikan bahwa penerbitan link benar-benar MENYIMPANNYA — tanpa
+ * itu tersimpan, pembayaran tak bisa diverifikasi sama sekali.
+ */
+async function orderTerbaru(invitationId: string): Promise<{
+  orderId: string;
+  amount: number;
+  txnId: string | null;
+}> {
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  );
+  const { data } = await admin
+    .from("orders")
+    .select("order_code, amount_idr, txn_id")
+    .eq("invitation_id", invitationId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) throw new Error("order pending tak ditemukan untuk undangan uji");
+  return {
+    orderId: data.order_code,
+    amount: data.amount_idr,
+    txnId: data.txn_id,
+  };
+}
 
 test.describe("Pembayaran end-to-end (paymentsimulation)", () => {
   test.skip(
@@ -62,11 +97,15 @@ test.describe("Pembayaran end-to-end (paymentsimulation)", () => {
     ).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Pilih paket ini" }).first().click();
 
-    // 3) Redirect ke halaman bayar Pakasir → ambil order_id + amount dari URL.
-    await page.waitForURL(/app\.pakasir\.com\/pay\//, { timeout: 30_000 });
-    const payUrl = new URL(page.url());
-    const orderId = payUrl.searchParams.get("order_id");
-    const amount = Number(payUrl.pathname.split("/").pop());
+    // 3) Redirect ke halaman bayar Pakasir.
+    //
+    //    URL v2 adalah `/pay-v2/{txn_id}`: TIDAK ada `order_id` di query, dan
+    //    segmen terakhir path adalah txn_id — bukan nominal seperti pada v1
+    //    (`/pay/{slug}/{amount}?order_id=..`). Keduanya karena itu diambil dari
+    //    DB, yang memang sumber otoritatifnya; membacanya dari URL sudah tak
+    //    mungkin dan dulu pun hanya kebetulan bisa.
+    await page.waitForURL(/app\.pakasir\.com\/pay-v2\//, { timeout: 30_000 });
+    const { orderId, amount } = await orderTerbaru(invitationId);
     expect(orderId).toBeTruthy();
     expect(amount).toBeGreaterThan(0);
 

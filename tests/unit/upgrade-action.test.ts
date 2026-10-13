@@ -23,12 +23,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const { createPaymentLink } = vi.hoisted(() => ({
-  createPaymentLink: vi.fn(() => "https://pakasir.test/pay/UPG"),
+// `createPaymentLink` menjadi ASINKRON sejak Pakasir API v2 dan kini dibungkus
+// `terbitkanLink` (`src/server/payment/link.ts`), yang juga MENYIMPAN `txn_id` ke
+// baris order sebelum pelanggan diarahkan. Mock dipasang di lapisan itu: yang
+// relevan bagi aksi ini adalah "dapat URL atau tidak", sementara urutan
+// terbitkan-lalu-simpan diuji terpisah di tests/unit/payment-link.test.ts.
+const { terbitkanLink } = vi.hoisted(() => ({
+  terbitkanLink: vi.fn(async () => "https://pakasir.test/pay/UPG"),
 }));
-vi.mock("@/lib/payment", () => ({
-  getPaymentGateway: () => ({ createPaymentLink, verifyTransaction: vi.fn() }),
-}));
+vi.mock("@/server/payment/link", () => ({ terbitkanLink }));
 
 const { refs } = vi.hoisted(() => ({
   refs: { server: null as unknown, admin: null as unknown },
@@ -129,7 +132,7 @@ let calls: Call[];
 
 beforeEach(() => {
   calls = [];
-  createPaymentLink.mockClear();
+  terbitkanLink.mockClear();
 });
 
 const AKTIF = {
@@ -182,7 +185,7 @@ describe("createUpgradeCheckoutAction — gerbang sebelum order dibuat", () => {
 
     expect(res.status).toBe("error");
     expect(ordersInserted()).toHaveLength(0);
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
   });
 
   it("bukan pemilik (RLS 0 baris) → ditolak", async () => {
@@ -309,7 +312,8 @@ describe("createUpgradeCheckoutAction — selisih harga", () => {
       status: "pending",
       purpose: "upgrade",
     });
-    expect(createPaymentLink).toHaveBeenCalledWith(
+    expect(terbitkanLink).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ amountIdr: 100000 }),
     );
   });
@@ -413,6 +417,6 @@ describe("createUpgradeCheckoutAction — efek samping", () => {
 
     expect(res.status).toBe("error");
     expect(ordersInserted()).toHaveLength(1);
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
   });
 });

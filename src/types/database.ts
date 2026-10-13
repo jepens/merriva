@@ -491,6 +491,7 @@ export type Database = {
       };
       orders: {
         Row: {
+          txn_id: string | null;
           amount_idr: number;
           created_at: string;
           id: string;
@@ -505,6 +506,7 @@ export type Database = {
           user_id: string | null;
         };
         Insert: {
+          txn_id?: string | null;
           amount_idr: number;
           created_at?: string;
           id?: string;
@@ -519,6 +521,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          txn_id?: string | null;
           amount_idr?: number;
           created_at?: string;
           id?: string;

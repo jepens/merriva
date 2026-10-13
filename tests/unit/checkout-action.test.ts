@@ -21,12 +21,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const { createPaymentLink } = vi.hoisted(() => ({
-  createPaymentLink: vi.fn(() => "https://pakasir.test/pay/XYZ"),
+// `createPaymentLink` menjadi ASINKRON sejak Pakasir API v2 dan kini dibungkus
+// `terbitkanLink` (`src/server/payment/link.ts`), yang juga MENYIMPAN `txn_id` ke
+// baris order sebelum pelanggan diarahkan. Mock dipasang di lapisan itu: yang
+// relevan bagi aksi ini adalah "dapat URL atau tidak", sementara urutan
+// terbitkan-lalu-simpan diuji terpisah di tests/unit/payment-link.test.ts.
+const { terbitkanLink } = vi.hoisted(() => ({
+  terbitkanLink: vi.fn(async () => "https://pakasir.test/pay/XYZ"),
 }));
-vi.mock("@/lib/payment", () => ({
-  getPaymentGateway: () => ({ createPaymentLink, verifyTransaction: vi.fn() }),
-}));
+vi.mock("@/server/payment/link", () => ({ terbitkanLink }));
 
 const { refs } = vi.hoisted(() => ({
   refs: { server: null as unknown, admin: null as unknown },
@@ -121,7 +124,7 @@ let calls: Call[];
 
 beforeEach(() => {
   calls = [];
-  createPaymentLink.mockClear();
+  terbitkanLink.mockClear();
 });
 
 /**
@@ -172,7 +175,7 @@ describe("createCheckoutAction — gerbang sebelum order dibuat", () => {
 
     expect(res.status).toBe("error");
     expect(orders()).toHaveLength(0);
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
   });
 
   it("bukan pemilik (RLS 0 baris) → ditolak", async () => {
@@ -193,7 +196,7 @@ describe("createCheckoutAction — gerbang sebelum order dibuat", () => {
 
       expect(res.status).toBe("error");
       expect(orders()).toHaveLength(0);
-      expect(createPaymentLink).not.toHaveBeenCalled();
+      expect(terbitkanLink).not.toHaveBeenCalled();
     },
   );
 
@@ -222,7 +225,7 @@ describe("createCheckoutAction — gerbang sebelum order dibuat", () => {
 
     expect(res.status).toBe("error");
     expect(orders()).toHaveLength(0);
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
   });
 
   it("slug masih `draft-…` → diblokir SEBELUM order (alamat terkunci saat aktif)", async () => {
@@ -232,7 +235,7 @@ describe("createCheckoutAction — gerbang sebelum order dibuat", () => {
 
     expect(res.status).toBe("error");
     expect(orders()).toHaveLength(0);
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
   });
 
   it("kode paket di luar enum (termasuk kode add-on) ditolak", async () => {
@@ -268,7 +271,7 @@ describe("createCheckoutAction — syarat jadwal (DECISIONS #44)", () => {
       reason: "readiness",
     });
     expect(orders()).toHaveLength(0);
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
     // Tak ada transisi status: undangan tetap seperti semula.
     expect(
       calls.some((c) => c.table === "invitations" && c.op === "update"),
@@ -348,7 +351,7 @@ describe("createCheckoutAction — syarat jadwal (DECISIONS #44)", () => {
     const res = await createCheckoutAction(INV, "premium");
     expect(res).toEqual({ status: "error", message: copy.common.error });
     expect(orders()).toHaveLength(0);
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
   });
 
   it("jadwal dibaca dari undangan INI, lewat klien pengguna (RLS), bukan service_role", async () => {
@@ -382,7 +385,8 @@ describe("createCheckoutAction — jalur sukses", () => {
     expect(payload.status).toBe("pending");
 
     // Link bayar memakai nominal yang SAMA dengan order.
-    expect(createPaymentLink).toHaveBeenCalledWith(
+    expect(terbitkanLink).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ amountIdr: 299000 }),
     );
   });
@@ -409,7 +413,8 @@ describe("createCheckoutAction — jalur sukses", () => {
     expect(orders()).toHaveLength(0);
     // Link mengarah ke order LAMA, dengan nominal dari ORDER itu — bukan harga
     // paket saat ini, karena Pakasir menagih sesuai order yang sudah dibuat.
-    expect(createPaymentLink).toHaveBeenCalledWith(
+    expect(terbitkanLink).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ orderCode: "MRV-LAMA01", amountIdr: 299000 }),
     );
   });
@@ -521,7 +526,7 @@ describe("createCheckoutAction — ketahanan pembuatan order", () => {
 
     expect(res.status).toBe("error");
     expect(orders()).toHaveLength(1); // tidak mencoba ulang
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
   });
 
   it("seluruh percobaan bentrok → menyerah tanpa link bayar", async () => {
@@ -532,6 +537,6 @@ describe("createCheckoutAction — ketahanan pembuatan order", () => {
     const res = await createCheckoutAction(INV, "premium");
 
     expect(res.status).toBe("error");
-    expect(createPaymentLink).not.toHaveBeenCalled();
+    expect(terbitkanLink).not.toHaveBeenCalled();
   });
 });

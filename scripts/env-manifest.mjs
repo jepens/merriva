@@ -78,6 +78,13 @@ export const MANIFEST = [
     rusak:
       "verifikasi otoritatif `transactiondetail` mati → webhook & cron TAK PERNAH bisa mengaktifkan order lunas",
   },
+  {
+    key: "PAKASIR_WEBHOOK_SECRET",
+    kapan: "prod",
+    rahasia: true,
+    rusak:
+      'webhook pembayaran TIDAK terautentikasi. Sejak API v2 Pakasir mengirim header `X-Secret` (lihat pakasir.com/p/webhook), jadi premis lama "webhook tanpa signature" sudah kedaluwarsa. Kosongnya SENGAJA tidak menolak webhook — menolak akan mematikan seluruh aktivasi pembayaran bila nilainya belum disalin saat deploy — tetapi dilaporkan ke Sentry sebagai `payment.webhook.secret-unset`. Nilainya dilihat/di-reset di bagian bawah halaman detail project Pakasir',
+  },
   // --- Email ----------------------------------------------------------------
   {
     key: "RESEND_API_KEY",

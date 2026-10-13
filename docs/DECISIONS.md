@@ -2632,6 +2632,120 @@ Easypanel di sini. Yang hilang hanyalah keharusan mengingat apa saja yang perlu 
 
 ---
 
+## #72 — 2026-10-13 · Migrasi Pakasir v1 → v2, tujuh hari sebelum v1 dimatikan
+
+Pemilik mengabarkan ada pembaruan Pakasir. Yang ditemukan: **API v1 dihentikan 20 Oktober
+2026**, dan integrasi kita seluruhnya v1. Halaman yang memuat pengumuman itu adalah halaman
+yang JUGA mendokumentasikan webhook, `transactiondetail`, `transactioncancel`, dan
+`paymentsimulation` — kalimatnya berbunyi "Integrasi API v1 **ini**" tanpa merinci endpoint,
+jadi cakupannya ambigu. Di jalur uang, ambigu berarti harus diasumsikan yang terburuk.
+
+### Dokumen vendor tidak dipakai sebagai dasar — API-nya dipanggil
+
+Seluruh bentuk di bawah berasal dari pemanggilan API sandbox sungguhan. Itu bukan
+kehati-hatian berlebihan: **dokumen Pakasir terbukti salah dua kali dalam satu hari.** Ia
+menulis `expired_at` padahal API mengirim `expires_at`, dan menjanjikan `va_number: ""`
+yang sebenarnya tak ada sama sekali. Mengode dari dokumen akan menghasilkan dua
+`undefined` tanpa satu pun galat.
+
+Tiga penemuan yang menentukan seluruh rancangan:
+
+- **Status dan pembatalan v2 berkunci `txn_id`, bukan `order_id`.** Keduanya **tidak ada di
+  dokumen mana pun** — ditemukan dengan menebak URL lalu dibedakan dari route yang tak ada
+  lewat bentuk pesan galatnya: `{"message":"Transaction not found","data":null}` (format
+  API, route ADA) versus `{"message":"Not found"}` (route tak ada). Konsekuensinya kolom
+  baru `orders.txn_id`, karena tanpanya order yang SUDAH DIBAYAR tak bisa diverifikasi.
+- **`create-transaction` bersifat `find-or-create`, berkunci `order_id` SAJA.** Dibuktikan:
+  `order_id` + body sama mengembalikan `txn_id` identik. Itu menguntungkan — percobaan ulang
+  checkout tak menggandakan transaksi. Tetapi `order_id` sama dengan **amount BERBEDA**
+  mengembalikan transaksi LAMA dengan HTTP 200 dan **mengabaikan amount baru diam-diam**.
+- **Plafon 2 permintaan/detik itu nyata.** 429 benar-benar terjadi pada panggilan ketiga.
+
+### Rencana dibantah sebelum kodenya ditulis
+
+Empat penyerang dengan lensa berbeda (kehilangan uang · tenggat & yang tak terdokumentasi ·
+kontrak kode · operasi) menyerang rencana migrasi: **46 keberatan, 15 memblokir**. Yang
+terpenting mengubah arah:
+
+**Handler webhook akan menolak SETIAP webhook v2, secara senyap dan permanen.** Skema lama
+MEWAJIBKAN `project`; payload v2 tak mengirimnya. Bentuk tak dikenal dijawab **400**, dan
+400 diperlakukan Pakasir sebagai final sehingga ia berhenti mencoba ulang. Jadi begitu
+Pakasir beralih, tak satu pun undangan teraktivasi lewat jalur itu — dan `safeParse` yang
+gagal tak memanggil `reportHandledError`, jadi tak ada yang tahu. Diperbaiki: skema menerima
+**kedua versi** dan hanya mewajibkan dua field yang benar-benar dipakai (`order_id`,
+`amount`), dan bentuk tak dikenal kini **503 + dilaporkan** — bentuk yang tak kita kenali
+adalah kegagalan KITA, bukan payload cacat, dan 400 membuang satu-satunya percobaan ulang
+gratis yang kita punya.
+
+**Premis "webhook Pakasir TANPA signature" sudah kedaluwarsa.** Penyerang menyebut header
+`X-Secret`; pembacaan pertama saya atas dokumen mengatakan tak ada verifikasi webhook —
+saya salah, dan ada halaman `/p/webhook` terpisah yang belum saya baca. v2 mengirim
+`X-Secret` yang nilainya dilihat/di-reset di bagian bawah halaman detail project. Premis itu
+dikoreksi di SPEC §4.8 dan CLAUDE.md. **Kesimpulannya tidak berubah**: verifikasi otoritatif
+tetap wajib, dan header itu ADITIF. `unset` sengaja TIDAK menolak — menolak akan mematikan
+seluruh aktivasi pembayaran bila pemilik belum menyalin secret-nya saat deploy, kegagalan
+yang jauh lebih mahal daripada webhook tak tersaring.
+
+**Nominal yang benar-benar ditagih menjadi tak terverifikasi.** Respons `payment_link` hanya
+`{txn_id, payment_link}` — tak ada nominal di dalamnya — sementara find-or-create akan
+mengembalikan transaksi lama bila `order_id` pernah dipakai dengan nominal lain. Di v1
+nominal tertulis di dalam URL sehingga mustahil berbeda; v2 menghapus jaminan itu. Diambil
+kembali: `createPaymentLink` memanggil status SEGERA setelah membuat dan menolak bila
+nominal atau gema `order_id` tak cocok. Tanpa itu, pelanggan membayar nominal lama lalu
+aktivasinya ditolak `mismatch` — sudah membayar, tak mendapat apa pun.
+
+**Verifikasi tidak boleh menjadi operasi TULIS.** Rencana awal memulihkan `txn_id` yang
+hilang dengan memanggil `create-transaction` (elegan, karena find-or-create juga berfungsi
+sebagai penerjemah `order_id` → `txn_id`). Ditolak: jalur verifikasi dipicu endpoint webhook
+publik, jadi itu berarti pemanggil tak dikenal bisa menerbitkan link pembayaran hidup.
+`txn_id` yang hilang kini galat yang dilaporkan.
+
+### Yang ternyata sudah benar, dan tidak disentuh
+
+`reconcile.ts` menolak aktivasi bila `verification.amountIdr !== order.amount_idr` — garis
+pertahanan terakhir yang membuat jebakan find-or-create tak bisa menghasilkan aktivasi
+salah. `checkout.ts` sengaja memakai nominal dari ORDER, bukan harga paket saat ini, yang
+justru cocok dengan kunci find-or-create. Urutan "EXPIRE dulu via RPC, BARU batalkan" di
+cron tetap aman. Dan `paymentMethod` yang menjadi `null` tidak memecahkan apa pun: kolomnya
+nullable, dan v1 pun mengembalikan `""` untuk transaksi `payment_link`.
+
+### Keputusan yang dicatat karena bisa dipersoalkan
+
+`txnId` masuk ke kontrak `PaymentGateway`, dan peninjau benar bahwa "txn" adalah istilah
+Pakasir pada abstraksi yang justru ada agar bisa pindah gateway. Nama netral
+(`providerRef`) ditimbang dan **ditolak**: ketika jalur uang bermasalah, yang menelusuri
+butuh nama kolom DB kita COCOK dengan nama di dashboard Pakasir dan di payload webhook-nya.
+Nama netral membeli portabilitas hipotetis dengan harga kebingungan nyata di jalur yang
+paling mahal bila salah dibaca.
+
+`revoke all (txn_id) on orders` juga ditimbang, dibuat, **lalu dibuang** setelah diuji
+terhadap skema cloud: baris itu TIDAK BEREFEK. `orders` memakai grant tabel-level (default
+Supabase) dan Postgres tak bisa mencabut sebagian kolom dari grant setingkat tabel —
+setelah revoke dijalankan, 8 privilege kolom masih tercatat. Membiarkannya berarti memasang
+keamanan palsu. Yang menggerbangi kolom ini sama dengan seluruh kolom `orders` lain: RLS.
+
+### Verifikasi
+
+`orders.txn_id` + **unique partial index** (dua order tak boleh berbagi satu transaksi)
+diuji 5/5 terhadap skema cloud dalam blok rollback, termasuk bahwa dua order TANPA `txn_id`
+tetap boleh berdampingan. **67 test baru, 10 mutan 10 mati** — termasuk "`project`
+diwajibkan lagi", "secret kosong jadi MENOLAK", "verifikasi nominal pasca-create dibuang",
+"cek host `payment_link` dibuang" (open-redirect: URL itu datang dari body respons API lalu
+dipakai mengarahkan browser pelanggan), dan "arahkan pelanggan walau `txn_id` gagal
+tersimpan". 1520 test hijau.
+
+Kedua spec E2E jalur uang diperbaiki: URL `pay-v2/{txn_id}` tak lagi memuat `order_id`
+maupun nominal, jadi keduanya kini dibaca dari DB — sumber otoritatifnya, yang dulu pun
+hanya kebetulan sama dengan URL.
+
+**Yang masih harus ditanyakan pemilik ke Pakasir**, karena tak bisa dijawab dari kode:
+apakah `transaction-status` dan `cancel-transaction` v2 endpoint RESMI yang didukung, dan
+apakah `paymentsimulation` v1 ikut dimatikan. Verifikasi pembayaran bergantung pada yang
+pertama. `?redirect=` pada `pay-v2` juga tak bisa dipastikan dari sini (halamannya dirender
+di klien), jadi jalur poll dirancang tidak bergantung padanya.
+
+---
+
 ---
 
 ## Template entri baru

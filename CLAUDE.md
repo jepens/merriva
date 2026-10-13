@@ -55,7 +55,7 @@ TypeScript `strict`, hindari `any`. Server Components secara default; `"use clie
 
 ## Boundaries (ringkas — lengkapnya di SPEC.md §11)
 
-**SELALU:** RLS aktif di setiap tabel baru sebelum migrasi dipush · verifikasi webhook Pakasir dengan memanggil `transactiondetail` sebelum aktivasi (webhook TANPA signature — payload webhook = sinyal, bukan bukti) · rate limit endpoint publik · `paymentsimulation` (bukan uang asli) di luar production.
+**SELALU:** RLS aktif di setiap tabel baru sebelum migrasi dipush · verifikasi webhook Pakasir dengan memanggil **status transaksi** sebelum aktivasi (payload webhook = sinyal, bukan bukti). Sejak **API v2** webhook membawa header `X-Secret` sehingga BISA diautentikasi — itu aditif, tidak menggantikan verifikasi otoritatif. Endpoint v2: `GET /api/v2/transaction-status/{slug}/{txn_id}` (berkunci `txn_id`, bukan `order_id`); v1 `transactiondetail` dihentikan 20 Okt 2026 · rate limit endpoint publik · `paymentsimulation` (bukan uang asli) di luar production.
 
 **TANYA DULU:** ubah harga/struktur paket · migrasi destruktif pada data production · dependency besar / layanan berbayar baru · ubah kontrak props tema (berdampak semua tema).
 
