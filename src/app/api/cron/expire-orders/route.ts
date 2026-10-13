@@ -9,7 +9,18 @@ import { notifyOrderPaid } from "@/server/email/notify";
 import { verifyAndActivate } from "@/server/payment/reconcile";
 
 /**
- * Cron: kedaluwarsakan order `pending` > 24 jam (SPEC §4.8, ARCHITECTURE §7).
+ * Cron: DUA pass atas order `pending` (SPEC §4.8, ARCHITECTURE §7).
+ *
+ * **Pass 1 — rekonsiliasi MUDA (10 menit … 24 jam).** Ditambahkan 2026-10-13
+ * (DECISIONS #73) karena sebelumnya TIDAK ADA backstop di bawah 24 jam: bila
+ * webhook hilang DAN pelanggan menutup tab sebelum poller selesai, order yang
+ * sudah dibayar menggantung sehari penuh tanpa satu pun sinyal. Risiko itu naik
+ * tajam di API v2 — bentuk payload webhook berubah, dan `?redirect=` yang
+ * membawa pelanggan kembali ke halaman poll tak bisa diverifikasi dari luar
+ * browser. Pass ini HANYA memverifikasi & mengaktifkan; ia tak pernah
+ * membatalkan apa pun.
+ *
+ * **Pass 2 — kedaluwarsakan yang > 24 jam.**
  * REKONSILIASI DULU, baru batalkan (menutup celah "webhook hilang" M3.3): tiap
  * order diverifikasi OTORITATIF via `transactiondetail` (`verifyAndActivate`) —
  * bila ternyata LUNAS, diaktifkan (atau `held` utk suspended, pembayaran tetap
@@ -23,9 +34,33 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-// Batasi kerja per-jalankan (tiap order = 1 panggilan `transactiondetail`).
-// Sisa diambil jalankan berikutnya. Order pending >24 jam seharusnya jarang.
+// Batasi kerja per-jalankan. Sisa diambil jalankan berikutnya.
 const BATCH = 100;
+
+/**
+ * Umur minimum order sebelum ikut REKONSILIASI MUDA.
+ *
+ * Di bawah ini, jalur normal belum selesai bekerja: webhook biasanya tiba dalam
+ * hitungan detik, dan poller halaman bayar berjalan sampai ±6 menit. Menyentuh
+ * order yang lebih muda hanya menambah panggilan Pakasir yang bersaing dengan
+ * poller pelanggan atas plafon 2 permintaan/detik yang sama.
+ */
+const RECONCILE_MIN_AGE_MS = 10 * 60 * 1000;
+
+/**
+ * Anggaran panggilan Pakasir untuk SATU jalan cron.
+ *
+ * Plafonnya 2 permintaan/detik, jadi tanpa anggaran satu jalan bisa menuntut
+ * ratusan panggilan: pass kedaluwarsa saja bisa memakai 2 panggilan per order
+ * (verifikasi lalu pembatalan) untuk sampai 100 order. Hampir semuanya akan
+ * dijawab 429 → transien → `skipped` → tak ada yang benar-benar beres, dan
+ * jalan berikutnya mengulang kegagalan yang sama. Itu livelock, dan panel admin
+ * tetap hijau karena job-nya "berhasil".
+ *
+ * Yang kehabisan anggaran DILAPORKAN sebagai `budgetHabis`, bukan dipotong
+ * diam-diam.
+ */
+const PAKASIR_BUDGET = 60;
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -38,8 +73,75 @@ export async function POST(req: Request) {
   if (!isAuthorizedCron(req)) return json({ ok: false }, 401);
 
   const admin = createSupabaseAdminClient();
-  const cutoff = new Date(Date.now() - PENDING_MAX_AGE_MS).toISOString();
+  const sekarang = Date.now();
+  const cutoff = new Date(sekarang - PENDING_MAX_AGE_MS).toISOString();
 
+  // Satu anggaran panggilan Pakasir untuk SELURUH jalan, dengan jeda per
+  // panggilan. Pass muda memakainya LEBIH DULU: di sanalah ada pelanggan yang
+  // mungkin sudah membayar dan sedang menunggu, sedangkan pass kedaluwarsa
+  // adalah pembersihan yang boleh menunggu jalan berikutnya.
+  const JEDA_MS = 600;
+  let anggaran = PAKASIR_BUDGET;
+  const pakaiAnggaran = async (): Promise<boolean> => {
+    if (anggaran <= 0) return false;
+    if (anggaran < PAKASIR_BUDGET) {
+      await new Promise((r) => setTimeout(r, JEDA_MS));
+    }
+    anggaran -= 1;
+    return true;
+  };
+
+  // === PASS 1 — REKONSILIASI MUDA ===========================================
+  let mudaScanned = 0;
+  let mudaActivated = 0;
+  let mudaPending = 0;
+  let budgetHabis = 0;
+
+  const { data: muda, error: mudaErr } = await admin
+    .from("orders")
+    .select("order_code, amount_idr, txn_id")
+    .eq("status", "pending")
+    .not("txn_id", "is", null) // tanpa txn_id tak bisa diverifikasi (v2)
+    .lt("created_at", new Date(sekarang - RECONCILE_MIN_AGE_MS).toISOString())
+    .gte("created_at", cutoff) // yang lebih tua ditangani pass 2
+    .order("created_at", { ascending: true })
+    .limit(BATCH);
+  if (mudaErr) {
+    reportHandledError(mudaErr, "cron.expire-orders.reconcile");
+    await recordCronRun("expire-orders", false, {}, mudaErr);
+    return json({ ok: false }, 503);
+  }
+
+  for (const o of muda ?? []) {
+    mudaScanned += 1;
+    if (!(await pakaiAnggaran())) {
+      budgetHabis += 1;
+      continue;
+    }
+    const outcome = await verifyAndActivate(admin, {
+      order_code: o.order_code,
+      amount_idr: o.amount_idr,
+      txn_id: o.txn_id,
+    });
+    if (outcome.kind === "ok") {
+      if (outcome.result === "activated") {
+        mudaActivated += 1;
+        // Webhook hilang → cron yang mengaktifkan tetap mengirim kuitansi.
+        await notifyOrderPaid(admin, o.order_code);
+        if (outcome.slug) revalidatePath(`/${outcome.slug}`);
+      } else if (outcome.result === "already_paid") {
+        mudaActivated += 1;
+        if (outcome.slug) revalidatePath(`/${outcome.slug}`);
+      }
+      continue;
+    }
+    // Belum lunas / transien / kontrak putus → biarkan `pending`. JANGAN
+    // batalkan apa pun di pass ini: order ini belum tentu ditinggalkan, dan
+    // pelanggannya mungkin sedang di halaman bayar Pakasir saat ini.
+    mudaPending += 1;
+  }
+
+  // === PASS 2 — KEDALUWARSAKAN > 24 JAM =====================================
   const { data: stale, error } = await admin
     .from("orders")
     .select("order_code, amount_idr, txn_id")
@@ -60,27 +162,6 @@ export async function POST(req: Request) {
   let cancelFailed = 0; // Pakasir cancel gagal (tetap di-expire; residual link)
   let tanpaTxn = 0; // order tanpa txn_id → tak bisa diverifikasi v2
 
-  // Pakasir v2 berplafon 2 PERMINTAAN/DETIK, dan itu bukan teori: 429 benar-benar
-  // terjadi saat tiga panggilan dikirim berurutan saat integrasi ini diuji.
-  //
-  // Satu iterasi loop ini bisa memakai DUA panggilan Pakasir (verifikasi, lalu
-  // pembatalan), jadi batas atasnya 2 x BATCH = 200 panggilan. Tanpa jeda,
-  // hampir semuanya akan dijawab 429 → dipetakan transien → `skipped` → order
-  // tak pernah benar-benar dibatalkan, dan jalan berikutnya mengulang kegagalan
-  // yang sama. Itu livelock, dan panel admin tetap hijau karena job-nya
-  // "berhasil".
-  //
-  // Jeda dipasang per PANGGILAN, bukan per iterasi — menaruhnya per iterasi akan
-  // melewatkan panggilan kedua dan tetap melampaui plafon.
-  const JEDA_MS = 600;
-  let panggilanKe = 0;
-  const jedaPakasir = async () => {
-    panggilanKe += 1;
-    if (panggilanKe > 1) {
-      await new Promise((r) => setTimeout(r, JEDA_MS));
-    }
-  };
-
   for (const o of stale ?? []) {
     // Tanpa `txn_id`, status v2 tak bisa dibaca (ia berkunci txn_id). Order
     // seperti ini lahir dari penerbitan link yang gagal — artinya pelanggan tak
@@ -90,7 +171,10 @@ export async function POST(req: Request) {
       tanpaTxn += 1;
       continue;
     }
-    await jedaPakasir();
+    if (!(await pakaiAnggaran())) {
+      budgetHabis += 1;
+      continue;
+    }
     const outcome = await verifyAndActivate(admin, {
       order_code: o.order_code,
       amount_idr: o.amount_idr,
@@ -137,7 +221,10 @@ export async function POST(req: Request) {
     // Batalkan link Pakasir (best-effort). Gagal → order tetap `expired` lokal;
     // residual: link mungkin masih hidup (dicatat cancelFailed).
     try {
-      await jedaPakasir();
+      // Anggaran habis di sini berarti order sudah di-`expired` tetapi link-nya
+      // belum dibatalkan — residual yang sama dengan `cancelFailed`, dan dihitung
+      // di sana supaya tak ada kegagalan yang tak terwakili angka.
+      if (!(await pakaiAnggaran())) throw new Error("anggaran Pakasir habis");
       await getPaymentGateway().cancelTransaction(
         o.order_code,
         o.amount_idr,
@@ -162,6 +249,10 @@ export async function POST(req: Request) {
     skipped,
     cancelFailed,
     tanpaTxn,
+    mudaScanned,
+    mudaActivated,
+    mudaPending,
+    budgetHabis,
   });
   return json(
     {
@@ -176,6 +267,10 @@ export async function POST(req: Request) {
       skipped,
       cancelFailed,
       tanpaTxn,
+      mudaScanned,
+      mudaActivated,
+      mudaPending,
+      budgetHabis,
     },
     200,
   );

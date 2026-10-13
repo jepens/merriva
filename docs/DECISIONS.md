@@ -2746,6 +2746,87 @@ di klien), jadi jalur poll dirancang tidak bergantung padanya.
 
 ---
 
+## #73 — 2026-10-13 · Backstop di bawah 24 jam, dan membedakan "jaringan kedip" dari "kontrak putus"
+
+Tiga keberatan peninjau yang belum tertutup di #72. Ketiganya tentang hal yang sama:
+kegagalan di jalur uang yang **tidak terlihat oleh siapa pun**.
+
+### Tak ada rekonsiliasi di bawah 24 jam — dan v2 menaikkan risikonya
+
+`expire-orders` hanya menyentuh order berumur > 24 jam (`PENDING_MAX_AGE_MS`), berapa pun
+kekerapan jadwalnya. Jadi bila webhook hilang DAN pelanggan menutup tab sebelum poller
+selesai (±6 menit), order yang sudah dibayar menggantung **sehari penuh** tanpa satu pun
+sinyal. Satu-satunya jalur cepat yang tersisa adalah halaman poll, yang harus dibuka
+pelanggan sendiri.
+
+Dua hal dari migrasi v2 menaikkan peluang itu dari teoretis menjadi nyata: bentuk payload
+webhook **berubah**, dan `?redirect=` yang membawa pelanggan kembali ke halaman poll
+**tak bisa diverifikasi dari luar browser** (halaman `pay-v2` dirender di klien, jadi
+ketiadaan param di HTML server bukan bukti ia dihormati).
+
+Diperbaiki sebagai **pass kedua di cron yang sudah ada**, bukan cron kelima. Alasannya
+operasional: pemilik sudah punya empat perintah cron untuk disetel di Easypanel, dan setiap
+job tambahan adalah satu lagi yang bisa salah kadens — yang menurut #69 akan membuat panel
+admin menuduh job sehat. Pass muda mengambil order `pending` berumur **10 menit – 24 jam**
+dan HANYA memverifikasi & mengaktifkan; ia tak pernah membatalkan apa pun, karena order
+semuda itu belum tentu ditinggalkan — pelanggannya mungkin sedang di halaman bayar Pakasir
+saat itu. Ambang 10 menit dipilih agar tidak bersaing dengan webhook (tiba dalam hitungan
+detik) maupun poller pelanggan atas plafon 2 permintaan/detik yang sama.
+
+**Satu anggaran panggilan Pakasir untuk seluruh jalan** (`PAKASIR_BUDGET = 60`), dan pass
+muda memakainya lebih dulu: di sanalah ada pelanggan yang mungkin sudah membayar dan sedang
+menunggu, sedangkan pass kedaluwarsa adalah pembersihan yang boleh menunggu jalan
+berikutnya. Tanpa anggaran, satu jalan bisa menuntut 200 panggilan (2 per order × 100),
+hampir semuanya dijawab 429 → transien → `skipped` → tak ada yang beres, dan jalan
+berikutnya mengulang kegagalan yang sama. Itu livelock sementara panel admin tetap hijau
+karena job-nya "berhasil". Yang kehabisan anggaran dilaporkan sebagai `budgetHabis`.
+
+### `verify_error` menyatukan dua kegagalan yang menuntut tindakan berbeda
+
+"Jaringan kedip / 429 / 5xx" sembuh sendiri; "kontrak API putus" (401, 400, 404, bentuk
+respons tak dikenal, `txn_id` tak tersimpan) **tidak akan pernah** sembuh dengan diulang.
+Menyatukannya membuat yang parah tenggelam di antara yang biasa — dan itu risiko konkret,
+bukan hipotetis: `transaction-status` v2 **tidak terdokumentasi**, jadi bila Pakasir
+mengubah atau menghapusnya, laporan inilah satu-satunya yang akan memberi tahu kita.
+
+`PakasirError.transient` (dibuat di #72) kini dipakai untuk memilah, dan outcome baru
+`verify_broken` muncul. Perhatikan apa yang TIDAK berubah: keduanya tetap dilaporkan —
+`transient` memilah area laporan, bukan membungkam salah satunya. Galat yang bukan
+`PakasirError` (DNS, abort timeout) diperlakukan **transien**, fail-safe ke arah yang benar:
+memperlakukannya "putus" akan menghentikan poll untuk gangguan jaringan biasa.
+
+Di jalur webhook, `verify_broken` tetap dijawab **503 dan bukan 200**, meski retry takkan
+menolong. Sebabnya 200 bersifat final: pembayaran nyata yang di-ack tanpa aktivasi akan
+HILANG. Lebih baik Pakasir mengulang dengan sia-sia daripada kita kehilangan satu
+pembayaran; yang menyelesaikannya laporan `payment.verify.broken`, bukan kode HTTP-nya.
+
+Di ketiga poller, `verify_broken` → `error`, bukan `pending`. `pending` akan membuat poller
+berputar sampai batasnya (±6 menit) lalu menyerah tanpa penjelasan, padahal pelanggan
+mungkin sudah membayar. `error` menghentikan poll dan memunculkan jalur bantuan — yang
+memang satu-satunya jalan keluar untuk kontrak yang putus. TypeScript yang menemukan ketiga
+titik ini: menambah satu anggota ke discriminated union membuat ketiga `switch` gagal
+compile, yang persis gunanya.
+
+### `mismatch` adalah jalan buntu yang senyap
+
+Cek `verification.amountIdr !== order.amount_idr` adalah garis pertahanan terakhir terhadap
+jebakan `find-or-create` Pakasir v2 (berkunci `order_id` saja, mengabaikan amount baru).
+Aktivasi memang ditolak — tetapi penolakan itu **tidak dilaporkan ke mana pun**, padahal
+artinya pelanggan kemungkinan SUDAH membayar nominal yang salah dan tak akan pernah
+menerima layanannya. Satu-satunya jalan keluarnya manual: refund, atau aktivasi manual
+admin. Kini dilaporkan sebagai `payment.mismatch` dengan KEDUA nominal di dalam pesan —
+tanpa keduanya, yang membaca Sentry tak tahu apakah pelanggan membayar lebih atau kurang.
+
+**Verifikasi:** 16 test baru, 5 mutan 5 mati — termasuk "semua galat jadi `verify_broken`"
+(yang akan menghentikan poll untuk gangguan jaringan biasa), "`mismatch` tak dilaporkan lagi",
+dan "area laporan putus & transien disatukan". 1536 test hijau.
+
+**Konsekuensi:** statistik cron bertambah (`mudaScanned`, `mudaActivated`, `mudaPending`,
+`budgetHabis`) dan semuanya hanya terbaca lewat SQL, karena `/admin` tak merender kolom
+`stats` — keterbatasan yang sudah dicatat di #69 dan belum diperbaiki.
+
+---
+
 ---
 
 ## Template entri baru

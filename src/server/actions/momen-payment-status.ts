@@ -121,9 +121,16 @@ export async function checkMomenPaymentStatusAction(
       return { status: "pending" };
     case "mismatch":
       return { status: "error" };
-    // Transien (jaringan/HTTP/RPC) → tetap `pending`; klien poll lagi nanti.
+    // Transien (jaringan/429/5xx/RPC) → tetap `pending`; klien poll lagi nanti.
     case "verify_error":
     case "rpc_error":
       return { status: "pending" };
+    // Kontrak verifikasi PUTUS — tak akan membaik bila diulang. `pending` akan
+    // membuat poller berputar sampai batasnya (±6 menit) lalu menyerah tanpa
+    // penjelasan, padahal pelanggan mungkin SUDAH membayar. `error` menghentikan
+    // poll dan memunculkan jalur bantuan, yang memang satu-satunya jalan keluar;
+    // laporan `payment.verify.broken` sudah dipancarkan `verifyAndActivate`.
+    case "verify_broken":
+      return { status: "error" };
   }
 }

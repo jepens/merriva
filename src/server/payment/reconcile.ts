@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { toDbJson } from "@/lib/json";
 import { reportHandledError } from "@/lib/observability";
 import { getPaymentGateway } from "@/lib/payment";
+import { PakasirError } from "@/lib/payment/pakasir";
 import type { Database, Json } from "@/types/database";
 
 /**
@@ -34,7 +35,20 @@ export type ReconcileOutcome =
     }
   | { kind: "not_confirmed" } // API OTORITATIF: belum lunas → jangan aktifkan
   | { kind: "mismatch" } // API OTORITATIF: amount tak cocok → jangan aktifkan
-  | { kind: "verify_error" } // transien: jaringan/HTTP/bentuk tak dikenal
+  | { kind: "verify_error" } // TRANSIEN: jaringan / 429 / 5xx → coba lagi
+  /**
+   * Verifikasi gagal dengan cara yang TIDAK akan membaik bila diulang: 401
+   * (api_key salah), 400, 404, bentuk respons tak dikenal, atau `txn_id` yang
+   * tak tersimpan.
+   *
+   * Dipisah dari `verify_error` karena keduanya menuntut tindakan yang berbeda,
+   * dan menyatukannya membuat yang parah tak terlihat: "jaringan kedip" memang
+   * sembuh sendiri, sedangkan "kontrak API putus" akan diam-diam dicoba ulang
+   * selamanya. Itu risiko nyata di sini — `transaction-status` v2 TIDAK
+   * TERDOKUMENTASI, jadi bila Pakasir mengubah atau menghapusnya, inilah satu-
+   * satunya sinyal yang akan memberi tahu kita.
+   */
+  | { kind: "verify_broken" }
   | { kind: "rpc_error" }; // transien: RPC gagal
 
 /**
@@ -70,14 +84,39 @@ export async function verifyAndActivate(
   } catch (err) {
     // JALUR UANG: kegagalan verifikasi tak boleh senyap — tanpa sinyal ini,
     // Pakasir/jaringan bermasalah di hari-H hanya tampak sebagai order pending.
-    reportHandledError(err, "payment.verify", {
-      orderCode: order.order_code,
-    });
-    return { kind: "verify_error" };
+    //
+    // `transient` dipakai untuk MEMBEDAKAN, bukan untuk memutuskan apakah
+    // melaporkan: keduanya tetap dilaporkan, tetapi dengan area berbeda supaya
+    // "kontrak putus" tidak tenggelam di antara gangguan jaringan biasa. Galat
+    // yang bukan `PakasirError` (mis. DNS, abort timeout) diperlakukan transien.
+    const putus = err instanceof PakasirError && !err.transient;
+    reportHandledError(
+      err,
+      putus ? "payment.verify.broken" : "payment.verify",
+      {
+        orderCode: order.order_code,
+      },
+    );
+    return { kind: putus ? "verify_broken" : "verify_error" };
   }
 
   if (verification.status !== "paid") return { kind: "not_confirmed" };
-  if (verification.amountIdr !== order.amount_idr) return { kind: "mismatch" };
+  if (verification.amountIdr !== order.amount_idr) {
+    // Garis pertahanan terakhir terhadap jebakan `find-or-create` Pakasir v2
+    // (berkunci `order_id` saja, mengabaikan amount baru). Aktivasi ditolak —
+    // tetapi penolakan itu DULU senyap di ketiga pemanggil, padahal artinya
+    // pelanggan kemungkinan SUDAH membayar nominal yang salah dan tak akan
+    // pernah menerima layanannya. Satu-satunya jalan keluarnya manual
+    // (refund atau aktivasi manual admin), jadi harus ada yang memberi tahu.
+    reportHandledError(
+      new Error(
+        `nominal transaksi (${verification.amountIdr}) tak cocok dengan order (${order.amount_idr})`,
+      ),
+      "payment.mismatch",
+      { orderCode: order.order_code },
+    );
+    return { kind: "mismatch" };
+  }
 
   const { data, error } = await admin.rpc("activate_paid_order", {
     p_order_code: order.order_code,

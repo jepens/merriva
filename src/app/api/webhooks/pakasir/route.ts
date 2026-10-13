@@ -194,8 +194,16 @@ export async function POST(req: Request) {
     toDbJson(p),
   );
   switch (outcome.kind) {
-    // Error jaringan/HTTP/bentuk saat verifikasi → 503 agar Pakasir retry nanti.
+    // Transien saat verifikasi → 503 agar Pakasir retry nanti.
     case "verify_error":
+      return json({ ok: false }, 503);
+    // Kontrak verifikasi PUTUS (401/400/404/bentuk tak dikenal). Retry tak akan
+    // menolong, TETAPI jawabannya tetap 503 dan bukan 200: 200 bersifat final,
+    // dan pembayaran nyata yang di-ack tanpa aktivasi akan HILANG. Lebih baik
+    // Pakasir mengulang dengan sia-sia daripada kita kehilangan satu pembayaran;
+    // yang menyelesaikannya adalah laporan `payment.verify.broken` yang sudah
+    // dipancarkan `verifyAndActivate`, bukan kode HTTP ini.
+    case "verify_broken":
       return json({ ok: false }, 503);
     // RPC gagal (transien) → 500 agar Pakasir retry.
     case "rpc_error":
