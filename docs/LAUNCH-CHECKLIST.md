@@ -191,6 +191,13 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 
 ## Lampiran — Env production (ringkas; detail DEPLOYMENT §4)
 
+> **Jangan isi tabel ini dari hafalan — jalankan `pnpm env:check --prod`.**
+> Ia membaca `.env.production.local`, menyebut persis apa yang masih kosong beserta
+> akibat konkretnya, menandai mana yang build-arg, dan MEMERAH bila ada variabel
+> baru di kode yang belum terdaftar. Daftar induknya ada di
+> [`../.env.example`](../.env.example); satu test (`tests/unit/env-manifest.test.ts`)
+> menjaga agar daftar itu tetap sejalan dengan kode dan dengan `ARG` di Dockerfile.
+
 > **Enam variabel bertanda 🏗️ adalah BUILD ARG, bukan hanya env runtime.** Next meng-inline nilainya ke bundel saat `next build`, dan `.dockerignore` membuang `.env*` dari konteks build — jadi di dalam Docker nilainya hanya bisa datang dari build-arg. Mengisinya setelah image jadi tidak berpengaruh sampai **rebuild**.
 
 | Variabel | Kapan | Catatan |

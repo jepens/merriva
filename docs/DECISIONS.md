@@ -2555,6 +2555,83 @@ ini.
 
 ---
 
+## #71 — 2026-10-13 · Satu daftar env, satu perintah, dan dua berkas yang menunjuk project berbeda
+
+Pemilik meminta "satu env yang sama untuk test dan produksi agar mudah diisi dan tidak ada
+yang terlewat". Permintaan literalnya tak bisa dipenuhi, tetapi keluhannya sah — dan
+penyebabnya ditemukan saat memeriksa.
+
+### Kenapa satu berkas untuk keduanya tidak mungkin, dan tidak diinginkan
+
+`.dockerignore` membuang `.env*` dari konteks build, jadi **tak ada berkas env yang pernah
+masuk ke image**: nilai produksi yang sebenarnya hidup di panel Easypanel, dan enam di
+antaranya harus pula diteruskan sebagai `--build-arg` karena Next meng-inline setiap
+`NEXT_PUBLIC_*` saat `next build`.
+
+Lebih penting: satu berkas untuk dev DAN produksi berarti setiap `pnpm dev` menyambung ke
+Supabase produksi — menulis baris nyata, mengirim email nyata lewat Resend, memanggil
+Pakasir nyata. Untuk produk yang menyimpan data tamu pelanggan, itu bukan kenyamanan
+melainkan jalan menuju insiden.
+
+### Yang ditemukan: dev sudah setengah jalan ke sana
+
+Repo ini punya `.env` DAN `.env.local`, dan keduanya menunjuk **project Supabase yang
+berbeda** — `.env` ke project cloud (yang pemilik tetapkan sebagai produksi), `.env.local`
+ke stack lokal `127.0.0.1:54321`. Itu sendiri setup yang benar.
+
+Masalahnya presedensi: Next memuat `.env` sebagai lapis **terendah**, termasuk saat
+`pnpm dev`. Tiga variabel (`MOMEN_SESSION_SECRET`, `CRON_SECRET`, `PEXELS_API_KEY`) yang
+tak ada di `.env.local` sudah diambil dari `.env` — dan bila `.env.local` hilang atau salah
+nama, seluruh dev jatuh ke kredensial produksi **tanpa satu pun peringatan**.
+
+### Yang dibangun
+
+- **`.env.example` menjadi DAFTAR INDUK.** Satu berkas yang menjelaskan tiga tempat,
+  menandai keenam build-arg, dan untuk setiap variabel menyebut nilai dev vs prod beserta
+  AKIBAT KONKRET bila kosong. Bukan daftar nama; daftar konsekuensi.
+- **`pnpm env:check [--prod]`.** Menyebut apa yang kosong + akibatnya, mana yang build-arg,
+  variabel mana yang diam-diam diwarisi dari `.env`, dan memperingatkan bila kedua berkas
+  menunjuk project berbeda.
+- **`.env.production.local`.** Satu berkas yang pemilik isi untuk produksi lalu disalin ke
+  panel. Hanya dimuat saat `NODE_ENV=production`, jadi `pnpm dev` tak pernah menyentuhnya.
+  Dipra-isi dari project cloud yang ter-link, dengan `MOMEN_SESSION_SECRET` dan
+  `CRON_SECRET` dibangkitkan BARU — berbeda dari dev, sengaja. Pakasir TIDAK disalin dari
+  `.env` karena nilainya identik dengan `.env.local`, jadi kemungkinan besar sandbox.
+
+### Anti-drift dijaga CI, bukan ingatan
+
+Manifestnya dipisah ke `scripts/env-manifest.mjs` agar bisa diuji, dan
+`tests/unit/env-manifest.test.ts` menjaga tujuh properti: tak ada variabel di kode yang
+belum terdaftar, tak ada entri yatim, setiap variabel wajib menjelaskan akibat kosongnya,
+tak ada rahasia ber-prefix `NEXT_PUBLIC_`, hanya `NEXT_PUBLIC_*` yang boleh ditandai
+build-arg, setiap variabel ada di `.env.example`, dan **daftar build-arg cocok persis
+dengan `ARG` di Dockerfile**.
+
+Alasannya empiris: setiap daftar manual di repo ini sudah pernah membusuk —
+`reminder_sent_at` hilang dua kali (#65), `MOMEN_SESSION_SECRET` tak pernah masuk lampiran
+checklist (#69), kadens `expiry-reminders` bertentangan dengan route-nya sendiri
+berbulan-bulan (#69). Validator yang daftarnya usang lebih berbahaya daripada tak ada
+validator, karena ia menjawab "LENGKAP".
+
+### Satu pelajaran teknis
+
+Pemindai anti-drift awalnya memelihara daftar nama berkas yang dikecualikan, karena berkas
+yang menulis `process.env.X` di docstring-nya melaporkan variabel palsu bernama `X`. Itu
+obat yang salah — daftar semacam itu harus diperbarui setiap kali ada docstring baru, yaitu
+persis jenis daftar yang test ini ada untuk mencegah. Diganti: **buang komentar sebelum
+memindai**, dan hanya komentar yang jelas (blok, baris yang dimulai dengan tanda komentar).
+Komentar di TENGAH baris sengaja dibiarkan: memotongnya akan menelan kode setelah URL di
+dalam string, dan false negative jauh lebih berbahaya daripada false positive di sini.
+
+**Verifikasi:** 10 test, 7 mutan 7 mati — termasuk "entri dibuang dari manifest", "entri
+hantu ditambahkan", "rahasia server ditandai build-arg", "komentar tidak dibuang saat
+memindai", dan "ARG dibuang dari Dockerfile". 1467 test hijau.
+
+**Konsekuensi:** nilai produksi masih harus disalin manual ke panel Easypanel — tak ada API
+Easypanel di sini. Yang hilang hanyalah keharusan mengingat apa saja yang perlu disalin.
+
+---
+
 ---
 
 ## Template entri baru

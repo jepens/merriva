@@ -36,6 +36,8 @@ pnpm build && pnpm start  # build & run production lokal
 pnpm lint                 # ESLint + Prettier check
 pnpm typecheck            # tsc --noEmit
 pnpm test                 # unit test (Vitest)
+pnpm env:check            # periksa .env.local  — sebut yang kosong + akibatnya
+pnpm env:check --prod     # periksa .env.production.local (nilai utk Easypanel)
 pnpm test:e2e             # Playwright (butuh env staging)
 pnpm test:db              # pgTAP supabase/tests/ (butuh stack lokal `supabase start`; job `db` terpisah di CI)
 supabase migration new <nama>   # migrasi baru (folder supabase/migrations)

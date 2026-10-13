@@ -69,6 +69,18 @@ Untuk **tiap** project (staging dulu, lalu prod):
 
 ## 4. Environment variables (di panel Easypanel)
 
+> **Cara terpendek mengisi bagian ini:** `cp .env.example .env.production.local`,
+> isi berkas itu, lalu `pnpm env:check --prod`. Perintah itu menyebutkan persis apa
+> yang masih kosong, apa akibatnya bila dibiarkan, dan mana yang wajib jadi
+> build-arg — lalu salin isinya ke panel Easypanel. Berkas itu ter-gitignore dan
+> hanya dimuat saat `NODE_ENV=production`, jadi `pnpm dev` tak pernah memakainya.
+>
+> **JANGAN menaruh nilai produksi di `.env`.** Next memuat `.env` sebagai lapis
+> TERENDAH, termasuk saat `pnpm dev` — jadi variabel yang tak ada di `.env.local`
+> akan diambil dari sana, dan dev menulis ke data produksi tanpa satu pun
+> peringatan. `pnpm env:check` memperingatkan bila kedua berkas menunjuk project
+> Supabase yang berbeda.
+
 > **Versi awal dokumen ini menulis "sisanya menyusul per milestone" dan menandai `PAKASIR_*` (M3), `RESEND_API_KEY` (M3), `TURNSTILE_*` (M2) sebagai nanti. Ketiga milestone itu sudah selesai — semuanya dibutuhkan SEKARANG.** Daftar otoritatifnya ada di [LAUNCH-CHECKLIST Lampiran](LAUNCH-CHECKLIST.md); tabel di bawah hanya ringkasan Fase 1.
 
 🏗️ = **build arg**, bukan hanya env runtime (lihat §3.3).
