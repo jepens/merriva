@@ -10,9 +10,10 @@ import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
 import { copy } from "@/lib/copy";
 import { stepKeyFromParam } from "@/lib/editor-links";
 import { isUuid } from "@/lib/id";
-import { photoLimitFromPackage, thumbPath, toMediaView } from "@/lib/media";
+import { displayPath, photoLimitFromPackage, toMediaView } from "@/lib/media";
 import { toEventDraft } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
+import { getThemeOptions } from "@/themes/theme-options-registry";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   DEFAULT_SETTINGS,
@@ -20,6 +21,7 @@ import {
   settingsSchema,
 } from "@/lib/validation/content";
 import { requireUser } from "@/server/guards/auth";
+import type { PhotoSlots } from "@/components/dashboard/editor/types";
 
 export const metadata: Metadata = { title: copy.editor.title };
 
@@ -42,7 +44,7 @@ export default async function EditInvitationPage({
   const { data: inv } = await supabase
     .from("invitations")
     .select(
-      "id, slug, category, status, content, settings, event_date, package_id",
+      "id, slug, category, status, content, settings, event_date, package_id, theme_id",
     )
     .eq("id", id)
     .maybeSingle();
@@ -92,19 +94,46 @@ export default async function EditInvitationPage({
   }
   const maxPhotos = photoLimitFromPackage(pkgLimits);
 
-  // Foto bernama tersimpan → URL untuk pratinjau 80px di editor. Varian THUMB:
-  // halaman ini dibuka dari HP sambil mengedit, dan 1600px di kotak 80px hanya
-  // membuang kuota. Tema memakai varian display (`server/invitation-data.ts`).
-  const namedUrl = (p?: string) =>
-    p ? storage.getPublicUrl(thumbPath(p)) : null;
-  const photoUrls = {
-    cover: namedUrl(content.coverPhoto),
-    groom:
-      content.category === "wedding" ? namedUrl(content.groom?.photo) : null,
-    bride:
-      content.category === "wedding" ? namedUrl(content.bride?.photo) : null,
-    logo: content.category === "corporate" ? namedUrl(content.logo) : null,
+  // Bidang foto di editor dirakit dari apa yang TEMA AKTIF nyatakan dirender
+  // (THEME-CONTRACT §2) — bukan dari daftar tetap. Tema yang tak menyebut
+  // `groom`/`bride` tak menampilkan bidangnya sama sekali, jadi tak ada lagi
+  // bidang unggah yang isinya tak pernah muncul di mana pun.
+  const { data: tema } = await supabase
+    .from("themes")
+    .select("slug")
+    .eq("id", inv.theme_id)
+    .maybeSingle();
+  const slotTema = (tema?.slug ? getThemeOptions(tema.slug) : null)?.media
+    ?.slots;
+
+  // Varian DISPLAY: bingkai penyesuaian bisa diperbesar sampai 4x, dan thumb
+  // 400px akan terlihat pecah persis saat pemilik sedang menilai framing.
+  const pathSlot = (id: string): string | undefined => {
+    if (id === "cover") return content.coverPhoto?.path;
+    if (id === "logo")
+      return content.category === "corporate" ? content.logo?.path : undefined;
+    if (id === "groom")
+      return content.category === "wedding"
+        ? content.groom?.photo?.path
+        : undefined;
+    if (id === "bride")
+      return content.category === "wedding"
+        ? content.bride?.photo?.path
+        : undefined;
+    return undefined;
   };
+  const photoSlots: PhotoSlots = Object.fromEntries(
+    (slotTema ?? []).map((slot) => {
+      const p = pathSlot(slot.id);
+      return [
+        slot.id,
+        {
+          aspect: slot.aspect,
+          url: p ? storage.getPublicUrl(displayPath(p)) : null,
+        },
+      ];
+    }),
+  );
 
   // Pustaka lagu aktif untuk picker musik (RLS `songs_select_public`: is_active).
   // URL dirakit ke domain sendiri di server → tema/pratinjau tak lihat URL vendor.
@@ -143,7 +172,7 @@ export default async function EditInvitationPage({
           initialMedia={media}
           maxPhotos={maxPhotos}
           songs={songs}
-          photoUrls={photoUrls}
+          photoSlots={photoSlots}
           initialStep={initialStep}
         />
       ) : content.category === "corporate" ? (
@@ -154,7 +183,7 @@ export default async function EditInvitationPage({
           initialMedia={media}
           maxPhotos={maxPhotos}
           songs={songs}
-          photoUrls={photoUrls}
+          photoSlots={photoSlots}
           initialStep={initialStep}
         />
       ) : (
@@ -165,7 +194,7 @@ export default async function EditInvitationPage({
           initialMedia={media}
           maxPhotos={maxPhotos}
           songs={songs}
-          photoUrls={photoUrls}
+          photoSlots={photoSlots}
           initialStep={initialStep}
         />
       )}

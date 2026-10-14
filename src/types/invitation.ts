@@ -25,6 +25,18 @@ export interface InvitationMediaView {
 }
 
 /**
+ * Foto bernama siap render. `x`/`y` adalah titik fokus ternormalisasi (0..1)
+ * yang dipetakan ke `object-position` DAN `transform-origin`, sehingga
+ * memperbesar terjadi di titik yang dipilih pemilik — bukan di tengah wadah.
+ */
+export interface PhotoView {
+  url: string;
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+/**
  * Props komponen tema (SPEC §7.1 / ARCHITECTURE §5) — KONTRAK INTI.
  * Tema DILARANG mengambil data sendiri; semua sudah ter-parse & siap render.
  * Personalisasi tamu (nama dari `?g=token`) disuntik terpisah di client (M2)
@@ -41,14 +53,18 @@ export interface InvitationData {
   events: InvitationEventView[];
   media: InvitationMediaView[];
   /**
-   * Foto bernama sudah di-resolve ke URL domain sendiri di server (dari
-   * `content.coverPhoto` / `groom.photo` / `bride.photo`), atau `null` bila tak
-   * ada. Tema TIDAK menerima `storage_path` mentah untuk foto ini (boundary:
-   * tanpa URL vendor) — render foto bila ada, jika tidak pakai fallback monogram.
+   * Foto bernama sudah di-resolve di server (dari `content.coverPhoto` /
+   * `groom.photo` / `bride.photo`), atau `null` bila tak ada. Tema TIDAK
+   * menerima `storage_path` mentah (boundary: tanpa URL vendor) — render foto
+   * bila ada, jika tidak pakai fallback monogram.
+   *
+   * Penyesuaian pemilik ikut di sini sebagai ANGKA, bukan dipanggang ke
+   * berkasnya: rasio pangkas milik TEMA (THEME-CONTRACT §3). Terapkan dengan
+   * `fotoStyle()` dari `@/themes/_shared/foto` — satu baris, sama di semua tema.
    */
-  coverPhotoUrl?: string | null;
-  groomPhotoUrl?: string | null;
-  bridePhotoUrl?: string | null;
+  coverPhoto?: PhotoView | null;
+  groomPhoto?: PhotoView | null;
+  bridePhoto?: PhotoView | null;
   /** Musik latar terpilih, sudah di-resolve dari `songs` (URL domain sendiri). */
   music: { url: string; title: string } | null;
   /** Watermark footer untuk paket Basic (SPEC §2). */

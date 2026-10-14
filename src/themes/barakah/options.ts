@@ -49,6 +49,15 @@ export const barakahOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  // Foto bernama yang BENAR-BENAR dirender tema ini (THEME-CONTRACT §2).
+  // `aspect` = rasio wadahnya di CSS (.bk-mihrab aspect-ratio: 4/5.4) — dipakai editor untuk
+  // bingkai penyesuaian, BUKAN untuk memangkas berkas.
+  media: {
+    slots: [
+      { id: "groom", aspect: 4 / 5.4 },
+      { id: "bride", aspect: 4 / 5.4 },
+    ],
+  },
   preview: {
     root: "bk",
     vars: [

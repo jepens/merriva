@@ -107,13 +107,14 @@ export async function uploadNamedPhotoAction(
     return { status: "error", message: copy.common.error };
   }
 
-  // Varian THUMB untuk pratinjau 80px di editor; tema yang memakai varian
-  // display (`invitation-data.ts`). Mengirim 1600px ke kotak 80px akan membuat
-  // pemilik yang mengedit dari HP membayar ±200KB per foto tanpa sebab.
+  // Varian DISPLAY, bukan thumb: bingkai penyesuaian di editor bisa diperbesar
+  // sampai 4x, dan thumb 400px akan terlihat pecah persis saat pemilik sedang
+  // menilai framing. Tema memakai varian yang sama (`invitation-data.ts`), jadi
+  // berkasnya sudah berada di cache peramban saat undangan dibuka.
   return {
     status: "success",
     path: prefix,
-    url: storage.getPublicUrl(thumbPath(prefix)),
+    url: storage.getPublicUrl(displayPath(prefix)),
   };
 }
 

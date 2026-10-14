@@ -79,22 +79,40 @@ describe("buildInvitationData — foto bernama", () => {
     });
   }
 
+  const foto = (path: string, x = 0.5, y = 0.5, zoom = 1) => ({
+    path,
+    x,
+    y,
+    zoom,
+  });
+
   it("memberi tema varian DISPLAY, bukan prefixnya", () => {
     const d = dengan({
-      coverPhoto: "inv/a/foto/c1",
-      groom: { name: "A", photo: "inv/a/foto/g1" },
-      bride: { name: "B", photo: "inv/a/foto/b1" },
+      coverPhoto: foto("inv/a/foto/c1"),
+      groom: { name: "A", photo: foto("inv/a/foto/g1") },
+      bride: { name: "B", photo: foto("inv/a/foto/b1") },
     });
 
-    expect(d.coverPhotoUrl).toMatch(/\/inv\/a\/foto\/c1\/1600\.webp$/);
-    expect(d.groomPhotoUrl).toMatch(/\/inv\/a\/foto\/g1\/1600\.webp$/);
-    expect(d.bridePhotoUrl).toMatch(/\/inv\/a\/foto\/b1\/1600\.webp$/);
+    expect(d.coverPhoto?.url).toMatch(/\/inv\/a\/foto\/c1\/1600\.webp$/);
+    expect(d.groomPhoto?.url).toMatch(/\/inv\/a\/foto\/g1\/1600\.webp$/);
+    expect(d.bridePhoto?.url).toMatch(/\/inv\/a\/foto\/b1\/1600\.webp$/);
+  });
+
+  it("meneruskan titik fokus & perbesaran apa adanya ke tema", () => {
+    // Inti model non-destruktif: angka ini TIDAK dipanggang ke berkas, jadi ia
+    // harus sampai ke tema utuh — kalau hilang di sini, penyesuaian pemilik
+    // lenyap tanpa jejak dan fotonya kembali terpusat.
+    const d = dengan({
+      groom: { name: "A", photo: foto("inv/a/foto/g1", 0.2, 0.8, 2.5) },
+    });
+
+    expect(d.groomPhoto).toMatchObject({ x: 0.2, y: 0.8, zoom: 2.5 });
   });
 
   it("tanpa foto → null, supaya tema memakai fallback monogram", () => {
     const d = dengan({});
-    expect(d.coverPhotoUrl).toBeNull();
-    expect(d.groomPhotoUrl).toBeNull();
-    expect(d.bridePhotoUrl).toBeNull();
+    expect(d.coverPhoto).toBeNull();
+    expect(d.groomPhoto).toBeNull();
+    expect(d.bridePhoto).toBeNull();
   });
 });

@@ -871,11 +871,11 @@ export const copy = {
       // merendernya. Menjanjikan lebih dari itu akan membuat pemilik mengunggah
       // lalu mencari-cari di mana fotonya muncul.
       logoHint: "Tersimpan, tetapi belum ditampilkan tema mana pun.",
-      cropHint: "Geser fotonya, lalu atur perbesaran di bawah.",
-      cropFrame: "Pratinjau pemangkasan foto",
       zoom: "Perbesaran",
-      cropSave: "Simpan foto",
-      cropCancel: "Batal",
+      // Bingkai di editor memakai gaya yang SAMA dengan tema, jadi kalimat ini
+      // boleh menjanjikan kemiripan — dan penyesuaiannya bisa diubah kapan saja
+      // karena yang disimpan hanya angka, bukan foto yang sudah terpangkas.
+      adjustHint: "Seret fotonya untuk menggeser. Bingkai ini mengikuti tema.",
     },
     schedule: {
       // Sesi berisi yang jam mulainya belum lengkap (DECISIONS #42).

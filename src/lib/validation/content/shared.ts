@@ -30,6 +30,35 @@ export const storagePathSchema = z
   )
   .refine((p) => !p.includes(".."), "Path tidak boleh mengandung '..'");
 
+/** Perbesaran maksimum foto bernama. Lebih dari ini, varian display jatuh di
+ * bawah lebar wadah tema pada layar 3x dan wajahnya terlihat pecah. */
+export const PHOTO_MAX_ZOOM = 4;
+
+/**
+ * Foto bernama + penyesuaian tampilannya (THEME-CONTRACT §3).
+ *
+ * Berkasnya disimpan UTUH; yang disimpan di sini hanyalah ANGKA — titik fokus
+ * (0..1) dan perbesaran. Rasio pangkas karena itu milik TEMA, bukan milik
+ * berkas: tiap tema memangkas sendiri lewat `object-fit: cover` di wadahnya,
+ * dan pemilik yang berganti tema tak kehilangan apa pun.
+ *
+ * String telanjang tetap diterima dan dinormalkan ke titik tengah — foto yang
+ * terlanjur tersimpan sebelum ini tetap sah TANPA migrasi.
+ */
+export const photoSchema = z.preprocess(
+  (v) => (typeof v === "string" ? { path: v } : v),
+  z.object({
+    path: storagePathSchema,
+    // `.catch()` bukan kelonggaran: angka rusak dari data lama tak boleh
+    // menjatuhkan SELURUH draft undangan hanya karena satu titik fokus.
+    x: z.number().min(0).max(1).default(0.5).catch(0.5),
+    y: z.number().min(0).max(1).default(0.5).catch(0.5),
+    zoom: z.number().min(1).max(PHOTO_MAX_ZOOM).default(1).catch(1),
+  }),
+);
+
+export type Photo = z.output<typeof photoSchema>;
+
 /**
  * True bila string TIDAK diawali skema URL berbahaya (`javascript:`/`data:`/
  * `vbscript:`/`file:`). Semua karakter kontrol/spasi (code ≤ 0x20) dibuang dulu
@@ -115,7 +144,7 @@ export const personSchema = z.object({
   fatherName: z.string().trim().max(L.person.fatherName).optional(),
   motherName: z.string().trim().max(L.person.motherName).optional(),
   childOrder: z.string().trim().max(L.person.childOrder).optional(),
-  photo: storagePathSchema.optional(),
+  photo: photoSchema.optional(),
 });
 
 /** Rekening bank untuk amplop digital. */
@@ -172,7 +201,7 @@ export const storyEntrySchema = z.object({
  * bukan `settings` (perilaku/tampilan).
  */
 export const commonContentFields = {
-  coverPhoto: storagePathSchema.optional(),
+  coverPhoto: photoSchema.optional(),
   greetingOpen: z.string().trim().max(L.common.greeting).optional(),
   greetingClose: z.string().trim().max(L.common.greeting).optional(),
   quote: quoteSchema.optional(),

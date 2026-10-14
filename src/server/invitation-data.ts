@@ -9,6 +9,7 @@ import { scheduledEvents } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
 import { dataOrThrow } from "@/lib/supabase/result";
 import { DEFAULT_SETTINGS, settingsSchema } from "@/lib/validation/content";
+import type { Photo } from "@/lib/validation/content";
 import type { InvitationCategory } from "@/types";
 import type { Database } from "@/types/database";
 import type {
@@ -120,12 +121,19 @@ export function buildInvitationData(args: {
   // 20261014120000. Tema diberi varian DISPLAY: foto mempelai ada di bawah
   // lipatan (tak memengaruhi LCP) dan wajah manusia yang pecah lebih mahal
   // daripada byte-nya. Varian thumb dipakai pratinjau 80px di editor.
-  const resolve = (p?: string) =>
-    p ? storage.getPublicUrl(displayPath(p)) : null;
-  const coverPhotoUrl = resolve(content.coverPhoto);
-  const groomPhotoUrl =
+  const resolve = (p?: Photo) =>
+    p
+      ? {
+          url: storage.getPublicUrl(displayPath(p.path)),
+          x: p.x,
+          y: p.y,
+          zoom: p.zoom,
+        }
+      : null;
+  const coverPhoto = resolve(content.coverPhoto);
+  const groomPhoto =
     content.category === "wedding" ? resolve(content.groom.photo) : null;
-  const bridePhotoUrl =
+  const bridePhoto =
     content.category === "wedding" ? resolve(content.bride.photo) : null;
 
   return {
@@ -136,9 +144,9 @@ export function buildInvitationData(args: {
     settings,
     events,
     media,
-    coverPhotoUrl,
-    groomPhotoUrl,
-    bridePhotoUrl,
+    coverPhoto,
+    groomPhoto,
+    bridePhoto,
     music: args.music,
     watermark: args.watermark,
   };

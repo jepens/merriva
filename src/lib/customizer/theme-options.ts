@@ -73,6 +73,38 @@ export interface PreviewContract {
   open?: string;
 }
 
+/** Jenis foto bernama yang dikenal lintas tema (THEME-CONTRACT §2). */
+export const MEDIA_SLOT_IDS = [
+  "cover",
+  "groom",
+  "bride",
+  "celebrant",
+  "logo",
+] as const;
+
+export type MediaSlotId = (typeof MEDIA_SLOT_IDS)[number];
+
+export interface MediaSlot {
+  /** Salah satu `MEDIA_SLOT_IDS`, atau khas tema dengan awalan `x-` + `label`. */
+  id: string;
+  /**
+   * lebar / tinggi WADAH foto itu di tema ini (0,8 = 4:5 potret).
+   * Dipakai editor untuk bingkai penyesuaian — bukan untuk memangkas berkas.
+   */
+  aspect: number;
+  /** Wajib untuk slot `x-`; untuk id dikenal, labelnya satu di seluruh produk. */
+  label?: string;
+}
+
+/**
+ * Media yang BENAR-BENAR dirender tema ini. Editor merender bidang unggah
+ * persis dari daftar ini — jadi tema tanpa foto mempelai tak menampilkan
+ * bidangnya, dan tak ada lagi bidang yang mengambang tanpa penampil.
+ */
+export interface ThemeMedia {
+  slots: readonly MediaSlot[];
+}
+
 export interface ThemeOptions {
   /** Minimal 1; index 0 = bawaan tema. */
   variants: readonly ThemeVariant[];
@@ -89,6 +121,12 @@ export interface ThemeOptions {
   };
   /** Kontrak DOM untuk pratinjau langsung editor + penyusunan `appearance.style`. */
   preview: PreviewContract;
+  /**
+   * Foto bernama yang dirender tema ini (THEME-CONTRACT §2). Tema yang belum
+   * mendeklarasikannya tak menampilkan bidang unggah apa pun — itu keadaan yang
+   * jujur, bukan fitur yang hilang.
+   */
+  media?: ThemeMedia;
 }
 
 /** Bentuk `settings.custom` v1 (disimpan di invitations.settings.custom). */

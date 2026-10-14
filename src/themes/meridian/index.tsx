@@ -218,8 +218,8 @@ export default function Meridian({ data }: ThemeComponentProps) {
       <Couple
         bride={content.bride}
         groom={content.groom}
-        bridePhoto={data.bridePhotoUrl}
-        groomPhoto={data.groomPhotoUrl}
+        bridePhoto={data.bridePhoto}
+        groomPhoto={data.groomPhoto}
       />
     ),
     countdown: countdownTarget ? (

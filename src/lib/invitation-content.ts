@@ -17,7 +17,13 @@ import type { InvitationCategory } from "@/types";
  * (tema tetap membaca defensif). Fallback: kerangka kosong yang valid.
  */
 
-type RawPerson = Partial<Record<keyof Person, string>> | undefined;
+// `photo` bukan string lagi (THEME-CONTRACT §3) — ia `{ path, x, y, zoom }`,
+// jadi tak bisa ikut peta string di atasnya.
+type RawPerson =
+  | (Partial<Record<Exclude<keyof Person, "photo">, string>> & {
+      photo?: Person["photo"];
+    })
+  | undefined;
 
 function coercePerson(p: RawPerson): Person {
   return {

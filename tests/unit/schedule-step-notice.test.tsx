@@ -76,7 +76,7 @@ function renderWith(
       initialMedia={[]}
       maxPhotos={8}
       songs={[]}
-      photoUrls={{}}
+      photoSlots={{}}
     />,
   );
 }

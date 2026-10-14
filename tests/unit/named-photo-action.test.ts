@@ -171,12 +171,15 @@ describe("uploadNamedPhotoAction — hasil", () => {
     expect(res.path.endsWith(".webp")).toBe(false);
   });
 
-  it("URL yang dikembalikan memakai varian THUMB (pratinjau 80px di editor)", async () => {
+  it("URL yang dikembalikan memakai varian DISPLAY (bingkai penyesuaian bisa 4x)", async () => {
+    // Thumb 400px akan terlihat pecah persis saat pemilik sedang menilai
+    // framing — dan varian display ini sama dengan yang dipakai tema, jadi
+    // berkasnya sudah ter-cache saat undangan dibuka.
     const res = await uploadNamedPhotoAction(INV, form());
 
     expect(res.status).toBe("success");
     if (res.status !== "success") return;
-    expect(res.url).toBe(`https://cdn.test/${res.path}/400.webp`);
+    expect(res.url).toBe(`https://cdn.test/${res.path}/1600.webp`);
   });
 
   it("path BARU setiap unggah — bukan nama tetap per jenis", async () => {

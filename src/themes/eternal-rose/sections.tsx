@@ -11,11 +11,13 @@ import type {
   StoryEntry,
   TimezoneId,
 } from "@/lib/validation/content";
+import { fotoStyle } from "@/themes/_shared/foto";
 import { Countdown } from "@/themes/_shared/motion";
 import { CopyButton } from "@/themes/_shared/copy-button";
 import type {
   InvitationEventView,
   InvitationMediaView,
+  PhotoView,
 } from "@/types/invitation";
 
 import { LightboxThumb } from "@/themes/_shared/lightbox";
@@ -127,22 +129,24 @@ function PersonCard({
   role: string;
   side: "left" | "right";
   initial: string;
-  photo?: string | null;
+  photo?: PhotoView | null;
 }) {
   const parents = L.couple.parents(person.fatherName, person.motherName);
   return (
     <div className={`er-person er-person--${side}`}>
       <div className="er-arch" data-parallax={side === "left" ? "-8" : "8"}>
-        {/* Foto mempelai sudah di-resolve ke URL domain sendiri di server
-            (`data.groomPhotoUrl`/`bridePhotoUrl`); fallback monogram inisial bila
-            tak ada — tetap anggun, tak ada kotak kosong. */}
+        {/* Foto mempelai sudah di-resolve di server (`data.groomPhoto`/
+            `bridePhoto`), lengkap dengan titik fokus & perbesaran pilihan
+            pemilik — `fotoStyle` yang menerapkannya (THEME-CONTRACT §3).
+            Fallback monogram inisial bila tak ada: tetap anggun, tak ada
+            kotak kosong. */}
         <div className="er-arch__ph">
           {photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={photo}
+              src={photo.url}
               alt=""
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", ...fotoStyle(photo) }}
             />
           ) : (
             <span>{initial}</span>
@@ -179,8 +183,8 @@ export function Couple({
 }: {
   groom: Person;
   bride: Person;
-  groomPhoto?: string | null;
-  bridePhoto?: string | null;
+  groomPhoto?: PhotoView | null;
+  bridePhoto?: PhotoView | null;
 }) {
   const gi = (groom.nickname || groom.name || "•")
     .trim()

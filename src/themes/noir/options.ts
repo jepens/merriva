@@ -63,6 +63,15 @@ export const noirOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  // Foto bernama yang BENAR-BENAR dirender tema ini (THEME-CONTRACT §2).
+  // `aspect` = rasio wadahnya di CSS (.nr-portrait aspect-ratio: 4/5) — dipakai editor untuk
+  // bingkai penyesuaian, BUKAN untuk memangkas berkas.
+  media: {
+    slots: [
+      { id: "groom", aspect: 4 / 5 },
+      { id: "bride", aspect: 4 / 5 },
+    ],
+  },
   preview: {
     root: "nr",
     vars: [

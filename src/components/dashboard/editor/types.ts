@@ -1,4 +1,3 @@
-import type { NamedPhotoKind } from "@/lib/media";
 import type {
   DraftContent,
   EventDraft,
@@ -32,9 +31,13 @@ export type SongOption = {
 };
 
 /**
- * URL foto bernama yang SUDAH tersimpan, dirakit di server dari `storage_path`
- * (`getPublicUrl`). Dikirim ke editor sebagai nilai awal pratinjau supaya klien
- * tak pernah merakit URL media sendiri — aturan "media hanya dari domain
- * sendiri" tinggal di satu tempat (SPEC §6.4).
+ * Satu slot foto yang AKTIF untuk undangan ini: rasio wadah milik TEMA yang
+ * sedang dipakai, plus URL foto tersimpan (null bila belum ada).
+ *
+ * Dirakit di server — klien tak pernah merakit URL media sendiri, dan tak
+ * pernah menebak rasio. Slot yang tak ada di sini berarti tema aktif memang tak
+ * merendernya, jadi editor tak menampilkan bidangnya (THEME-CONTRACT §2).
  */
-export type NamedPhotoUrls = Partial<Record<NamedPhotoKind, string | null>>;
+export type PhotoSlotView = { aspect: number; url: string | null };
+
+export type PhotoSlots = Readonly<Partial<Record<string, PhotoSlotView>>>;

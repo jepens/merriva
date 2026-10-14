@@ -23,7 +23,7 @@ import type { InvitationMediaView } from "@/types/invitation";
 
 import { EditorErrorsContext } from "./editor-errors";
 import { stepForPath } from "./step-fields";
-import type { EditorValues, NamedPhotoUrls, SongOption } from "./types";
+import type { EditorValues, PhotoSlots, SongOption } from "./types";
 import {
   useDraftAutosave,
   type FlushResult,
@@ -39,8 +39,8 @@ export interface EditorStepContext {
   setMedia: Dispatch<SetStateAction<InvitationMediaView[]>>;
   maxPhotos: number;
   songs: SongOption[];
-  /** URL foto bernama tersimpan (nilai awal pratinjau; dirakit di server). */
-  photoUrls: NamedPhotoUrls;
+  /** Slot foto yang dirender TEMA AKTIF + URL foto tersimpan (dari server). */
+  photoSlots: PhotoSlots;
 }
 
 /** Definisi satu langkah editor (dipakai lintas kategori via konfigurasi). */
@@ -82,7 +82,7 @@ export function EditorShell({
   initialMedia,
   maxPhotos,
   songs,
-  photoUrls,
+  photoSlots,
   steps,
   initialStep,
 }: {
@@ -92,7 +92,7 @@ export function EditorShell({
   initialMedia: InvitationMediaView[];
   maxPhotos: number;
   songs: SongOption[];
-  photoUrls: NamedPhotoUrls;
+  photoSlots: PhotoSlots;
   steps: EditorStep[];
   /** Kunci langkah yang dibuka pertama (`?langkah=`, #44); tak dikenal → 0. */
   initialStep?: string;
@@ -167,7 +167,7 @@ export function EditorShell({
     setMedia,
     maxPhotos,
     songs,
-    photoUrls,
+    photoSlots,
   };
 
   return (

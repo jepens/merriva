@@ -6,7 +6,7 @@ import {
   commonContentFields,
   optionalFormat,
   personSchema,
-  storagePathSchema,
+  photoSchema,
   storyEntrySchema,
 } from "./shared";
 
@@ -36,7 +36,7 @@ export const corporateContentSchema = z.object({
     .max(L.corporate.eventName),
   organizer: z.string().trim().max(L.corporate.organizer).optional(),
   description: z.string().trim().max(L.corporate.description).optional(),
-  logo: storagePathSchema.optional(),
+  logo: photoSchema.optional(),
   pic: z
     .object({
       name: z.string().trim().max(L.pic.name).optional(),

@@ -13,10 +13,12 @@ import type {
   TimezoneId,
 } from "@/lib/validation/content";
 import { CopyButton } from "@/themes/_shared/copy-button";
+import { fotoStyle } from "@/themes/_shared/foto";
 import { Countdown } from "@/themes/_shared/motion";
 import type {
   InvitationEventView,
   InvitationMediaView,
+  PhotoView,
 } from "@/types/invitation";
 
 import { LightboxThumb } from "@/themes/_shared/lightbox";
@@ -95,7 +97,7 @@ function Keraton({
   person: Person;
   role: string;
   initial: string;
-  photo?: string | null;
+  photo?: PhotoView | null;
 }) {
   const parents = L.couple.parents(person.fatherName, person.motherName);
   return (
@@ -120,9 +122,9 @@ function Keraton({
             {photo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={photo}
+                src={photo.url}
                 alt=""
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{ width: "100%", height: "100%", ...fotoStyle(photo) }}
               />
             ) : (
               <span>{initial}</span>
@@ -152,8 +154,8 @@ export function Couple({
 }: {
   groom: Person;
   bride: Person;
-  groomPhoto?: string | null;
-  bridePhoto?: string | null;
+  groomPhoto?: PhotoView | null;
+  bridePhoto?: PhotoView | null;
 }) {
   return (
     <section className="kr-section">

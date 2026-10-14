@@ -54,6 +54,15 @@ export const verdantOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  // Foto bernama yang BENAR-BENAR dirender tema ini (THEME-CONTRACT §2).
+  // `aspect` = rasio wadahnya di CSS (.vd-oval 150x190px) — dipakai editor untuk
+  // bingkai penyesuaian, BUKAN untuk memangkas berkas.
+  media: {
+    slots: [
+      { id: "groom", aspect: 150 / 190 },
+      { id: "bride", aspect: 150 / 190 },
+    ],
+  },
   preview: {
     root: "vd",
     vars: [

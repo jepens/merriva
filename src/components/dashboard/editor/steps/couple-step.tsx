@@ -4,27 +4,29 @@ import type { UseFormReturn } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy";
+import type { Photo } from "@/lib/validation/content";
 import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
 import { Field } from "../field";
 import { PhotoField } from "../photo-field";
-import type { EditorValues, NamedPhotoUrls } from "../types";
+import type { EditorValues, PhotoSlots, PhotoSlotView } from "../types";
 
 function PersonFields({
   form,
   side,
   title,
   invitationId,
-  photoUrl,
+  slot,
 }: {
   form: UseFormReturn<EditorValues>;
   side: "groom" | "bride";
   title: string;
   invitationId: string;
-  photoUrl: string | null;
+  /** `undefined` = tema aktif tak merender foto pihak ini. */
+  slot: PhotoSlotView | undefined;
 }) {
   const { register, setValue, watch } = form;
-  const photoPath = watch(`content.${side}.photo`) as string | undefined;
+  const photo = watch(`content.${side}.photo`) as Photo | undefined;
   return (
     <div className="space-y-3">
       <h3 className="font-medium">{title}</h3>
@@ -53,28 +55,27 @@ function PersonFields({
           {...register(`content.${side}.childOrder`)}
         />
       </Field>
-      {/* Hanya PATH yang masuk form; autosave yang menuliskannya ke `content`.
-          Tema sudah merendernya sejak lama (fallback monogram bila kosong) —
-          yang belum ada justru tombolnya (SPEC §4.4 langkah 2). */}
-      <PhotoField
-        invitationId={invitationId}
-        label={
-          side === "groom"
-            ? copy.editor.photo.groomLabel
-            : copy.editor.photo.brideLabel
-        }
-        hint={copy.editor.photo.personHint}
-        // 4:5 = 0,8. Wadah foto mempelai di keenam tema yang merendernya
-        // berkisar 1,24-1,35 (potret); 4:5 adalah yang PALING LEBAR di
-        // antaranya, jadi tema hanya memangkas sedikit di sisi dan tak
-        // pernah memotong atas-bawah yang berisi wajah.
-        aspect={4 / 5}
-        value={photoPath}
-        initialUrl={photoUrl}
-        onChange={(path) =>
-          setValue(`content.${side}.photo`, path, { shouldDirty: true })
-        }
-      />
+      {/* Bidangnya hanya muncul bila TEMA AKTIF memang merender foto ini, dan
+          rasio bingkainya datang dari tema itu juga (THEME-CONTRACT §2).
+          Yang masuk form hanya `{ path, x, y, zoom }`; autosave yang
+          menuliskannya ke `content`. */}
+      {slot ? (
+        <PhotoField
+          invitationId={invitationId}
+          label={
+            side === "groom"
+              ? copy.editor.photo.groomLabel
+              : copy.editor.photo.brideLabel
+          }
+          hint={copy.editor.photo.personHint}
+          aspect={slot.aspect}
+          value={photo}
+          initialUrl={slot.url}
+          onChange={(next) =>
+            setValue(`content.${side}.photo`, next, { shouldDirty: true })
+          }
+        />
+      ) : null}
     </div>
   );
 }
@@ -82,25 +83,25 @@ function PersonFields({
 export function CoupleStep({
   form,
   invitationId,
-  photoUrls,
+  photoSlots,
 }: {
   form: UseFormReturn<EditorValues>;
   invitationId: string;
-  photoUrls: NamedPhotoUrls;
+  photoSlots: PhotoSlots;
 }) {
   return (
     <div className="grid gap-6 sm:grid-cols-2">
       <PersonFields
         form={form}
         invitationId={invitationId}
-        photoUrl={photoUrls.groom ?? null}
+        slot={photoSlots.groom}
         side="groom"
         title={copy.editor.fields.groomTitle}
       />
       <PersonFields
         form={form}
         invitationId={invitationId}
-        photoUrl={photoUrls.bride ?? null}
+        slot={photoSlots.bride}
         side="bride"
         title={copy.editor.fields.brideTitle}
       />

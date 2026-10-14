@@ -3763,6 +3763,95 @@ tidak dikerjakan.
 
 ---
 
+## #86 — 2026-10-14 · Foto non-destruktif + slot media per tema (fase 1b)
+
+Fase 1b dari [THEME-CONTRACT.md](THEME-CONTRACT.md). Ia membatalkan sebagian
+#84 — dengan sengaja, dan pada satu-satunya momen ketika itu masih gratis.
+
+### Rasio pangkas pindah dari BERKAS ke TEMA
+
+#84 memanggang pangkasan 4:5 ke berkas yang diunggah. Itu benar selama
+kesepuluh tema berwadah potret serupa, dan salah pada hari pertama ada tema
+lanskap. Pemilik memutuskan pindah sebelum tema ke-11 ditulis.
+
+Sekarang berkasnya disimpan UTUH dan yang tersimpan di `content` hanyalah angka:
+
+```ts
+photo: { path: "inv/<inv>/foto/<uuid>", x: 0.38, y: 0.22, zoom: 1.6 }
+```
+
+Tema menerapkannya lewat satu helper bersama, satu baris per `<img>`:
+`objectPosition` + `transform: scale()` dengan `transformOrigin` DISAMAKAN —
+tanpa penyamaan itu, memperbesar menarik gambar ke tengah wadah dan wajah yang
+sudah dibidik justru bergeser keluar.
+
+Yang didapat: ganti tema tak merusak foto · penyesuaian bisa diubah kapan saja
+tanpa unggah ulang · mutu tak pernah turun bertingkat · tema lanskap tinggal
+menulis `aspect: 16/9`.
+
+**Nol migrasi.** Skema menerima string telanjang dan menormalkannya ke titik
+tengah, jadi dua foto yang sudah terlanjur tersimpan tetap sah. Angka yang rusak
+jatuh ke bawaan lewat `.catch()` alih-alih melempar — `content` satu kolom
+JSONB, dan satu titik fokus karangan tak boleh membuat nama mempelai serta
+jadwal ikut hilang dari editor.
+
+### Kodenya BERKURANG
+
+Pemangkas kanvas (`photo-cropper.tsx`), `crop.ts`, dan `cropToVariants` dihapus.
+Penyesuai sekarang memakai CSS yang sama persis dengan tema, jadi pratinjau di
+editor bukan lagi tiruan — ia perilaku yang sama. Tak ada lagi kanvas keluaran,
+`drawImage`, atau penghitungan ukuran varian.
+
+Matematika pergeseran dipindah ke `lib/image/focus.ts` sebagai fungsi murni.
+Pembaginya LUAPAN NYATA foto di dalam bingkai, bukan lebar bingkai: foto yang
+nyaris sebentuk bingkai akan terasa melompat, dan panorama terasa macet —
+keduanya terbaca sebagai "penyesuaiannya rusak", bukan "faktornya kurang pas".
+
+Satu penjaga dibuang karena terbukti tak terjangkau: `pembagi > 0` sudah
+menangani bingkai 0 px, gambar belum termuat, dan NaN sekaligus.
+
+### Slot media: editor berhenti menebak
+
+`ThemeOptions.media.slots` menyatakan foto apa yang BENAR-BENAR dirender sebuah
+tema, lengkap dengan rasio wadahnya. Editor merender bidang unggah persis dari
+daftar itu. Konsekuensinya langsung terlihat, dan semuanya jujur:
+
+- **Enam tema** mendeklarasikan `groom` + `bride` dengan rasio asli wadahnya
+  (eternal-rose 3/4 · barakah 4/5,4 · kirana 150/186 · meridian & noir 4/5 ·
+  verdant 150/190).
+- **Empat tema — aria, festa, lumina, prisma — tidak merender foto mempelai
+  sama sekali.** Pemilik yang memakai tema itu kini tak melihat bidang
+  unggahnya. Itu bukan fitur yang hilang; bidangnya memang tak pernah
+  menghasilkan apa pun di sana.
+- **`cover` dan `logo` tak dideklarasikan satu tema pun**, jadi bidangnya hilang
+  dari editor. Ini menutup janji palsu yang saya pasang di #83 dan saya akui di
+  #84: keduanya bisa diunggah, tak pernah tampil di mana pun.
+
+### Tinjauan yang menangkap kesalahan saya
+
+Lima tema dikerjakan paralel dengan acuan eternal-rose buatan saya. **Tiga agen
+secara terpisah melaporkan lubang yang sama di acuan itu**: komponen perantara
+`Couple` masih bertipe `string | null` sementara `PersonCard` di dalamnya sudah
+`PhotoView | null`. Saya melewatkannya karena memangkas keluaran `tsc` dengan
+`head -12` — galatnya ada, terpotong. Dua agen menolak menyalin lubang itu dan
+menambalnya di temanya masing-masing; satu lagi menyebutnya tanpa menyentuh
+berkas di luar batasnya. Semuanya saya verifikasi sendiri di kode sebelum
+menerima.
+
+**Verifikasi:** 1953+ test hijau · 133 assert kontrak atas 10 tema · 18 mutan 18
+mati, termasuk "string telanjang tak lagi dinormalkan", "transformOrigin
+tertinggal di tengah", "pembagi memakai lebar bingkai", dan "foto baru mewarisi
+penyesuaian foto lama".
+
+### Yang tersisa
+
+Keempat tema tanpa foto mempelai layak diberi foto — itu pekerjaan art
+direction, bukan kontrak. `/api/og` masih belum memakai foto sampul (SPEC §4.5),
+dan selama tak ada tema yang mendeklarasikan slot `cover`, bidangnya pun tak
+tersedia untuk diisi.
+
+---
+
 ## Template entri baru
 
 ```

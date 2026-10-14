@@ -79,6 +79,15 @@ export const eternalRoseOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  // Foto bernama yang BENAR-BENAR dirender tema ini (THEME-CONTRACT §2).
+  // `aspect` = rasio wadahnya di CSS (.er-arch aspect-ratio: 3/4) — dipakai editor untuk
+  // bingkai penyesuaian, BUKAN untuk memangkas berkas.
+  media: {
+    slots: [
+      { id: "groom", aspect: 3 / 4 },
+      { id: "bride", aspect: 3 / 4 },
+    ],
+  },
   preview: {
     root: "er",
     vars: [

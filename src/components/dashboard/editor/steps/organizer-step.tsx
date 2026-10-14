@@ -4,37 +4,42 @@ import type { UseFormReturn } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy";
+import type { Photo } from "@/lib/validation/content";
 import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
 import { Field } from "../field";
 import { LimitedTextarea } from "../limited-textarea";
 import { PhotoField } from "../photo-field";
-import type { EditorValues } from "../types";
+import type { EditorValues, PhotoSlotView } from "../types";
 
 /** Detail corporate: logo perusahaan + deskripsi acara + narahubung (PIC). */
 export function OrganizerStep({
   form,
   invitationId,
-  logoUrl,
+  logoSlot,
 }: {
   form: UseFormReturn<EditorValues>;
   invitationId: string;
-  logoUrl: string | null;
+  /** `undefined` = tema aktif tak merender logo. */
+  logoSlot: PhotoSlotView | undefined;
 }) {
   const { register, setValue, watch } = form;
-  const logoPath = watch("content.logo") as string | undefined;
+  const logo = watch("content.logo") as Photo | undefined;
   return (
     <div className="space-y-5">
-      <PhotoField
-        invitationId={invitationId}
-        label={copy.editor.photo.logoLabel}
-        hint={copy.editor.photo.logoHint}
-        value={logoPath}
-        initialUrl={logoUrl}
-        onChange={(path) =>
-          setValue("content.logo", path, { shouldDirty: true })
-        }
-      />
+      {logoSlot ? (
+        <PhotoField
+          invitationId={invitationId}
+          label={copy.editor.photo.logoLabel}
+          hint={copy.editor.photo.logoHint}
+          aspect={logoSlot.aspect}
+          value={logo}
+          initialUrl={logoSlot.url}
+          onChange={(next) =>
+            setValue("content.logo", next, { shouldDirty: true })
+          }
+        />
+      ) : null}
 
       <Field label={copy.editor.fields.description}>
         <LimitedTextarea

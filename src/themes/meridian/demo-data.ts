@@ -1,4 +1,4 @@
-import { demoPhotosFor } from "@/themes/_shared/demo-photos";
+import { demoPhoto, demoPhotosFor } from "@/themes/_shared/demo-photos";
 import type { InvitationData } from "@/types/invitation";
 
 /**
@@ -92,9 +92,9 @@ export const demoInvitationData: InvitationData = {
       photo("#d4b36a", "#4a3d22"),
       photo("#17223a", "#a97e35"),
     ].map((p, i) => ({ id: `demo-m${i}`, ...p })),
-  groomPhotoUrl: demoPhotosFor("meridian")?.[0]?.url ?? null,
-  bridePhotoUrl: demoPhotosFor("meridian")?.[1]?.url ?? null,
-  coverPhotoUrl: demoPhotosFor("meridian")?.[2]?.url ?? null,
+  groomPhoto: demoPhoto(demoPhotosFor("meridian")?.[0]?.url),
+  bridePhoto: demoPhoto(demoPhotosFor("meridian")?.[1]?.url),
+  coverPhoto: demoPhoto(demoPhotosFor("meridian")?.[2]?.url),
   music: null,
   watermark: true,
 };

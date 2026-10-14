@@ -231,8 +231,8 @@ export default function Verdant({ data }: ThemeComponentProps) {
       <Couple
         groom={content.groom}
         bride={content.bride}
-        groomPhoto={data.groomPhotoUrl}
-        bridePhoto={data.bridePhotoUrl}
+        groomPhoto={data.groomPhoto}
+        bridePhoto={data.bridePhoto}
       />
     ),
     countdown: countdownTarget ? (

@@ -63,7 +63,7 @@ function renderWith(events: EventDraft[]) {
       initialMedia={[]}
       maxPhotos={8}
       songs={[]}
-      photoUrls={{}}
+      photoSlots={{}}
     />,
   );
 }

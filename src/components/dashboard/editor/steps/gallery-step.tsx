@@ -5,6 +5,7 @@ import type { UseFormReturn } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
+import type { Photo } from "@/lib/validation/content";
 import { compressToWebpVariants, isSupportedImage } from "@/lib/image/compress";
 import { MEDIA_MAX_BYTES } from "@/lib/media";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,7 @@ import {
 import type { InvitationMediaView } from "@/types/invitation";
 
 import { PhotoField } from "../photo-field";
-import type { EditorValues } from "../types";
+import type { EditorValues, PhotoSlotView } from "../types";
 
 /**
  * Langkah Galeri (SPEC §4.4 step 4). Kompresi 2 varian WebP di klien lalu unggah
@@ -26,20 +27,21 @@ import type { EditorValues } from "../types";
 export function GalleryStep({
   form,
   invitationId,
-  coverUrl,
+  coverSlot,
   maxPhotos,
   media,
   setMedia,
 }: {
   form: UseFormReturn<EditorValues>;
   invitationId: string;
-  coverUrl: string | null;
+  /** `undefined` = tema aktif tak merender foto sampul. */
+  coverSlot: PhotoSlotView | undefined;
   maxPhotos: number;
   media: InvitationMediaView[];
   setMedia: Dispatch<SetStateAction<InvitationMediaView[]>>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const coverPath = form.watch("content.coverPhoto") as string | undefined;
+  const cover = form.watch("content.coverPhoto") as Photo | undefined;
   const [pending, setPending] = useState(0);
   const [removing, setRemoving] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -121,20 +123,25 @@ export function GalleryStep({
   return (
     <div className="space-y-4">
       {/* Foto sampul: satu foto bernama, DI LUAR batas foto paket (batas itu
-          tentang galeri). Ditaruh di langkah ini karena di sinilah pemilik
-          sedang berurusan dengan foto. */}
-      <PhotoField
-        invitationId={invitationId}
-        label={copy.editor.photo.coverLabel}
-        hint={copy.editor.photo.coverHint}
-        value={coverPath}
-        initialUrl={coverUrl}
-        onChange={(path) =>
-          form.setValue("content.coverPhoto", path, { shouldDirty: true })
-        }
-      />
-
-      <hr className="border-border" />
+          tentang galeri). Muncul HANYA bila tema aktif memang merendernya —
+          hari ini belum ada satu pun, jadi bidang ini tak tampil di mana pun
+          (THEME-CONTRACT §2). */}
+      {coverSlot ? (
+        <>
+          <PhotoField
+            invitationId={invitationId}
+            label={copy.editor.photo.coverLabel}
+            hint={copy.editor.photo.coverHint}
+            aspect={coverSlot.aspect}
+            value={cover}
+            initialUrl={coverSlot.url}
+            onChange={(next) =>
+              form.setValue("content.coverPhoto", next, { shouldDirty: true })
+            }
+          />
+          <hr className="border-border" />
+        </>
+      ) : null}
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-xs">

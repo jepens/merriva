@@ -10,10 +10,12 @@ import type {
   TimezoneId,
 } from "@/lib/validation/content";
 import { CopyButton } from "@/themes/_shared/copy-button";
+import { fotoStyle } from "@/themes/_shared/foto";
 import { Countdown } from "@/themes/_shared/motion";
 import type {
   InvitationEventView,
   InvitationMediaView,
+  PhotoView,
 } from "@/types/invitation";
 
 import { LightboxThumb } from "@/themes/_shared/lightbox";
@@ -76,7 +78,7 @@ function Figure({
   person: Person;
   role: string;
   initial: string;
-  photo?: string | null;
+  photo?: PhotoView | null;
 }) {
   const meta = parentsLine(person);
   return (
@@ -86,9 +88,9 @@ function Figure({
           {photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={photo}
+              src={photo.url}
               alt=""
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", ...fotoStyle(photo) }}
             />
           ) : (
             <span>{initial}</span>
@@ -112,8 +114,8 @@ export function Couple({
 }: {
   bride: Person;
   groom: Person;
-  bridePhoto?: string | null;
-  groomPhoto?: string | null;
+  bridePhoto?: PhotoView | null;
+  groomPhoto?: PhotoView | null;
 }) {
   return (
     <section className="mrd-section mrd-couple">

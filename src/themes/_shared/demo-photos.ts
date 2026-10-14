@@ -1,4 +1,4 @@
-import type { InvitationMediaView } from "@/types/invitation";
+import type { InvitationMediaView, PhotoView } from "@/types/invitation";
 
 import {
   demoPhotoCredits,
@@ -43,4 +43,12 @@ export function allDemoPhotographers(): { name: string; url: string }[] {
     }
   }
   return [...seen.values()];
+}
+
+/**
+ * URL foto demo -> `PhotoView` siap render. Demo selalu memakai titik tengah
+ * tanpa perbesaran: katalog memamerkan TEMANYA, bukan penyesuaian seseorang.
+ */
+export function demoPhoto(url: string | undefined | null): PhotoView | null {
+  return url ? { url, x: 0.5, y: 0.5, zoom: 1 } : null;
 }

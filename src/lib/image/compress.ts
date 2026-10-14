@@ -1,6 +1,5 @@
 import { MEDIA_VARIANTS } from "@/lib/media";
 
-import { ukuranKeluaran, type CropRect } from "./crop";
 import { encodeCanvas } from "./encode";
 
 /**
@@ -30,9 +29,7 @@ export function isSupportedImage(file: File): boolean {
   return Boolean(file.type) && ACCEPTED.test(file.type);
 }
 
-/** Decode file → bitmap (EXIF dihormati). Diekspor karena pemangkas foto
- * memegang bitmapnya sendiri selama pemilik menggeser & memperbesar. */
-export async function loadBitmap(file: File): Promise<ImageBitmap> {
+async function loadBitmap(file: File): Promise<ImageBitmap> {
   // `imageOrientation: 'from-image'` menghormati EXIF (foto potret dari HP);
   // fallback bila opsi tak didukung (Safari lama).
   try {
@@ -99,56 +96,4 @@ export async function compressToWebpVariants(
   } finally {
     bitmap.close();
   }
-}
-
-async function encodeCrop(
-  bitmap: ImageBitmap,
-  crop: CropRect,
-  maxLong: number,
-  quality: number,
-): Promise<{ blob: Blob; w: number; h: number }> {
-  const { w, h } = ukuranKeluaran(crop, maxLong);
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas 2D tidak tersedia.");
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(bitmap, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, w, h);
-  const { blob } = await encodeCanvas(canvas, quality);
-  return { blob, w, h };
-}
-
-/**
- * Pangkas bitmap ke `crop` lalu hasilkan 2 varian — jalur foto mempelai
- * (DECISIONS #84). Berbeda dari `compressToWebpVariants` yang memakai seluruh
- * gambar: di sini pemilik sudah memilih bagian mana yang dipakai, dan BAGIAN
- * ITULAH yang disimpan. Tema tidak perlu tahu apa-apa soal penyesuaian ini.
- *
- * Batas varian dihitung dari sisi terpanjang hasil pangkas, bukan dari lebar —
- * foto mempelai berorientasi POTRET, jadi membatasi lebar ke 1600px akan
- * menghasilkan tinggi 2000px dan berkas yang jauh lebih berat dari galeri.
- */
-export async function cropToVariants(
-  bitmap: ImageBitmap,
-  crop: CropRect,
-): Promise<CompressedPhoto> {
-  const display = await encodeCrop(
-    bitmap,
-    crop,
-    MEDIA_VARIANTS.display.maxWidth,
-    MEDIA_VARIANTS.display.quality,
-  );
-  const thumb = await encodeCrop(
-    bitmap,
-    crop,
-    MEDIA_VARIANTS.thumb.maxWidth,
-    MEDIA_VARIANTS.thumb.quality,
-  );
-  return {
-    display: display.blob,
-    thumb: thumb.blob,
-    width: display.w,
-    height: display.h,
-  };
 }

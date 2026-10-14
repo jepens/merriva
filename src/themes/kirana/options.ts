@@ -55,6 +55,15 @@ export const kiranaOptions: ThemeOptions = {
     motion: true,
     grain: true,
   },
+  // Foto bernama yang BENAR-BENAR dirender tema ini (THEME-CONTRACT §2).
+  // `aspect` = rasio wadahnya di CSS (.kr-foto-oval 150x186px) — dipakai editor untuk
+  // bingkai penyesuaian, BUKAN untuk memangkas berkas.
+  media: {
+    slots: [
+      { id: "groom", aspect: 150 / 186 },
+      { id: "bride", aspect: 150 / 186 },
+    ],
+  },
   preview: {
     root: "kr",
     vars: [

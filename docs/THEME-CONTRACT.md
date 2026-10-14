@@ -1,6 +1,6 @@
 # Kontrak Tema v2 — standar untuk menambah banyak tema
 
-Status: **fase 1a SELESAI** (DECISIONS #85) · fase 1b–3 menunggu · 14 Okt 2026 · keputusan pemilik: media
+Status: **fase 1a & 1b SELESAI** (DECISIONS #85, #86) · fase 2–3 menunggu · 14 Okt 2026 · keputusan pemilik: media
 **non-destruktif**, susunan section **boleh berbeda antar tema**, tema dibuat **dari arahan pemilik**.
 
 Dokumen ini melengkapi — bukan menggantikan — [`THEME-DESIGN.md`](THEME-DESIGN.md)
@@ -220,7 +220,7 @@ Tema ke-30 jadi sama amannya dengan tema ke-11.
 | Fase | Isi | Catatan |
 |---|---|---|
 | **1a** ✅ | Kosakata kanonik + rename alias di 6 tema · helper `defaultSectionOrder` · test konformansi | SELESAI 14 Okt 2026 — menemukan 4 tema ber-hero yang bisa disembunyikan + 2 tema dua-jalur (DECISIONS #85) |
-| **1b** | Blok `media` · foto non-destruktif + helper + 6 tema · penyesuai editor berbasis CSS | Mengubah kontrak props tema. Nol migrasi data **bila dikerjakan sekarang** |
+| **1b** ✅ | Blok `media` · foto non-destruktif + `fotoStyle` + 6 tema · penyesuai editor berbasis CSS | SELESAI 14 Okt 2026 — nol migrasi; 4 tema ternyata tak merender foto mempelai, `cover`/`logo` tak dirender siapa pun (DECISIONS #86) |
 | **2** | `pnpm theme:new` + template tema minimal | Setelah kontraknya stabil |
 | **3** | Tema baru — satu commit per tema, masing-masing lolos DoD | Di sinilah ragam dibangun |
 
