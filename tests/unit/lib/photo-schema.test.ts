@@ -36,9 +36,9 @@ describe("menerima bentuk lama", () => {
 
 describe("menyimpan penyesuaian", () => {
   it("meneruskan titik fokus & perbesaran apa adanya", () => {
-    expect(photoSchema.parse({ path: PATH, x: 0.2, y: 0.9, zoom: 2.5 })).toEqual(
-      { path: PATH, x: 0.2, y: 0.9, zoom: 2.5 },
-    );
+    expect(
+      photoSchema.parse({ path: PATH, x: 0.2, y: 0.9, zoom: 2.5 }),
+    ).toEqual({ path: PATH, x: 0.2, y: 0.9, zoom: 2.5 });
   });
 });
 
@@ -55,9 +55,9 @@ describe("angka rusak tak menjatuhkan seluruh draft", () => {
   });
 
   it("batas zoom dipatuhi", () => {
-    expect(photoSchema.parse({ path: PATH, zoom: PHOTO_MAX_ZOOM })).toMatchObject(
-      { zoom: PHOTO_MAX_ZOOM },
-    );
+    expect(
+      photoSchema.parse({ path: PATH, zoom: PHOTO_MAX_ZOOM }),
+    ).toMatchObject({ zoom: PHOTO_MAX_ZOOM });
     // Di atas batas = data karangan; dikembalikan ke 1 daripada merender foto
     // yang pecah di depan tamu.
     expect(
