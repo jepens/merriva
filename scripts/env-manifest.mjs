@@ -155,6 +155,12 @@ export const MANIFEST = [
   { key: "R2_SECRET_ACCESS_KEY", kapan: "r2", rahasia: true },
   { key: "R2_BUCKET", kapan: "r2" },
   { key: "PEXELS_API_KEY", kapan: "tooling" },
+  // Token Management API Supabase, dibaca `pnpm ops:verify` untuk membaca
+  // konfigurasi Auth produksi. SENGAJA `tooling`, bukan `prod`: ini kredensial
+  // mesin pengembang, dan cakupannya SELURUH akun Supabase — ia tak punya
+  // urusan apa pun di dalam container produksi. Biasanya sudah ada di
+  // `.mcp.json` (ter-gitignore); env ini hanya jalan alternatifnya.
+  { key: "SUPABASE_ACCESS_TOKEN", kapan: "tooling", rahasia: true },
   { key: "E2E_EMAIL", kapan: "tooling" },
   { key: "E2E_PASSWORD", kapan: "tooling" },
   { key: "E2E_INVITATION_ID", kapan: "tooling" },

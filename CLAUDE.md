@@ -39,6 +39,10 @@ pnpm typecheck            # tsc --noEmit
 pnpm test                 # unit test (Vitest)
 pnpm env:check            # periksa .env.local  — sebut yang kosong + akibatnya
 pnpm env:check --prod     # periksa .env.production.local (nilai utk Easypanel)
+pnpm ops:verify           # periksa PRODUKSI yang sedang berjalan: konfigurasi Auth Supabase,
+                          # DNS (MX/DMARC/DKIM), build-arg yang benar-benar ter-inline di bundel,
+                          # kesehatan cron, objek media, ISR. Berkas lokal hanya sumber KUNCI —
+                          # bukan sumber kebenaran tentang apa yang terpasang (lihat docstringnya)
 pnpm test:e2e             # Playwright (butuh env staging)
 pnpm brand:assets         # regenerasi favicon/ikon/OG/banner dari master SVG public/brand/ (Chromium Playwright)
 pnpm test:db              # pgTAP supabase/tests/ (butuh stack lokal `supabase start`; job `db` terpisah di CI)

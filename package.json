@@ -20,6 +20,7 @@
     "loadtest": "k6 run scripts/k6/invitation-load.js",
     "typecheck": "node scripts/build-theme-css.mjs && tsc --noEmit",
     "env:check": "node scripts/check-env.mjs",
+    "ops:verify": "node scripts/ops-verify.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

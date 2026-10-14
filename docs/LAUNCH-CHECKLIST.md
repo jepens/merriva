@@ -20,6 +20,13 @@ dibaca lewat Management API (`GET /v1/projects/{ref}/config/auth`), DNS lewat re
 publik, sisanya lewat HTTP ke `merriva.id` dan query ke DB prod. Angka di bawah adalah
 nilai yang benar-benar terbaca hari itu.
 
+> **Jangan percaya tabel ini bila tanggalnya sudah lama — jalankan `pnpm ops:verify`.**
+> Ia mengulang persis pemeriksaan di bawah dan keluar dengan kode 1 bila ada yang
+> GAGAL. Tabel ini adalah keluarannya pada 15 Okt 2026, bukan janji yang berlaku
+> selamanya. Butir yang tak bisa diperiksa dilaporkan "TIDAK DIPERIKSA" dan bukan
+> berarti aman. Endpoint `/api/cron/*` sengaja tak dipanggil: memanggilnya berarti
+> menjalankan job-nya (membatalkan order, mengirim email, menghapus data retensi).
+
 **Terbukti jalan:**
 
 | Butir | Bukti |
