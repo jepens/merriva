@@ -858,13 +858,24 @@ export const copy = {
       hint: "JPG, PNG, atau WebP. Otomatis dikompres di perangkat.",
       preview: "Pratinjau foto",
       coverLabel: "Foto sampul",
-      coverHint:
-        "Tampil di layar pembuka undangan dan pada pratinjau tautan di WhatsApp.",
+      // Jujur apa adanya: nilainya tersimpan dan ikut terhapus saat retensi,
+      // tetapi belum ada tema yang membacanya dan `/api/og` pun belum.
+      // Menjanjikan "tampil di layar pembuka" akan membuat pemilik mengunggah
+      // lalu mencari-cari di mana fotonya muncul.
+      coverHint: "Tersimpan, tetapi belum ditampilkan tema mana pun.",
       groomLabel: "Foto mempelai pria",
       brideLabel: "Foto mempelai wanita",
       personHint: "Bila kosong, undangan menampilkan monogram inisial.",
       logoLabel: "Logo perusahaan",
-      logoHint: "Tampil di bagian penyelenggara.",
+      // Jujur: datanya tersimpan, tetapi belum ada satu pun tema yang
+      // merendernya. Menjanjikan lebih dari itu akan membuat pemilik mengunggah
+      // lalu mencari-cari di mana fotonya muncul.
+      logoHint: "Tersimpan, tetapi belum ditampilkan tema mana pun.",
+      cropHint: "Geser fotonya, lalu atur perbesaran di bawah.",
+      cropFrame: "Pratinjau pemangkasan foto",
+      zoom: "Perbesaran",
+      cropSave: "Simpan foto",
+      cropCancel: "Batal",
     },
     schedule: {
       // Sesi berisi yang jam mulainya belum lengkap (DECISIONS #42).

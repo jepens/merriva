@@ -3591,6 +3591,87 @@ produksi terhadap enam bentuk `content`, termasuk `content` yang bukan objek.
 
 ---
 
+## #84 — 2026-10-14 · Penyesuaian foto mempelai: dipanggang saat unggah, tema tak tersentuh
+
+Foto mempelai pertama yang diunggah langsung memperlihatkan masalahnya: wadah di
+tema berbentuk POTRET, sedangkan foto yang dipilih pemilik jarang berbentuk itu
+— `object-fit: cover` lalu memotong seenaknya, dan wajahnya bisa tergeser keluar.
+
+Ada dua tempat penyesuaian itu bisa hidup.
+
+| | Dipanggang saat unggah | Non-destruktif (fokus + zoom disimpan) |
+|---|---|---|
+| Kontrak props tema | tak berubah | **berubah** (TANYA DULU, CLAUDE.md) |
+| Berkas tema | 0 | 6 `sections.tsx` + tipe |
+| Ketepatan per tema | ±7% | tepat |
+| Ubah lagi kemudian | unggah ulang | kapan saja |
+
+**Pemilik memilih yang dipanggang** (14 Okt 2026) — dan ukuran "±7%" itu bukan
+tebakan: keenam tema yang merender foto mempelai memakai wadah potret yang
+rapat.
+
+| tema | tinggi / lebar |
+|---|---|
+| meridian, noir | 1,25 (4:5) |
+| kirana | 1,24 |
+| verdant | 1,267 |
+| eternal-rose | 1,333 (3:4) |
+| barakah | 1,35 |
+
+Pangkasan dibuat **4:5 (1,25)** — yang PALING LEBAR di antaranya. Akibatnya tema
+hanya memangkas sedikit di SISI dan tak pernah memotong atas-bawah, tempat wajah
+berada. Terburuk (barakah) kehilangan ±7% lebar.
+
+### Yang dipilih dengan sadar
+
+- **Keadaan disimpan sebagai `zoom` + titik tengah ternormalisasi**, bukan kotak
+  piksel. Titik tengah tetap berarti sama ketika zoom berubah, jadi memperbesar
+  tak menggeser wajah keluar bingkai — cacat paling umum pemangkas buatan
+  sendiri. Penjepitan hanya ada di SATU tempat (`cropFrom`), sehingga kotaknya
+  tak pernah keluar gambar dan tepi kosong mustahil muncul.
+- **Batas keluaran dihitung dari sisi TERPANJANG**, bukan dari lebar seperti
+  galeri. Foto 4:5 yang lebarnya dibatasi 1600px menghasilkan tinggi 2000px —
+  berkas lebih berat daripada foto galeri, untuk wadah yang justru lebih kecil.
+- **Tak pernah memperbesar melebihi piksel sumber.** Memperbesar hanya menambah
+  byte tanpa menambah detail.
+- **Slider, bukan cubit dua jari.** Slider bekerja sama di tetikus dan sentuh,
+  dan tak berebut gestur dengan penggeseran halaman. `touch-none` pada kanvas
+  wajib: tanpanya, menyeret di HP menggulung halaman alih-alih menggeser foto.
+- **Inline, bukan modal.** Proyek ini belum punya primitif Dialog, dan pemilik
+  sering mengedit dari HP — panel yang mengembang di tempat tak perlu perangkap
+  fokus dan tak tertutup papan ketik layar.
+- **Tanpa dependency baru.** Pemangkas siap pakai (mis. `react-easy-crop`)
+  menawarkan cubit dua jari dan rotasi; keduanya tak dipakai di sini, sedangkan
+  geometrinya ±60 baris dan justru lebih mudah diuji sebagai fungsi murni.
+  Catatan jujur: MCP context7 GAGAL TERSAMBUNG di sesi ini
+  (`CONNECT_TIMEOUT`), jadi keputusan ini diambil dari penalaran, bukan dari
+  riset praktik terbaik seperti biasanya.
+
+**Harga yang diterima, dan dikatakan apa adanya:** setelah tersimpan, menyesuaikan
+ulang hanya bisa MEMPERBESAR — tepi yang sudah terpangkas tak ada lagi. Untuk
+mundur, pemilik mengunggah ulang dari galeri HP. Alternatifnya (menyimpan foto
+asli yang tak pernah disajikan) ditawarkan dan tidak dipilih.
+
+### Koreksi yang ikut dibawa commit ini
+
+`coverPhoto` dan `logo` **tidak dirender tema mana pun** — `grep coverPhotoUrl`
+di seluruh `src/themes` tak menghasilkan apa pun, dan `/api/og` pun belum
+memakainya. Keduanya tetap di-resolve server dan ikut terhapus saat retensi
+(#83), tetapi tak ada yang menampilkannya. Saat memasang ketiga bidang di #83
+saya menyebut foto sampul "tampil di layar pembuka" — itu keliru. Bidangnya
+tetap ada karena datanya sah dan akan terpakai, tetapi keterangannya kini
+berbunyi apa adanya: *"Tersimpan, tetapi belum ditampilkan tema mana pun."*
+Pemangkas sengaja TIDAK dipasang pada keduanya: tanpa wadah tema, rasio
+pangkasnya hanya akan jadi tebakan.
+
+**Verifikasi:** 15 mutan 15 mati. Dua di antaranya sempat lolos dan keduanya
+salah saya, bukan mutan cacat: test "zoom dijepit" membandingkan `MAX_ZOOM`
+dengan DIRINYA SENDIRI (melonggarkan batas jadi 99 tetap hijau), dan kasus
+"minimal 1px" memakai angka yang membulat ke 1 dengan sendirinya sehingga tak
+pernah menyentuh penjaganya.
+
+---
+
 ## Template entri baru
 
 ```

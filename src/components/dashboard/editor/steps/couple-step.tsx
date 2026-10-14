@@ -64,6 +64,11 @@ function PersonFields({
             : copy.editor.photo.brideLabel
         }
         hint={copy.editor.photo.personHint}
+        // 4:5 = 0,8. Wadah foto mempelai di keenam tema yang merendernya
+        // berkisar 1,24-1,35 (potret); 4:5 adalah yang PALING LEBAR di
+        // antaranya, jadi tema hanya memangkas sedikit di sisi dan tak
+        // pernah memotong atas-bawah yang berisi wajah.
+        aspect={4 / 5}
         value={photoPath}
         initialUrl={photoUrl}
         onChange={(path) =>

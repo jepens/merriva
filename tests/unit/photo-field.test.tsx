@@ -24,6 +24,25 @@ vi.mock("@/server/actions/named-photo", () => ({
   deleteNamedPhotoAction,
 }));
 
+const { cropToVariants, loadBitmap } = vi.hoisted(() => {
+  const hasil = () => ({
+    display: new File([new Uint8Array(10)], "d", { type: "image/webp" }),
+    thumb: new File([new Uint8Array(5)], "t", { type: "image/webp" }),
+    width: 1280,
+    height: 1600,
+  });
+  return {
+    // Parameter DIDEKLARASIKAN supaya `mock.calls[0][1]` lolos typecheck.
+    cropToVariants: vi.fn(
+      (_bitmap: unknown, _crop: { sw: number; sh: number }) =>
+        Promise.resolve(hasil()),
+    ),
+    loadBitmap: vi.fn(() =>
+      Promise.resolve({ width: 1200, height: 1600, close: vi.fn() }),
+    ),
+  };
+});
+
 vi.mock("@/lib/image/compress", () => ({
   isSupportedImage: (f: File) => f.type.startsWith("image/"),
   compressToWebpVariants: vi.fn(() =>
@@ -34,6 +53,8 @@ vi.mock("@/lib/image/compress", () => ({
       height: 1200,
     }),
   ),
+  cropToVariants,
+  loadBitmap,
 }));
 
 import { PhotoField } from "@/components/dashboard/editor/photo-field";
@@ -52,16 +73,19 @@ function Induk({
   awal,
   initialUrl,
   onChange,
+  aspect,
 }: {
   awal?: string;
   initialUrl: string | null;
   onChange: (p: string | undefined) => void;
+  aspect?: number;
 }) {
   const [value, setValue] = useState<string | undefined>(awal);
   return (
     <PhotoField
       invitationId={INV}
       label="Foto mempelai pria"
+      aspect={aspect}
       value={value}
       initialUrl={initialUrl}
       onChange={(p) => {
@@ -72,13 +96,16 @@ function Induk({
   );
 }
 
-function pasang(over: { value?: string; initialUrl?: string | null } = {}) {
+function pasang(
+  over: { value?: string; initialUrl?: string | null; aspect?: number } = {},
+) {
   const onChange = vi.fn();
   const utils = render(
     <Induk
       awal={over.value}
       initialUrl={over.initialUrl ?? null}
       onChange={onChange}
+      aspect={over.aspect}
     />,
   );
   const input = utils.container.querySelector(
@@ -194,5 +221,93 @@ describe("mengganti & membuang", () => {
 
     await waitFor(() => expect(uploadNamedPhotoAction).toHaveBeenCalled());
     expect(deleteNamedPhotoAction).not.toHaveBeenCalled();
+  });
+});
+
+describe("pemangkas (aspect diberikan)", () => {
+  const ASPEK = 4 / 5;
+
+  it("memilih berkas MEMBUKA pemangkas dan belum mengunggah apa pun", async () => {
+    // Unggah sebelum pemilik menekan "Simpan" berarti objek yatim untuk setiap
+    // foto yang batal dipakai.
+    const { input } = pasang({ aspect: ASPEK });
+
+    fireEvent.change(input, { target: { files: [berkas()] } });
+
+    expect(
+      await screen.findByRole("button", { name: "Simpan foto" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /pratinjau pemangkasan/i }),
+    ).toBeInTheDocument();
+    expect(uploadNamedPhotoAction).not.toHaveBeenCalled();
+  });
+
+  it('"Simpan foto" memangkas lalu mengunggah hasil pangkasannya', async () => {
+    const { onChange, input } = pasang({ aspect: ASPEK });
+
+    fireEvent.change(input, { target: { files: [berkas()] } });
+    fireEvent.click(await screen.findByRole("button", { name: "Simpan foto" }));
+
+    await waitFor(() => expect(cropToVariants).toHaveBeenCalled());
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(PATH_BARU));
+    // Yang diunggah HASIL PANGKASAN, bukan gambar utuh.
+    expect(uploadNamedPhotoAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('"Batal" menutup pemangkas tanpa mengunggah', async () => {
+    const { onChange, input } = pasang({ aspect: ASPEK });
+
+    fireEvent.change(input, { target: { files: [berkas()] } });
+    fireEvent.click(await screen.findByRole("button", { name: "Batal" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Simpan foto" })).toBeNull(),
+    );
+    expect(uploadNamedPhotoAction).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Unggah foto" }),
+    ).toBeInTheDocument();
+  });
+
+  it("menyediakan kendali perbesaran", async () => {
+    const { input } = pasang({ aspect: ASPEK });
+    fireEvent.change(input, { target: { files: [berkas()] } });
+    // `findBy`: bitmap dimuat asinkron, jadi menunggu dulu agar tak ada
+    // pembaruan state yang lolos di luar `act`.
+    expect(await screen.findByLabelText("Perbesaran")).toHaveAttribute(
+      "type",
+      "range",
+    );
+  });
+
+  it("TANPA aspect, berkas langsung diunggah tanpa pemangkas", async () => {
+    // Foto sampul & logo belum punya wadah tema, jadi rasio pangkasnya akan
+    // jadi tebakan — lebih jujur tidak memangkas sama sekali.
+    const { input } = pasang();
+
+    fireEvent.change(input, { target: { files: [berkas()] } });
+
+    await waitFor(() => expect(uploadNamedPhotoAction).toHaveBeenCalled());
+    expect(cropToVariants).not.toHaveBeenCalled();
+  });
+
+  it("perbesaran yang dipilih IKUT ke hasil pangkasan", async () => {
+    // Inti seluruh fiturnya. Tanpa assert ini, pemangkas yang mengabaikan
+    // slider tetap lolos semua test lain: ia tetap memanggil pemangkasan,
+    // tetap mengunggah, dan tetap terlihat benar di UI.
+    const { input } = pasang({ aspect: ASPEK });
+    fireEvent.change(input, { target: { files: [berkas()] } });
+
+    const slider = await screen.findByLabelText("Perbesaran");
+    fireEvent.change(slider, { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Simpan foto" }));
+
+    await waitFor(() => expect(cropToVariants).toHaveBeenCalled());
+    const crop = cropToVariants.mock.calls[0][1];
+    // bitmap tiruan 1200x1600, aspect 0,8 -> di zoom 1 lebar pangkas 1200.
+    expect(crop.sw).toBeCloseTo(1200 / 3, 5);
+    expect(crop.sw / crop.sh).toBeCloseTo(ASPEK, 5);
   });
 });
