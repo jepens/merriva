@@ -3106,6 +3106,103 @@ memperbaiki sesuatu yang belum tentu rusak.
 
 ---
 
+## #78 — 2026-10-14 · Tiga gerbang keamanan yang gagal senyap — dan satu yang ternyata tidak ada
+
+Sapuan empat lensa setelah #77 (`request.url` berbohong) mencari segala keputusan yang
+bergantung pada host atau topologi. Tiga temuan terverifikasi dan diperbaiki; satu
+**terbantah oleh fakta lapangan**, dan itu dicatat di sini supaya tak "diperbaiki" kelak.
+
+### 1. Gerbang hostname Turnstile membatalkan dirinya sendiri
+
+`allowedTurnstileHosts()` memuat `"localhost"` dan `"127.0.0.1"` **tanpa syarat**,
+sementara komentarnya sendiri menyatakan alasan gerbang itu ada: *"Site key bersifat publik
+→ tanpa cek hostname, token yang di-solve dari origin pihak ketiga bisa lolos."* Kedua entri
+itu justru PRA-MENYETUJUI sebuah origin pihak ketiga.
+
+Serangannya tidak rumit: baca `NEXT_PUBLIC_TURNSTILE_SITE_KEY` dari HTML (memang publik),
+sajikan halaman di `http://localhost:8080` di mesin sendiri dengan site key itu, selesaikan
+tantangan, kirim tokennya ke Server Action produksi. `siteverify` menjawab
+`success: true, hostname: "localhost"` — dan daftar lama menerimanya. Hasilnya pembuatan
+akun massal dan email-bombing lewat reset kata sandi.
+
+Kini keduanya hanya ditambahkan di luar `NODE_ENV === "production"`. Fungsinya juga
+di-`export` dan menerima `base` opsional supaya keempat cabangnya bisa diuji tanpa membangun
+ulang modul demi satu variabel env — sebelumnya ia tak punya satu test pun.
+
+### 2. Sinyal topologi IP hanya `console.warn` — jebakan yang SUDAH pernah ditemukan
+
+`warnTopologyOnce` memancarkan dua kondisi yang komentarnya sendiri sebut *"seharusnya
+TIDAK PERNAH muncul"*, lewat `console.warn` saja. Tidak ada `captureConsoleIntegration` di
+ketiga `Sentry.init`, jadi kondisi itu memang tak akan pernah muncul **bagi siapa pun**.
+
+Yang membuatnya pantas dicatat: jebakan ini **sudah pernah ditemukan dan didokumentasikan**
+di `email.receipt` (`notify.ts`) — komentar lama di sana mengklaim "Sentry menangkap
+console", klaim itu salah, dan justru klaim itulah yang membuat celahnya tampak tertutup.
+Temuannya ditutup di satu tempat dan dibiarkan di tempat lain.
+
+Taruhannya konkret: `cf-rejected` berarti `cf-connecting-ip` DIABAIKAN dan rate limit
+memakai **IP edge Cloudflare**, sehingga semua tamu di balik edge itu berbagi satu bucket
+/24. Di resepsi 300 tamu, RSVP dan buku ucapan menabrak plafon dalam hitungan detik — pada
+hari yang tak bisa diulang. Pemicunya bisa sesederhana `cloudflare-ips.json` yang basi.
+
+Kini dilaporkan ke `security.client-ip.topology`, **tanpa nilai IP** (UU PDP) — `source`
+sudah cukup untuk tahu harus memperbaiki apa. `console.warn` dipertahankan karena ia
+satu-satunya yang berfungsi sebelum DSN diisi; pola dua-tujuan yang sama dengan
+`email.receipt`.
+
+### 3. Cookie sesi Supabase tanpa `Secure`
+
+`DEFAULT_COOKIE_OPTIONS` milik `@supabase/ssr` berisi
+`{ path, sameSite: "lax", httpOnly: false, maxAge }` — **tanpa `secure`**. Dokumentasi
+vendor tidak menyebutkannya; nilainya hanya terlihat dari kodenya, jadi tak ada yang akan
+menemukannya dengan membaca dokumen (pola yang sudah jadi catatan tersendiri di proyek ini).
+
+Tanpa `Secure`, satu-satunya penahan access + refresh token pemilik agar tak berjalan di
+atas HTTP polos adalah HSTS — yang baru mengikat SETELAH satu respons HTTPS diterima dan
+tidak selalu bertahan di WebView tertanam, jalur utama produk ini.
+
+Ditambahkan `cookieOptions: { secure: NODE_ENV === "production" }` di **kedua** pemanggil.
+Keduanya wajib: middleware menulis ulang cookie sesi pada tiap navigasi, jadi menambal satu
+sisi saja akan ditimpa sisi lain pada request berikutnya — perbaikan yang terlihat selesai
+padahal tidak. Aman ditambahkan sendirian: `cookieOptions` di-sebar DI ATAS default
+(`{ ...DEFAULT_COOKIE_OPTIONS, ...cookieOptions }`, diverifikasi di `dist/main/cookies.js`),
+jadi `path`/`sameSite`/`maxAge` tetap utuh. `httpOnly` sengaja TIDAK disentuh —
+`lib/supabase/browser.ts` membaca cookie ini lewat `document.cookie`.
+
+### Yang TERBANTAH: skenario apex vs `www`
+
+Sapuan melaporkan bahwa `turnstile.ts` menerima varian `www` sementara semua nilai
+turunan-host lain apex-only, sehingga pengguna yang datang lewat `www.merriva.id` akan
+menulis cookie PKCE host-only di sana dan gagal login. Mekanismenya benar — cookie Supabase
+memang host-only — tetapi premisnya tidak: **`www.merriva.id` tidak di-resolve sama sekali**
+(diperiksa langsung: apex 200, `www` gagal koneksi). Tidak ada yang bisa tiba di sana.
+
+Jadi tidak ada perubahan kode untuk ini. Ia menjadi catatan OPS: **bila kelak record `www`
+ditambahkan** (default yang sangat umum di Cloudflare), pasang Redirect Rule
+`www.merriva.id/*` → `https://merriva.id/$1` **pada saat yang sama** — tanpa itu, celahnya
+baru lahir. Memasang pagar middleware sekarang berarti menjaga pintu yang belum ada.
+
+### Kebisingan juga diputuskan, bukan dibiarkan
+
+`verifyTurnstile` melaporkan kegagalan `siteverify` **hanya** untuk kelas salah-pasang
+(`missing-input-secret`, `invalid-input-secret`, `bad-request`, `internal-error`). Penolakan
+bot adalah kerja normal yang terjadi terus-menerus; melaporkannya akan membanjiri Sentry
+sampai orang berhenti membacanya — dan saat itulah yang penting ikut tak terbaca. Ambang
+yang sama sudah dipakai `STAT_PERHATIAN` di panel admin (#74).
+
+**Verifikasi:** 21 test di dua berkas, 17 mutan 17 mati — termasuk "localhost kembali
+diterima tanpa syarat", "IP mentah ikut ke laporan", "dedup hilang", "SEMUA penolakan
+dilaporkan", "`cookieOptions` dihapus di sisi middleware saja", dan "`httpOnly` ikut
+disetel". Test PDP memeriksa SELURUH panggilan laporan, bukan hanya yang pertama: laporan
+kedua yang kelak ditambahkan dengan niat baik adalah persis cara IP mentah akan masuk ke
+Sentry tanpa ada yang menyadarinya.
+
+**Belum dikerjakan.** Sepuluh kandidat lain dari sapuan (tautan email tanpa gerbang
+`appUrlMasihDefault()`, `appUrl` tanpa normalisasi garis miring, cache-busting OG, ICS)
+belum dibantah — tiga dari empat pemverifikasi berhenti di batas kuota sesi.
+
+---
+
 ## Template entri baru
 
 ```

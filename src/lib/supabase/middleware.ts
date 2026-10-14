@@ -16,6 +16,11 @@ export async function updateSession(request: NextRequest) {
     getSupabaseUrl(),
     getSupabaseAnonKey(),
     {
+      // Lihat `lib/supabase/server.ts`: @supabase/ssr tidak menyetel `Secure`.
+      // Kedua pemanggil harus sama — middleware inilah yang MENULIS ULANG cookie
+      // sesi pada tiap navigasi, jadi menambal satu sisi saja akan ditimpa sisi
+      // lain pada request berikutnya.
+      cookieOptions: { secure: process.env.NODE_ENV === "production" },
       cookies: {
         getAll() {
           return request.cookies.getAll();

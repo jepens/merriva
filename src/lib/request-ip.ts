@@ -10,6 +10,7 @@ import {
   resolveClientIpDetailed,
   type ClientIpSource,
 } from "@/lib/client-ip";
+import { reportHandledError } from "@/lib/observability";
 import {
   checkRateLimitAll,
   type RateLimitCheck,
@@ -44,19 +45,41 @@ const warned = new Set<ClientIpSource>();
  * - `cf-rejected`: `cf-connecting-ip` datang dari peer publik non-Cloudflare —
  *   percobaan langsung ke origin, atau daftar rentang Cloudflare basi.
  */
+const PESAN_TOPOLOGI: Partial<Record<ClientIpSource, string>> = {
+  unverified:
+    "asal request tak bisa diverifikasi (peer X-Forwarded-For internal/tak ada) — cek mode publish port & forwardedHeaders Traefik (DECISIONS #37)",
+  "cf-rejected":
+    "cf-connecting-ip diabaikan: peer bukan Cloudflare — akses langsung ke origin, atau rentang di cloudflare-ips.json basi (DECISIONS #37)",
+};
+
 function warnTopologyOnce(source: ClientIpSource): void {
   if (warned.has(source)) return;
-  if (source === "unverified") {
-    warned.add(source);
-    console.warn(
-      "[client-ip] asal request tak bisa diverifikasi (peer X-Forwarded-For internal/tak ada) — cek mode publish port & forwardedHeaders Traefik (DECISIONS #37)",
-    );
-  } else if (source === "cf-rejected") {
-    warned.add(source);
-    console.warn(
-      "[client-ip] cf-connecting-ip diabaikan: peer bukan Cloudflare — akses langsung ke origin, atau rentang di cloudflare-ips.json basi (DECISIONS #37)",
-    );
-  }
+  const pesan = PESAN_TOPOLOGI[source];
+  if (!pesan) return;
+  warned.add(source);
+
+  // DILAPORKAN, bukan hanya di-console. Komentar di atas menyebut kondisi ini
+  // "seharusnya TIDAK PERNAH muncul" — dan selama ia hanya `console.warn`,
+  // memang tak akan pernah muncul BAGI SIAPA PUN: tak ada
+  // `captureConsoleIntegration` di ketiga `Sentry.init`, jadi console tak
+  // pernah sampai ke Sentry. Jebakan yang sama persis sudah pernah ditemukan
+  // di `email.receipt` (notify.ts) — komentar lama di sana mengklaim "Sentry
+  // menangkap console", dan klaim itulah yang membuat celahnya tampak tertutup.
+  //
+  // Taruhannya nyata: `cf-rejected` berarti `cf-connecting-ip` DIABAIKAN dan
+  // rate limit memakai IP EDGE Cloudflare, sehingga semua tamu yang lewat edge
+  // itu berbagi satu bucket /24. Di resepsi 300 tamu, RSVP dan buku ucapan
+  // menabrak plafon dalam hitungan detik — pada hari yang tak bisa diulang.
+  //
+  // TANPA nilai IP (UU PDP): `source` sudah cukup untuk tahu harus memperbaiki
+  // apa. Dedup per-proses: dengan >1 replika akan ada satu event per replika,
+  // dan itu justru berguna — ia menunjukkan replika mana yang salah topologi.
+  reportHandledError(
+    new Error(`[client-ip] topologi: ${source}`),
+    "security.client-ip.topology",
+    { source },
+  );
+  console.warn(`[client-ip] ${pesan}`);
 }
 
 /**
