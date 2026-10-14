@@ -3,13 +3,13 @@ import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
 import { appearanceStyle } from "@/lib/customizer/appearance-style";
+import { defaultSectionOrder } from "@/lib/customizer/default-order";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
-import { isSectionVisible, type SectionKey } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
@@ -211,18 +211,6 @@ const FONT_VARS = [
 
 const firstInitial = (s: string) => (s.trim()[0] ?? "•").toUpperCase();
 
-/** Section yang bisa disembunyikan lewat toggle lama (`settings.sections`). */
-const LEGACY_TOGGLE = new Set<SectionKey>([
-  "countdown",
-  "schedule",
-  "gallery",
-  "story",
-  "envelope",
-  "rsvp",
-]);
-const isLegacyToggle = (id: string): id is SectionKey =>
-  LEGACY_TOGGLE.has(id as SectionKey);
-
 /**
  * Tema "eternal-rose" (wedding, tier Signature) — acuan
  * `prototypes/eternal-rose-signature.html`. SERVER component: section dirender
@@ -343,12 +331,8 @@ export default function EternalRose({ data }: ThemeComponentProps) {
 
   // Urutan render (DOM order). Dengan custom → dari resolver; tanpa custom →
   // urutan bawaan + toggle lama (`isSectionVisible`) → identik dgn sebelumnya.
-  const order = resolved
-    ? resolved.sections
-    : eternalRoseOptions.sections.map((s) => ({
-        id: s.id,
-        visible: isLegacyToggle(s.id) ? isSectionVisible(settings, s.id) : true,
-      }));
+  const order =
+    resolved?.sections ?? defaultSectionOrder(eternalRoseOptions, settings);
 
   const grainOn = resolved ? resolved.grain : true;
 

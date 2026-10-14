@@ -1012,17 +1012,17 @@ export const copy = {
     moveDown: "Turunkan",
     locked: "Wajib tampil",
     dragHandle: "Seret untuk mengurutkan",
+    // Satu label per id KANONIK (THEME-CONTRACT §1). Sinonim lama
+    // (`opening`, `intro`, `principals`, `event`, `rundown`) sengaja dibuang:
+    // entri yatim membuat nama lama terasa masih sah dan mengundang tema
+    // berikutnya memakainya lagi — test kontrak menolak yang yatim.
     sectionLabels: {
       hero: "Pembuka",
-      opening: "Pembuka",
-      intro: "Pembuka",
       quote: "Kutipan",
       couple: "Mempelai",
-      principals: "Tokoh utama",
       countdown: "Hitung mundur",
       schedule: "Acara",
-      event: "Acara",
-      rundown: "Agenda",
+      agenda: "Agenda",
       gallery: "Galeri",
       story: "Kisah",
       envelope: "Amplop hadiah",

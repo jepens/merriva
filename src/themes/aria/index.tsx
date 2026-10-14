@@ -139,7 +139,12 @@ export default function Aria({ data }: ThemeComponentProps) {
   const showStory =
     isSectionVisible(settings, "story") && content.story.length > 0;
   const showEnvelope = isSectionVisible(settings, "envelope") && hasEnvelope;
-  const showRsvp = isSectionVisible(settings, "rsvp");
+  // `rsvp` dideklarasikan `toggle: false` di options.ts = WAJIB TAMPIL
+  // (CUSTOMIZER-SPEC §3). Jalur lama ini dulu tetap menanyakan toggle lama,
+  // sehingga buku tamu bisa hilang dari undangan yang sudah terbit. Tema
+  // berjalur tunggal menutupnya lewat `defaultSectionOrder`; tema dua-jalur
+  // seperti ini menutupnya di sini.
+  const showRsvp = true;
 
   // Kustomisasi (Fase G). Tanpa `custom` → render legacy PERSIS (di bawah).
   // Dengan `custom` → section-map bernomor sesuai urutan resolver (countdown
@@ -157,7 +162,7 @@ export default function Aria({ data }: ThemeComponentProps) {
       string,
       { has: boolean; render: (no: string) => ReactNode }
     > = {
-      opening: {
+      hero: {
         has: showOpening,
         render: (no) => (
           <Opening

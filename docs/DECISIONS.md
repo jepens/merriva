@@ -3672,6 +3672,97 @@ pernah menyentuh penjaganya.
 
 ---
 
+## #85 — 2026-10-14 · Kosakata section kanonik + test konformansi tema (fase 1a)
+
+Fase 1a dari [THEME-CONTRACT.md](THEME-CONTRACT.md), disetujui pemilik sebelum
+tema ke-11 ditulis. Isinya tiga hal, dan dua di antaranya memperbaiki cacat yang
+sudah ada.
+
+### Kosakata yang bercabang
+
+Sepuluh tema pertama ditulis satu per satu, dan masing-masing menamai sendiri
+bagian yang sama:
+
+| sebelum | sesudah | tema |
+|---|---|---|
+| `intro` | `hero` | meridian, lumina, prisma |
+| `opening` | `hero` | aria, festa |
+| `principals` | `couple` | lumina |
+| `rundown` | `agenda` | prisma |
+| `event` | `schedule` | prisma |
+
+Id section bukan nama internal: ia tersimpan di `settings.custom.sections`,
+menentukan label di editor tampilan, dan menentukan apakah pengaturan pemilik
+bisa ikut berpindah saat ia berganti tema. Sinonim membuat ketiganya mustahil.
+
+`copy.appearance.sectionLabels` ikut dirapikan — kelima label sinonim dibuang.
+Entri yatim di sana membuat nama lama terasa masih sah dan mengundang tema
+berikutnya memakainya lagi; test kontrak kini menolak yang yatim.
+
+### Dua cacat yang ditemukan karena akhirnya ADA yang memeriksa
+
+1. **EMPAT tema membuat layar pembuka bisa disembunyikan** (`toggle: true`) —
+   `aria`, `festa`, `kirana`, `lumina` — padahal CUSTOMIZER-SPEC §3 mewajibkan
+   hero & rsvp selalu tampil. Dugaan awal saya dua; test yang menemukannya,
+   bukan pembacaan saya. Keempatnya lolos lint, typecheck, dan seluruh unit test
+   selama berbulan-bulan.
+
+2. **Jebakan yang justru akan DIBUKA oleh rename.** Logika urutan bawaan disalin
+   di sepuluh `index.tsx`, dan salinan itu hanya menanyakan `isSectionVisible`.
+   Selama hero bernama `intro`/`opening`, ia tak ada di `SECTION_KEYS` sehingga
+   selalu tampil. Begitu dinamai `hero` — yang ADA di `SECTION_KEYS` —
+   `settings.sections.hero = false` bisa menyembunyikannya. Hal yang sama
+   berlaku untuk `rsvp`, yang memang sudah bisa disembunyikan begitu sejak awal.
+
+   Keduanya ditutup `defaultSectionOrder()`: satu salinan untuk DELAPAN tema
+   berjalur tunggal, dan `toggle: false` menang lebih dulu sebelum toggle lama
+   ditanya. UI editor kebetulan tak pernah menampilkan toggle hero/rsvp, jadi
+   tak ada data produksi yang terdampak — tetapi "kebetulan tak terjangkau dari
+   UI" bukan jaminan.
+
+3. **`aria` dan `prisma` ternyata berbentuk DUA JALUR**: satu cabang untuk
+   `resolved` (customizer) dan satu JSX legacy yang sama sekali tak membaca
+   `options.sections` — `aria` bahkan tak mendaftarkan `countdown` di sana.
+   Helper tak bisa dipasang tanpa menyatukan kedua jalur, dan itu akan mengubah
+   tampilan. Jadi keduanya dibiarkan dua-jalur, tetapi pelanggaran kontraknya
+   ditutup langsung: `showRsvp` yang semula menanyakan toggle lama kini `true`,
+   sama artinya dengan `toggle: false` di delapan tema lain. Menyatukan kedua
+   jalur dicatat sebagai pekerjaan terpisah — ia keputusan tampilan, bukan
+   keputusan kontrak.
+
+### Test konformansi
+
+`src/lib/customizer/theme-contracts.test.ts` diperluas: berjalan atas SELURUH
+registry dan menolak tema yang tak punya `hero`/`rsvp` dengan flag yang benar,
+memakai id di luar kosakata tanpa awalan `x-` + label, punya id ganda, atau
+belum terdaftar di `themeRegistry` / `demoDataRegistry` / `themeCatalogMeta`.
+
+Inilah inti fase 1a: DoD yang selama ini hidup di dokumen jadi dijaga CI. Tema
+ke-30 sama amannya dengan tema ke-11 — dan ketiga temuan di atas muncul pada
+menit pertama test ini dijalankan, bukan dari seseorang yang kebetulan curiga.
+
+**Verifikasi:** 1935 test hijau · 103 assert kontrak atas 10 tema · 9 mutan 9
+mati pada `section-vocab` + `default-order` (termasuk "sinonim lama dimasukkan
+kembali" dan "`toggle:false` tak lagi menang").
+
+### Kenapa sekarang
+
+Produksi berisi **3 undangan, 0 aktif, 0 yang punya `settings.custom`**.
+Mengganti id section hari ini = nol migrasi data. Setelah ada klien berbayar dan
+tiga puluh tema, hal yang sama menjadi migrasi betulan atas kolom JSONB.
+
+### Yang SENGAJA belum dikerjakan
+
+Blok `media` di `options.ts` dan foto non-destruktif (THEME-CONTRACT §2–§3)
+adalah fase **1b** — keduanya mengubah kontrak props tema, dan dipisah supaya
+perubahan kosakata ini bisa diverifikasi sendirian.
+
+Label section masih satu per id, belum sadar kategori: `couple` selalu
+"Mempelai", padahal lumina memakai bagian itu untuk kategori lain juga. Dicatat,
+tidak dikerjakan.
+
+---
+
 ## Template entri baru
 
 ```

@@ -1,6 +1,6 @@
 # Kontrak Tema v2 — standar untuk menambah banyak tema
 
-Status: **usulan, menunggu persetujuan pemilik** · 14 Okt 2026 · keputusan pemilik: media
+Status: **fase 1a SELESAI** (DECISIONS #85) · fase 1b–3 menunggu · 14 Okt 2026 · keputusan pemilik: media
 **non-destruktif**, susunan section **boleh berbeda antar tema**, tema dibuat **dari arahan pemilik**.
 
 Dokumen ini melengkapi — bukan menggantikan — [`THEME-DESIGN.md`](THEME-DESIGN.md)
@@ -219,9 +219,15 @@ Tema ke-30 jadi sama amannya dengan tema ke-11.
 
 | Fase | Isi | Catatan |
 |---|---|---|
-| **1** | Kosakata kanonik + rename alias · blok `media` · foto non-destruktif + helper + 6 tema · penyesuai editor berbasis CSS · test konformansi | Tanpa tema baru. Nol migrasi data **bila dikerjakan sekarang** |
+| **1a** ✅ | Kosakata kanonik + rename alias di 6 tema · helper `defaultSectionOrder` · test konformansi | SELESAI 14 Okt 2026 — menemukan 4 tema ber-hero yang bisa disembunyikan + 2 tema dua-jalur (DECISIONS #85) |
+| **1b** | Blok `media` · foto non-destruktif + helper + 6 tema · penyesuai editor berbasis CSS | Mengubah kontrak props tema. Nol migrasi data **bila dikerjakan sekarang** |
 | **2** | `pnpm theme:new` + template tema minimal | Setelah kontraknya stabil |
 | **3** | Tema baru — satu commit per tema, masing-masing lolos DoD | Di sinilah ragam dibangun |
+
+**Temuan fase 1a yang mengubah perkiraan fase 1b:** `aria` dan `prisma` bukan
+berjalur tunggal. Keduanya punya cabang `resolved` DAN JSX legacy yang tak
+membaca `options.sections` sama sekali. Fase 1b harus memperhitungkan itu —
+mengganti kontrak foto di sana menyentuh dua tempat per tema, bukan satu.
 
 Fase 1 menyentuh 6 tema sekaligus. Itu memang sekali kerja besar — dan itulah
 alasan ia dikerjakan **sebelum** tema ke-11, bukan sesudah tema ke-30.

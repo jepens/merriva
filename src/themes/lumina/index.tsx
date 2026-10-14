@@ -3,13 +3,13 @@ import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
 import { appearanceStyle } from "@/lib/customizer/appearance-style";
+import { defaultSectionOrder } from "@/lib/customizer/default-order";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
-import { isSectionVisible, type SectionKey } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { StoryEntry } from "@/lib/validation/content";
@@ -33,18 +33,6 @@ import {
   Schedule,
   Timeline,
 } from "./sections";
-
-/** Section yang bisa disembunyikan lewat toggle lama (`settings.sections`). */
-const LEGACY_TOGGLE = new Set<SectionKey>([
-  "countdown",
-  "story",
-  "schedule",
-  "gallery",
-  "envelope",
-  "rsvp",
-]);
-const isLegacyToggle = (id: string): id is SectionKey =>
-  LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). Spectral =
 // serif buku layar kontras-rendah (display + nama), Karla = humanist sans
@@ -178,14 +166,14 @@ export default function Lumina({ data }: ThemeComponentProps) {
   const resolved = custom ? resolveAppearance(luminaOptions, custom) : null;
 
   const sectionNodes: Record<string, ReactNode> = {
-    intro: hasIntro ? (
+    hero: hasIntro ? (
       <Intro
         greetingOpen={content.greetingOpen}
         description={description}
         quote={content.quote?.text ? content.quote : undefined}
       />
     ) : null,
-    principals,
+    couple: principals,
     countdown: countdownTarget ? (
       <CountdownBlock targetIso={countdownTarget} />
     ) : null,
@@ -217,12 +205,8 @@ export default function Lumina({ data }: ThemeComponentProps) {
     ),
   };
 
-  const order = resolved
-    ? resolved.sections
-    : luminaOptions.sections.map((s) => ({
-        id: s.id,
-        visible: isLegacyToggle(s.id) ? isSectionVisible(settings, s.id) : true,
-      }));
+  const order =
+    resolved?.sections ?? defaultSectionOrder(luminaOptions, settings);
 
   const grainOn = resolved ? resolved.grain : true;
 

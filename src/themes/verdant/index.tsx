@@ -3,13 +3,13 @@ import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
 import { appearanceStyle } from "@/lib/customizer/appearance-style";
+import { defaultSectionOrder } from "@/lib/customizer/default-order";
 import { resolveAppearance } from "@/lib/customizer/resolve";
 import {
   formatDateOnly,
   formatEventDateTime,
   localToUtc,
 } from "@/lib/datetime";
-import { isSectionVisible, type SectionKey } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
@@ -31,18 +31,6 @@ import {
   Schedule,
   Story,
 } from "./sections";
-
-/** Section yang bisa disembunyikan lewat toggle lama (`settings.sections`). */
-const LEGACY_TOGGLE = new Set<SectionKey>([
-  "countdown",
-  "schedule",
-  "gallery",
-  "story",
-  "envelope",
-  "rsvp",
-]);
-const isLegacyToggle = (id: string): id is SectionKey =>
-  LEGACY_TOGGLE.has(id as SectionKey);
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
 // Dua PASANGAN font kurasi (kustomisasi Fase G).
@@ -277,12 +265,8 @@ export default function Verdant({ data }: ThemeComponentProps) {
     ),
   };
 
-  const order = resolved
-    ? resolved.sections
-    : verdantOptions.sections.map((s) => ({
-        id: s.id,
-        visible: isLegacyToggle(s.id) ? isSectionVisible(settings, s.id) : true,
-      }));
+  const order =
+    resolved?.sections ?? defaultSectionOrder(verdantOptions, settings);
 
   const grainOn = resolved ? resolved.grain : true;
 

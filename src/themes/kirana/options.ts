@@ -37,7 +37,7 @@ export const kiranaOptions: ThemeOptions = {
     },
   ],
   sections: [
-    { id: "hero", reorder: false, toggle: true },
+    { id: "hero", reorder: false, toggle: false },
     { id: "quote", reorder: true, toggle: true },
     { id: "couple", reorder: true, toggle: false },
     { id: "countdown", reorder: true, toggle: true },

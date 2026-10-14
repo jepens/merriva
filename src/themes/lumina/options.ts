@@ -25,8 +25,8 @@ export const luminaOptions: ThemeOptions = {
     },
   ],
   sections: [
-    { id: "intro", reorder: false, toggle: true },
-    { id: "principals", reorder: true, toggle: false },
+    { id: "hero", reorder: false, toggle: false },
+    { id: "couple", reorder: true, toggle: false },
     { id: "countdown", reorder: true, toggle: true },
     { id: "story", reorder: true, toggle: true },
     { id: "schedule", reorder: true, toggle: true },

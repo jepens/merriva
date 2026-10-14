@@ -25,7 +25,7 @@ export const festaOptions: ThemeOptions = {
     },
   ],
   sections: [
-    { id: "opening", reorder: false, toggle: true },
+    { id: "hero", reorder: false, toggle: false },
     { id: "countdown", reorder: true, toggle: true },
     { id: "schedule", reorder: true, toggle: true },
     { id: "gallery", reorder: true, toggle: true },

@@ -172,7 +172,12 @@ export default function Prisma({ data }: ThemeComponentProps) {
   const showEventBlock = showCountdown || showSchedule;
   const showGallery =
     isSectionVisible(settings, "gallery") && data.media.length > 0;
-  const showRsvp = isSectionVisible(settings, "rsvp");
+  // `rsvp` dideklarasikan `toggle: false` di options.ts = WAJIB TAMPIL
+  // (CUSTOMIZER-SPEC §3). Jalur lama ini dulu tetap menanyakan toggle lama,
+  // sehingga buku tamu bisa hilang dari undangan yang sudah terbit. Tema
+  // berjalur tunggal menutupnya lewat `defaultSectionOrder`; tema dua-jalur
+  // seperti ini menutupnya di sini.
+  const showRsvp = true;
   const showEnvelope = isSectionVisible(settings, "envelope") && hasEnvelope;
 
   const headText = content.quote?.text ?? L.intro.fallbackHead;
@@ -218,17 +223,17 @@ export default function Prisma({ data }: ThemeComponentProps) {
       string,
       { has: boolean; render: (no: string) => ReactNode }
     > = {
-      intro: {
+      hero: {
         has: true,
         render: (no) => (
           <Intro no={no} headText={headText} lead={lead} stats={stats} />
         ),
       },
-      rundown: {
+      agenda: {
         has: content.agenda.length > 0,
         render: (no) => <Rundown no={no} agenda={content.agenda} />,
       },
-      event: {
+      schedule: {
         has: Boolean(countdownTarget) || data.events.length > 0,
         render: (no) => (
           <EventBlock

@@ -8,7 +8,12 @@
 import { describe, expect, it } from "vitest";
 
 import { copy } from "@/lib/copy";
+import { themeCatalogMeta } from "@/themes/catalog-meta";
+import { demoDataRegistry } from "@/themes/demo-data-registry";
+import { themeRegistry } from "@/themes/registry";
 import { themeOptionsRegistry } from "@/themes/theme-options-registry";
+
+import { isKnownSection, isThemeSpecificSection } from "./section-vocab";
 
 import { appearanceStyle } from "./appearance-style";
 import { resolveAppearance } from "./resolve";
@@ -77,5 +82,99 @@ describe.each(themes)("kontrak tema '%s'", (_slug, opt) => {
         expect(styleLabels[val], `label gaya '${val}' hilang`).toBeTruthy();
       }
     }
+  });
+});
+
+/**
+ * Kontrak tema v2 (THEME-CONTRACT §5) — yang dulu hanya hidup di dokumen.
+ *
+ * Alasan konkret test ini ada: `lumina` mendeklarasikan layar pembukanya
+ * `toggle: true`, padahal CUSTOMIZER-SPEC §3 mewajibkan hero & rsvp selalu
+ * tampil. Itu lolos lint, typecheck, dan seluruh unit test selama berbulan-bulan
+ * karena tak ada satu pun yang memeriksanya. Tema ke-30 harus sama amannya
+ * dengan tema ke-11, dan satu-satunya cara adalah CI yang menolak.
+ */
+describe.each(themes)("kontrak v2 tema '%s'", (slug, opt) => {
+  it("punya `hero`: selalu tampil, tak bisa diurut ulang", () => {
+    const hero = opt.sections.find((s) => s.id === "hero");
+    expect(hero, `${slug} tak punya section 'hero'`).toBeDefined();
+    expect(hero?.toggle, `${slug}: hero tak boleh bisa disembunyikan`).toBe(
+      false,
+    );
+    expect(hero?.reorder, `${slug}: hero tak boleh bisa dipindah`).toBe(false);
+  });
+
+  it("punya `rsvp` yang tak bisa disembunyikan", () => {
+    const rsvp = opt.sections.find((s) => s.id === "rsvp");
+    expect(rsvp, `${slug} tak punya section 'rsvp'`).toBeDefined();
+    expect(rsvp?.toggle).toBe(false);
+  });
+
+  it("semua id section ada di kosakata kanonik, atau `x-` + label", () => {
+    for (const s of opt.sections) {
+      expect(
+        isKnownSection(s.id),
+        `${slug}: id '${s.id}' di luar kosakata — pakai nama kanonik, atau awali 'x-' bila memang khas tema ini`,
+      ).toBe(true);
+      if (isThemeSpecificSection(s.id)) {
+        expect(
+          s.label,
+          `${slug}: section khas '${s.id}' wajib punya label sendiri`,
+        ).toBeTruthy();
+      }
+    }
+  });
+
+  it("tak ada id section ganda", () => {
+    const ids = opt.sections.map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("terdaftar lengkap: komponen, demo-data, dan poster katalog", () => {
+    // Satu registry yang terlewat = tema yang tampil di katalog tetapi gagal
+    // dirender, atau sebaliknya. Tak terlihat sampai ada yang membukanya.
+    expect(themeRegistry[slug], `${slug} tak ada di themeRegistry`).toBeTypeOf(
+      "function",
+    );
+    expect(demoDataRegistry[slug], `${slug} tak punya demo-data`).toBeTypeOf(
+      "function",
+    );
+    expect(
+      themeCatalogMeta[slug],
+      `${slug} tak punya entri catalog-meta`,
+    ).toBeDefined();
+  });
+});
+
+describe("registry tema saling konsisten", () => {
+  it("setiap tema di `themeRegistry` punya options", () => {
+    const tanpaOptions = Object.keys(themeRegistry).filter(
+      (slug) => !themeOptionsRegistry[slug],
+    );
+    expect(tanpaOptions).toEqual([]);
+  });
+});
+
+describe("peta label section", () => {
+  it("memuat label untuk setiap id kanonik yang DIPAKAI tema", () => {
+    const dipakai = new Set(
+      themes.flatMap(([, opt]) =>
+        opt.sections
+          .map((s) => s.id)
+          .filter((id) => !isThemeSpecificSection(id)),
+      ),
+    );
+    const tanpaLabel = [...dipakai].filter((id) => !sectionLabels[id]);
+    expect(tanpaLabel).toEqual([]);
+  });
+
+  it("tak menyimpan label yatim — sinonim lama harus ikut dibuang", () => {
+    // Entri yatim membuat sinonim terasa masih sah dan mengundang tema
+    // berikutnya memakainya lagi.
+    const dipakai = new Set(
+      themes.flatMap(([, opt]) => opt.sections.map((s) => s.id)),
+    );
+    const yatim = Object.keys(sectionLabels).filter((id) => !dipakai.has(id));
+    expect(yatim).toEqual([]);
   });
 });

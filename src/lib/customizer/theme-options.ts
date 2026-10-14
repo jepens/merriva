@@ -27,11 +27,18 @@ export interface FontPairOption {
 
 /** Section yang dikenal tema + kebebasannya. */
 export interface SectionOption {
+  /** Kosakata kanonik (`section-vocab.ts`), atau khas tema dengan awalan `x-`. */
   id: string;
   /** Boleh dipindah urutannya oleh user. */
   reorder: boolean;
   /** Boleh disembunyikan oleh user (false = wajib tampil). */
   toggle: boolean;
+  /**
+   * Label Indonesia khusus tema ini. WAJIB untuk section `x-`; untuk id
+   * kanonik, kosongkan agar labelnya satu di seluruh produk
+   * (`copy.appearance.sectionLabels`) dan tak bercabang lagi.
+   */
+  label?: string;
 }
 
 /** Token render yang bisa dipetakan ke CSS var tema. */

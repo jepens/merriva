@@ -32,7 +32,7 @@ export const ariaOptions: ThemeOptions = {
     },
   ],
   sections: [
-    { id: "opening", reorder: false, toggle: true },
+    { id: "hero", reorder: false, toggle: false },
     { id: "couple", reorder: true, toggle: false },
     { id: "schedule", reorder: true, toggle: true },
     { id: "gallery", reorder: true, toggle: true },

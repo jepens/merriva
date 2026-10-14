@@ -36,7 +36,7 @@ export const meridianOptions: ThemeOptions = {
     },
   ],
   sections: [
-    { id: "intro", reorder: false, toggle: false },
+    { id: "hero", reorder: false, toggle: false },
     { id: "couple", reorder: true, toggle: false },
     { id: "countdown", reorder: true, toggle: true },
     { id: "schedule", reorder: true, toggle: true },

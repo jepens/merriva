@@ -25,9 +25,9 @@ export const prismaOptions: ThemeOptions = {
     },
   ],
   sections: [
-    { id: "intro", reorder: false, toggle: false },
-    { id: "rundown", reorder: true, toggle: true },
-    { id: "event", reorder: true, toggle: true },
+    { id: "hero", reorder: false, toggle: false },
+    { id: "agenda", reorder: true, toggle: true },
+    { id: "schedule", reorder: true, toggle: true },
     { id: "gallery", reorder: true, toggle: true },
     { id: "rsvp", reorder: true, toggle: false },
     { id: "envelope", reorder: true, toggle: true },
