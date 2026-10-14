@@ -13,6 +13,43 @@ uji lapangan). Checklist ini mengurutkannya dari nol → go-live.
 
 ---
 
+## Status terverifikasi — 15 Oktober 2026
+
+Diambil **dari produksi**, bukan dari dasbor dan bukan dari ingatan: konfigurasi Auth
+dibaca lewat Management API (`GET /v1/projects/{ref}/config/auth`), DNS lewat resolver
+publik, sisanya lewat HTTP ke `merriva.id` dan query ke DB prod. Angka di bawah adalah
+nilai yang benar-benar terbaca hari itu.
+
+**Terbukti jalan:**
+
+| Butir | Bukti |
+|---|---|
+| Kedua template email `{{ .TokenHash }}` | `mailer_templates_confirmation_content` **dan** `..._recovery_content` keduanya memuat `{{ .TokenHash }}` + `/auth/confirm`. Ini lebih kuat dari uji `POST /verify`: yang dibaca adalah konfigurasinya sendiri, bukan jejak satu klik |
+| Custom SMTP → Resend | `smtp_host=smtp.resend.com`, user `resend`, password terisi, sender `noreply@merriva.id`. **Pengiriman terbukti**: satu akun daftar 14 Okt 10:30:31 dan `email_confirmed_at` terisi 10:30:43 — email diterima dan diklik dalam 12 detik |
+| Confirm email aktif | `mailer_autoconfirm=false`, `disable_signup=false`, `rate_limit_email_sent=25`/jam |
+| Redirect allow list | memuat `/auth/callback`, `/auth/confirm`, dan `https://merriva.id/**` |
+| Google OAuth | provider aktif, client id + secret terisi, dan satu login Google sungguhan berhasil (`last_sign_in_at` terisi → kodenya benar-benar ditukar, bukan kegagalan senyap #76) |
+| **Volume media selamat dari redeploy** | objek yang diunggah 14 Okt tetap menjawab `200 image/webp` dari `https://merriva.id/media/…` setelah container naik ulang (commit `9302754`). Menutup butir lifecycle Fase 1 yang sebelumnya hanya asumsi |
+| Konten awal | 6 lagu aktif, 10 tema aktif, 1 admin, 5 add-on Momen nonaktif, `basic` 99rb + `premium` 199rb aktif |
+| Identitas pelaku usaha | tayang di `/syarat`, `/privasi`, `/refund` → gerbang checkout (#88) terbuka |
+| `site_url` bertrailing-slash | `https://merriva.id/` membuat tautan email jadi `//auth/confirm`. **Diuji: tidak merusak** — kedua bentuk sama-sama `303 → /masuk?error=verify` |
+
+**Masih terbuka, dengan nilai yang terbaca hari itu:**
+
+| Butir | Nilai terbaca | Akibat bila dibiarkan |
+|---|---|---|
+| `mailer_otp_exp` | **3600** | harus ≤ 1800. Tautan reset yang diklik di menit 31–60 LOLOS GoTrue lalu DITOLAK aplikasi — pengguna sudah masuk, melihat form, lalu ditolak tanpa tahu sebabnya |
+| `password_min_length` | **6** | aplikasi dan `supabase/config.toml` memakai 8; jalur yang tak lewat form Merriva jadi lebih longgar |
+| `password_hibp_enabled` | **false** | Leaked Password Protection mati |
+| `NEXT_PUBLIC_SENTRY_DSN` | **kosong di bundel produksi** | SDK Sentry 10.67.0 ikut terkirim tetapi tanpa DSN sama sekali → tidak aktif. Seluruh kegagalan yang sengaja senyap (SMTP, webhook, cron) tak terlihat oleh siapa pun |
+| `cron_runs` | **kosong** | belum satu pun dari keempat cron pernah jalan → rekonsiliasi pembayaran dan retensi UU PDP belum hidup |
+| `orders` / undangan `active` | **0 / tidak ada** | jalur uang belum pernah berjalan di produksi. Tak ada `/{slug}` publik, jadi uji ISR dan monitor kedua belum bisa dipasang |
+| MX `merriva.id` | **tidak ada** | `halo@merriva.id` tak bisa MENERIMA email — padahal ia kanal resmi hapus-data UU PDP di tiga halaman hukum. SPF ada di `send.merriva.id` dan DKIM `resend._domainkey` ada, jadi **kirim aman, terima tidak**. DMARC juga belum ada |
+| `smtp_sender_name` | **`noreply`** | setiap email auth tampil dari pengirim bernama "noreply", bukan "Merriva" |
+| Template Confirm signup | `</a>>` | ada satu `>` nyasar sesudah tag penutup → satu karakter ">" tercetak di bawah tombol |
+
+---
+
 ## Urutan kerja — apa yang memblokir apa
 
 Fase di bawah disusun per TEMA, bukan per ketergantungan. Delapan urutan berikut tidak
@@ -162,7 +199,10 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
   - [ ] **Uji spoof LANGSUNG ke origin** (sebelum firewall dikunci, atau dari host yang sementara di-allowlist): arahkan `merriva.id` ke IP origin lewat file hosts perangkat uji, kirim header `CF-Connecting-IP` acak tiap request (mis. ekstensi pengubah header), lalu gagal masuk >10× dalam 1 menit → percobaan ke-11 ditolak dan log app memuat satu `[client-ip] cf-connecting-ip diabaikan`. Uji lewat `https://merriva.id` biasa TIDAK membuktikan apa pun — Cloudflare menimpa header itu. Setelah firewall + AOP aktif: akses langsung `curl --resolve merriva.id:443:<IP_ORIGIN> https://merriva.id/` → gagal di handshake TLS/timeout.
   - [ ] Workflow terjadwal **Rentang IP Cloudflare** (GitHub Actions) hijau. Bila merah: perbarui `cloudflare-ips.json` DAN allowlist firewall bersamaan.
 - [ ] **Turnstile**: kunci _allowed hostnames_ widget ke `merriva.id` di dashboard Cloudflare (server sudah cek hostname; ini lapis utama)
-- [ ] **Supabase Auth**: aktifkan _Secure password change_ (re-auth ganti sandi) + review `[auth.rate_limit]`/`[auth.captcha]` project cloud
+- [ ] **Supabase Auth**: review `[auth.rate_limit]`/`[auth.captcha]` project cloud
+  - ⚠️ **JANGAN aktifkan _Secure password change_ di produksi** (`security_update_password_require_reauthentication`) — butir ini dulu berbunyi "aktifkan", dan mengikutinya akan mematahkan **kedua** jalur kata sandi (DECISIONS #89). Dengan toggle itu hidup, GoTrue menuntut `nonce` pada `updateUser({ password })`, sementara aplikasi memanggilnya tanpa nonce di dua tempat: `updatePasswordAction` (jalur reset, `src/server/actions/auth.ts`) dan form ganti sandi di profil. Akibatnya **tak seorang pun bisa menyetel kata sandi** — dan gejalanya hanya "coba lagi" yang generik.
+  - Yang hendak dilindungi toggle itu **sudah ditegakkan aplikasi sendiri**, lebih ketat: jalur profil memverifikasi kata sandi saat ini lewat `signInWithPassword` pada klien terpisah, dan jalur reset menuntut `isFreshEmailGrant` (sesi yang baru lahir dari klik tautan email, ≤ 30 menit) — sesi dashboard biasa ditolak (AUDIT-2026-10-01 B1).
+  - Bila kelak tetap diinginkan: uji di **staging** lebih dulu, dan ubah kode untuk meminta nonce. Jangan dibalik urutannya.
 
 ## Fase 7 — Uji pra-launch (SPEC §10) — WAJIB sebelum umum
 

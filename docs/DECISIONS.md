@@ -3954,6 +3954,47 @@ dev", "menolak diam-diam tanpa melapor", dan "pesannya menyuruh coba lagi".
 
 ---
 
+## #89 — 2026-10-15 · _Secure password change_ Supabase TIDAK diaktifkan
+
+**Keputusan:** biarkan `security_update_password_require_reauthentication = false`
+di project cloud. Re-autentikasi sebelum penggantian kata sandi ditegakkan
+**aplikasi**, bukan GoTrue. Butir LAUNCH-CHECKLIST Fase 6 yang dulu berbunyi
+"aktifkan _Secure password change_" diubah menjadi larangan eksplisit.
+
+**Alasan:** mengikuti butir lama itu akan mematahkan **kedua** jalur kata sandi
+sekaligus. Dengan toggle itu hidup GoTrue menuntut `nonce` pada
+`updateUser({ password })`, sementara aplikasi memanggilnya tanpa nonce di dua
+tempat — `updatePasswordAction` (jalur reset) dan form ganti sandi di profil
+(`src/server/actions/auth.ts`). Hasilnya: tak seorang pun bisa menyetel kata
+sandi, dan gejalanya hanya "coba lagi" generik, persis kelas kegagalan yang
+sudah dua kali menggigit project ini (#76, #81).
+
+Yang hendak dilindungi toggle itu sudah ada, dan lebih ketat daripada yang
+ditawarkannya:
+
+- **Jalur profil** memverifikasi kata sandi saat ini lewat `signInWithPassword`
+  pada klien terpisah. Ini dibangun justru karena parameter `current_password`
+  Supabase **diabaikan diam-diam** — dokumen vendor menjanjikannya, runtime
+  tidak melakukannya.
+- **Jalur reset** menuntut `isFreshEmailGrant`: hanya sesi yang baru lahir dari
+  klik tautan email (≤ 30 menit) yang boleh menyetel sandi tanpa sandi lama.
+  Sesi dashboard biasa ditolak — perbaikan AUDIT-2026-10-01 B1, ketika
+  `getUser()` tak-null masih menjadi satu-satunya syarat.
+
+**Ditolak:** (a) aktifkan toggle lalu kirim `nonce` dari aplikasi — menambah satu
+email bolak-balik pada alur yang sudah terbukti, demi penjagaan yang sudah
+dipunyai; (b) aktifkan "karena checklist bilang begitu" tanpa uji — inilah yang
+hampir terjadi, dan satu-satunya alasan tidak terjadi adalah kodenya dibaca
+lebih dulu.
+
+**Konsekuensi:** penjagaan ini hidup di `src/server/actions/auth.ts`, bukan di
+setelan dasbor. Siapa pun yang menyederhanakan kedua jalur itu kelak menghapus
+satu-satunya re-autentikasi yang ada — 36 test di tiga berkas
+(`auth-action-errors`, `change-password-action`, `lib/email-grant`) menjaganya,
+dan ADR ini menjelaskan kenapa dasbornya sengaja dibiarkan "longgar".
+
+---
+
 ## Template entri baru
 
 ```
