@@ -95,13 +95,38 @@ Untuk **tiap** project (staging dulu, lalu prod):
 | `PAKASIR_PROJECT_SLUG` / `PAKASIR_API_KEY` | project **production** Pakasir. Keduanya GAGAL-KERAS: slug kosong mematikan tombol bayar, api_key kosong mematikan verifikasi otoritatif `transactiondetail` sehingga webhook & cron TAK PERNAH bisa mengaktifkan order lunas |
 | `RESEND_API_KEY` / `EMAIL_FROM` | domain terverifikasi. Kosong = **seluruh email no-op tanpa satu pun galat** |
 | 🏗️ `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | secret kosong di produksi = **GAGAL-TUTUP total** pada semua form, satu `console.error` per permintaan, nol event Sentry |
-| `STORAGE_DRIVER` | `supabase` (atau `r2` menjelang launch) |
-| 🏗️ `NEXT_PUBLIC_MEDIA_URL` | **WAJIB** host penyaji bucket domain sendiri — **kosong = media 404** (app gagal-keras runtime, tetapi SENGAJA tidak dicek saat build, jadi CI tetap hijau dan kerusakannya baru muncul saat tamu pertama membuka undangan). R2: `https://cdn.merriva.id`; tetap Supabase: proxy domain sendiri, dan **bucket `media` harus PUBLIC** |
+| `STORAGE_DRIVER` | `local` (disk VPS, lihat §5a), `supabase`, atau `r2`. Salah ketik kini **melempar** — dulu ia jatuh diam-diam ke `supabase` |
+| `MEDIA_ROOT` | hanya driver `local`; boleh kosong (default `data/media` = `/app/data/media`). Yang berbahaya bukan variabelnya melainkan **lupa memasang volume ke sana** |
+| 🏗️ `NEXT_PUBLIC_MEDIA_URL` | **WAJIB** host penyaji media dari domain sendiri — **kosong = media 404 DAN editor 500** (app gagal-keras runtime, tetapi SENGAJA tidak dicek saat build, jadi CI tetap hijau dan kerusakannya baru muncul pada foto pertama yang diunggah). `local`: `https://merriva.id/media`; R2: `https://cdn.merriva.id`; tetap Supabase: proxy domain sendiri, dan **bucket `media` harus PUBLIC** |
 | `CRON_SECRET` | string acak panjang |
 | 🏗️ `NEXT_PUBLIC_SENTRY_DSN` | dari Sentry. Kosong = Sentry non-aktif — dan karena itu kegagalan SMTP yang senyap di sisi pengguna menjadi tak terlihat sama sekali. Isi SEBELUM menyentuh Custom SMTP |
 | `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | dari Sentry (opsional, untuk sourcemap) |
 
-`R2_*` hanya bila `STORAGE_DRIVER=r2`; `STORAGE_DRIVER` sendiri punya default `supabase` di dua tempat, jadi boleh dikosongkan di fase awal. Kredensial R2 dibaca **lazily** dan hanya pada upload/hapus — jadi R2 yang salah-konfigurasi tidak mematikan pembacaan media: halaman undangan tetap tampil, yang gagal hanya unggah foto/lagu.
+`R2_*` hanya bila `STORAGE_DRIVER=r2`; `STORAGE_DRIVER` sendiri punya default `supabase` bila KOSONG, jadi boleh dikosongkan di fase awal — tetapi nilai yang tak dikenali melempar, bukan jatuh ke default. Kredensial R2 dibaca **lazily** dan hanya pada upload/hapus — jadi R2 yang salah-konfigurasi tidak mematikan pembacaan media: halaman undangan tetap tampil, yang gagal hanya unggah foto/lagu.
+
+---
+
+## 4a. Volume media (WAJIB bila `STORAGE_DRIVER=local`)
+
+Driver `local` menyimpan foto & lagu di disk VPS dan menyajikannya lewat route `/media/[...path]` milik app ini (SPEC §6.4, DECISIONS #82).
+
+> ⚠️ **Ini langkah yang paling mudah terlewat dan paling mahal bila terlewat.** Tanpa volume, unggah tetap **berhasil** — ke lapisan container yang dibuang setiap deploy. Tidak ada galat, tidak ada peringatan; seluruh foto klien baru hilang pada rebuild berikutnya. App tidak bisa membedakannya: bagi `fs`, direktori yang ter-mount dan yang tidak sama saja.
+
+1. Easypanel → service **merriva** → tab **Mounts** → **Add Mount**
+   - Type: **Volume**
+   - Name: `media`
+   - Mount Path: `/app/data/media`
+2. Environment: `STORAGE_DRIVER=local`, `NEXT_PUBLIC_MEDIA_URL=https://merriva.id/media` (🏗️ **build-arg** — hanya berlaku setelah **rebuild**, bukan restart).
+3. Deploy, lalu **buktikan mount-nya nyata** — bukan percaya pada UI:
+   ```bash
+   # di VPS
+   C=$(docker ps --format '{{.Names}}' | grep '^etc_merriva' | head -1)
+   docker inspect "$C" --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{println}}{{end}}'
+   ```
+   Harus muncul baris yang berujung `/app/data/media`. Host path-nya ada di `/etc/easypanel/projects/etc/merriva/volumes/media`.
+4. Uji daur hidupnya sekali, sekarang juga, selagi belum ada klien: unggah satu foto → **redeploy** → buka editornya lagi. Foto yang masih tampil adalah satu-satunya bukti yang berarti.
+
+Backup: tidak ada bawaan. Isinya `/etc/easypanel/projects/etc/merriva/volumes/media` — ikutkan ke rutinitas backup VPS (LAUNCH-CHECKLIST Fase 5).
 
 ---
 

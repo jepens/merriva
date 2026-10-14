@@ -53,6 +53,13 @@ COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder --chown=node:node /app/public ./public
 
+# Akar media untuk STORAGE_DRIVER=local (MEDIA_ROOT, default `data/media` relatif
+# ke /app). Dibuat & di-chown di sini supaya proses non-root bisa menulis sejak
+# boot pertama. PERINGATAN: direktori ini WAJIB ditimpa volume (Easypanel →
+# Mounts). Tanpa mount, unggah tetap berhasil ke lapisan container yang dibuang
+# setiap deploy — foto klien hilang senyap pada rebuild berikutnya.
+RUN mkdir -p /app/data/media && chown -R node:node /app/data
+
 USER node
 EXPOSE 3000
 

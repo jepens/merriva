@@ -3419,6 +3419,93 @@ pengguna mencari tautan yang sudah terpakai.
 
 ---
 
+## #82 — 2026-10-14 · Storage media pindah ke disk VPS (driver `local`) sebagai jembatan ke R2
+
+**Pemicu yang dilaporkan.** "Unggah foto error." Yang sebenarnya terjadi berbeda
+dan lebih sempit: unggahnya **berhasil**.
+
+| Bukti | Nilai |
+|---|---|
+| `storage.objects` | `inv/85d261d6-…/3bca4756-…/{400,1600}.webp` ADA, 10:34:18 |
+| `public.media` | 1 baris — RPC `insert_gallery_media` juga sukses |
+| Log container | `Error: NEXT_PUBLIC_MEDIA_URL belum di-set` ×2 |
+| `docker inspect` | `NEXT_PUBLIC_MEDIA_URL=` **kosong**, `STORAGE_DRIVER=supabase` |
+
+Jadi yang rusak adalah RENDER sesudahnya: `/dashboard/undangan/<id>/edit`
+memanggil `storage.getPublicUrl()` untuk setiap baris `media`, dan
+`getMediaBaseUrl()` sengaja gagal-keras di runtime produksi bila basisnya
+kosong. Selama galeri masih kosong, halaman itu hidup; foto pertama yang
+terunggah membunuhnya. Gerbangnya bekerja persis seperti yang dirancang —
+yang belum ada adalah hostnya.
+
+**Keputusan pemilik:** sementara ini media disimpan di VPS sendiri, bukan
+menunggu R2. Maka ada driver ketiga.
+
+### Bentuknya
+
+`STORAGE_DRIVER=local` + `NEXT_PUBLIC_MEDIA_URL=https://merriva.id/media`.
+Berkas ditulis ke `MEDIA_ROOT` (default `data/media`, relatif cwd → `/app/data/media`
+di container) dan disajikan route **`/media/[...path]`** dari domain sendiri —
+jadi aturan §6.4 "jangan pernah serve media dari URL vendor" tetap utuh dan
+pindah ke R2 nanti tetap berarti "ganti env", bukan ganti kode.
+
+Yang dipilih dengan sadar:
+
+- **Disajikan app Next, bukan subdomain/nginx terpisah.** Tanpa DNS dan
+  sertifikat baru. Nama objek immutable (UUID/hash) → `max-age=31536000,
+  immutable`, Cloudflare yang menanggung hari-H dan origin hanya tersentuh
+  sekali per objek.
+- **Berkas dibaca utuh ke memori, bukan di-stream.** Objeknya ratusan KB sampai
+  ±3MB dan sudah dibatasi di sisi unggah; yang dibeli adalah penanganan `Range`
+  yang sederhana. Bila kelak ada video, ini yang pertama diganti.
+- **`Range` tetap diimplementasikan** (206/416). Tanpanya menggeser posisi lagu
+  tak berfungsi dan Safari/iOS bisa menolak memutar audio sama sekali.
+- **Tulis-ke-sementara lalu `rename`.** Tamu yang meminta objek saat unggah
+  berjalan mendapat 404 atau berkas utuh, tak pernah foto separuh — dan karena
+  header cache-nya `immutable`, foto separuh akan tersimpan di Cloudflare sampai
+  undangannya kedaluwarsa.
+- **Daftar-putih dua lapis di `lib/storage/local-path.ts`**, dipakai bersama oleh
+  driver dan route penyaji supaya aturannya tak bisa bercabang: segmen path
+  hanya `[A-Za-z0-9._-]` **dan** `.`/`..` ditolak terpisah (titik wajib sah —
+  nama berkas punya ekstensi — jadi regex sendirian tidak menahan traversal);
+  ekstensi di luar daftar dijawab 404 walau berkasnya ada. Ini route tanpa
+  autentikasi yang membaca filesystem; tamu undangan memang harus bisa
+  membukanya tanpa akun.
+- **Route menjawab 404 bila driver aktif bukan `local`**, supaya ia tak
+  menganggur sebagai pembaca berkas di produksi yang memakai R2.
+
+### `STORAGE_DRIVER` yang salah ketik kini GAGAL-KERAS
+
+Pola lama `name === "r2" ? R2 : Supabase` membuat `lokal`, `Local`, atau sisa
+spasi diam-diam berarti Supabase. Dengan dua driver itu kosmetik; dengan tiga ia
+berbahaya: foto ditulis ke satu tempat sementara `NEXT_PUBLIC_MEDIA_URL`
+menunjuk tempat lain, dan yang terlihat hanyalah foto 404 tanpa sebab.
+`getStorageDriver()` sekarang melempar dan menyebut nilai yang salah.
+
+### Harga yang diterima
+
+Satu disk, tanpa replikasi, tanpa backup bawaan — **dan sebuah jebakan senyap**:
+bila `MEDIA_ROOT` tidak ditimpa volume yang di-mount, unggah tetap "berhasil" ke
+lapisan container yang dibuang setiap deploy, lalu seluruh foto klien hilang
+pada rebuild berikutnya tanpa satu pun galat. Tak ada cara yang jujur untuk
+mendeteksi itu dari dalam app (direktori yang ter-mount dan yang tidak sama saja
+bagi `fs`), jadi yang menjaganya adalah LAUNCH-CHECKLIST, DEPLOYMENT, dan
+komentar di Dockerfile — plus verifikasi nyata saat cutover: tulis berkas,
+redeploy, baca lagi.
+
+Juga sah hanya selama app berjalan **satu replika**. Dua replika = foto yang
+diunggah ke replika A tak terlihat dari replika B.
+
+**Konsekuensi yang menyenangkan:** alasan Album Momen dinonaktifkan
+(LAUNCH-CHECKLIST Fase 4: Supabase free 1 GB ≈ 7 album penuh) tak lagi mengikat
+di disk 125 GB. Mengaktifkannya kembali tetap keputusan pemilik — itu struktur
+paket, bukan infrastruktur.
+
+**Verifikasi:** 76 test baru (daftar-putih path, parse `Range`, driver, route),
+dan di produksi: unggah → redeploy → objek masih terbaca.
+
+---
+
 ## Template entri baru
 
 ```

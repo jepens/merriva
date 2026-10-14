@@ -55,7 +55,13 @@ export const MANIFEST = [
     key: "STORAGE_DRIVER",
     kapan: "opsional",
     rusak:
-      "tak ada — default `supabase` di dua tempat. Jebakannya bukan lupa mengisi, melainkan salah ejaan",
+      "tak ada — kosong berarti `supabase`. Ejaan yang tak dikenali kini GAGAL-KERAS (dulu jatuh diam-diam ke Supabase)",
+  },
+  {
+    key: "MEDIA_ROOT",
+    kapan: "opsional",
+    rusak:
+      "tak ada — default `data/media` (= /app/data/media di container). Yang berbahaya bukan variabel ini melainkan LUPA MEMASANG VOLUME ke sana: unggah tetap berhasil, lalu hilang tiap deploy",
   },
   {
     key: "MOMEN_SESSION_SECRET",

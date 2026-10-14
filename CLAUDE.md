@@ -48,7 +48,7 @@ docker build -t merriva . # verifikasi image sebelum push (deploy = git push →
 
 ## Stack ringkas
 
-Next.js App Router + TypeScript strict + Tailwind CSS + shadcn/ui (dashboard) + Framer Motion (tema) · Supabase cloud: Postgres + RLS + Auth (+ Storage pada fase awal) · Media via `lib/storage/` dengan driver `supabase` | `r2` (env `STORAGE_DRIVER`) · Pembayaran: **Pakasir** (payment link + webhook) · Email: Resend · Anti-spam: Cloudflare Turnstile · Deploy: Dockerfile (Next standalone) → Easypanel di VPS.
+Next.js App Router + TypeScript strict + Tailwind CSS + shadcn/ui (dashboard) + Framer Motion (tema) · Supabase cloud: Postgres + RLS + Auth (+ Storage pada fase awal) · Media via `lib/storage/` dengan driver `supabase` | `local` (disk VPS, disajikan route `/media`) | `r2` (env `STORAGE_DRIVER`) · Pembayaran: **Pakasir** (payment link + webhook) · Email: Resend · Anti-spam: Cloudflare Turnstile · Deploy: Dockerfile (Next standalone) → Easypanel di VPS.
 
 ## Gaya kode
 

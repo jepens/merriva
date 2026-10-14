@@ -4,7 +4,7 @@
  * Aturan yang membuat pindah vendor = ganti env:
  *  - DB hanya menyimpan `path` relatif (immutable hash) — TIDAK pernah URL vendor.
  *  - Media selalu disajikan dari domain sendiri (NEXT_PUBLIC_MEDIA_URL).
- *  - Driver dipilih via env STORAGE_DRIVER (`supabase` | `r2`).
+ *  - Driver dipilih via env STORAGE_DRIVER (`supabase` | `r2` | `local`).
  */
 
 /** Path relatif objek media (immutable hash), mis. `inv/abc123/1600.webp`. */
@@ -25,4 +25,4 @@ export interface StorageDriver {
   delete(path: StorageObjectPath): Promise<void>;
 }
 
-export type StorageDriverName = "supabase" | "r2";
+export type StorageDriverName = "supabase" | "r2" | "local";

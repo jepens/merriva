@@ -8,7 +8,7 @@ Prosedur singkat pemulihan ketika VPS/aplikasi bermasalah. Prinsip inti: **aplik
 |---|---|---|
 | Aplikasi Next.js | Container Docker di VPS (Easypanel) | Ya — tapi bisa dibangun ulang dari repo Git |
 | Database (Postgres + Auth) | Supabase cloud | Tidak |
-| Media (foto) | Supabase Storage → R2 (M4) | Tidak |
+| Media (foto & lagu) | **Disk VPS** — volume `/app/data/media` (host: `/etc/easypanel/projects/etc/merriva/volumes/media`); → R2 di M4 | **YA** — satu-satunya komponen yang ikut mati bersama VPS. Selama `STORAGE_DRIVER=local`, backup direktori itu adalah satu-satunya salinan yang ada |
 | Secrets/env | Panel Easypanel (+ password manager pemilik) | Perlu diisi ulang saat provision baru |
 | DNS | Cloudflare | Tidak |
 
@@ -23,11 +23,12 @@ Prosedur singkat pemulihan ketika VPS/aplikasi bermasalah. Prinsip inti: **aplik
 1. Provision VPS baru, pasang **Easypanel**.
 2. Buat app dari repo Git (Dockerfile), port `3000` — lihat [`DEPLOYMENT.md`](DEPLOYMENT.md) §3–4.
 3. Isi ulang **environment variables** di panel (dari password manager) — lihat [`../.env.example`](../.env.example).
-4. Attach domain `merriva.id` + SSL.
-5. Cloudflare → arahkan DNS `merriva.id` ke IP/host VPS baru (proxy ON).
-6. Verifikasi `https://merriva.id/api/health`.
+4. **Buat kembali volume media** `/app/data/media` (DEPLOYMENT §4a) lalu **restore isinya dari backup**. Lewati langkah ini dan hasilnya adalah kegagalan yang paling menyesatkan di dokumen ini: situs hidup, dasbor normal, setiap undangan merender — dengan semua fotonya 404, karena baris `media` menyimpan path relatif ke objek yang sudah tak ada salinannya.
+5. Attach domain `merriva.id` + SSL.
+6. Cloudflare → arahkan DNS `merriva.id` ke IP/host VPS baru (proxy ON).
+7. Verifikasi `https://merriva.id/api/health` **dan** satu URL media nyata (`https://merriva.id/media/songs/<hash>.mp3`).
 
-> Karena data di Supabase, tidak ada langkah restore DB pada skenario ini — cukup deploy ulang.
+> Database ada di Supabase, jadi tak ada langkah restore DB di sini. **Media tidak begitu** selama `STORAGE_DRIVER=local`: ia hidup di disk VPS yang baru saja mati. Pindah ke R2 menghapus seluruh langkah 4 ini.
 
 ## Backup & restore database
 

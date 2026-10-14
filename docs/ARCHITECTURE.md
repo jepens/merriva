@@ -30,7 +30,7 @@
 | Framework | Next.js App Router + TypeScript strict | SSR/ISR untuk halaman undangan cepat & SEO; satu codebase untuk marketing + dashboard + halaman publik |
 | Styling | Tailwind + shadcn/ui (dashboard) + Framer Motion (tema) | Kecepatan develop; animasi tema premium dengan `prefers-reduced-motion` |
 | DB/Auth | Supabase cloud (Postgres + RLS + Auth) | Managed, RLS untuk isolasi data antar user, free tier saat dev → Pro $25/bln saat launch (backup harian, tanpa auto-pause) |
-| Media | `lib/storage/` driver `supabase` → `r2` | Lihat §6 |
+| Media | `lib/storage/` driver `supabase` → `local` → `r2` | Lihat §6 |
 | Pembayaran | Pakasir | Keputusan pemilik (DECISIONS #4); QRIS 0,7%+Rp310 / 1%, VA flat Rp2.000–3.500, settlement H+1 |
 | Email | Resend (fallback SMTP) | Free tier cukup; template transaksional sederhana |
 | Anti-spam | Cloudflare Turnstile invisible | RSVP/ucapan publik tanpa mengganggu tamu |
@@ -60,6 +60,7 @@ Satu folder per tema di `src/themes/{slug}/`: `index.tsx` (komponen menerima pro
 | Tahap | Driver | Biaya | Catatan |
 |---|---|---|---|
 | Dev + klien awal | Supabase Storage (free: 1GB, egress 5GB) | Rp0 | Tanpa akun/kartu baru |
+| **Jembatan (sejak 14 Okt 2026)** | **`local`: disk VPS** via volume Easypanel, disajikan route `/media/[...path]` + cache CF | Rp0 | Satu disk, tanpa replikasi/backup bawaan; **wajib volume ter-mount** — DECISIONS #82 |
 | Menjelang launch (checklist M4, **wajib sebelum event ramai**) | Cloudflare R2 (free: 10GB + **egress gratis**) via `cdn.merriva.id` + cache CF | Rp0 | Egress Supabase free hanya 5GB ≈ 3–4 event |
 | > 10GB (±1.000 undangan) | R2 $0,015/GB/bln | ±Rp10–25rb/bln | Siap video kenangan Fase 3 |
 
@@ -101,7 +102,8 @@ Env (nilai di Easypanel/`.env`, daftar di `.env.example`):
 NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
 SUPABASE_SERVICE_ROLE_KEY, PAKASIR_PROJECT_SLUG, PAKASIR_API_KEY,
 RESEND_API_KEY, EMAIL_FROM, TURNSTILE_SECRET_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-CRON_SECRET, STORAGE_DRIVER (supabase|r2), NEXT_PUBLIC_MEDIA_URL,
+CRON_SECRET, STORAGE_DRIVER (supabase|local|r2), MEDIA_ROOT (saat driver=local),
+NEXT_PUBLIC_MEDIA_URL,
 R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET   # saat driver=r2
 ```
 

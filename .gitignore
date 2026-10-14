@@ -71,3 +71,7 @@ results.sarif
 # Folder keluaran perkakas (spasi di namanya, muncul di root repo). Berkas yang
 # layak disimpan dipindahkan ke handoff/, bukan dibiarkan menumpuk di sini.
 Claude outputs/
+
+# Media driver `local` (MEDIA_ROOT) — isi disk, bukan kode. Di produksi ini
+# adalah volume Easypanel; di dev ia terbentuk sendiri saat foto pertama diunggah.
+/data/

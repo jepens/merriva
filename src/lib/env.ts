@@ -64,14 +64,42 @@ export function appUrlMasihDefault(): boolean {
   return !process.env.NEXT_PUBLIC_APP_URL;
 }
 
-export const storageDriver = (process.env.STORAGE_DRIVER ?? "supabase") as
-  "supabase" | "r2";
+/**
+ * Driver storage aktif. Dibaca SAAT DIPANGGIL (bukan konstanta modul) supaya
+ * pabrik driver dan route penyaji `/media` selalu melihat nilai yang sama.
+ *
+ * Ejaan yang tak dikenali GAGAL-KERAS. Sebelumnya nilai asing jatuh diam-diam
+ * ke `supabase`, dan itu jebakan yang lebih buruk daripada lupa mengisi: unggah
+ * tetap berhasil — ke tempat yang salah — sementara URL media menunjuk tempat
+ * yang benar, jadi yang terlihat hanyalah foto yang 404 tanpa sebab.
+ */
+export function getStorageDriver(): "supabase" | "r2" | "local" {
+  const raw = (process.env.STORAGE_DRIVER ?? "").trim();
+  if (!raw) return "supabase";
+  if (raw === "supabase" || raw === "r2" || raw === "local") return raw;
+  throw new Error(
+    `STORAGE_DRIVER="${raw}" tidak dikenali — isi dengan \`supabase\`, \`r2\`, atau \`local\` (kosong = supabase).`,
+  );
+}
+
+/**
+ * Akar penyimpanan media untuk driver `local` — RELATIF terhadap cwd proses
+ * (`/app` di dalam container), jadi default `data/media` berarti
+ * `/app/data/media`: titik mount volume Easypanel.
+ *
+ * Nilainya tak pernah berasal dari permintaan; yang menentukan berkas mana yang
+ * boleh terbaca adalah `lib/storage/local-path.ts`.
+ */
+export function getMediaRoot(): string {
+  return (process.env.MEDIA_ROOT ?? "").trim() || "data/media";
+}
 
 /**
  * Basis URL publik media (foto/musik) — WAJIB domain sendiri (SPEC §6.4), bukan
- * URL vendor. Di **production** wajib di-set ke host yang menyajikan bucket
- * (mis. `https://cdn.merriva.id` untuk R2, atau reverse-proxy domain sendiri ke
- * Supabase Storage). Bila KOSONG, `getPublicUrl` menghasilkan URL RELATIF yang
+ * URL vendor. Di **production** wajib di-set ke host yang menyajikan bucket:
+ * `https://merriva.id/media` untuk driver `local` (route penyaji di app ini),
+ * `https://cdn.merriva.id` untuk R2, atau reverse-proxy domain sendiri ke
+ * Supabase Storage. Bila KOSONG, `getPublicUrl` menghasilkan URL RELATIF yang
  * 404 di produksi (tak ada rewrite) → SELURUH foto/cover/musik undangan rusak
  * senyap. Karena itu kita GAGAL-KERAS di production agar salah-konfig ketahuan
  * saat uji staging (Fase 7), bukan diam-diam di depan tamu. Dev: boleh kosong.
@@ -87,8 +115,9 @@ export function getMediaBaseUrl(): string {
   ) {
     throw new Error(
       "NEXT_PUBLIC_MEDIA_URL belum di-set — media (foto/musik) akan 404 di " +
-        "produksi. Isi dengan host penyaji bucket dari domain sendiri " +
-        "(mis. https://cdn.merriva.id).",
+        "produksi. Isi dengan host penyaji media dari domain sendiri " +
+        "(https://merriva.id/media untuk STORAGE_DRIVER=local, " +
+        "https://cdn.merriva.id untuk r2).",
     );
   }
   return raw;
