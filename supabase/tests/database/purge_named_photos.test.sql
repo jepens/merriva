@@ -25,7 +25,7 @@ select plan(8);
 insert into auth.users (id, email) values
   ('0d810000-0000-4000-8000-00000000000a', 'pgtap-foto@merriva.test');
 insert into public.themes (id, slug, name, categories) values
-  ('0d810000-0000-4000-8000-0000000000e0', 'pgtap-foto-tema', 'pgTAP', '{wedding}');
+  ('0d810000-0000-4000-8000-0000000000e0', 'pgtap-foto-tema', 'pgTAP', '{wedding,corporate}');
 
 -- A: wedding — sampul + kedua mempelai + satu prefix galeri
 -- B: corporate — logo
@@ -36,18 +36,21 @@ values
   ('0d810000-0000-4000-8000-0000000000a1', '0d810000-0000-4000-8000-00000000000a',
    '0d810000-0000-4000-8000-0000000000e0', 'pgtap-foto-a', 'wedding', 'expired',
    '2026-01-01 00:00:00+00',
-   '{"coverPhoto":"inv/a1/foto/cover-1",
-     "groom":{"name":"A","photo":"inv/a1/foto/groom-1"},
-     "bride":{"name":"B","photo":"inv/a1/foto/bride-1"}}'::jsonb),
+   '{"coverPhoto":"inv/0d810000-0000-4000-8000-0000000000a1/foto/0d810000-0000-4000-8000-0000000000c1",
+     "groom":{"name":"A","photo":"inv/0d810000-0000-4000-8000-0000000000a1/foto/0d810000-0000-4000-8000-0000000000c2"},
+     "bride":{"name":"B","photo":"inv/0d810000-0000-4000-8000-0000000000a1/foto/0d810000-0000-4000-8000-0000000000c3"}}'::jsonb),
   ('0d810000-0000-4000-8000-0000000000a2', '0d810000-0000-4000-8000-00000000000a',
    '0d810000-0000-4000-8000-0000000000e0', 'pgtap-foto-b', 'corporate', 'expired',
-   '2026-01-01 00:00:00+00', '{"logo":"inv/a2/foto/logo-1"}'::jsonb),
+   '2026-01-01 00:00:00+00', '{"logo":"inv/0d810000-0000-4000-8000-0000000000a2/foto/0d810000-0000-4000-8000-0000000000c4"}'::jsonb),
   ('0d810000-0000-4000-8000-0000000000a3', '0d810000-0000-4000-8000-00000000000a',
    '0d810000-0000-4000-8000-0000000000e0', 'pgtap-foto-c', 'wedding', 'expired',
    '2026-01-01 00:00:00+00', '{}'::jsonb);
 
+-- `media.storage_path` dibatasi check constraint `media_storage_path_format`
+-- ke bentuk `inv/<uuid>/<uuid>` PERSIS. Prefix foto bernama sengaja berbeda
+-- (`inv/<uuid>/foto/<uuid>`) dan memang tak pernah masuk tabel ini.
 insert into public.media (invitation_id, storage_path, width, height) values
-  ('0d810000-0000-4000-8000-0000000000a1', 'inv/a1/galeri-1', 1600, 1200);
+  ('0d810000-0000-4000-8000-0000000000a1', 'inv/0d810000-0000-4000-8000-0000000000a1/0d810000-0000-4000-8000-0000000000f1', 1600, 1200);
 
 create temporary table hasil_a on commit drop as
   select * from public.purge_invitation_data('0d810000-0000-4000-8000-0000000000a1');
@@ -60,17 +63,17 @@ create temporary table hasil_c on commit drop as
 select is((select result from hasil_a), 'purged',
   'undangan wedding berfoto terpurge');
 
-select ok((select 'inv/a1/foto/cover-1' = any(media_paths) from hasil_a),
+select ok((select 'inv/0d810000-0000-4000-8000-0000000000a1/foto/0d810000-0000-4000-8000-0000000000c1' = any(media_paths) from hasil_a),
   'foto SAMPUL ikut daftar hapus');
-select ok((select 'inv/a1/foto/groom-1' = any(media_paths) from hasil_a),
+select ok((select 'inv/0d810000-0000-4000-8000-0000000000a1/foto/0d810000-0000-4000-8000-0000000000c2' = any(media_paths) from hasil_a),
   'foto MEMPELAI PRIA ikut daftar hapus');
-select ok((select 'inv/a1/foto/bride-1' = any(media_paths) from hasil_a),
+select ok((select 'inv/0d810000-0000-4000-8000-0000000000a1/foto/0d810000-0000-4000-8000-0000000000c3' = any(media_paths) from hasil_a),
   'foto MEMPELAI WANITA ikut daftar hapus');
 
-select ok((select 'inv/a1/galeri-1' = any(media_paths) from hasil_a),
+select ok((select 'inv/0d810000-0000-4000-8000-0000000000a1/0d810000-0000-4000-8000-0000000000f1' = any(media_paths) from hasil_a),
   'prefix galeri TETAP ikut — foto bernama menambah, bukan menggantikan');
 
-select ok((select 'inv/a2/foto/logo-1' = any(media_paths) from hasil_b),
+select ok((select 'inv/0d810000-0000-4000-8000-0000000000a2/foto/0d810000-0000-4000-8000-0000000000c4' = any(media_paths) from hasil_b),
   'LOGO corporate ikut daftar hapus');
 
 select is((select result from hasil_c), 'purged',
