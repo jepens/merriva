@@ -8,13 +8,34 @@ import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
 import { Field } from "../field";
 import { LimitedTextarea } from "../limited-textarea";
+import { PhotoField } from "../photo-field";
 import type { EditorValues } from "../types";
 
-/** Detail corporate: deskripsi acara + narahubung (PIC). */
-export function OrganizerStep({ form }: { form: UseFormReturn<EditorValues> }) {
-  const { register } = form;
+/** Detail corporate: logo perusahaan + deskripsi acara + narahubung (PIC). */
+export function OrganizerStep({
+  form,
+  invitationId,
+  logoUrl,
+}: {
+  form: UseFormReturn<EditorValues>;
+  invitationId: string;
+  logoUrl: string | null;
+}) {
+  const { register, setValue, watch } = form;
+  const logoPath = watch("content.logo") as string | undefined;
   return (
     <div className="space-y-5">
+      <PhotoField
+        invitationId={invitationId}
+        label={copy.editor.photo.logoLabel}
+        hint={copy.editor.photo.logoHint}
+        value={logoPath}
+        initialUrl={logoUrl}
+        onChange={(path) =>
+          setValue("content.logo", path, { shouldDirty: true })
+        }
+      />
+
       <Field label={copy.editor.fields.description}>
         <LimitedTextarea
           form={form}

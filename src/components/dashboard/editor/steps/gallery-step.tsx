@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
+import type { UseFormReturn } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
@@ -13,6 +14,9 @@ import {
 } from "@/server/actions/media";
 import type { InvitationMediaView } from "@/types/invitation";
 
+import { PhotoField } from "../photo-field";
+import type { EditorValues } from "../types";
+
 /**
  * Langkah Galeri (SPEC §4.4 step 4). Kompresi 2 varian WebP di klien lalu unggah
  * satu foto per aksi (sekuensial → progres jelas di 4G & menghindari balapan
@@ -20,17 +24,22 @@ import type { InvitationMediaView } from "@/types/invitation";
  * bertahan saat pindah langkah. Limit paket tetap ditegakkan di server.
  */
 export function GalleryStep({
+  form,
   invitationId,
+  coverUrl,
   maxPhotos,
   media,
   setMedia,
 }: {
+  form: UseFormReturn<EditorValues>;
   invitationId: string;
+  coverUrl: string | null;
   maxPhotos: number;
   media: InvitationMediaView[];
   setMedia: Dispatch<SetStateAction<InvitationMediaView[]>>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const coverPath = form.watch("content.coverPhoto") as string | undefined;
   const [pending, setPending] = useState(0);
   const [removing, setRemoving] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +120,22 @@ export function GalleryStep({
 
   return (
     <div className="space-y-4">
+      {/* Foto sampul: satu foto bernama, DI LUAR batas foto paket (batas itu
+          tentang galeri). Ditaruh di langkah ini karena di sinilah pemilik
+          sedang berurusan dengan foto. */}
+      <PhotoField
+        invitationId={invitationId}
+        label={copy.editor.photo.coverLabel}
+        hint={copy.editor.photo.coverHint}
+        value={coverPath}
+        initialUrl={coverUrl}
+        onChange={(path) =>
+          form.setValue("content.coverPhoto", path, { shouldDirty: true })
+        }
+      />
+
+      <hr className="border-border" />
+
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-xs">
           {copy.editor.gallery.addHint}

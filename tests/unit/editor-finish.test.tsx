@@ -66,6 +66,7 @@ function renderEditor() {
       initialMedia={[]}
       maxPhotos={8}
       songs={[]}
+      photoUrls={{}}
       steps={steps}
     />,
   );

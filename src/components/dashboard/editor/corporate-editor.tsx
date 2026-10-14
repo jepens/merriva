@@ -12,7 +12,7 @@ import { OrganizerStep } from "./steps/organizer-step";
 import { ScheduleStep } from "./steps/schedule-step";
 import { SettingsStep } from "./steps/settings-step";
 import { TimelineStep } from "./steps/timeline-step";
-import type { EditorValues, SongOption } from "./types";
+import type { EditorValues, NamedPhotoUrls, SongOption } from "./types";
 
 const STEPS: EditorStep[] = [
   {
@@ -32,7 +32,13 @@ const STEPS: EditorStep[] = [
   {
     key: "detail",
     label: copy.editor.steps.detail,
-    render: (c) => <OrganizerStep form={c.form} />,
+    render: (c) => (
+      <OrganizerStep
+        form={c.form}
+        invitationId={c.invitationId}
+        logoUrl={c.photoUrls.logo ?? null}
+      />
+    ),
     complete: (v) =>
       v.content.category === "corporate" &&
       Boolean(v.content.description || v.content.pic?.name),
@@ -48,7 +54,9 @@ const STEPS: EditorStep[] = [
     label: copy.editor.steps.gallery,
     render: (c) => (
       <GalleryStep
+        form={c.form}
         invitationId={c.invitationId}
+        coverUrl={c.photoUrls.cover ?? null}
         maxPhotos={c.maxPhotos}
         media={c.media}
         setMedia={c.setMedia}
@@ -97,6 +105,7 @@ export function CorporateEditor(props: {
   initialMedia: InvitationMediaView[];
   maxPhotos: number;
   songs: SongOption[];
+  photoUrls: NamedPhotoUrls;
   initialStep?: string;
 }) {
   return <EditorShell {...props} steps={STEPS} />;

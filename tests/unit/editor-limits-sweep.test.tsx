@@ -105,6 +105,7 @@ function renderEditor(cat: Cat, values = seed(cat)) {
       initialMedia={[]}
       maxPhotos={8}
       songs={[]}
+      photoUrls={{}}
     />,
   );
 }

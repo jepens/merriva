@@ -848,6 +848,24 @@ export const copy = {
       tooLarge: "Foto terlalu besar setelah dikompres. Coba foto lain.",
       error: "Gagal mengunggah foto. Coba lagi.",
     },
+    // Foto bernama (SPEC §4.4 langkah 2): satu per jenis, di luar batas foto
+    // paket — batas itu tentang galeri.
+    photo: {
+      add: "Unggah foto",
+      replace: "Ganti",
+      remove: "Hapus",
+      working: "Mengunggah…",
+      hint: "JPG, PNG, atau WebP. Otomatis dikompres di perangkat.",
+      preview: "Pratinjau foto",
+      coverLabel: "Foto sampul",
+      coverHint:
+        "Tampil di layar pembuka undangan dan pada pratinjau tautan di WhatsApp.",
+      groomLabel: "Foto mempelai pria",
+      brideLabel: "Foto mempelai wanita",
+      personHint: "Bila kosong, undangan menampilkan monogram inisial.",
+      logoLabel: "Logo perusahaan",
+      logoHint: "Tampil di bagian penyelenggara.",
+    },
     schedule: {
       // Sesi berisi yang jam mulainya belum lengkap (DECISIONS #42).
       startMissing:

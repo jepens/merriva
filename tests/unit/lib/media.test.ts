@@ -3,8 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   BASIC_MAX_PHOTOS,
   displayPath,
+  isNamedPhotoPath,
+  isVariantBlob,
+  MEDIA_MAX_BYTES,
   mediaObjectPaths,
   mediaPrefix,
+  namedPhotoPrefix,
   photoLimitFromPackage,
   thumbPath,
   toMediaView,
@@ -60,5 +64,75 @@ describe("photoLimitFromPackage", () => {
   it("memakai limit paket bila valid", () => {
     expect(photoLimitFromPackage({ max_photos: 20 })).toBe(20);
     expect(photoLimitFromPackage({ max_photos: 8 })).toBe(8);
+  });
+});
+
+describe("foto bernama", () => {
+  const FID = "3bca4756-1bba-46c3-8208-84baa2b09b45";
+
+  it("prefixnya berbentuk sama dengan galeri — 2 varian di dalamnya", () => {
+    // Bentuk inilah yang membuat purge retensi bisa memakai jalur `media_paths`
+    // yang sudah ada (migrasi 20261014120000). Prefix berbeda bentuk akan
+    // menghapus separuh objek saja.
+    const prefix = namedPhotoPrefix(INV, FID);
+    expect(prefix).toBe(`inv/${INV}/foto/${FID}`);
+    expect(mediaObjectPaths(prefix)).toEqual([
+      `${prefix}/1600.webp`,
+      `${prefix}/400.webp`,
+    ]);
+  });
+
+  it("segmen `foto` membedakannya dari prefix galeri", () => {
+    expect(namedPhotoPrefix(INV, FID)).not.toBe(mediaPrefix(INV, FID));
+  });
+
+  describe("isNamedPhotoPath — gerbang penghapusan", () => {
+    it("menerima prefix milik undangan itu sendiri", () => {
+      expect(isNamedPhotoPath(INV, namedPhotoPrefix(INV, FID))).toBe(true);
+    });
+
+    it.each([
+      ["undangan lain", `inv/33333333-3333-4333-8333-333333333333/foto/${FID}`],
+      ["prefix galeri", `inv/${INV}/${FID}`],
+      ["lagu", "songs/858954bda1e7a6730b511cab436b86ca"],
+      ["ada varian di ujung", `inv/${INV}/foto/${FID}/1600.webp`],
+      ["traversal", `inv/${INV}/foto/..`],
+      ["awalan saja", `inv/${INV}/foto/`],
+      ["id foto bukan UUID", `inv/${INV}/foto/abc`],
+      ["kosong", ""],
+    ])("menolak %s", (_n, path) => {
+      // Path datang dari klien dan storage tak mengenal kepemilikan: tanpa
+      // pencocokan bentuk PENUH, pemilik undangan sendiri bisa menghapus foto
+      // undangan orang lain.
+      expect(isNamedPhotoPath(INV, path)).toBe(false);
+    });
+
+    it("menolak bila invitationId sendiri bukan UUID", () => {
+      expect(isNamedPhotoPath("..", `inv/../foto/${FID}`)).toBe(false);
+    });
+  });
+});
+
+describe("isVariantBlob", () => {
+  const blob = (type: string, bytes: number) =>
+    new File([new Uint8Array(bytes)], "v", { type });
+
+  it("menerima WebP dan JPEG (fallback iOS)", () => {
+    expect(isVariantBlob(blob("image/webp", 10), MEDIA_MAX_BYTES.display)).toBe(
+      true,
+    );
+    expect(isVariantBlob(blob("image/jpeg", 10), MEDIA_MAX_BYTES.display)).toBe(
+      true,
+    );
+  });
+
+  it.each([
+    ["PNG — berarti kompresi klien tak berjalan", blob("image/png", 10), 1000],
+    ["kosong", blob("image/webp", 0), 1000],
+    ["melebihi batas", blob("image/webp", 1001), 1000],
+    ["bukan Blob", "bukan blob" as unknown, 1000],
+    ["null", null as unknown, 1000],
+  ])("menolak %s", (_n, value, max) => {
+    expect(isVariantBlob(value, max as number)).toBe(false);
   });
 });

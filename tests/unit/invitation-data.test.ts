@@ -57,3 +57,44 @@ describe("buildInvitationData — jadwal", () => {
     expect(build([baris("a", null), baris("b", null)]).events).toEqual([]);
   });
 });
+
+describe("buildInvitationData — foto bernama", () => {
+  /**
+   * Yang disimpan di `content` adalah PREFIX 2-varian, sama seperti
+   * `media.storage_path`. Tanpa `displayPath`, tema menerima URL direktori dan
+   * SETIAP foto mempelai/sampul 404 — pada halaman yang tetap menjawab 200,
+   * jadi tak ada monitor yang akan meneriakkannya.
+   */
+  function dengan(content: Record<string, unknown>) {
+    return buildInvitationData({
+      slug: "andi-sinta",
+      category: "wedding",
+      content: { ...emptyContent("wedding"), ...content },
+      settings: DEFAULT_SETTINGS,
+      eventDate: null,
+      eventRows: [],
+      mediaRows: [],
+      watermark: false,
+      music: null,
+    });
+  }
+
+  it("memberi tema varian DISPLAY, bukan prefixnya", () => {
+    const d = dengan({
+      coverPhoto: "inv/a/foto/c1",
+      groom: { name: "A", photo: "inv/a/foto/g1" },
+      bride: { name: "B", photo: "inv/a/foto/b1" },
+    });
+
+    expect(d.coverPhotoUrl).toMatch(/\/inv\/a\/foto\/c1\/1600\.webp$/);
+    expect(d.groomPhotoUrl).toMatch(/\/inv\/a\/foto\/g1\/1600\.webp$/);
+    expect(d.bridePhotoUrl).toMatch(/\/inv\/a\/foto\/b1\/1600\.webp$/);
+  });
+
+  it("tanpa foto → null, supaya tema memakai fallback monogram", () => {
+    const d = dengan({});
+    expect(d.coverPhotoUrl).toBeNull();
+    expect(d.groomPhotoUrl).toBeNull();
+    expect(d.bridePhotoUrl).toBeNull();
+  });
+});

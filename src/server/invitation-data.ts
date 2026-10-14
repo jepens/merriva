@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { copy } from "@/lib/copy";
 import { parseContentForRender } from "@/lib/invitation-content";
-import { toMediaView } from "@/lib/media";
+import { displayPath, toMediaView } from "@/lib/media";
 import { scheduledEvents } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
 import { dataOrThrow } from "@/lib/supabase/result";
@@ -112,7 +112,16 @@ export function buildInvitationData(args: {
   // Foto bernama (sampul/mempelai) → URL domain sendiri (SPEC §6.4: tema tak
   // pernah menerima storage_path mentah untuk foto ini). Mempelai hanya untuk
   // kategori wedding; coverPhoto berlaku semua kategori.
-  const resolve = (p?: string) => (p ? storage.getPublicUrl(p) : null);
+  //
+  // Yang disimpan di `content` adalah PREFIX 2-varian, sama seperti
+  // `media.storage_path` — bukan path objek. Satu bentuk untuk semua foto
+  // membuat penghapusan retensi bisa memakai jalur yang sama
+  // (`mediaObjectPaths`), dan itulah yang menutup lubang di migrasi
+  // 20261014120000. Tema diberi varian DISPLAY: foto mempelai ada di bawah
+  // lipatan (tak memengaruhi LCP) dan wajah manusia yang pecah lebih mahal
+  // daripada byte-nya. Varian thumb dipakai pratinjau 80px di editor.
+  const resolve = (p?: string) =>
+    p ? storage.getPublicUrl(displayPath(p)) : null;
   const coverPhotoUrl = resolve(content.coverPhoto);
   const groomPhotoUrl =
     content.category === "wedding" ? resolve(content.groom.photo) : null;

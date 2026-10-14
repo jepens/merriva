@@ -12,7 +12,7 @@ import { InfoStep } from "./steps/info-step";
 import { ScheduleStep } from "./steps/schedule-step";
 import { SettingsStep } from "./steps/settings-step";
 import { TimelineStep } from "./steps/timeline-step";
-import type { EditorValues, SongOption } from "./types";
+import type { EditorValues, NamedPhotoUrls, SongOption } from "./types";
 
 const STEPS: EditorStep[] = [
   {
@@ -32,7 +32,13 @@ const STEPS: EditorStep[] = [
   {
     key: "couple",
     label: copy.editor.steps.couple,
-    render: (c) => <CoupleStep form={c.form} />,
+    render: (c) => (
+      <CoupleStep
+        form={c.form}
+        invitationId={c.invitationId}
+        photoUrls={c.photoUrls}
+      />
+    ),
     complete: (v) =>
       v.content.category === "wedding" &&
       Boolean(v.content.groom?.name && v.content.bride?.name),
@@ -48,7 +54,9 @@ const STEPS: EditorStep[] = [
     label: copy.editor.steps.gallery,
     render: (c) => (
       <GalleryStep
+        form={c.form}
         invitationId={c.invitationId}
+        coverUrl={c.photoUrls.cover ?? null}
         maxPhotos={c.maxPhotos}
         media={c.media}
         setMedia={c.setMedia}
@@ -97,6 +105,7 @@ export function WeddingEditor(props: {
   initialMedia: InvitationMediaView[];
   maxPhotos: number;
   songs: SongOption[];
+  photoUrls: NamedPhotoUrls;
   initialStep?: string;
 }) {
   return <EditorShell {...props} steps={STEPS} />;

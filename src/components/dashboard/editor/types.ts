@@ -1,3 +1,4 @@
+import type { NamedPhotoKind } from "@/lib/media";
 import type {
   DraftContent,
   EventDraft,
@@ -29,3 +30,11 @@ export type SongOption = {
   artist: string | null;
   url: string;
 };
+
+/**
+ * URL foto bernama yang SUDAH tersimpan, dirakit di server dari `storage_path`
+ * (`getPublicUrl`). Dikirim ke editor sebagai nilai awal pratinjau supaya klien
+ * tak pernah merakit URL media sendiri — aturan "media hanya dari domain
+ * sendiri" tinggal di satu tempat (SPEC §6.4).
+ */
+export type NamedPhotoUrls = Partial<Record<NamedPhotoKind, string | null>>;

@@ -3506,6 +3506,91 @@ dan di produksi: unggah → redeploy → objek masih terbaca.
 
 ---
 
+## #83 — 2026-10-14 · Foto bernama: tombolnya tak pernah ada, dan membuatnya membuka lubang retensi
+
+**Yang dilaporkan.** "Tidak ada tombol untuk upload foto mempelai pria dan wanita."
+
+Benar, dan separuh fiturnya ternyata sudah terpasang sejak lama:
+
+| Lapisan | Status sebelum ini |
+|---|---|
+| SPEC §4.4 langkah 2 | menuntutnya: *"Mempelai pria & wanita + nama orang tua, urutan anak, **foto masing-masing**"* (corporate: *"logo perusahaan"*) |
+| Skema | ADA — `photo` pada person, `coverPhoto`, `logo` (`storagePathSchema`) |
+| Server | ADA — `groomPhotoUrl`/`bridePhotoUrl`/`coverPhotoUrl` di `invitation-data.ts` |
+| Tema | ADA — dirender, dengan fallback monogram inisial bila kosong |
+| **Editor** | **tidak ada** — `CoupleStep` merender empat isian teks dan berhenti |
+
+Jadi kolomnya mustahil terisi, dan setiap undangan selamanya memakai monogram.
+Yang terlihat seperti "fitur belum jadi" sebenarnya "fitur jadi, pintunya tak
+pernah dipasang".
+
+### Yang ditemukan sebelum menulis satu baris UI
+
+`purge_invitation_data` mengumpulkan objek untuk dihapus HANYA dari tabel
+`media` dan `momen_photos`. Foto bernama tak punya baris tabel — pathnya hidup
+di dalam `invitations.content`. Dan beberapa baris di bawahnya, fungsi yang
+sama menimpa `content` menjadi `'{}'`.
+
+Urutannya, kalau tombolnya dipasang begitu saja: satu-satunya rujukan ke objek
+itu DIHAPUS, objeknya TIDAK. Foto wajah mempelai tertinggal di storage
+selamanya, tak ada baris mana pun yang menunjuknya, dan cron melaporkan
+`purged` dengan jujur. Tak ada yang terlihat salah dari luar — dan itulah
+bentuk kegagalan yang paling buruk untuk kewajiban UU PDP 27/2022 yang
+dijanjikan `/privasi`.
+
+Belum pernah menggigit justru KARENA tombolnya tak ada. Menambahkan tombol
+tanpa menambal ini akan mengubah cacat laten menjadi cacat nyata pada klien
+berbayar pertama.
+
+**Migrasi `20261014120000` mendahului tombolnya, bukan menyusulnya.** Panennya
+diletakkan SEBELUM scrub, dan ikut `media_paths` — bukan kolom kembalian baru —
+karena foto bernama memakai bentuk objek yang sama persis dengan galeri: satu
+prefix berisi `1600.webp` + `400.webp`. Pemanggil sudah meng-expand tiap entri
+lewat `mediaObjectPaths`, jadi tak ada `drop function`, tak ada perubahan tipe
+kembalian, tak ada perubahan TypeScript. `admin_delete_account` ikut sembuh
+tanpa disentuh: ia mengakumulasi `media_paths` dari fungsi ini.
+
+### Keputusan desain yang tidak kelihatan dari luar
+
+- **Aksi unggah TIDAK menyentuh database.** `content` dimiliki autosave editor
+  yang mengirim SELURUH objeknya tiap beberapa detik. Bila aksi ikut menulis,
+  autosave berikutnya — yang form-nya belum tahu ada foto baru — menimpanya
+  kembali jadi kosong, dan fotonya "hilang" tanpa satu pun galat. Jadi aksi
+  menaruh objek lalu mengembalikan PATH; form yang memegangnya, autosave yang
+  menyimpannya. Harganya: objek yatim bila tab ditutup sebelum autosave —
+  tak berbahaya dan tak tertebak, sama seperti yatim pada galeri.
+- **Setiap unggah menghasilkan UUID BARU, bukan nama tetap per jenis.** Media
+  disajikan `max-age=31536000, immutable`; menimpa path yang sama berarti
+  Cloudflare dan peramban tamu menyajikan foto LAMA sampai undangannya
+  kedaluwarsa. Mengganti foto = path baru + objek lama dihapus.
+- **Yang disimpan PREFIX, bukan path objek.** Inilah yang membuat jalur purge di
+  atas bekerja. `invitation-data.ts` karena itu diubah memakai `displayPath(p)`;
+  sebelumnya ia memperlakukan nilai `content` sebagai path objek penuh — kontrak
+  yang tak pernah teruji karena tak pernah ada datanya.
+- **Dua varian dipakai di dua tempat berbeda:** tema menerima `1600.webp` (foto
+  mempelai ada di bawah lipatan, tak memengaruhi LCP, dan wajah yang pecah lebih
+  mahal daripada byte-nya), editor memakai `400.webp` untuk kotak pratinjau 80px
+  — pemilik sering mengedit dari HP.
+- **Penghapusan dipagari bentuk path penuh** (`isNamedPhotoPath`), bukan
+  `startsWith`. Path datang dari klien dan storage tak mengenal kepemilikan:
+  tanpa pencocokan penuh terhadap `invitationId` pemanggil, pemilik undangan
+  sendiri bisa mengirim path undangan ORANG LAIN dan menghapus fotonya.
+
+### Yang TIDAK ikut dikerjakan
+
+`/api/og` masih tak memakai `coverPhoto` sama sekali, jadi janji SPEC §4.5
+("OG image … nama + tanggal di atas foto cover") tetap belum terpenuhi. Kini
+fotonya sudah bisa diisi; menyambungkannya ke OG adalah pekerjaan terpisah.
+
+**Verifikasi:** 1822 unit test hijau, 22 mutan 22 mati — termasuk "gerbang hapus
+memakai startsWith", "photoId tetap", "URL yang masuk ke form bukan path", dan
+"tema diberi prefix, bukan varian display". Sisi SQL dijaga pgTAP
+`purge_named_photos.test.sql` (job `db` di CI menjalankan migrasi pada Postgres
+bersih lalu mengujinya); ekspresi panennya juga diperiksa langsung di DB
+produksi terhadap enam bentuk `content`, termasuk `content` yang bukan objek.
+
+---
+
 ## Template entri baru
 
 ```

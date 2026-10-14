@@ -6,6 +6,7 @@ import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import {
   displayPath,
+  isVariantBlob,
   MEDIA_MAX_BYTES,
   mediaObjectPaths,
   mediaPrefix,
@@ -28,19 +29,9 @@ export type MediaUploadResult =
 export type MediaDeleteResult =
   { status: "success" } | { status: "error"; message?: string };
 
-// Klien mengompres ke WebP, atau JPEG bila Safari/iOS tak dukung toBlob webp
-// (lib/image/encode). Terima keduanya; PNG/lainnya ditolak. Content-type storage
-// diambil dari `blob.type` aktual (bukan asumsi webp).
-const ACCEPTED_VARIANT_TYPES = new Set(["image/webp", "image/jpeg"]);
-
-function isVariantBlob(value: unknown, maxBytes: number): value is Blob {
-  return (
-    value instanceof Blob &&
-    ACCEPTED_VARIANT_TYPES.has(value.type) &&
-    value.size > 0 &&
-    value.size <= maxBytes
-  );
-}
+// Aturan varian (WebP, atau JPEG fallback iOS) hidup di `lib/media` supaya
+// galeri dan foto bernama memakai daftar yang sama. Content-type storage tetap
+// diambil dari `blob.type` aktual, bukan diasumsikan webp.
 
 function sanitizeDimension(value: FormDataEntryValue | null): number | null {
   const n = Number(value);
