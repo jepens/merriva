@@ -10,6 +10,8 @@ import { copy } from "@/lib/copy";
 import { PAYABLE_STATUSES } from "@/lib/invitation-status";
 import { appUrl } from "@/lib/env";
 import { isUuid } from "@/lib/id";
+import { merchantIdentityReady } from "@/lib/merchant";
+import { reportHandledError } from "@/lib/observability";
 import { generateOrderCode } from "@/lib/order";
 import { terbitkanLink } from "@/server/payment/link";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -57,6 +59,23 @@ export async function createCheckoutAction(
   } = await supabase.auth.getUser();
   if (!user) return { status: "error", message: copy.auth.genericAuthError };
   if (!isUuid(invitationId)) return { status: "error" };
+
+  // Identitas pelaku usaha WAJIB tampil SEBELUM pembayaran (PP 80/2019,
+  // Permendag 31/2020). Selama `merchant.name`/`address` kosong, `/syarat` dan
+  // `/refund` merender bagian itu KOSONG dengan anggun — tanpa galat, tanpa
+  // tanda. Gerbang ini membuat kelalaian itu mustahil ikut terbit: lebih baik
+  // tombol bayar mati daripada menerima uang tanpa identitas, yang juga rutin
+  // membuat aggregator menangguhkan akun merchant setelah uang pelanggan masuk.
+  // Hanya di PRODUCTION — dev & test tetap bisa menelusuri alur pembayaran.
+  if (process.env.NODE_ENV === "production" && !merchantIdentityReady()) {
+    reportHandledError(
+      new Error(
+        "identitas pelaku usaha belum diisi (copy.marketing.legal.merchant) — checkout ditutup",
+      ),
+      "checkout.merchant-identity",
+    );
+    return { status: "error", message: copy.checkout.merchantMissing };
+  }
 
   const parsedCode = packageCodeSchema.safeParse(packageCode);
   if (!parsedCode.success) return { status: "error" };

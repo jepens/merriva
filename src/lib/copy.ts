@@ -485,6 +485,10 @@ export const copy = {
     securedBy: "Pembayaran diproses oleh Pakasir (QRIS & Virtual Account).",
     perDuration: (months: number) => `Masa aktif ${months} bulan`,
     notPayable: "Undangan ini tidak dapat dibayar saat ini.",
+    // Pembeli tak bisa memperbaiki ini sendiri, jadi pesannya tak menyuruh
+    // mencoba lagi — ia memberi jalan keluar yang benar-benar menolong.
+    merchantMissing:
+      "Pembayaran sedang tidak tersedia. Tim kami sedang menyelesaikan penyiapan. Hubungi halo@merriva.id bila acara Anda sudah dekat.",
     packageUnavailable: "Paket tidak tersedia. Silakan coba lagi.",
     // Sejak Pakasir v2, penerbitan tautan adalah panggilan jaringan yang bisa
     // gagal (mis. plafon 2 permintaan/detik). Pesannya menenangkan dengan

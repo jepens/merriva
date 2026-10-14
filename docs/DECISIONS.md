@@ -3916,6 +3916,44 @@ bersih di typecheck, lint, dan konformansi tanpa suntingan.
 
 ---
 
+## #88 — 2026-10-14 · Identitas pelaku usaha: dari butir checklist menjadi gerbang
+
+`/syarat`, `/privasi`, dan `/refund` sudah lengkap sejak AUDIT-2026-10-01, dan
+`copy.marketing.legal.merchant` sudah jadi satu sumber untuk ketiganya. Yang tak
+pernah terisi adalah DATANYA: `name` dan `address` masih string kosong.
+
+Halaman legal menangani itu dengan **anggun** — field kosong tak dirender, jadi
+ketiganya tetap terbaca benar. Dan keanggunan itulah bahayanya: tak ada galat,
+tak ada bagian yang rusak, tak ada satu pun tanda bahwa sesuatu yang diwajibkan
+PP 80/2019 & Permendag 31/2020 sedang hilang. Satu-satunya yang akan memberi
+tahu adalah aggregator pembayaran — saat menangguhkan akun merchant, biasanya
+setelah uang pelanggan sudah masuk.
+
+Butir checklist tak cukup untuk itu. Checklist dibaca oleh orang yang ingat
+membacanya.
+
+**Sekarang `createCheckoutAction` menutup sendiri:** di PRODUCTION, selama
+`merchantIdentityReady()` false, ia melapor ke `checkout.merchant-identity` lalu
+menolak — SEBELUM menyentuh database, jadi tak ada baris `orders` setengah jadi
+untuk pembayaran yang memang tak boleh terjadi.
+
+Tiga hal yang dipilih dengan sadar:
+
+- **Hanya production.** Alur pembayaran harus tetap bisa ditelusuri di dev &
+  staging; gerbang yang menghalangi pengembangan akan dimatikan orang, dan
+  gerbang yang dimatikan tidak menjaga apa pun.
+- **Pesannya memberi jalan, bukan menyuruh mencoba lagi.** Pembeli tak bisa
+  memperbaiki ini sendiri, jadi ia diberi alamat email yang benar-benar
+  menolong — bukan "coba lagi nanti" yang akan dipatuhinya berkali-kali.
+- **`name` + `address` sebagai minimum.** `owner` dan NPWP/NIB menyusul bila
+  ada. Yang paling mungkin terjadi adalah nama terisi dan alamat tertunda —
+  karena itu "cukup salah satu" harus tetap dibaca BELUM SIAP.
+
+**Verifikasi:** 8 mutan 8 mati, termasuk "alamat tak diperiksa", "aktif juga di
+dev", "menolak diam-diam tanpa melapor", dan "pesannya menyuruh coba lagi".
+
+---
+
 ## Template entri baru
 
 ```
