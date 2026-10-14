@@ -17,6 +17,7 @@ Domain: **merriva.id** · Bahasa UI: **Indonesia** · Semua timestamp disimpan U
 | `docs/THEME-DESIGN.md` | Art direction & sistem motion tema (3 tingkat: Craft/Story/Signature) + budget performa | **Wajib sebelum membuat/mengubah tema** — acuan visual: 6 prototipe di `prototypes/` (satu per tema) |
 | `docs/MOMEN-SPEC.md` | Spesifikasi add-on **Album Momen** (FASE H): model peserta, gerbang kuota atomik, fase reveal, moderasi, retensi | Saat menyentuh apa pun di `src/**/momen*` atau tabel `momen_*` |
 | `docs/CUSTOMIZER-SPEC.md` | Kontrak kustomisasi tampilan tema (varian warna, pasangan font, urutan section) | Saat mengubah `options.ts` tema atau editor tampilan |
+| `docs/THEME-CONTRACT.md` | **Kontrak tema v2** (usulan): kosakata section kanonik, blok `media` di `options.ts`, foto non-destruktif, scaffold, test konformansi | **Wajib sebelum menambah tema baru** atau mengubah `ThemeOptions`/kontrak props |
 | `docs/THEME-PORTING.md` | Kontrak pemasangan prototipe→tema: infra bersama (`cover-gate`, `gsap-motion`, `silk-canvas`, `particles-canvas`), ketentuan per-tema, anggaran bundle per tier, DoD §5 | Saat mem-port/upgrade tema dari `prototypes/` (status pemetaan & bundle: DECISIONS #12) |
 
 ## Aturan kerja
