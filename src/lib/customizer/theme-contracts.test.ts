@@ -5,6 +5,9 @@
  * Indonesia (regresi tab "Bagian"/"Gaya"). Data murni (registry + copy) → tanpa
  * mock. Ini jaring pengaman kelas bug yang ditemukan audit customizer.
  */
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { copy } from "@/lib/copy";
@@ -217,5 +220,23 @@ describe.each(themes)("slot media tema '%s'", (slug, opt) => {
   it("tak ada id slot ganda", () => {
     const ids = slots.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("seed katalog", () => {
+  it("setiap tema di registry punya baris seed `themes`", () => {
+    // Tema yang kodenya ada tetapi barisnya tak pernah di-seed TIDAK akan
+    // gagal apa pun: ia hanya tak punya `theme_id`, jadi tak bisa dipilih saat
+    // membuat undangan dan tak muncul di katalog — tanpa satu pun galat.
+    const dir = join(process.cwd(), "supabase", "migrations");
+    const sql = readdirSync(dir)
+      .filter((f) => f.endsWith(".sql"))
+      .map((f) => readFileSync(join(dir, f), "utf8"))
+      .join("\n");
+
+    const tanpaSeed = Object.keys(themeRegistry).filter(
+      (slug) => !sql.includes(`'${slug}'`),
+    );
+    expect(tanpaSeed).toEqual([]);
   });
 });

@@ -3852,6 +3852,70 @@ tersedia untuk diisi.
 
 ---
 
+## #87 — 2026-10-14 · `pnpm theme:new` — tema baru lahir sudah memenuhi kontrak (fase 2)
+
+Fase 2 dari [THEME-CONTRACT.md](THEME-CONTRACT.md), dikerjakan sebelum tema
+ke-11 supaya tema ke-11 sampai ke-30 murah.
+
+### Masalah yang diselesaikan
+
+Menambah satu tema menyentuh **enam tempat di luar folder temanya**:
+`registry.ts`, `theme-options-registry.ts`, `demo-data-registry.ts`,
+`catalog-meta.ts`, satu migrasi seed `themes`, dan `pnpm thumbs`.
+
+Yang terlewat **tidak pernah menimbulkan galat**. Ia hanya membuat tema tak
+muncul di katalog, atau muncul lalu gagal dirender, atau tak bisa dipilih saat
+membuat undangan karena `theme_id`-nya tak pernah ada. Semuanya baru ketahuan
+dari orang yang membukanya.
+
+`pnpm theme:new <slug>` membuat tujuh berkas tema dan mendaftarkannya ke keempat
+registry + menulis migrasi seed. Penyisipan registrinya **idempoten** —
+menjalankan ulang setelah gagal di tengah jalan tak menggandakan baris, dan
+registry dengan dua baris untuk satu tema gagal build dengan pesan yang tak
+menunjuk penyebabnya.
+
+### Buktinya, bukan klaimnya
+
+Scaffold dijalankan sungguhan membuat tema `scaffold-uji`, lalu diperiksa:
+`tsc --noEmit` **bersih**, eslint **bersih**, dan test konformansi **146 assert
+hijau** — tanpa satu pun suntingan tangan. Temanya kemudian dihapus; yang
+tertinggal hanya scriptnya.
+
+Latihan itu menemukan satu cacat nyata di template: `formatEventDateTime`
+mengembalikan `FormattedEvent | null`, bukan string, sehingga section Jadwal tak
+akan typecheck. Tanpa menjalankannya sungguhan, cacat itu akan diwarisi setiap
+tema baru.
+
+### Yang sengaja dipilih
+
+- **`is_active = false` di migrasi seed.** Tema baru tak boleh muncul di katalog
+  sebelum art direction & DoD-nya selesai (THEME-PORTING §5). Menyalakannya
+  adalah keputusan sadar, bukan efek samping dari membuat berkas.
+- **Kerangkanya polos tetapi BENAR** — tersambung ke data yang tepat, memenuhi
+  kontrak, langsung hijau. Menyalin tema yang sudah ada akan membawa serta art
+  direction orang lain, dan itu justru yang harus diganti.
+- **Template dipisah** ke `theme-templates.mjs`: isinya kode dalam string,
+  dengan setiap backtick di-escape. Mencampurnya dengan logika scaffold membuat
+  keduanya sulit dibaca.
+
+### Dua jaring baru
+
+1. **`tests/unit/theme-scaffold.test.ts`** menjaga TEMPLATENYA: id section harus
+   lolos `isKnownSection`, hero/rsvp berflag benar, slot media dikenal, dan
+   sinonim lama (`intro`, `opening`, `principals`, `rundown`, `event`) ditolak.
+   Test konformansi menjaga tema yang SUDAH ada; ini menjaga tema yang BELUM
+   ada — tanpanya, kosakata yang berubah akan membuat setiap tema baru lahir
+   melanggar, dan yang menemukannya adalah orang yang sedang mengerjakan art
+   direction, jauh dari penyebabnya.
+2. **Pemeriksaan seed** di test konformansi: setiap slug di `themeRegistry`
+   harus muncul di salah satu migrasi. Ini melengkapi daftar §5 THEME-CONTRACT
+   yang terakhir belum terpasang.
+
+**Verifikasi:** 134 assert kontrak · 33 test scaffold · tema hasil generate
+bersih di typecheck, lint, dan konformansi tanpa suntingan.
+
+---
+
 ## Template entri baru
 
 ```

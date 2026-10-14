@@ -1,6 +1,6 @@
 # Kontrak Tema v2 — standar untuk menambah banyak tema
 
-Status: **fase 1a & 1b SELESAI** (DECISIONS #85, #86) · fase 2–3 menunggu · 14 Okt 2026 · keputusan pemilik: media
+Status: **fase 1a, 1b & 2 SELESAI** (DECISIONS #85, #86, #87) · fase 3 menunggu · 14 Okt 2026 · keputusan pemilik: media
 **non-destruktif**, susunan section **boleh berbeda antar tema**, tema dibuat **dari arahan pemilik**.
 
 Dokumen ini melengkapi — bukan menggantikan — [`THEME-DESIGN.md`](THEME-DESIGN.md)
@@ -191,8 +191,15 @@ Menambah satu tema hari ini menyentuh **enam tempat** di luar folder temanya:
 ketahuan sampai sesuatu kosong di produksi.
 
 Skrip ini membuat folder dari template minimal yang SUDAH memenuhi kontrak,
-menambahkan barisnya di keempat registry, dan menuliskan rangka migrasi seed.
-Sisanya — art direction — pekerjaan sungguhan.
+menambahkan barisnya di keempat registry, dan menuliskan rangka migrasi seed
+(`is_active = false` — tema baru tak boleh muncul di katalog sebelum DoD-nya
+selesai). Penyisipan registrinya idempoten. Sisanya — art direction — pekerjaan
+sungguhan.
+
+```bash
+pnpm theme:new senja
+pnpm theme:new kembang-api --name "Kembang Api" --tier premium --prefix ka
+```
 
 ---
 
@@ -211,6 +218,8 @@ Satu berkas test mengiterasi `themeRegistry` dan menolak tema yang:
 8. tak punya demo-data;
 9. slug-nya tak pernah muncul di migrasi seed `themes` mana pun.
 
+Kesembilannya kini terpasang (#85 untuk 1–8, #87 untuk yang ke-9).
+
 Tema ke-30 jadi sama amannya dengan tema ke-11.
 
 ---
@@ -221,7 +230,7 @@ Tema ke-30 jadi sama amannya dengan tema ke-11.
 |---|---|---|
 | **1a** ✅ | Kosakata kanonik + rename alias di 6 tema · helper `defaultSectionOrder` · test konformansi | SELESAI 14 Okt 2026 — menemukan 4 tema ber-hero yang bisa disembunyikan + 2 tema dua-jalur (DECISIONS #85) |
 | **1b** ✅ | Blok `media` · foto non-destruktif + `fotoStyle` + 6 tema · penyesuai editor berbasis CSS | SELESAI 14 Okt 2026 — nol migrasi; 4 tema ternyata tak merender foto mempelai, `cover`/`logo` tak dirender siapa pun (DECISIONS #86) |
-| **2** | `pnpm theme:new` + template tema minimal | Setelah kontraknya stabil |
+| **2** ✅ | `pnpm theme:new` + template tema minimal + test yang menjaga templatenya | SELESAI 14 Okt 2026 — tema hasil generate langsung hijau di typecheck, lint, & konformansi (DECISIONS #87) |
 | **3** | Tema baru — satu commit per tema, masing-masing lolos DoD | Di sinilah ragam dibangun |
 
 **Temuan fase 1a yang mengubah perkiraan fase 1b:** `aria` dan `prisma` bukan
