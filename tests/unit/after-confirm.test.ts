@@ -31,7 +31,10 @@ vi.mock("next/headers", () => ({
   }),
 }));
 
-vi.mock("@/lib/observability", () => ({ reportHandledError: vi.fn() }));
+const { reportHandledError } = vi.hoisted(() => ({
+  reportHandledError: vi.fn(),
+}));
+vi.mock("@/lib/observability", () => ({ reportHandledError }));
 
 type Hasil = { error: unknown };
 const { auth } = vi.hoisted(() => ({
@@ -69,6 +72,7 @@ import {
   takeNextForConfirm,
 } from "@/lib/auth/after-confirm";
 import { RegisterForm } from "@/components/auth/register-form";
+import { copy } from "@/lib/copy";
 import { signUpAction } from "@/server/actions/auth";
 import { idleState } from "@/server/actions/types";
 
@@ -221,6 +225,56 @@ describe("GET /auth/confirm memakai titipan itu", () => {
       minta("?token_hash=th_1&type=signup&next=https%3A%2F%2Fjahat.example"),
     );
     expect(tujuan(res)).toBe("/dashboard");
+  });
+
+  it("tautan `code` (templat bawaan) → pesan JUJUR, bukan 'tautan tidak valid'", async () => {
+    // Templat email masih bawaan: GoTrue sudah mengonfirmasi akun satu hop
+    // sebelum peramban sampai ke sini, lalu melempar `?code=`. Pesan lama
+    // menyuruh "minta tautan ulang" — saran yang MUSTAHIL dipenuhi karena
+    // tokennya sudah terpakai, untuk akun yang sebenarnya sudah aktif.
+    const res = await confirm(minta("?code=abc123"));
+    expect(tujuan(res)).toBe("/masuk?error=aktif");
+    expect(reportHandledError.mock.calls[0][1]).toBe(
+      "auth.confirm.default-template",
+    );
+  });
+
+  it("tautan `code` untuk RESET sandi → pesan berbeda, tanpa kabar palsu", async () => {
+    // Di jalur reset tak ada kabar baik: tautannya terpakai, sesinya tak lahir.
+    // "Akun Anda sudah aktif, silakan masuk" justru menyesatkan orang yang
+    // justru TIDAK bisa masuk.
+    const res = await confirm(
+      minta("?code=abc123&next=%2Freset-password%2Fubah"),
+    );
+    expect(tujuan(res)).toBe("/masuk?error=email-config");
+    expect(reportHandledError.mock.calls[0][2]).toEqual({ reset: true });
+  });
+
+  it("tanpa `code` maupun `token_hash` → pesan lama tetap", async () => {
+    const res = await confirm(minta(""));
+    expect(tujuan(res)).toBe("/masuk?error=verify");
+    expect(reportHandledError).not.toHaveBeenCalled();
+  });
+
+  it("pesan 'akun aktif' tidak mewarisi saran yang mustahil", () => {
+    // Inti perbaikannya ada di KATA-KATANYA, bukan di kode galatnya. Menyalin
+    // pesan lama ke kode baru akan lulus setiap test struktural sambil tetap
+    // menyuruh pengguna mencari tautan yang sudah terpakai.
+    const pesan = copy.auth.errorAccountActive.toLowerCase();
+    expect(pesan).not.toBe(copy.auth.errorVerifyLink.toLowerCase());
+    expect(pesan).not.toContain("kedaluwarsa");
+    expect(pesan).not.toContain("minta ulang");
+    expect(pesan).toContain("sudah aktif");
+  });
+
+  it("kedua kode galat baru punya pesan di halaman masuk", async () => {
+    // Kode galat tanpa entri di `errorCopy` tidak menampilkan APA PUN: pengguna
+    // dibuang ke halaman masuk tanpa penjelasan sama sekali.
+    const src = await import("node:fs").then((fs) =>
+      fs.readFileSync("src/app/(auth)/masuk/page.tsx", "utf8"),
+    );
+    expect(src).toContain("aktif: copy.auth.errorAccountActive");
+    expect(src).toContain('"email-config": copy.auth.errorEmailLinkConfig');
   });
 
   it("verifikasi gagal → titipan TIDAK terpakai dan tak hangus", async () => {

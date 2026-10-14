@@ -161,6 +161,17 @@ export const copy = {
       "Masuk dengan Google sedang tidak tersedia karena konfigurasi server belum lengkap. Tim kami sudah diberi tahu. Sementara ini silakan masuk dengan email dan kata sandi.",
     errorVerifyLink:
       "Tautan tidak valid atau sudah kedaluwarsa. Silakan minta ulang.",
+    // Templat email Supabase masih bawaan (DECISIONS #81). Untuk PENDAFTARAN,
+    // akunnya sudah aktif — GoTrue mengonfirmasinya satu hop sebelum peramban
+    // sampai ke kita — jadi menyuruh "minta tautan ulang" seperti pesan di atas
+    // adalah saran yang mustahil dipenuhi: tokennya sudah terpakai.
+    errorAccountActive:
+      "Akun Anda sudah aktif. Silakan masuk dengan email dan kata sandi Anda.",
+    // Untuk RESET KATA SANDI tak ada kabar baik yang bisa disampaikan: tautannya
+    // sudah terpakai dan sesinya tak terbentuk. Jangan menyuruh mencoba lagi —
+    // selama konfigurasinya belum dibetulkan, hasilnya akan sama persis.
+    errorEmailLinkConfig:
+      "Tautan email tidak bisa diproses karena konfigurasi server belum lengkap. Tim kami sudah diberi tahu — sementara ini silakan hubungi kami lewat halaman Bantuan.",
   },
   dashboard: {
     greeting: "Halo",

@@ -3337,6 +3337,88 @@ yang hanya terlihat karena mutannya dijalankan.
 
 ---
 
+## #81 — 2026-10-14 · Templat email bawaan: akun aktif, pengguna diberi tahu sebaliknya
+
+**Kejadian.** Pendaftaran email pertama yang berhasil di produksi. Email terkirim,
+pengguna mengklik tautannya, dan melihat **"Tautan tidak valid atau sudah kedaluwarsa.
+Silakan minta ulang."** Padahal akunnya sudah aktif, dan tautan baru mustahil menolong —
+tokennya sudah terpakai.
+
+**Bukti (diperiksa langsung, bukan disimpulkan dari tampilan):**
+
+| Sumber | Nilai |
+|---|---|
+| `auth.users` | `email_confirmed_at = 08:56:02`, `last_sign_in_at = NULL` |
+| `auth_logs` 08:56:02 | **`GET /verify` → 303**, `action: user_signedup` |
+| `auth.flow_state` | `authentication_method = "email/signup"`, baris MASIH ADA |
+| | `created_at 08:44:16.636` → `auth_code_issued_at 08:56:02.545` = **705,9 detik** |
+
+`GET /verify` adalah endpoint `{{ .ConfirmationURL }}`. Templat kustom `{{ .TokenHash }}`
+(AUTH-SETUP §2) akan menghasilkan **`POST /verify`** — panggilan `verifyOtp` dari server
+kita. Jadi templat di dasbor **masih bawaan**: GoTrue memverifikasi di sisinya sendiri,
+lalu melempar `?code=` (PKCE) ke `/auth/confirm`, yang hanya mengenali `token_hash`.
+
+### Rencana yang HAMPIR dipasang, dan kenapa dibatalkan
+
+Rencana awal: terima juga `code` di `/auth/confirm` dan tukar dengan
+`exchangeCodeForSession` — "dukung kedua bentuk tautan". Tinjauan adversarial membatalkan
+premisnya dengan dua keberatan, keduanya cocok dengan data produksi di atas:
+
+1. **Reset kata sandi akan ikut MATI.** Pada penukaran PKCE, `amr` diisi dari
+   `flow_state.authentication_method` — `"recovery"` / `"email/signup"` / `"oauth"` —
+   **bukan** `"otp"` seperti pada `verifyOtp`. `isFreshEmailGrant`
+   (`src/lib/auth/email-grant.ts:46`) menolak apa pun selain `"otp"`, jadi pengguna akan
+   mendarat di `/reset-password/ubah` **dalam keadaan sudah login**, mengisi kata sandi
+   baru, lalu ditolak "Tautan atur ulang sudah kedaluwarsa" — selamanya, karena setiap
+   tautan baru menghasilkan `amr` yang sama. Dan tak ada satu test pun yang akan merah:
+   `tests/unit/lib/email-grant.test.ts` justru MENEGASKAN penolakan itu. Hari ini yang
+   rusak hanya konfirmasi pendaftaran; rencana itu akan menambah regresi.
+   Ironinya terbalik dari catatan #51: di sana memakai `"recovery"` akan mengunci semua
+   orang — pada jalur PKCE, MENOLAK `"recovery"`-lah yang mengunci semua orang.
+2. **Ia tak akan menyembuhkan kasus yang dilaporkan.** `flow_state` PKCE kedaluwarsa
+   **300 detik sejak DIBUAT** (yaitu sejak menekan "Daftar"), bukan sejak tautan diklik.
+   Jedanya di insiden ini 705,9 detik. Pengguna nyata membaca email beberapa menit
+   kemudian, jadi mayoritas tetap gagal — sambil tokennya sudah hangus.
+
+Yang saya verifikasi sendiri: baris `email-grant.ts:46`, isi `auth.flow_state`,
+`auth_logs`, dan `auth.users` di atas. Nilai `amr` hasil penukaran PKCE dan angka 300
+detik berasal dari reproduksi lokal + pembacaan sumber GoTrue oleh peninjau; keduanya
+konsisten dengan data produksi (baris `flow_state` memang menyimpan
+`authentication_method`, dan baris itu masih ada ⇒ kodenya tak pernah ditukar).
+
+### Keputusan
+
+**Kodenya TIDAK ditukar.** `/auth/confirm` mengenali `code`, melapor ke
+`auth.confirm.default-template`, lalu **berkata jujur**:
+
+- tautan pendaftaran → `/masuk?error=aktif`: *"Akun Anda sudah aktif. Silakan masuk
+  dengan email dan kata sandi Anda."* Itu bukan penghalusan — akunnya memang aktif, dan
+  pengguna punya kata sandi yang baru saja ia buat;
+- tautan reset (dikenali dari `next=/reset-password/ubah`) → `/masuk?error=email-config`.
+  Di jalur ini tak ada kabar baik yang bisa disampaikan, dan "coba lagi" adalah saran
+  yang akan menghasilkan hasil yang sama persis.
+
+**Obatnya tetap satu: ganti templatnya.** `verifyOtp` tak menyentuh `flow_state` sama
+sekali — umurnya diatur `otp_expiry`, bukan 300 detik — dan ia bekerja lintas-peramban
+(daftar di laptop, buka email di ponsel). AUTH-SETUP §2 dan LAUNCH-CHECKLIST kini memuat
+peringatan bahwa langkah ini SUDAH pernah terlewat, plus **verifikasi 1 menit**: klik satu
+tautan uji lalu lihat Logs → Auth — `POST /verify` berarti templat kustom aktif,
+`GET /verify` berarti masih bawaan.
+
+**Bila kelak templat bawaan memang ingin didukung**, keduanya harus dikerjakan DALAM SATU
+commit: menerima `code` DAN meluaskan `isFreshEmailGrant` ke
+`{ "otp", "recovery", "email/signup" }` (cek timestamp + ambang 30 menit + penolakan
+timestamp masa depan tetap berlaku untuk semuanya). Mengerjakan separuhnya akan mematikan
+pemulihan kata sandi tanpa satu pun test memerah.
+
+**Verifikasi:** 26 test, 17 mutan 17 mati — termasuk "cabang `code` dihapus", "reset tak
+dibedakan", "SEMUA dianggap reset", dan "pesan 'akun aktif' disalin dari pesan lama".
+Mutan terakhir itu penting: inti perbaikan ini ada pada KATA-KATANYA, dan menyalin pesan
+lama ke kode galat baru akan lolos setiap pemeriksaan struktural sambil tetap menyuruh
+pengguna mencari tautan yang sudah terpakai.
+
+---
+
 ## Template entri baru
 
 ```

@@ -22,6 +22,8 @@ const errorCopy: Record<string, string> = {
   oauth: copy.auth.errorOauthLogin,
   config: copy.auth.errorOauthConfig,
   verify: copy.auth.errorVerifyLink,
+  aktif: copy.auth.errorAccountActive,
+  "email-config": copy.auth.errorEmailLinkConfig,
 };
 
 export default async function LoginPage({

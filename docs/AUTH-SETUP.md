@@ -30,6 +30,21 @@ relatif internal, mencegah open-redirect.
 Alur SSR menaruh sesi di server, jadi tautan email harus mengarah ke `/auth/confirm`
 memakai `{{ .TokenHash }}` (bukan `{{ .ConfirmationURL }}` bawaan).
 
+> ⚠️ **INI SUDAH MENGGIGIT (14 Okt 2026, DECISIONS #81).** Langkah ini terlewat, dan
+> akibatnya TIDAK tampak seperti salah konfigurasi: pendaftaran berhasil, email terkirim,
+> lalu pengguna yang mengklik tautannya melihat "Tautan tidak valid atau sudah
+> kedaluwarsa" — padahal akunnya **sudah aktif**. Dengan templat bawaan, GoTrue
+> memverifikasi di sisinya sendiri lalu melempar `?code=` (PKCE) ke `/auth/confirm`, yang
+> hanya mengenali `token_hash`. Kode PKCE itu pun kedaluwarsa **5 menit setelah
+> PENDAFTARAN** (bukan setelah klik), jadi tak ada perbaikan sisi-kode yang bisa
+> menyelamatkannya — **templat inilah obatnya**. Reset kata sandi rusak dengan cara yang
+> sama, dan lebih parah: tokennya terpakai tanpa sesi terbentuk.
+>
+> **Verifikasi 1 menit, setelah templat diganti:** daftar satu akun uji, klik tautannya,
+> lalu buka Logs → Auth dan cari baris `/verify`.
+> **`POST /verify` = templat kustom AKTIF** (itu `verifyOtp` dari server kita).
+> **`GET /verify` = masih bawaan** — ulangi langkah ini.
+
 **Confirm signup** — ganti tautan menjadi:
 
 ```html

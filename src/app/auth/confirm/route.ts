@@ -27,6 +27,8 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const nextDariUrl = searchParams.get("next");
+  /** Tujuan yang ditulis templat reset kata sandi (AUTH-SETUP §2). */
+  const RESET_PATH = "/reset-password/ubah";
 
   if (tokenHash && type) {
     const supabase = await createSupabaseServerClient();
@@ -52,6 +54,36 @@ export async function GET(request: NextRequest) {
       code: error.code ?? null,
       status: error.status ?? null,
     });
+  }
+
+  // Tautan membawa `code`, bukan `token_hash` → templat email di dasbor
+  // Supabase MASIH BAWAAN (`{{ .ConfirmationURL }}`), belum diganti ke
+  // `{{ .TokenHash }}` seperti `docs/AUTH-SETUP.md` §2. GoTrue sudah
+  // memverifikasi di sisinya sendiri (`GET /verify`) sebelum melempar ke sini.
+  //
+  // Kodenya SENGAJA tidak ditukar di sini. Itu terlihat seperti obat dan bukan:
+  // `flow_state` PKCE kedaluwarsa 5 menit SETELAH PENDAFTARAN — bukan setelah
+  // klik — jadi siapa pun yang membuka emailnya lebih lambat dari itu tetap
+  // gagal, sementara sesi hasil penukaran membawa `amr: "email/signup"` /
+  // `"recovery"` yang DITOLAK `isFreshEmailGrant` (yang hanya menerima `otp`,
+  // DECISIONS #51) sehingga reset kata sandi justru ikut mati. Obatnya satu:
+  // ganti templatnya (DECISIONS #81).
+  if (searchParams.get("code")) {
+    const reset = safeNextPath(nextDariUrl, "") === RESET_PATH;
+    reportHandledError(
+      new Error(
+        "templat email Supabase masih bawaan — tautan membawa `code`, bukan `token_hash`",
+      ),
+      "auth.confirm.default-template",
+      { reset },
+    );
+    // Pesan lama ("tautan tidak valid/kedaluwarsa") BOHONG di sini: untuk
+    // pendaftaran, akunnya justru sudah aktif — GoTrue mengonfirmasinya satu
+    // hop sebelum peramban sampai ke kita. Mengirim pengguna mencari tautan
+    // baru adalah saran yang mustahil dipenuhi: tokennya sudah terpakai.
+    return relativeRedirect(
+      reset ? "/masuk?error=email-config" : "/masuk?error=aktif",
+    );
   }
 
   return relativeRedirect("/masuk?error=verify");
