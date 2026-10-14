@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { copy } from "@/lib/copy";
+import { merchantIdentityReady } from "@/lib/merchant";
 
 /**
  * Invarian teks untuk saluran dukungan & riwayat pesanan (AUDIT-2026-10-01
@@ -135,8 +136,6 @@ describe("Syarat & Ketentuan mencerminkan perilaku kode, bukan sebaliknya", () =
   });
 
   it("identitas penjual punya SATU sumber, dipakai seluruh halaman legal", () => {
-    // Nilai boleh kosong sebelum pemilik mengisinya — halaman tetap benar —
-    // tetapi kuncinya harus ada supaya satu suntingan mengisi semuanya.
     const m = copy.marketing.legal.merchant;
     expect(Object.keys(m).sort()).toEqual([
       "address",
@@ -146,5 +145,17 @@ describe("Syarat & Ketentuan mencerminkan perilaku kode, bukan sebaliknya", () =
       "taxId",
     ]);
     expect(m.form).toBe("Usaha perseorangan");
+  });
+
+  it("identitas pelaku usaha TERISI — nama & alamat, minimum PP 80/2019", () => {
+    // Diisi 15 Okt 2026. Ratchet, bukan sekadar pemeriksaan: begitu terisi, ia
+    // tak boleh kembali kosong tanpa ada yang tahu — `createCheckoutAction`
+    // bergantung padanya (DECISIONS #88), jadi mengosongkannya berarti
+    // mematikan tombol bayar di produksi tanpa satu pun galat yang menunjuk
+    // ke sini.
+    expect(merchantIdentityReady()).toBe(true);
+    const m = copy.marketing.legal.merchant as Record<string, string>;
+    expect(m.name.trim()).not.toBe("");
+    expect(m.address.trim()).not.toBe("");
   });
 });

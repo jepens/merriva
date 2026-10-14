@@ -2128,12 +2128,18 @@ export const copy = {
       merchantTaxId: "NPWP/NIB",
       merchant: {
         form: "Usaha perseorangan",
-        name: "", // mis. "Merriva" atau nama usaha terdaftar
-        owner: "", // nama pemilik usaha perseorangan
-        address: "", // alamat usaha lengkap (kota & provinsi minimal)
-        taxId: "", // NPWP/NIB bila ada — opsional, tampil hanya bila diisi
+        name: "Merriva",
+        owner: "Muthalib",
+        address:
+          "Jl. Bougenvile Blok IW No.15, RT.6/RW.5, Klp. Dua Wetan, Kec. Ciracas, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 13730",
+        // Belum punya NPWP/NIB (pemilik, 15 Okt 2026). Dibiarkan KOSONG, bukan
+        // diisi "-": field kosong memang tak dirender, sedangkan "-" akan
+        // terbit sebagai baris "NPWP/NIB: -" yang tak memberi tahu apa pun.
+        taxId: "",
       },
-      updated: "Terakhir diperbarui 31 Juli 2026",
+      // Tanggalnya ikut berubah karena ISI ketiga halaman berubah hari ini:
+      // identitas pelaku usaha baru terbit sekarang.
+      updated: "Terakhir diperbarui 15 Oktober 2026",
       backHome: "Kembali ke beranda",
       contactHeading: "Hubungi kami",
       contactBody: "Ada pertanyaan tentang halaman ini? Email kami di",
