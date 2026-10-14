@@ -27,6 +27,16 @@ const { reportHandledError } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/observability", () => ({ reportHandledError }));
 
+// `/auth/confirm` membaca cookie titipan bila URL tak menyebut `next`
+// (DECISIONS #80). Tanpa cookie → perilaku lama: `/dashboard`.
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: () => undefined,
+    set: () => {},
+    delete: () => {},
+  }),
+}));
+
 type Hasil = { error: unknown };
 const { auth } = vi.hoisted(() => ({
   auth: {

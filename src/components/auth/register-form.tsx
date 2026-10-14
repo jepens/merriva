@@ -33,7 +33,7 @@ function useTurnstileReset(state: { status: string; fieldErrors?: unknown }) {
   return resetKey;
 }
 
-export function RegisterForm() {
+export function RegisterForm({ next }: { next?: string }) {
   const [state, formAction, pending] = useActionState(signUpAction, idleState);
   const fieldErrors = state.status === "error" ? state.fieldErrors : undefined;
   const tsReset = useTurnstileReset(state);
@@ -41,6 +41,10 @@ export function RegisterForm() {
 
   return (
     <form action={formAction} className="space-y-4">
+      {/* Tujuan yang dituju pengunjung sebelum diminta mendaftar (mis. tema
+          yang baru ia pilih). Dititipkan server ke cookie agar bisa dipakai
+          lagi setelah tautan konfirmasi diklik — lihat `lib/auth/after-confirm`. */}
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <FormAlert state={state} />
 
       <div className="space-y-1.5">

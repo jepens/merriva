@@ -38,7 +38,7 @@ export default async function RegisterPage({
         <CardDescription>{copy.auth.registerSubtitle}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <RegisterForm />
+        <RegisterForm next={next} />
 
         <div className="flex items-center gap-3">
           <span className="bg-border h-px flex-1" />
@@ -48,11 +48,10 @@ export default async function RegisterPage({
           <span className="bg-border h-px flex-1" />
         </div>
 
-        {/* Jalur yang BENAR-BENAR meneruskan `next` untuk pendaftar baru:
-            `signInWithGoogleAction` membacanya dari form ini. Pendaftaran email
-            berakhir di "cek email Anda" tanpa redirect, jadi tujuannya menyusul
-            lewat tautan konfirmasi — itu belum membawa `next` (lihat
-            `emailRedirectTo` di `signUpAction`). */}
+        {/* Dua jalur, dua cara meneruskan `next`: Google membacanya langsung
+            dari form ini, sedangkan pendaftaran email berakhir di "cek email
+            Anda" tanpa redirect sehingga tujuannya dititipkan ke cookie dan
+            diambil lagi di `/auth/confirm` (DECISIONS #80). */}
         <GoogleButton next={next} />
 
         <p className="text-muted-foreground text-center text-sm">

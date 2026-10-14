@@ -1,6 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest } from "next/server";
 
+import { takeNextForConfirm } from "@/lib/auth/after-confirm";
 import { reportHandledError } from "@/lib/observability";
 import { relativeRedirect } from "@/lib/relative-redirect";
 import { safeNextPath } from "@/lib/safe-redirect";
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = safeNextPath(searchParams.get("next"));
+  const nextDariUrl = searchParams.get("next");
 
   if (tokenHash && type) {
     const supabase = await createSupabaseServerClient();
@@ -34,7 +35,14 @@ export async function GET(request: NextRequest) {
       token_hash: tokenHash,
     });
     if (!error) {
-      return relativeRedirect(next);
+      // `next` di URL MENANG. Templat reset kata sandi menuliskannya sendiri
+      // (`next=/reset-password/ubah`), dan cookie titipan dari pendaftaran lain
+      // tak boleh membajak sesi recovery ke tempat lain. Cookie hanya dipakai
+      // bila URL memang tak menyebut tujuan — yaitu templat konfirmasi akun.
+      const tujuan = nextDariUrl
+        ? safeNextPath(nextDariUrl)
+        : ((await takeNextForConfirm()) ?? "/dashboard");
+      return relativeRedirect(tujuan);
     }
     // `type` saja yang dilampirkan — ia membedakan "verifikasi pendaftaran
     // gagal" dari "reset sandi gagal", dua masalah dengan obat yang berbeda.

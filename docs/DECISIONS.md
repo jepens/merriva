@@ -3266,6 +3266,77 @@ mencocokkan katalog", "form mengabaikan kategori", dan "`requireUser` membuang t
 
 ---
 
+## #80 — 2026-10-14 · Tujuan yang bertahan melintasi konfirmasi email
+
+Menutup celah yang dicatat terbuka di #79: pendaftar lewat EMAIL kehilangan tema yang baru
+saja ia pilih, karena pendaftaran berakhir di layar "cek email Anda" tanpa redirect.
+
+### Temuan yang mengubah rancangannya
+
+Rencana awal — selipkan `next` ke `emailRedirectTo` — **tidak akan sampai ke mana pun.**
+Tautan di email tidak dibangun oleh kode ini. Ia dibangun templat di dasbor Supabase, dan
+templat yang dipakai proyek ini (`docs/AUTH-SETUP.md` §2) memakai `{{ .SiteURL }}`:
+
+```html
+{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup
+```
+
+`emailRedirectTo` karena itu hanya divalidasi GoTrue terhadap daftar izin Redirect URL; ia
+tidak pernah muncul di peramban. Kode di `signUpAction` tampak mengendalikan tautan itu
+padahal tidak — komentar ditambahkan di sana supaya pembaca berikutnya tak mengulang
+kesimpulan yang sama.
+
+### Keputusan: dititipkan lewat cookie, bukan lewat tautan
+
+`src/lib/auth/after-confirm.ts`. `signUpAction` menitipkan tujuan ke cookie
+`mrv_after_confirm` (path `/auth`, 2 jam, `httpOnly`, `sameSite=lax`, `secure` di produksi);
+`/auth/confirm` mengambilnya sekali lalu membuangnya.
+
+`sameSite=lax`, bukan `strict`: tautan email adalah navigasi tingkat-atas dari konteks luar,
+dan `strict` justru menahan cookie pada satu-satunya permintaan yang membutuhkannya.
+
+Empat sifat yang bukan selera:
+
+- **`next` di URL MENANG atas cookie.** Templat reset kata sandi menuliskan tujuannya
+  sendiri (`next=/reset-password/ubah`). Bila cookie menang, titipan dari pendaftaran lain
+  bisa membajak sesi recovery yang berumur pendek — pengguna tak pernah sampai ke form ganti
+  kata sandi, dan tautannya sudah hangus.
+- **Disanitasi ULANG saat dibaca.** Nilainya datang kembali dari peramban; "kita sendiri
+  yang menulisnya" bukan jaminan apa pun.
+- **Tidak hangus bila verifikasi gagal.** Tautan kedaluwarsa itu lumrah; menghanguskan niat
+  pengguna pada percobaan pertama membuat percobaan berikutnya mendarat di tempat yang salah.
+- **Dititipkan juga untuk email yang SUDAH terdaftar.** Keduanya menjawab hal yang sama ke
+  pengguna demi anti-enumerasi, jadi keduanya harus BERPERILAKU sama — cookie yang hanya
+  muncul pada email baru adalah pembeda yang bisa diamati dari luar.
+
+### Keterbatasan yang disengaja
+
+Cookie hanya ada di peramban tempat pendaftaran dimulai. Mendaftar di laptop lalu membuka
+email di ponsel → tujuannya hilang dan pengguna mendarat di `/dashboard`, persis seperti
+sebelum perubahan ini. Ini peningkatan untuk kasus yang bisa ditingkatkan, bukan jaminan;
+pemulihannya pun wajar, temanya tinggal dipilih lagi di form buat-undangan.
+
+### Ditolak
+
+**Mengubah templat email** agar memakai `{{ .RedirectTo }}` atau `{{ .Data.next }}`. Itu
+menggantungkan fitur produk pada satu kolom teks di dasbor yang **tak terjangkau test mana
+pun**, menuntut daftar izin Redirect URL menerima query string (perilaku yang tak
+terdokumentasi), dan `{{ .RedirectTo }}` yang kosong akan merusak seluruh tautan — menukar
+"tema hilang" dengan "akun tak bisa diaktifkan".
+
+**Catatan penting untuk pengujian:** jalur daftar-email **belum pernah sekali pun berhasil di
+produksi** — `auth.users` hanya berisi satu akun Google dan satu admin buatan manual. Jadi
+rantai ini hijau di test tetapi BELUM terbukti ujung-ke-ujung; membuktikannya menuntut
+Custom SMTP aktif dan satu pendaftaran sungguhan (LAUNCH-CHECKLIST Fase 4).
+
+**Verifikasi:** 20 test, 11 mutan 11 mati — termasuk "cookie mengalahkan `next` di URL",
+"titipan hangus walau verifikasi gagal", "tanpa sanitasi ulang", dan "`next` tak dikirim
+form". Mutan terakhir itu LOLOS pada putaran pertama: `signUpAction` diuji dengan FormData
+buatan sendiri yang selalu memuat `next`, sedangkan form sungguhan boleh jadi tidak — lubang
+yang hanya terlihat karena mutannya dijalankan.
+
+---
+
 ## Template entri baru
 
 ```

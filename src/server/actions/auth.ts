@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { stashNextForConfirm } from "@/lib/auth/after-confirm";
 import { isFreshEmailGrant } from "@/lib/auth/email-grant";
 import { copy } from "@/lib/copy";
 import { appUrl, appUrlMasihDefault } from "@/lib/env";
@@ -80,6 +81,10 @@ export async function signUpAction(
     email,
     password,
     options: {
+      // TIDAK membentuk tautan di email. Templat Supabase (AUTH-SETUP §2)
+      // membangunnya sendiri dari `{{ .SiteURL }}`; nilai ini hanya divalidasi
+      // GoTrue terhadap daftar izin Redirect URL. Karena itu tujuan lanjutan
+      // dititipkan lewat cookie, bukan lewat sini (DECISIONS #80).
       emailRedirectTo: `${appUrl}/auth/confirm`,
       data: {
         full_name,
@@ -109,6 +114,12 @@ export async function signUpAction(
       return errorState(copy.auth.genericAuthError);
     }
   }
+
+  // Dititipkan SETELAH gerbang galat, dan sengaja juga untuk kasus "sudah
+  // terdaftar": keduanya menjawab hal yang sama ke pengguna (anti-enumerasi),
+  // jadi keduanya harus BERPERILAKU sama juga — cookie yang hanya muncul pada
+  // email baru adalah pembeda yang bisa diamati dari luar.
+  await stashNextForConfirm(formData.get("next"));
 
   // Respons identik untuk email baru & yang sudah terdaftar → hindari enumerasi.
   return { status: "success", message: copy.auth.signupSuccess };
