@@ -62,7 +62,13 @@ export default async function LoginPage({
         <GoogleButton next={next} />
 
         <p className="text-muted-foreground text-center text-sm">
-          <Link href="/daftar" className="hover:underline">
+          {/* `next` ikut menyeberang: pengunjung yang sampai di sini karena
+              memilih tema justru paling sering BELUM punya akun, dan tautan
+              yang membuangnya mengembalikan mereka ke dasbor kosong. */}
+          <Link
+            href={next ? `/daftar?next=${encodeURIComponent(next)}` : "/daftar"}
+            className="hover:underline"
+          >
             {copy.auth.toRegister}
           </Link>
         </p>

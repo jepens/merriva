@@ -3203,6 +3203,69 @@ belum dibantah — tiga dari empat pemverifikasi berhenti di batas kuota sesi.
 
 ---
 
+## #79 — 2026-10-14 · "Gunakan tema ini" membuang temanya
+
+**Kejadian.** Pengguna membuka `/preview/tema/eternal-rose`, menekan **Gunakan tema ini**,
+dan mendarat di `/dashboard` — dasbor kosong, tanpa penjelasan, setelah menyatakan dengan
+sangat jelas tema apa yang ia mau.
+
+**Sebab.** Tombol itu menunjuk `/daftar` begitu saja (`theme-showcase.tsx`), dan `/daftar`
+memantulkan pengguna yang sudah login ke `/dashboard`. Temanya tidak pernah ikut ke mana
+pun. Kartu di katalog `/tema` (`theme-poster.tsx`) punya cacat yang sama persis.
+
+Tak ada yang gagal: tautannya sah, redirect-nya sah. Yang hilang hanya niat pengguna —
+dan itu tidak pernah muncul di log mana pun.
+
+**Yang membuatnya pantas dicatat:** jalur sesudahnya sudah benar sejak lama.
+`createInvitationAction` memang mengakhiri dengan `redirect('/dashboard/undangan/{id}/edit')`
+— tujuan yang diharapkan pengguna. Fiturnya tidak kurang; hanya satu `href` yang memutus
+rantainya di awal.
+
+### Keputusan
+
+Temanya dibawa lewat `?tema={slug}` ke `/dashboard/undangan/baru`, dan kontraknya hidup di
+satu modul (`src/lib/theme-cta.ts`): nama parameter, pembuat tautan, saringan bentuk, dan
+pencocokan katalog. Tiga berkas memakainya — dua penaut dan satu pembaca — dan nama
+parameter yang salah ketik di salah satunya **tidak menimbulkan galat apa pun**, ia hanya
+diam-diam kembali membuang pilihan pengguna. Kegagalan yang sama, hanya lebih sulit dilihat;
+karena itu kontraknya tidak boleh ditulis manual di tiga tempat.
+
+Dua lapis pemeriksaan, dan keduanya perlu:
+
+- **Bentuk** (`themeFromParam`): hanya `[a-z0-9-]{1,64}`. Nilainya berasal dari bilah alamat
+  dan diputar ULANG ke dalam `?next=` saat pengunjung diminta masuk, jadi ia harus dibatasi
+  sebelum disambung.
+- **Keberadaan** (`preselectFromCatalog`): dicocokkan dengan katalog AKTIF. Slug yang rapi
+  tetapi sudah dinonaktifkan lolos saringan bentuk, dan meneruskannya menghasilkan form
+  dengan **pilihan hantu**: `themeSlug` terisi tema yang tak ada di daftar, tombol lanjut
+  gagal validasi, dan tak satu pun kartu tampak terpilih.
+
+`category` ikut dikembalikan, bukan dibiarkan pada bawaan `wedding`: pemilih tema di form
+DISARING oleh kategori, jadi tema korporat/keluarga yang terpilih akan lenyap dari daftar.
+`wedding` diutamakan bila tema mendukung keduanya supaya kasus terbanyak tidak berpindah
+tab tanpa alasan.
+
+### Rantai `next` ikut disambung
+
+`requireUser()` dulu selalu `redirect("/masuk")` tanpa tujuan — jadi bahkan setelah tautannya
+benar, pengunjung yang belum login (yaitu SASARAN UTAMA tombol ini) tetap mendarat di dasbor
+kosong. Kini `requireUser(next?)`, dan dua tautan yang memutus rantai di tengah ikut
+diperbaiki: `/masuk` → `/daftar` dan `/daftar` → `/masuk` sama-sama meneruskan `next`, serta
+`/daftar` memakai `safeNextPath(next)` untuk pengguna yang ternyata sudah login.
+
+**Diketahui belum tertutup:** pendaftaran lewat EMAIL berakhir di "cek email Anda" tanpa
+redirect, dan tautan konfirmasinya dibangun dari `emailRedirectTo: ${appUrl}/auth/confirm`
+yang tidak membawa `next`. Jadi pendaftar email tetap kehilangan temanya; pendaftar Google
+tidak, karena `signInWithGoogleAction` membaca `next` dari form. Menutupnya berarti
+menyuntikkan `next` per-pendaftaran ke `emailRedirectTo` — perubahan tersendiri, bukan
+tempelan di sini.
+
+**Verifikasi:** 23 test, 14 mutan 14 mati — termasuk "showcase kembali menunjuk `/daftar`",
+"showcase memakai slug tema lain", "nama parameter berubah hanya di penaut", "preselect tak
+mencocokkan katalog", "form mengabaikan kategori", dan "`requireUser` membuang tujuan".
+
+---
+
 ## Template entri baru
 
 ```

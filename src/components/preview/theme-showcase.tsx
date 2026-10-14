@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { copy } from "@/lib/copy";
+import { themeCtaHref } from "@/lib/theme-cta";
 
 interface ThemeNeighbor {
   slug: string;
@@ -16,6 +17,7 @@ interface ThemeNeighbor {
  * murni; konteks tema & tetangga prev/next disuplai server dari katalog aktif.
  */
 export function ThemeShowcase({
+  slug,
   name,
   category,
   tier,
@@ -24,6 +26,7 @@ export function ThemeShowcase({
   prev,
   next,
 }: {
+  slug: string;
   name: string;
   category: string | null;
   tier: string | null;
@@ -54,7 +57,13 @@ export function ThemeShowcase({
           <p className="mrv-lead mrv-show__note">{p.showcaseNote}</p>
 
           <div className="mrv-show__ctas">
-            <Link href="/daftar" className="mrv-btn mrv-btn--primary">
+            {/* Tema yang baru dilihat ikut terbawa. Menunjuk `/daftar` begitu
+                saja membuang pilihan itu, dan pengguna yang sudah login bahkan
+                dipantulkan ke dasbor kosong. */}
+            <Link
+              href={themeCtaHref(slug)}
+              className="mrv-btn mrv-btn--primary"
+            >
               {p.useThisTheme}
             </Link>
             <Link href="/tema" className="mrv-btn mrv-btn--ghost">

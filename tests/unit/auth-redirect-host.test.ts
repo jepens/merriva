@@ -89,7 +89,6 @@ describe("relativeRedirect", () => {
     // ditangani berbeda oleh Traefik maupun Cloudflare.
     const loc = relativeRedirect("/dashboard/café x")!.headers.get("Location")!;
     expect(loc).toBe("/dashboard/caf%C3%A9%20x");
-    // eslint-disable-next-line no-control-regex
     expect(/^[\x20-\x7e]*$/.test(loc)).toBe(true);
   });
 });

@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 
 import { ThemeMockup } from "@/components/theme-mockup";
 import { copy } from "@/lib/copy";
+import { themeCtaHref } from "@/lib/theme-cta";
 import type { MarketingTheme } from "@/server/marketing/catalog";
 import { hasThemeThumb } from "@/server/theme-thumbs";
 import type { InvitationCategory } from "@/types";
@@ -94,7 +95,10 @@ export function ThemeCard({ theme }: { theme: MarketingTheme }) {
             <Eye size={16} aria-hidden="true" />
             {copy.marketing.themes.preview}
           </a>
-          <Link className="mrv-btn mrv-btn--primary mrv-btn--sm" href="/daftar">
+          <Link
+            className="mrv-btn mrv-btn--primary mrv-btn--sm"
+            href={themeCtaHref(theme.slug)}
+          >
             <Send size={16} aria-hidden="true" />
             {copy.marketing.themes.useTheme}
           </Link>

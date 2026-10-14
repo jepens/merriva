@@ -3,14 +3,31 @@ import type { Metadata } from "next";
 import { CreateInvitationForm } from "@/components/dashboard/create-invitation-form";
 import { copy } from "@/lib/copy";
 import { dataOrThrow } from "@/lib/supabase/result";
+import {
+  CREATE_PATH,
+  THEME_PARAM,
+  preselectFromCatalog,
+  themeFromParam,
+  themeCtaHref,
+} from "@/lib/theme-cta";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser } from "@/server/guards/auth";
 import { hasThemeThumb } from "@/server/theme-thumbs";
 
 export const metadata: Metadata = { title: copy.create.title };
 
-export default async function NewInvitationPage() {
-  await requireUser();
+export default async function NewInvitationPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // `?tema=` datang dari tombol "Gunakan tema ini" di katalog & showcase.
+  const diminta = themeFromParam((await searchParams)[THEME_PARAM]);
+
+  // Tujuannya ikut ke `/masuk` lengkap dengan temanya: pengunjung marketing
+  // yang belum login adalah justru SASARAN UTAMA tombol itu, dan tanpa ini ia
+  // mendarat di dasbor kosong setelah masuk — pilihannya hilang.
+  await requireUser(diminta ? themeCtaHref(diminta) : CREATE_PATH);
   const supabase = await createSupabaseServerClient();
 
   // Katalog tema kosong karena DB berkedip akan menampilkan pemilih tema tanpa
@@ -39,7 +56,10 @@ export default async function NewInvitationPage() {
         </h1>
         <p className="text-muted-foreground text-sm">{copy.create.subtitle}</p>
       </div>
-      <CreateInvitationForm themes={themeOptions} />
+      <CreateInvitationForm
+        themes={themeOptions}
+        preselect={preselectFromCatalog(themeOptions, diminta)}
+      />
     </div>
   );
 }

@@ -28,7 +28,18 @@ type ThemeOption = {
 
 const CATEGORIES: InvitationCategory[] = ["wedding", "corporate", "family"];
 
-export function CreateInvitationForm({ themes }: { themes: ThemeOption[] }) {
+export function CreateInvitationForm({
+  themes,
+  preselect = null,
+}: {
+  themes: ThemeOption[];
+  /**
+   * Tema yang sudah dipilih pengguna di katalog/showcase (`?tema=`), sudah
+   * dicocokkan server dengan katalog aktif. `category` ikut karena pemilih tema
+   * di bawah disaring olehnya.
+   */
+  preselect?: { themeSlug: string; category: InvitationCategory } | null;
+}) {
   const [formError, setFormError] = useState<string | null>(null);
   const {
     handleSubmit,
@@ -37,7 +48,10 @@ export function CreateInvitationForm({ themes }: { themes: ThemeOption[] }) {
     formState: { errors, isSubmitting },
   } = useForm<CreateInvitationInput>({
     resolver: zodResolver(createInvitationSchema),
-    defaultValues: { category: "wedding", themeSlug: "" },
+    defaultValues: {
+      category: preselect?.category ?? "wedding",
+      themeSlug: preselect?.themeSlug ?? "",
+    },
   });
 
   const category = watch("category");

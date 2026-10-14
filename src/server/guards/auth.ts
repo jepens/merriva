@@ -15,10 +15,13 @@ export async function getSessionUser() {
 }
 
 /** Wajib login — redirect ke /masuk bila belum. Dipakai route dashboard/admin (M1+). */
-export async function requireUser() {
+export async function requireUser(next?: string) {
   const user = await getSessionUser();
   if (!user) {
-    redirect("/masuk");
+    // `next` membawa tujuan yang SEDANG dituju pengunjung. Tanpa itu ia
+    // mendarat di `/dashboard` setelah masuk — dan niat yang membawanya ke sini
+    // (mis. tema yang baru ia pilih di katalog) hilang tanpa jejak.
+    redirect(next ? `/masuk?next=${encodeURIComponent(next)}` : "/masuk");
   }
   return user;
 }

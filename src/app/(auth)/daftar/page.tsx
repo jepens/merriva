@@ -12,14 +12,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
+import { safeNextPath } from "@/lib/safe-redirect";
 import { getSessionUser } from "@/server/guards/auth";
 
 export const metadata: Metadata = { title: "Daftar" };
 
-export default async function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+
   const user = await getSessionUser();
   if (user) {
-    redirect("/dashboard");
+    // `safeNextPath` menolak URL absolut & protocol-relative (anti open
+    // redirect) dan jatuh ke `/dashboard` bila kosong.
+    redirect(safeNextPath(next));
   }
 
   return (
@@ -39,10 +48,18 @@ export default async function RegisterPage() {
           <span className="bg-border h-px flex-1" />
         </div>
 
-        <GoogleButton />
+        {/* Jalur yang BENAR-BENAR meneruskan `next` untuk pendaftar baru:
+            `signInWithGoogleAction` membacanya dari form ini. Pendaftaran email
+            berakhir di "cek email Anda" tanpa redirect, jadi tujuannya menyusul
+            lewat tautan konfirmasi — itu belum membawa `next` (lihat
+            `emailRedirectTo` di `signUpAction`). */}
+        <GoogleButton next={next} />
 
         <p className="text-muted-foreground text-center text-sm">
-          <Link href="/masuk" className="hover:underline">
+          <Link
+            href={next ? `/masuk?next=${encodeURIComponent(next)}` : "/masuk"}
+            className="hover:underline"
+          >
             {copy.auth.toLogin}
           </Link>
         </p>

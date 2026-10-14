@@ -133,6 +133,7 @@ export default async function ThemeDemoPage({
   return (
     <MarketingShell>
       <ThemeShowcase
+        slug={slug}
         name={ctx.name}
         category={ctx.category}
         tier={ctx.tier}
