@@ -3017,6 +3017,95 @@ juga. 7 test, 11 mutan 11 mati.
 
 ---
 
+## #77 — 2026-10-14 · `request.url` berbohong di mode standalone: redirect auth jadi relatif
+
+**Kejadian.** Setelah `NEXT_PUBLIC_APP_URL` diperbaiki (#76), login Google berhasil —
+kode ditukar, cookie sesi benar-benar tertulis — lalu peramban dikirim ke
+**`https://0.0.0.0:3000/dashboard`** dan berhenti di ERR_ADDRESS_INVALID. Pengguna
+menyimpulkan "login gagal" untuk login yang sebenarnya BERHASIL: tekan kembali, buka
+`/dashboard` manual, sesinya ada.
+
+**Sebab, diverifikasi di sumber `next@16.2.11` yang terpasang** (bukan dugaan dari gejala):
+
+```js
+// next/dist/server/next-server.js — attachRequestMeta
+const protocol = req.headers['x-forwarded-proto']?.includes('https') ? 'https' : 'http';
+const initUrl = this.fetchHostname && this.port
+  ? `${protocol}://${this.fetchHostname}:${this.port}${req.url}`
+  : this.nextConfig.experimental.trustHostHeader
+    ? `https://${req.headers.host || 'localhost'}${req.url}` : req.url;
+```
+
+Header `Host` HANYA dibaca di cabang kedua, dan cabang itu mati karena `trustHostHeader`
+tidak dinyalakan. `next.config.ts` memakai `output: "standalone"` dan Dockerfile stage
+`runner` menyetel `HOSTNAME=0.0.0.0` + `PORT=3000`, jadi `fetchHostname` terisi dan cabang
+pertama menang. `https`-nya datang dari `x-forwarded-proto` Cloudflare — itulah yang
+membuat URL-nya tampak meyakinkan sambil tetap mustahil dibuka.
+
+`/auth/callback` dan `/auth/confirm` sama-sama mengambil `origin` dari sana. Hanya
+`searchParams`-nya yang sehat: path dan query tetap persis seperti yang dikirim peramban.
+
+### Keputusan: `Location` RELATIF
+
+`src/lib/relative-redirect.ts`. Peramban menyelesaikan `Location` relatif terhadap URL yang
+IA minta, jadi tujuannya selalu benar tanpa bergantung pada konfigurasi apa pun — termasuk
+bila `NEXT_PUBLIC_APP_URL` kelak salah lagi. Pola ini sudah hidup di repo:
+`api/og/[slug]` menjawab `Location: /og-default.png` dan test-nya sudah menjaga itu.
+
+Tiga detail yang bukan selera:
+
+- **Cookie tetap ikut.** Ini pertanyaan terpenting — bila tidak, login akan tampak berhasil
+  TANPA sesi, kegagalan yang lebih buruk daripada yang sedang diperbaiki. Diverifikasi di
+  `next/dist/server/route-modules/app-route/module.js`: `appendMutableCookies` dipasang ke
+  Response APA PUN yang handler kembalikan, bukan hanya ke hasil `NextResponse.redirect()`.
+- **Persen-encoding wajib.** `NextResponse.redirect()` meng-encode diam-diam lewat
+  `String(new URL(...))`; `Location` yang dirakit tangan tidak. `safeNextPath` meloloskan
+  spasi (0x20 di atas ambang 0x1f) dan UTF-8, dan nilai header di luar Latin-1 tidak
+  konforman serta bisa diperlakukan berbeda oleh Traefik maupun Cloudflare. Normalisasi
+  lewat basis boneka `http://n` mengembalikan encoding itu — tanpa langkah ini perbaikan
+  kasar hanya ditukar dengan cacat halus.
+- **303, dan 301/308 TERLARANG.** Peramban men-cache 301/308 secara permanen; sekali
+  `/auth/callback → /dashboard` ter-cache, setiap login berikutnya mati, termasuk jalur
+  galatnya.
+
+### Ditolak
+
+**`NextResponse.redirect(new URL(next, appUrl))`.** Bekerja, tetapi memasang ulang
+ketergantungan yang baru saja menggigit. Lebih spesifik: `/auth/confirm` dicapai lewat
+`token_hash` dan TIDAK menuntut cookie PKCE, jadi ia bisa sah-sah saja diminta dari host
+lain (tautan email disunting, proxy korporat, `www.` bila kelak di-DNS-kan) — dan di situ
+obat ini melempar pengguna ke host yang tak memegang cookie yang baru saja ditulis.
+
+**`experimental.trustHostHeader: true`.** Perbaikan satu baris yang menukar bug dengan
+kerentanan: header `Host` dikendalikan klien, dan memercayainya membuat setiap URL turunan
+origin — termasuk tautan reset sandi — bisa diarahkan penyerang. Next menggerbangi flag ini
+justru karena itu.
+
+### Yang ikut diperbaiki
+
+`/auth/callback` dan `/auth/confirm` tidak punya SATU PUN `reportHandledError`, padahal
+`signInWithGoogleAction` melaporkan sisi pemberangkatannya. Jadi separuh tarian OAuth yang
+justru rusak adalah separuh yang tak terlihat: "verifier PKCE hilang" dan "kode kedaluwarsa"
+tak bisa dibedakan dari "pengguna membatalkan". Kini keduanya melapor di area terpisah
+(`auth.callback.exchange`, `auth.confirm.verify`); `token_hash` TIDAK pernah ikut — ia
+kredensial sekali pakai — sedangkan `type` ikut karena ia memisahkan "verifikasi pendaftaran
+gagal" dari "reset sandi gagal", dua masalah dengan obat berbeda.
+
+**Verifikasi:** 15 test, 13 mutan 13 mati. Fixture permintaannya SENGAJA berhost
+`0.0.0.0:3000`: dengan `localhost` setiap test lulus tanpa menguji apa pun, karena
+`localhost` kebetulan host yang benar di mesin pengembang — persis cara bug ini lolos ke
+produksi. Test `/auth/confirm` wajib menyebut `next` eksplisit, karena `safeNextPath` jatuh
+ke `/dashboard` dan test tanpa `next` akan tetap hijau walau jalur reset sandi rusak lagi.
+
+**Belum dikerjakan.** Sapuan empat lensa menemukan kandidat lain (tautan email tanpa gerbang
+`appUrlMasihDefault()`, `appUrl` tanpa normalisasi garis miring, hostname Turnstile vs
+apex/www, rantai `x-forwarded-for` di belakang Cloudflare+Traefik). Tiga dari empat
+pemverifikasi berhenti di batas kuota sesi, jadi temuan itu BELUM dibantah dan sengaja
+tidak dieksekusi di sini — mencatatnya sebagai "belum diverifikasi" lebih jujur daripada
+memperbaiki sesuatu yang belum tentu rusak.
+
+---
+
 ## Template entri baru
 
 ```
