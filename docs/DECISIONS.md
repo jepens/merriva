@@ -89,7 +89,7 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 **Konteks:** survei status M0–M4 (workflow) menemukan software pada dasarnya matang; sisa **koding** sempit → R2 storage (driver skeleton), skrip uji beban, dan cakupan E2E jalur webhook. Arah dipilih pemilik: **soft-launch** (R2 sebagai fast-follow yang disiapkan sekarang).
 **Keputusan:**
 1. **R2 driver via `aws4fetch`** (bukan `@aws-sdk/client-s3`). aws4fetch ~6,4 KB, memakai `fetch`+`SubtleCrypto` global (tersedia di Node 22 runtime), dipakai/direkomendasikan Cloudflare untuk R2. Karena hostname R2 tak mengikuti pola AWS, `service:"s3"`+`region:"auto"` DISET eksplisit agar SigV4 benar. Kontrak `StorageDriver` TIDAK berubah (DB tetap path relatif; penyajian via `NEXT_PUBLIC_MEDIA_URL`). Aktivasi = set `STORAGE_DRIVER=r2` + isi `R2_*` + `NEXT_PUBLIC_MEDIA_URL=cdn`.
-2. **Migrasi media** = skrip ops `scripts/migrate-media-to-r2.mjs` (idempoten + resume via HEAD, `--dry-run`/`--force`/`--limit`, pool 8). DB TIDAK disentuh (path vendor-agnostik). Cutover: migrasi (0 gagal) → set env → verifikasi URL → hapus objek Supabase (opsional). `pnpm migrate:media`.
+2. ~~**Migrasi media** = skrip ops `scripts/migrate-media-to-r2.mjs` (idempoten + resume via HEAD, `--dry-run`/`--force`/`--limit`, pool 8). DB TIDAK disentuh (path vendor-agnostik). Cutover: migrasi (0 gagal) → set env → verifikasi URL → hapus objek Supabase (opsional). `pnpm migrate:media`.~~ **DICABUT 16 Okt 2026 — lihat #92.** Skripnya dihapus, dan resep cutover di atas KELIRU di dua tempat: "set env" tak cukup (`NEXT_PUBLIC_MEDIA_URL` build-arg → wajib REBUILD), dan "hapus objek Supabase (opsional)" akan menghapus satu-satunya salinan server pustaka lagu, yang tak pernah ikut dipindahkan skrip itu.
 3. **Uji beban k6** `scripts/k6/invitation-load.js`: ramping ke 200 VU pada `/{slug}` (jalur ISR kritis WA-blast), ambang error < 1% & p95 < 800 ms. Jalankan pada build PRODUCTION di staging/Docker (bukan `next dev`). `pnpm loadtest`.
 4. **E2E hardening** `tests/e2e/payment-webhook.spec.ts`: menambah cakupan jalur **WEBHOOK** publik (POST `/api/webhooks/pakasir`) + **idempotensi**, melengkapi jalur poll. Memakai `E2E_INVITATION_ID_WEBHOOK` terpisah agar tak bentrok (tiap test mengaktifkan undangannya).
 **Alasan:** menuntaskan potongan koding tersisa agar R2 = fast-follow siap-pakai, kapasitas launch dapat divalidasi (SPEC §10), dan jalur pembayaran webhook (bukan hanya poll) tercakup uji.
@@ -4113,6 +4113,71 @@ itu mengenai semuanya. Versi terbaru saat ini **30.1.3**; tunggu itu.
 (v22.23.3, hasil resolve `node-version: 22`). Selama belum dinaikkan, jsdom 30
 tak bisa dipasang bersih secara lokal walau CI sanggup. Tak adanya `.nvmrc`
 membuat versi runtime tersebar di empat berkas tanpa satu sumber kebenaran.
+
+---
+
+## #92 — 2026-10-16 · `pnpm migrate:media` dihapus; pindah R2 tanpa migrasi
+
+**Keputusan:** `scripts/migrate-media-to-r2.mjs` dan skrip npm `migrate:media`
+DIHAPUS. Pindah ke R2 dikerjakan tanpa alat pemindah: pustaka lagu diunggah
+ulang lewat `/admin/lagu` dari master di `handoff/music/mp3/`, foto uji dibuat
+ulang. Butir #15.2 dicabut.
+
+**Alasan — alatnya salah, dan sungainya tidak ada.**
+
+Audit empat dimensi (driver, skrip migrasi, deploy, cakupan uji; masing-masing
+dibantah skeptik) menemukan skrip itu tak layak dipakai untuk migrasi ini:
+
+- **Sumbernya salah.** Ia mengunduh dari bucket Supabase Storage, sedangkan
+  produksi memakai driver `local` di disk VPS. Setiap objek akan gagal.
+- **Cakupannya sepertiga.** Daftar objeknya dibangun dari tabel `media` ×
+  `["1600.webp","400.webp"]`. Yang TIDAK ikut: varian `og.jpg`, seluruh foto
+  bernama (pathnya hidup di `invitations.content`, tanpa baris `media`), foto
+  Album Momen, dan pustaka lagu di `songs/<sha256>.<ext>`.
+- **`Content-Type` dipaku `image/webp`** untuk setiap objek — `og.jpg` akan
+  ditolak satori, `.mp3` disajikan sebagai gambar.
+- **`loadEnv()` mendahulukan `.env.local`**, sehingga ia menyasar database
+  LOKAL dan tetap melaporkan sukses.
+- **Tak ada verifikasi objek sampai**, dan `--dry-run` kembali sebelum
+  mengunduh — buta terhadap masalah sumber yang justru ingin diuji.
+
+Yang menentukan keputusan untuk tidak memperbaikinya: **tak ada data pelanggan
+untuk dipindahkan.** Saat keputusan diambil, seluruh isi storage adalah 6 lagu
+(11 MB, masternya ada lengkap di disk pemilik beserta WAV dan generatornya) dan
+segelintir foto uji pada tiga undangan `draft` milik akun uji — dengan 0 order,
+0 undangan `active`, 0 pelanggan. Menulis pemindah yang benar untuk memindahkan
+~16 objek yang semuanya bisa dibuat ulang adalah membangun jembatan di atas
+sungai yang tidak ada.
+
+**Kenapa DIHAPUS, bukan ditandai USANG:** namanya terdengar benar. Butir
+checklist dan ADR yang sama-sama menuliskan `pnpm migrate:media` membuatnya
+jalan yang paling mungkin ditempuh orang yang terburu-buru — dan skrip yang
+salah di lima dimensi dengan label peringatan tetaplah senjata yang terisi.
+Sejarah git menyimpannya bila kelak dibutuhkan sebagai rujukan.
+
+**Syarat pemindah yang benar, bila kelak media PELANGGAN harus dipindahkan:**
+
+1. Sumbernya dua: `MEDIA_ROOT` di disk DAN Supabase Storage (objek nyata
+   tersebar di keduanya).
+2. Daftar objeknya dari EMPAT sumber: tabel `media` (lewat `mediaObjectPaths()`
+   yang sudah mencakup `og.jpg`), path foto bernama yang dipanen dari
+   `invitations.content` (query yang sama dipakai migrasi
+   `20261014120000_purge_named_photos`), `momen_photos`, dan `songs`.
+3. `Content-Type` DITURUNKAN dari ekstensi lewat `TIPE_ISI_PER_EKSTENSI`
+   (`src/lib/storage/local-path.ts`) — satu-satunya peta yang sudah terbukti
+   sejalan dengan sisi unggah — atau, lebih baik, PUT lewat
+   `R2StorageDriver.upload()` sendiri supaya header cache tak bisa berbeda
+   antara objek lama dan baru.
+4. Verifikasi objek sampai (ukuran/ETag) SEBELUM apa pun dihapus di sumber.
+5. Idempoten, dan menyadari aplikasi masih menulis media baru selama ia jalan.
+
+**Konsekuensi:** prosedur cutover yang benar kini tertulis di
+LAUNCH-CHECKLIST Fase 5, dengan peringatan yang hilang dari ketiga dokumen
+lama: **REBUILD, bukan restart**. `NEXT_PUBLIC_MEDIA_URL` di-inline saat build
+sementara `STORAGE_DRIVER` dibaca saat runtime; mengubah keduanya di panel lalu
+me-restart hanya menggerakkan yang kedua dan memadamkan seluruh media. Sejak
+commit sebelum entri ini, `/api/health` menolak pasangan yang tak padu sehingga
+image yang salah tak pernah menerima trafik.
 
 ---
 

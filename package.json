@@ -16,7 +16,6 @@
     "theme:new": "node scripts/new-theme.mjs",
     "thumbs": "node scripts/capture-theme-thumbs.mjs",
     "brand:assets": "node scripts/build-brand-assets.mjs",
-    "migrate:media": "node scripts/migrate-media-to-r2.mjs",
     "loadtest": "k6 run scripts/k6/invitation-load.js",
     "typecheck": "node scripts/build-theme-css.mjs && tsc --noEmit",
     "env:check": "node scripts/check-env.mjs",
