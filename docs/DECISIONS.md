@@ -4060,6 +4060,62 @@ agar tak ada nilai `undefined` yang lolos.
 
 ---
 
+## #91 — 2026-10-15 · Triase enam PR Dependabot; `@types/node` dipatok ke Node runtime
+
+**Keputusan:** `@types/node` major di-ignore di `.github/dependabot.yml`. Empat
+PR mayor lain ditriase: `supabase/setup-cli` v3 **merge**, TypeScript 6 **merge
+setelah CI-nya benar-benar jalan**, jsdom 30.1.1 **tunggu 30.1.3**,
+`@types/node` 26 **tolak**.
+
+**Temuan pangkal — semua PR merah karena satu bug izin, bukan karena
+dependensinya.** Keenam PR gagal di langkah gitleaks dengan
+`403 Resource not accessible by integration` pada `GET /pulls/{n}/commits`;
+`Lint, Typecheck, Test, Build` berstatus `skipped` di setiap run. Enam PR
+tampak "pembaruannya rusak" selama berminggu-minggu padahal tak satu pun pernah
+diuji. Diperbaiki di commit sebelum entri ini (`pull-requests: read` di level
+job). Pelajarannya melampaui Dependabot: **job yang mati di langkah awal
+menghasilkan merah yang menuduh langkah yang tak pernah jalan.**
+
+**`@types/node` — kenapa ditolak, bukan ditunda.** Ia mendeskripsikan API
+runtime. Repo seragam Node 22 di empat tempat (`Dockerfile:4`, `Dockerfile:44`,
+`package.json` `engines`, CI `node-version`), dan tak ada `.nvmrc` sebagai
+sumber tunggal. Menerima tipe Node 26 membuat `tsc` merestui API yang tak ada
+saat dijalankan — `URLPattern` global, `node:ffi`, `node:quic`, `node:vfs` —
+dan **gerbang typecheck BUTA terhadap kelas cacat ini**: hijau sambil
+meloloskan kode yang pasti pecah di produksi. Tak ada satu pun breaking change
+v22→v26 yang menyentuh kode repo, jadi manfaatnya nol dan risikonya searah.
+Major-nya hanya boleh naik bersamaan dengan menaikkan Node di Dockerfile + CI.
+
+**TypeScript 6 — aman, tetapi urutannya yang dijaga.** Kompiler 6.0.3 yang
+sungguhan dijalankan terhadap tsconfig repo: **0 error** pada pohon lokal (554
+berkas) DAN pada pohon bentuk-CI (`git archive HEAD`, tanpa `.next`), dengan
+kontrol tsc 5.9.3 pada pohon yang sama juga 0 error. Agar "0 error" tak lolos
+karena alasan yang salah, tiga probe diskriminatif dipakai — `import "./nope"`
+→ TS2882, `const x: string = null` → TS2322, `process.env` → TS2591 — ketiganya
+error di 6.0.3 dan senyap di 5.9.3, membuktikan `noUncheckedSideEffectImports`,
+`strict`, dan `types: []` memang aktif. `@typescript-eslint` 8.65.0 memparse
+545/545 berkas dengan TS 6.0.3 (`SUPPORTED_TYPESCRIPT_VERSIONS` `<6.1.0`), dan
+Vitest tak pernah memuat paket `typescript` sama sekali (tanpa mode `typecheck`,
+transform lewat esbuild). Tetap tidak di-merge sebelum CI-nya jalan: job
+`promote` mem-fast-forward `production` pada setiap push ke `main` dan tak ada
+branch protection, jadi me-merge commit yang gerbangnya **tak pernah berjalan**
+adalah persis mode kegagalan yang workflow itu dibangun untuk mencegah.
+
+**jsdom — versinya, bukan kodenya.** 30.0.0 hanya punya SATU breaking change
+resmi: lantai Node naik ke `^22.22.2`. Tetapi 30.1.1 yang ditawarkan PR masih
+membawa dua regresi yang baru diperbaiki sesudahnya — "severe slowdowns when
+building large DOM trees" (30.1.2) dan perhitungan CSS persentase yang salah
+jadi piksel (30.1.3). Seluruh 152 berkas test berjalan di jsdom, jadi regresi
+itu mengenai semuanya. Versi terbaru saat ini **30.1.3**; tunggu itu.
+
+**Konsekuensi yang perlu diingat:** mesin pengembang berjalan di Node **v22.20.0**
+— di bawah lantai jsdom 30 (`^22.22.2`) dan di bawah Node yang dipakai CI
+(v22.23.3, hasil resolve `node-version: 22`). Selama belum dinaikkan, jsdom 30
+tak bisa dipasang bersih secara lokal walau CI sanggup. Tak adanya `.nvmrc`
+membuat versi runtime tersebar di empat berkas tanpa satu sumber kebenaran.
+
+---
+
 ## Template entri baru
 
 ```

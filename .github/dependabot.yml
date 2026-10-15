@@ -16,6 +16,23 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    ignore:
+      # `@types/node` BUKAN dependensi biasa: ia mendeskripsikan API runtime,
+      # jadi major-nya harus mengikuti Node yang benar-benar dijalankan — bukan
+      # yang terbaru di npm. Repo ini seragam Node 22 (Dockerfile `node:22-alpine`
+      # untuk base DAN runner, `engines: >=22`, CI `node-version: 22`).
+      #
+      # Menerima @types/node 26 akan membuat `tsc` MENERIMA API yang tidak ada
+      # di Node 22 — mis. `URLPattern` global, `node:ffi`, `node:quic` — dan
+      # galatnya baru muncul saat runtime, di produksi. Gerbang typecheck justru
+      # BUTA terhadap kelas cacat ini: ia akan hijau sambil merestui kode yang
+      # pasti pecah. Risikonya searah dan manfaatnya nol, karena tak ada satu
+      # pun breaking change v22→v26 yang menyentuh kode repo ini.
+      #
+      # Minor/patch tetap diterima (perbaikan tipe untuk Node 22 yang sama).
+      # Naikkan major HANYA bersamaan dengan menaikkan Node di Dockerfile + CI.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       # Satu PR per kelompok — menelaah 20 PR terpisah tiap minggu tak realistis
       # untuk tim satu orang, dan yang tak tertelaah sama saja dengan tak ada.
