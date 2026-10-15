@@ -104,15 +104,26 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          PELAKU: ${{ github.actor }}
         run: |
-          missing=0
+          kosong=""
           for v in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY; do
-            if [ -z "${!v}" ]; then
-              echo "::error::Secret $v belum di-set di GitHub Actions (Settings > Secrets and variables > Actions). Lihat DECISIONS #36."
-              missing=1
-            fi
+            if [ -z "${!v}" ]; then kosong="$kosong $v"; fi
           done
-          exit "$missing"
+          if [ -z "$kosong" ]; then exit 0; fi
+
+          # Sebabnya BEDA tergantung siapa yang memicu, dan pesan yang salah
+          # mengirim orang ke tab setelan yang keliru. Run Dependabot TIDAK
+          # pernah menerima GitHub Actions secrets — ia memakai Dependabot
+          # secrets yang tersimpan terpisah. Tanpa pembedaan ini, PR Dependabot
+          # gagal dengan "Secret belum di-set" padahal secret-nya ADA; itulah
+          # topeng ketiga yang membuat enam PR tampak rusak (15 Okt 2026).
+          if [ "$PELAKU" = "dependabot[bot]" ]; then
+            echo "::error::Run Dependabot tidak menerima GitHub Actions secrets — ia memakai DEPENDABOT secrets yang terpisah. Tambahkan${kosong} di Settings > Secrets and variables > Dependabot (nilainya sama; keduanya publik by design, dilindungi RLS — BUKAN service role). Sampai itu, Build dan Anggaran bundle TIDAK terverifikasi pada PR ini; Lint, Typecheck, dan Test di atas tetap sahih."
+          else
+            echo "::error::Secret${kosong} belum di-set di GitHub Actions (Settings > Secrets and variables > Actions). Lihat DECISIONS #36."
+          fi
+          exit 1
 
       # Build tanpa NEXT_PUBLIC_SENTRY_DSN → path config polos ikut teruji,
       # menangkap regresi build standalone sebelum deploy Easypanel.
