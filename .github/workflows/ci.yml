@@ -64,11 +64,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           # Komentar PR dimatikan agar langkah ini tak pernah butuh izin TULIS.
-          # Pada run yang dipicu Dependabot, GitHub menyerahkan token read-only
-          # dan izin tulis TAK BISA diberikan lewat `permissions:` — jadi
-          # membiarkan komentar aktif berarti menaruh kegagalan kedua di jalur
-          # yang baru saja diperbaiki. Sinyalnya tak hilang: temuan gitleaks
-          # tetap memerahkan job, dan log-nya menyebut berkas & barisnya.
+          # Izin itu SEBENARNYA bisa diberikan — sejak Okt 2021 run yang dipicu
+          # Dependabot menghormati blok `permissions:` (bawaannya read-only;
+          # contoh auto-merge GitHub sendiri meminta `pull-requests: write`).
+          # Tidak diberikan karena tak sepadan: menaikkan token ke TULIS pada
+          # job yang menjalankan kode dependensi pihak ketiga, demi komentar bot
+          # yang hanya muncul ketika gitleaks menemukan sesuatu — padahal saat
+          # itu job-nya sudah merah dan log-nya sudah menyebut berkas & baris.
           GITLEAKS_ENABLE_COMMENTS: false
 
       - name: Lint
