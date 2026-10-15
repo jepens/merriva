@@ -4,6 +4,7 @@ import { googleCalendarUrl } from "@/lib/calendar";
 import { formatEventDateTime } from "@/lib/datetime";
 import { isDraftSlug, isReservedSlug } from "@/lib/slug";
 import { CopyButton } from "@/themes/_shared/copy-button";
+import { fotoStyle } from "@/themes/_shared/foto";
 import { Countdown, Reveal } from "@/themes/_shared/motion";
 import type {
   Envelope as EnvelopeType,
@@ -14,6 +15,7 @@ import type {
 import type {
   InvitationEventView,
   InvitationMediaView,
+  PhotoView,
 } from "@/types/invitation";
 
 import { LightboxThumb } from "@/themes/_shared/lightbox";
@@ -69,10 +71,32 @@ export function Opening({
 }
 
 /* ------------------------------------------------------------- Couple ------ */
-function CoupleOne({ person }: { person: Person }) {
+const initialOf = (s: string) => (s.trim()[0] ?? "•").toUpperCase();
+
+function CoupleOne({
+  person,
+  photo,
+}: {
+  person: Person;
+  photo?: PhotoView | null;
+}) {
   const parents = L.couple.parents(person.fatherName, person.motherName);
   return (
     <div className="ar-couple__one">
+      {/* Dekoratif: namanya sudah tercetak besar persis di bawahnya, jadi foto
+          ini tak menambah informasi bagi pembaca layar. */}
+      <div className="ar-couple__ph" aria-hidden>
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photo.url}
+            alt=""
+            style={{ width: "100%", height: "100%", ...fotoStyle(photo) }}
+          />
+        ) : (
+          <span>{initialOf(person.nickname || person.name || "•")}</span>
+        )}
+      </div>
       <div className="ar-couple__name">{person.name || "—"}</div>
       {person.childOrder ? (
         <p className="ar-body ar-body--tight">{person.childOrder}</p>
@@ -86,19 +110,23 @@ export function Couple({
   no,
   groom,
   bride,
+  groomPhoto,
+  bridePhoto,
 }: {
   no: string;
   groom: Person;
   bride: Person;
+  groomPhoto?: PhotoView | null;
+  bridePhoto?: PhotoView | null;
 }) {
   return (
     <section className="ar-section">
       <SecHead no={no} title={L.sec.couple} />
       <Reveal>
         <div className="ar-couple">
-          <CoupleOne person={groom} />
+          <CoupleOne person={groom} photo={groomPhoto} />
           <div className="ar-couple__amp">&amp;</div>
-          <CoupleOne person={bride} />
+          <CoupleOne person={bride} photo={bridePhoto} />
         </div>
       </Reveal>
     </section>

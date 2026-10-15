@@ -12,6 +12,7 @@ import { googleCalendarUrl } from "@/lib/calendar";
 import { formatEventDateTime } from "@/lib/datetime";
 import { isDraftSlug, isReservedSlug } from "@/lib/slug";
 import { CopyButton } from "@/themes/_shared/copy-button";
+import { fotoStyle } from "@/themes/_shared/foto";
 import { Countdown, Reveal } from "@/themes/_shared/motion";
 import type {
   Envelope as EnvelopeType,
@@ -22,6 +23,7 @@ import type {
 import type {
   InvitationEventView,
   InvitationMediaView,
+  PhotoView,
 } from "@/types/invitation";
 
 import { LightboxThumb } from "@/themes/_shared/lightbox";
@@ -70,17 +72,36 @@ export function Intro({
 }
 
 /* -------------------------------------------------------- Principals ------ */
+const initialOf = (s: string) => (s.trim()[0] ?? "•").toUpperCase();
+
 function Principal({
   role,
   name,
   meta,
+  initial,
+  photo,
 }: {
   role: string;
   name: string;
   meta: string[];
+  initial: string;
+  photo?: PhotoView | null;
 }) {
   return (
     <div className="lm-principal">
+      {/* Dekoratif: peran dan nama tercetak persis di bawahnya. */}
+      <div className="lm-principal__ph" aria-hidden>
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photo.url}
+            alt=""
+            style={{ width: "100%", height: "100%", ...fotoStyle(photo) }}
+          />
+        ) : (
+          <span>{initial}</span>
+        )}
+      </div>
       <p className="lm-eyebrow">{role}</p>
       <h3 className="lm-principal__name">{name}</h3>
       {meta.map((m, i) => (
@@ -95,9 +116,13 @@ function Principal({
 export function CoupleBlock({
   groom,
   bride,
+  groomPhoto,
+  bridePhoto,
 }: {
   groom: Person;
   bride: Person;
+  groomPhoto?: PhotoView | null;
+  bridePhoto?: PhotoView | null;
 }) {
   const meta = (p: Person) =>
     [p.childOrder, L.principals.parents(p.fatherName, p.motherName)].filter(
@@ -118,6 +143,8 @@ export function CoupleBlock({
               role={L.principals.groom}
               name={groom.name || "—"}
               meta={meta(groom)}
+              initial={initialOf(groom.nickname || groom.name || "•")}
+              photo={groomPhoto}
             />
           </Reveal>
           <span className="lm-principals__amp" aria-hidden>
@@ -128,6 +155,8 @@ export function CoupleBlock({
               role={L.principals.bride}
               name={bride.name || "—"}
               meta={meta(bride)}
+              initial={initialOf(bride.nickname || bride.name || "•")}
+              photo={bridePhoto}
             />
           </Reveal>
         </div>

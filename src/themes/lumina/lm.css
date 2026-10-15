@@ -369,6 +369,29 @@
 .lm-principal {
   text-align: center;
 }
+/* Foto mempelai — rata tengah di atas peran, mengikuti susunan dua kolom yang
+   simetris. Sudutnya hampir tegak (2px) dan hanya dibatasi hairline: tema ini
+   bekerja dengan bidang lembut dan garis tipis, bukan bentuk yang menonjol.
+   `aspect-ratio` WAJIB sama dengan `media.slots[].aspect` di `options.ts` —
+   bingkai penyesuaian di editor memakai angka itu, dan selisih sedikit pun
+   membuat hasil geser/zoom pemilik tak sama dengan yang tampil di undangan. */
+.lm-principal__ph {
+  width: 100%;
+  max-width: 9.5rem;
+  aspect-ratio: 4 / 5;
+  margin: 0 auto 0.85rem;
+  overflow: hidden;
+  border: 1px solid var(--lm-line);
+  border-radius: 2px;
+  background: var(--lm-paper);
+  display: grid;
+  place-items: center;
+}
+.lm-principal__ph span {
+  font-family: var(--lm-serif);
+  font-size: 2.3rem;
+  color: var(--lm-taupe-ink);
+}
 .lm-principal__name {
   font-family: var(--lm-serif);
   font-weight: 700;

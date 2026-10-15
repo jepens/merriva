@@ -46,6 +46,14 @@ export const ariaOptions: ThemeOptions = {
     motion: false,
     grain: true,
   },
+  // Rasio = lebar/tinggi wadah `.ar-couple__ph` di `aria.css`. Keduanya harus
+  // sama persis; bingkai penyesuaian di editor memakai angka ini.
+  media: {
+    slots: [
+      { id: "groom", aspect: 4 / 5 },
+      { id: "bride", aspect: 4 / 5 },
+    ],
+  },
   preview: {
     root: "ar",
     vars: [

@@ -123,7 +123,14 @@ export default function Lumina({ data }: ThemeComponentProps) {
     const g = content.groom.nickname || content.groom.name || "Mempelai Pria";
     const b = content.bride.nickname || content.bride.name || "Mempelai Wanita";
     titleLines = [g, b];
-    principals = <CoupleBlock groom={content.groom} bride={content.bride} />;
+    principals = (
+      <CoupleBlock
+        groom={content.groom}
+        bride={content.bride}
+        groomPhoto={data.groomPhoto}
+        bridePhoto={data.bridePhoto}
+      />
+    );
     timelineItems = content.story;
     timelineLabel = L.timeline.wedding;
   } else if (content.category === "corporate") {

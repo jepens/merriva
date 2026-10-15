@@ -175,7 +175,13 @@ export default function Aria({ data }: ThemeComponentProps) {
       couple: {
         has: true,
         render: (no) => (
-          <Couple no={no} groom={content.groom} bride={content.bride} />
+          <Couple
+            no={no}
+            groom={content.groom}
+            bride={content.bride}
+            groomPhoto={data.groomPhoto}
+            bridePhoto={data.bridePhoto}
+          />
         ),
       },
       schedule: {

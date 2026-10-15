@@ -221,6 +221,34 @@ describe.each(themes)("slot media tema '%s'", (slug, opt) => {
     const ids = slots.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it("deklarasi slot dan render foto berjalan bersama", () => {
+    // Docstring di atas sudah menyebut kedua kegagalannya; yang dijaga baru
+    // ejaan id-nya. Ini menutup SIMETRINYA, dan keduanya senyap:
+    //
+    //  · deklarasi TANPA render → bidang unggah muncul di editor, pemilik
+    //    mengunggah foto mempelainya, dan foto itu tak pernah tampil di
+    //    undangan. Tak ada galat; pemilik menyangka dirinya salah pakai.
+    //  · render TANPA deklarasi → tema menggambar wadah foto yang tak akan
+    //    pernah terisi, karena bidang unggahnya tak pernah dirender. Inilah
+    //    keadaan `aria` dan `lumina` sampai 15 Okt 2026: keduanya punya
+    //    section mempelai lengkap, tetapi fotonya mustahil dipasang.
+    //
+    // Dipindai SELURUH `.tsx` tema, bukan hanya `sections.tsx` — tema boleh
+    // merender fotonya dari berkas lain, dan pemindaian yang terlalu sempit
+    // akan menuduh tema yang sehat.
+    const dir = join(process.cwd(), "src", "themes", slug);
+    const merender = readdirSync(dir)
+      .filter((f) => f.endsWith(".tsx"))
+      .some((f) => readFileSync(join(dir, f), "utf8").includes("fotoStyle"));
+
+    expect(
+      slots.length > 0,
+      merender
+        ? `${slug}: merender foto tetapi tak mendeklarasikan slot media — bidang unggahnya tak akan pernah muncul`
+        : `${slug}: mendeklarasikan slot media tetapi tak merender foto — unggahan pemilik tak akan pernah tampil`,
+    ).toBe(merender);
+  });
 });
 
 describe("seed katalog", () => {

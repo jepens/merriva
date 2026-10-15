@@ -286,6 +286,29 @@
   font-size: 26px;
   color: var(--ar-red);
 }
+/* Foto mempelai — portrait sempit RATA KIRI dengan sudut tegak.
+   Bukan bulat: lingkaran terbaca sebagai avatar media sosial, sementara tema
+   ini bahasa majalah — hairline, angka italic, dan susunan asimetris. Lebarnya
+   ditahan agar nama serif besar di bawahnya tetap yang pertama dibaca.
+   `aspect-ratio` di sini WAJIB sama dengan `media.slots[].aspect` di
+   `options.ts`: bingkai penyesuaian di editor mengikuti angka itu, dan selisih
+   sedikit pun membuat hasil geser/zoom pemilik tak sama dengan yang tampil. */
+.ar-couple__ph {
+  width: min(58%, 210px);
+  aspect-ratio: 4 / 5;
+  margin: 0 0 16px;
+  overflow: hidden;
+  border: 1px solid var(--ar-hairline);
+  background: rgba(21, 19, 16, 0.04);
+  display: grid;
+  place-items: center;
+}
+.ar-couple__ph span {
+  font-family: var(--ar-serif-stack);
+  font-style: italic;
+  font-size: 44px;
+  color: var(--ar-red);
+}
 
 /* Acara -------------------------------------------------------------------- */
 .ar-event + .ar-event {
