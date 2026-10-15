@@ -26,3 +26,33 @@ export const JADWAL_JAM = {
  * lewat masih bisa berarti jitter penjadwal atau redeploy yang bertepatan.
  */
 export const FAKTOR_BASI = 2;
+
+/**
+ * Angka di `cron_runs.stats` yang berarti "pekerjaannya TIDAK terjadi".
+ *
+ * Dipisah dari yang sekadar sinyal penyetelan karena akibatnya beda kelas.
+ * `*Failed` dan `*NoOwner` berarti ada yang seharusnya dikerjakan tetapi tidak
+ * — dan yang paling berat `purge-expired.storageFailed`: baris DB sudah
+ * dibersihkan sementara objeknya tertinggal, jadi data pribadi yang menurut
+ * UU PDP harus musnah tinggal di storage tanpa rujukan apa pun lagi.
+ *
+ * Kenapa ini perlu dibaca di sini: `recordCronRun` menandai run itu `ok: true`
+ * (pekerjaan DB-nya memang berhasil), dan `ok: true` me-NULL-kan `last_error`
+ * serta tidak menaikkan `failures`. Tanpa membaca `stats`, verifikator ini
+ * melaporkan cron tersebut HIJAU selamanya.
+ */
+export const STATS_GAGAL = /(Failed|NoOwner)$/;
+/** Sinyal penyetelan: pekerjaannya terjadi, kadensnya yang perlu ditinjau. */
+export const STATS_PERHATIAN = new Set([
+  "budgetHabis",
+  "tanpaTxn",
+  "backstop",
+  "notifyTruncated",
+]);
+
+export function angkaStats(stats, cocok) {
+  if (!stats || typeof stats !== "object") return [];
+  return Object.entries(stats)
+    .filter(([k, v]) => typeof v === "number" && v > 0 && cocok(k))
+    .map(([k, v]) => `${k}=${v}`);
+}

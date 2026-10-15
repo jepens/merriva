@@ -224,6 +224,36 @@ export async function POST(req: Request) {
     if (results.some((r) => r.status === "rejected")) storageFailed += 1;
   }
 
+  // Objek yang gagal dihapus WAJIB berbunyi. Sebelum ini angkanya hanya
+  // ditulis ke `cron_runs.stats` sementara runnya tetap ditandai `ok: true` —
+  // dan `ok: true` me-NULL-kan `last_error` serta tidak menaikkan `failures`
+  // (lihat `server/cron/record.ts`). Akibatnya satu-satunya permukaan yang
+  // menampilkannya adalah `/admin`; `pnpm ops:verify` melaporkan cron ini
+  // HIJAU, dan tak ada satu pun event Sentry.
+  //
+  // Yang hilang bukan sekadar angka: baris DB SUDAH dibersihkan, jadi objek
+  // yang tertinggal tak punya rujukan apa pun lagi — data pribadi yang
+  // seharusnya musnah menurut UU PDP tinggal di storage tanpa ada yang tahu,
+  // dan tanpa jalan menemukannya kembali selain menyisir bucket.
+  //
+  // Jalan gagalnya nyata pada R2: satu token ber-scope read-only membuat
+  // SETIAP delete 403 — tiap malam, selamanya, hijau. Bandingkan
+  // `admin-users.ts` yang melaporkan kelas kegagalan yang sama; aksi admin
+  // yang ditunggui manusia punya alarm, sementara cron malam tanpa penunggu
+  // yang justru menegakkan retensi tidak punya. Inversi itu yang diperbaiki.
+  //
+  // Runnya TIDAK ditandai gagal: pekerjaan DB-nya memang berhasil, dan
+  // memerahkan seluruh job akan menyembunyikan apa yang sebenarnya rusak.
+  if (storageFailed > 0) {
+    reportHandledError(
+      new Error(
+        `${storageFailed} undangan gagal dihapus objek storage-nya saat purge retensi`,
+      ),
+      "cron.purge-expired.storage",
+      { storageFailed, purged },
+    );
+  }
+
   const scanned = due?.length ?? 0;
   await recordCronRun("purge-expired", true, {
     scanned,

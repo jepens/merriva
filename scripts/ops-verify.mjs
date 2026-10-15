@@ -36,7 +36,13 @@
 import { readFileSync } from "node:fs";
 import { resolveMx, resolveTxt } from "node:dns/promises";
 
-import { FAKTOR_BASI, JADWAL_JAM } from "./ops-schedule.mjs";
+import {
+  angkaStats,
+  FAKTOR_BASI,
+  JADWAL_JAM,
+  STATS_GAGAL,
+  STATS_PERHATIAN,
+} from "./ops-schedule.mjs";
 
 const ROOT = new URL("..", import.meta.url);
 
@@ -120,15 +126,36 @@ async function ambil(url, opts = {}) {
 async function periksaSitus(app) {
   mulai("1. Situs");
 
+  let basisMedia = "";
   const health = await ambil(`${app}/api/health`);
   if (health.status !== 200) {
     gagal("/api/health", `status ${health.status || health.galat}`);
+    // Health 503 PUNYA badan JSON yang menyebut sebabnya — membuangnya berarti
+    // kehilangan satu-satunya keterangan yang ada.
+    const j = await health.json?.().catch(() => null);
+    if (j?.mediaPesan) gagal("konfigurasi media", j.mediaPesan);
   } else {
     const j = await health.json().catch(() => ({}));
     // `db: "not_configured"` dinilai SEHAT oleh endpoint-nya (env Supabase
     // kosong), jadi 200 saja bukan bukti. Nilai `db` harus dilihat sendiri.
     harap("/api/health", j.db === "up", `db=${j.db}`, "db=up");
+
+    // Pasangan STORAGE_DRIVER (runtime) x NEXT_PUBLIC_MEDIA_URL (build-time).
+    if (j.media && j.media !== "ok") {
+      gagal("konfigurasi media", j.mediaPesan ?? j.media);
+    }
+
+    // Basis media yang BENAR-BENAR terpasang. Ia tak pernah sampai ke chunk
+    // peramban (pemanggilnya `server-only`), jadi inilah satu-satunya cara
+    // memverifikasi build-arg paling menentukan saat pindah driver — dan
+    // satu-satunya cara memprobe objek media lewat host yang sungguh dipakai
+    // tamu, alih-alih `<app>/media/` yang dipaku dan akan salah setelah
+    // cutover ke R2.
+    basisMedia = typeof j.mediaBase === "string" ? j.mediaBase : "";
+    if (basisMedia) ok("basis media terpasang", basisMedia);
+    else lewat("basis media", "tak dilaporkan health (image lama?)");
   }
+  return basisMedia;
 
   const syarat = await ambil(`${app}/syarat`);
   const html = syarat.status === 200 ? await syarat.text() : "";
@@ -376,7 +403,7 @@ async function periksaAuth(token, ref) {
 
 // === 5. Data produksi (PostgREST, service role) =============================
 
-async function periksaData(env, app) {
+async function periksaData(env, app, basisMedia) {
   mulai("5. Data produksi");
 
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
@@ -406,7 +433,7 @@ async function periksaData(env, app) {
 
   // --- cron: kegagalannya berbentuk KEHENINGAN, bukan galat -----------------
   const cron = await pilih(
-    "cron_runs?select=name,last_run_at,ok,failures,last_error",
+    "cron_runs?select=name,last_run_at,ok,failures,last_error,stats",
   );
   if (cron === null) {
     lewat("cron_runs", "tak terbaca");
@@ -437,6 +464,15 @@ async function periksaData(env, app) {
           `cron ${nama}`,
           `${umurJam.toFixed(1)} jam lalu, ${row.failures} gagal total`,
         );
+      }
+
+      const rusak = angkaStats(row.stats, (k) => STATS_GAGAL.test(k));
+      if (rusak.length) {
+        gagal(`cron ${nama} — pekerjaan tak terjadi`, rusak.join(", "));
+      }
+      const tinjau = angkaStats(row.stats, (k) => STATS_PERHATIAN.has(k));
+      if (tinjau.length) {
+        warn(`cron ${nama} — perlu ditinjau`, tinjau.join(", "));
       }
     }
   }
@@ -498,15 +534,21 @@ async function periksaData(env, app) {
   if (!media || media.length === 0) {
     lewat("objek media", "belum ada baris media untuk diuji");
   } else {
+    // Lewat basis yang DILAPORKAN HEALTH, bukan `<app>/media/` yang dipaku:
+    // begitu driver pindah ke R2, rute `/media` menjawab 404 untuk semua
+    // permintaan dan probe yang dipaku akan melaporkan GAGAL pada migrasi yang
+    // justru 100% benar. Basis dari health adalah host yang sungguh dipakai
+    // tamu. Bila health tak melaporkannya (image lama), jatuh ke bentuk lama.
+    const basis = basisMedia || `${app}/media`;
     const objek = `${media[0].storage_path}/1600.webp`;
-    const r = await ambil(`${app}/media/${objek}`);
+    const r = await ambil(`${basis}/${objek}`);
     if (
       r.status === 200 &&
       (r.headers.get("content-type") ?? "").includes("image/")
     ) {
       ok(
         "objek media tersaji",
-        `200 ${r.headers.get("content-type")} dari domain sendiri`,
+        `200 ${r.headers.get("content-type")} dari ${basis}`,
       );
     } else {
       gagal(
@@ -580,11 +622,11 @@ const ref =
 
 console.log(`ops:verify — target ${app}`);
 
-await periksaSitus(app);
+const basisMedia = await periksaSitus(app);
 await periksaBundel(app);
 await periksaDns(app);
 await periksaAuth(token, ref);
-await periksaData(env, app);
+await periksaData(env, app, basisMedia);
 
 // --- Ringkasan --------------------------------------------------------------
 

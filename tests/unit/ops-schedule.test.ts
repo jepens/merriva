@@ -4,7 +4,13 @@ import { CRON_JOBS, hitungHealth } from "@/server/cron/status";
 
 // Modul `.mjs` polos — sengaja JS, bukan TS, supaya `node scripts/ops-verify.mjs`
 // bisa dijalankan tanpa langkah build (pola yang sama dengan `theme-scaffold.mjs`).
-import { FAKTOR_BASI, JADWAL_JAM } from "@/../scripts/ops-schedule.mjs";
+import {
+  angkaStats,
+  FAKTOR_BASI,
+  JADWAL_JAM,
+  STATS_GAGAL,
+  STATS_PERHATIAN,
+} from "@/../scripts/ops-schedule.mjs";
 
 /**
  * `pnpm ops:verify` menilai cron BASI dengan jadwalnya sendiri, sedangkan panel
@@ -61,4 +67,63 @@ describe("jadwal ops:verify sejalan dengan panel admin", () => {
     expect(hitungHealth(baris(jam * 2.5), terpanjang, NOW)).toBe("basi");
     expect(FAKTOR_BASI).toBe(2);
   });
+});
+
+/**
+ * Klasifikasi `cron_runs.stats` yang dipakai `pnpm ops:verify`.
+ *
+ * KENAPA PEMBEDAANNYA PENTING: `recordCronRun` menandai run `ok: true` selama
+ * pekerjaan DB-nya berhasil, dan `ok: true` me-NULL-kan `last_error` serta
+ * tidak menaikkan `failures`. Angka di `stats` karena itu SATU-SATUNYA jejak
+ * bahwa sebagian pekerjaan tak terjadi — dan sebelum ini verifikator tak
+ * pernah membacanya sama sekali.
+ *
+ * Kasus terberatnya `purge-expired.storageFailed`: baris DB sudah dibersihkan
+ * sementara objeknya gagal dihapus, jadi data pribadi yang menurut UU PDP
+ * harus musnah tinggal di storage TANPA rujukan apa pun lagi. Pada R2 ini
+ * berhenti teoretis — satu token ber-scope read-only membuat setiap DELETE
+ * 403, tiap malam, selamanya.
+ */
+describe("klasifikasi stats cron", () => {
+  const gagal = (s: unknown) =>
+    angkaStats(s, (k: string) => STATS_GAGAL.test(k));
+  const tinjau = (s: unknown) =>
+    angkaStats(s, (k: string) => (STATS_PERHATIAN as Set<string>).has(k));
+
+  it("storageFailed dibaca GAGAL, bukan sekadar perlu ditinjau", () => {
+    expect(gagal({ purged: 4, storageFailed: 2 })).toEqual(["storageFailed=2"]);
+    expect(tinjau({ purged: 4, storageFailed: 2 })).toEqual([]);
+  });
+
+  it.each(["cancelFailed", "warnFailed", "notifyNoOwner"])(
+    "%s juga GAGAL — pekerjaannya tak terjadi",
+    (k) => {
+      expect(gagal({ [k]: 1 })).toEqual([`${k}=1`]);
+    },
+  );
+
+  it.each(["budgetHabis", "tanpaTxn", "backstop", "notifyTruncated"])(
+    "%s hanya perlu ditinjau — pekerjaannya terjadi",
+    (k) => {
+      expect(tinjau({ [k]: 3 })).toEqual([`${k}=3`]);
+      expect(gagal({ [k]: 3 })).toEqual([]);
+    },
+  );
+
+  it("nol TIDAK dilaporkan — panel yang berisik berhenti dipercaya", () => {
+    expect(gagal({ storageFailed: 0, cancelFailed: 0 })).toEqual([]);
+    expect(tinjau({ budgetHabis: 0 })).toEqual([]);
+  });
+
+  it("bukan angka diabaikan — `stats` bertipe jsonb, isinya bisa apa pun", () => {
+    expect(gagal({ storageFailed: "2", nestedFailed: { a: 1 } })).toEqual([]);
+  });
+
+  it.each([[null], [undefined], ["bukan objek"], [[1, 2]]])(
+    "stats %s → daftar kosong, bukan lemparan",
+    (s) => {
+      expect(() => gagal(s)).not.toThrow();
+      expect(gagal(s)).toEqual([]);
+    },
+  );
 });
