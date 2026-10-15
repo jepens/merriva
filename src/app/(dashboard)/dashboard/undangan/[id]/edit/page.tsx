@@ -10,7 +10,12 @@ import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
 import { copy } from "@/lib/copy";
 import { stepKeyFromParam } from "@/lib/editor-links";
 import { isUuid } from "@/lib/id";
-import { displayPath, photoLimitFromPackage, toMediaView } from "@/lib/media";
+import {
+  displayPath,
+  OG_ASPECT,
+  photoLimitFromPackage,
+  toMediaView,
+} from "@/lib/media";
 import { toEventDraft } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
 import { getThemeOptions } from "@/themes/theme-options-registry";
@@ -122,8 +127,17 @@ export default async function EditInvitationPage({
         : undefined;
     return undefined;
   };
+  // Foto SAMPUL adalah pengecualian yang disengaja dari aturan "dirakit dari
+  // tema": ia tak dirender tema mana pun, melainkan oleh `/api/og` sebagai
+  // gambar pratinjau tautan WhatsApp. Karena itu slotnya selalu ada, dan
+  // rasionya rasio KANVAS OG — bukan rasio sebuah tema. Dengan begitu bingkai
+  // penyesuaian di editor memperlihatkan persis potongan yang akan dikirim ke
+  // WhatsApp; memakai rasio tema akan membuat pemilik membingkai sesuatu yang
+  // bukan yang dilihat penerima. Tema BOLEH menimpanya bila kelak ada yang
+  // benar-benar merender sampul (slot temanya menang, lihat urutan di bawah).
+  const slotSampul = { id: "cover", aspect: OG_ASPECT } as const;
   const photoSlots: PhotoSlots = Object.fromEntries(
-    (slotTema ?? []).map((slot) => {
+    [slotSampul, ...(slotTema ?? [])].map((slot) => {
       const p = pathSlot(slot.id);
       return [
         slot.id,

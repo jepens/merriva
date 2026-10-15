@@ -56,6 +56,27 @@ function canvasToBlob(
  * pemanggil menamai berkas & menetapkan content-type sesuai kenyataan (bukan
  * asumsi webp). Melempar bila kedua encode gagal.
  */
+/**
+ * Encode canvas → JPEG, apa pun dukungan WebP peramban.
+ *
+ * Dipakai HANYA untuk varian pratinjau tautan: satori tak bisa membaca WebP,
+ * jadi di sini "WebP kalau bisa" justru kebalikan dari yang dibutuhkan.
+ *
+ * Mengembalikan `null` alih-alih melempar bila peramban menyerahkan sesuatu
+ * yang bukan JPEG. Pemanggil lalu melewati varian ini dan pratinjau tautan
+ * jatuh ke tipografi — jauh lebih baik daripada menyimpan berkas bernama
+ * `og.jpg` yang isinya bukan JPEG, yang akan disajikan dengan content-type
+ * salah lalu gagal DIAM-DIAM di satori: persis kegagalan yang varian ini ada
+ * untuk mencegah.
+ */
+export async function encodeCanvasJpeg(
+  canvas: HTMLCanvasElement,
+  quality: number,
+): Promise<Blob | null> {
+  const jpeg = await canvasToBlob(canvas, ENCODE_MIME.jpeg, quality);
+  return jpeg && jpeg.type === ENCODE_MIME.jpeg ? jpeg : null;
+}
+
 export async function encodeCanvas(
   canvas: HTMLCanvasElement,
   webpQuality: number,

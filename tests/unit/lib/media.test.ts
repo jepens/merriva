@@ -25,11 +25,18 @@ describe("path helpers", () => {
     expect(thumbPath(prefix)).toBe(`inv/${INV}/${MID}/400.webp`);
   });
 
-  it("mediaObjectPaths mengembalikan kedua varian", () => {
+  it("mediaObjectPaths menyebut SELURUH varian, termasuk `og.jpg`", () => {
+    // Daftar ini dipakai purge retensi UU PDP. Varian yang tak disebut akan
+    // TERTINGGAL di disk setelah seluruh data pribadi pemiliknya dihapus —
+    // kegagalan yang tak menimbulkan galat apa pun dan hanya ketahuan dengan
+    // menengok disk. Foto galeri tak punya `og.jpg`; menghapus objek yang tak
+    // ada tak berbahaya (seluruh pemanggilnya best-effort), sedangkan objek
+    // yatim yang tertinggal berbahaya.
     const prefix = mediaPrefix(INV, MID);
     expect(mediaObjectPaths(prefix)).toEqual([
       `inv/${INV}/${MID}/1600.webp`,
       `inv/${INV}/${MID}/400.webp`,
+      `inv/${INV}/${MID}/og.jpg`,
     ]);
   });
 });
@@ -70,7 +77,7 @@ describe("photoLimitFromPackage", () => {
 describe("foto bernama", () => {
   const FID = "3bca4756-1bba-46c3-8208-84baa2b09b45";
 
-  it("prefixnya berbentuk sama dengan galeri — 2 varian di dalamnya", () => {
+  it("prefixnya berbentuk sama dengan galeri — varian di dalamnya", () => {
     // Bentuk inilah yang membuat purge retensi bisa memakai jalur `media_paths`
     // yang sudah ada (migrasi 20261014120000). Prefix berbeda bentuk akan
     // menghapus separuh objek saja.
@@ -79,6 +86,7 @@ describe("foto bernama", () => {
     expect(mediaObjectPaths(prefix)).toEqual([
       `${prefix}/1600.webp`,
       `${prefix}/400.webp`,
+      `${prefix}/og.jpg`,
     ]);
   });
 

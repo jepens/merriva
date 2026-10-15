@@ -15,7 +15,7 @@ describe("titik fokus", () => {
     // Keduanya harus sama. Bila transformOrigin tertinggal di tengah,
     // memperbesar menarik gambar ke arah tengah wadah dan wajah yang sudah
     // dibidik justru bergeser keluar.
-    const s = fotoStyle({ x: 0.25, y: 0.8, zoom: 1 });
+    const s = fotoStyle({ x: 0.25, y: 0.8, zoom: 1.6 });
     expect(s.objectPosition).toBe("25% 80%");
     expect(s.transformOrigin).toBe("25% 80%");
   });
@@ -36,6 +36,19 @@ describe("perbesaran", () => {
     // `scale(1)` membuat lapisan komposit baru tanpa guna, di halaman yang
     // mengejar LCP < 2,5 dtk dan sering dibuka di WebView WhatsApp.
     expect(fotoStyle({ x: 0.5, y: 0.5, zoom: 1 }).transform).toBeUndefined();
+  });
+
+  it("zoom 1: kuncinya HILANG, bukan bernilai undefined", () => {
+    // Bedanya tak terlihat di peramban — React mengabaikan keduanya. Tetapi
+    // helper ini dipakai juga oleh `/api/og`, dan satori MELEMPAR pada
+    // `transform: undefined` ("Invalid `transform` value"). Karena `zoom: 1`
+    // adalah bawaan setiap foto yang baru diunggah, bentuk yang salah membuat
+    // pratinjau tautan gagal 500 justru pada kasus yang paling sering.
+    const s = fotoStyle({ x: 0.5, y: 0.5, zoom: 1 });
+    expect(Object.keys(s)).not.toContain("transform");
+    expect(Object.keys(s)).not.toContain("transformOrigin");
+    // Dan tak satu pun kunci lain boleh bernilai undefined, dengan alasan sama.
+    expect(Object.values(s).every((v) => v !== undefined)).toBe(true);
   });
 
   it("zoom > 1 memancarkan scale", () => {

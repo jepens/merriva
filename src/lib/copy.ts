@@ -861,12 +861,13 @@ export const copy = {
       working: "Mengunggah…",
       hint: "JPG, PNG, atau WebP. Otomatis dikompres di perangkat.",
       preview: "Pratinjau foto",
-      coverLabel: "Foto sampul",
-      // Jujur apa adanya: nilainya tersimpan dan ikut terhapus saat retensi,
-      // tetapi belum ada tema yang membacanya dan `/api/og` pun belum.
-      // Menjanjikan "tampil di layar pembuka" akan membuat pemilik mengunggah
-      // lalu mencari-cari di mana fotonya muncul.
-      coverHint: "Tersimpan, tetapi belum ditampilkan tema mana pun.",
+      coverLabel: "Foto untuk pratinjau tautan",
+      // Menyebut PERSIS di mana fotonya muncul, karena ia TIDAK muncul di
+      // halaman undangan. Label lama "Foto sampul" membuat pemilik mencarinya
+      // di layar pembuka dan tak menemukannya. Bingkai penyesuaiannya memakai
+      // rasio kanvas OG, jadi yang dibingkai di sini = yang dikirim WhatsApp.
+      coverHint:
+        "Tampil saat tautan undangan dibagikan di WhatsApp — bukan di halaman undangannya.",
       groomLabel: "Foto mempelai pria",
       brideLabel: "Foto mempelai wanita",
       personHint: "Bila kosong, undangan menampilkan monogram inisial.",

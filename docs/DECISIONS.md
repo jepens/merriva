@@ -3995,6 +3995,71 @@ dan ADR ini menjelaskan kenapa dasbornya sengaja dibiarkan "longgar".
 
 ---
 
+## #90 — 2026-10-15 · Foto sampul = pratinjau tautan, dan ia wajib JPEG
+
+**Keputusan:** `/api/og` kini merender `content.coverPhoto` sebagai latar penuh
+(SPEC §4.5 akhirnya terpenuhi: "nama + tanggal di atas foto cover"). Foto sampul
+dipakai **hanya** di sana — bukan di halaman undangan — dan punya varian ketiga
+`og.jpg` di samping `1600.webp` + `400.webp`. Label editornya diganti menjadi
+"Foto untuk pratinjau tautan".
+
+**Alasan — dua temuan probe, bukan dokumen:**
+
+1. **Satori tidak bisa meraster WebP, dan gagalnya TANPA SUARA.** Diberi WebP ia
+   mencatat `Unsupported image type: image/webp` lalu tetap menghasilkan PNG
+   yang sepenuhnya sah — hanya tanpa fotonya. Probe: kontrol PNG 26.620 byte
+   berisi gambar, WebP 4.515 byte berisi latar kosong, JPEG 172.430 byte berisi
+   gambar. Tanpa varian JPEG, pratinjau WhatsApp akan "berhasil" selamanya
+   sambil tak pernah memuat satu wajah pun. Karena itu aturannya keras: `og`
+   yang bukan `image/jpeg` DITOLAK saat unggah, bukan disimpan dengan nama
+   menyesatkan — route `/media` menentukan tipe dari EKSTENSI, jadi berkas
+   bukan-JPEG bernama `og.jpg` akan disajikan sebagai `image/jpeg` lalu gagal
+   diam-diam di satori.
+2. **Satori MENDUKUNG `object-fit`, `object-position`, `scale`, dan
+   `transform-origin`.** Diprobe dengan gambar berisi detail khas: `scale(3)`
+   dengan origin kiri-atas benar-benar memperbesar sudut kiri-atas. Karena itu
+   penyesuaian geser-zoom pemilik diterapkan SAAT RENDER lewat `fotoStyle` yang
+   sama dengan tema — tidak dipanggang ke berkas saat unggah. Memanggangnya akan
+   membuat pratinjau BASI pada geseran berikutnya.
+
+**Bug yang ditemukan probe sebelum terbit:** `fotoStyle` memancarkan
+`transform: undefined` saat `zoom === 1`. Peramban mengabaikannya; satori
+MELEMPAR (`Invalid transform value`). Karena `zoom: 1` adalah bawaan setiap foto
+yang baru diunggah, bentuk lama membuat `/api/og` gagal 500 justru pada kasus
+yang paling sering. Helper kini menghilangkan kuncinya, dan satu test menjaga
+agar tak ada nilai `undefined` yang lolos.
+
+**Ditolak:**
+
+- **Foto sampul juga tampil di gerbang cover tema** — menyentuh `cover.tsx`
+  KESEPULUH tema (tak satu pun menampilkan foto hari ini), masing-masing butuh
+  perlakuan visual sendiri, dan foto layar penuh menjadi elemen LCP sehingga
+  anggaran < 2,5 dtk di 4G harus diukur ulang. Ditunda, bukan ditutup.
+- **Pakai foto galeri pertama** — terdengar paling murah, nyatanya paling mahal:
+  SETIAP foto galeri harus ikut menghasilkan varian JPEG padahal hanya satu yang
+  dipakai, dan pemilik kehilangan kendali atas foto mana yang muncul di WhatsApp.
+- **Dekode WebP di server** — dependency besar + CPU per permintaan pada
+  endpoint publik, melanggar "server tidak memproses gambar".
+
+**Konsekuensi:**
+
+- `og.jpg` masuk ke `mediaObjectPaths`, bukan daftar terpisah — daftar itu
+  dipakai purge retensi UU PDP, dan varian yang tak disebut akan meninggalkan
+  foto wajah seseorang di disk setelah data pribadinya dihapus. Foto galeri jadi
+  menghapus satu objek yang tak ada; aman (semua pemanggilnya best-effort).
+- Rasio bingkai penyesuaian foto sampul = rasio kanvas OG (1200×630), bukan
+  rasio tema — supaya yang dibingkai pemilik = yang dikirim ke WhatsApp. Slotnya
+  selalu ada, tak bergantung tema; tema yang kelak benar-benar merender sampul
+  boleh menimpanya.
+- `/api/og` mengambil berkasnya SENDIRI lalu memeriksa content-type sebelum
+  render, dan melapor (`og.cover`) bila tak terbaca. 404 tidak dilaporkan: itu
+  foto sampul yang diunggah sebelum varian OG ada. Gagal mengambil foto
+  menurunkan gambar ke tipografi — tak pernah menggagalkan pratinjau.
+- Scrim `rgba(18,12,12,0.46)` diuji terhadap foto paling terang yang ada dan
+  teks putih tetap terbaca; dipertahankan apa adanya.
+
+---
+
 ## Template entri baru
 
 ```

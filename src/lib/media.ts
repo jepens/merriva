@@ -63,9 +63,53 @@ export function thumbPath(prefix: string): string {
   return `${prefix}/${MEDIA_VARIANTS.thumb.file}`;
 }
 
-/** Semua objek storage milik satu baris media (untuk penghapusan). */
+/**
+ * Ukuran kanvas pratinjau tautan (OG). Satu sumber untuk `/api/og` DAN untuk
+ * bingkai penyesuaian di editor — kalau keduanya mengarang sendiri, pemilik
+ * membingkai foto pada rasio yang bukan rasio yang akhirnya dikirim WhatsApp.
+ */
+export const OG_SIZE = { width: 1200, height: 630 } as const;
+export const OG_ASPECT = OG_SIZE.width / OG_SIZE.height;
+
+/**
+ * Varian KHUSUS pratinjau tautan: **JPEG**, bukan WebP.
+ *
+ * Alasannya bukan preferensi melainkan batas mesin: satori (di balik
+ * `next/og`) TIDAK bisa meraster WebP. Dan cara gagalnya yang berbahaya — ia
+ * tidak melempar. Ia mencatat `Unsupported image type: image/webp` lalu tetap
+ * menghasilkan PNG yang sepenuhnya SAH, hanya tanpa fotonya. Dibuktikan dengan
+ * probe 15 Okt 2026: kontrol PNG 26 KB berisi gambar, WebP 4,5 KB berisi latar
+ * kosong. Tanpa varian ini, pratinjau WhatsApp akan terlihat "berhasil"
+ * selamanya sambil tak pernah memuat satu wajah pun.
+ *
+ * Hanya foto SAMPUL yang punya varian ini — ia satu-satunya yang dibaca OG.
+ */
+export const OG_VARIANT = {
+  file: "og.jpg",
+  maxWidth: OG_SIZE.width,
+  quality: 0.8,
+} as const;
+
+/** Batas ukuran varian OG (pertahanan server, sejalan `MEDIA_MAX_BYTES`). */
+export const OG_MAX_BYTES = 700_000;
+
+export function ogPath(prefix: string): string {
+  return `${prefix}/${OG_VARIANT.file}`;
+}
+
+/**
+ * Semua objek storage milik satu baris media (untuk penghapusan).
+ *
+ * Varian OG ikut DI SINI, bukan di daftar terpisah: penghapusan dipakai juga
+ * oleh purge retensi UU PDP (`/api/cron/purge-expired`), dan daftar yang lupa
+ * menyebut `og.jpg` akan meninggalkan foto wajah seseorang di disk setelah
+ * seluruh data pribadinya dihapus. Foto galeri tak punya varian ini, jadi satu
+ * penghapusan menyasar objek yang tak ada — tak apa: seluruh pemanggilnya
+ * best-effort (`allSettled`), dan kelebihan satu panggilan saat purge jauh
+ * lebih murah daripada satu objek yatim yang seharusnya sudah hilang.
+ */
 export function mediaObjectPaths(prefix: string): string[] {
-  return [displayPath(prefix), thumbPath(prefix)];
+  return [displayPath(prefix), thumbPath(prefix), ogPath(prefix)];
 }
 
 /**

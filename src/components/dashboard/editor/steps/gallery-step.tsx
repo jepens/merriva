@@ -135,6 +135,7 @@ export function GalleryStep({
             aspect={coverSlot.aspect}
             value={cover}
             initialUrl={coverSlot.url}
+            withOg
             onChange={(next) =>
               form.setValue("content.coverPhoto", next, { shouldDirty: true })
             }

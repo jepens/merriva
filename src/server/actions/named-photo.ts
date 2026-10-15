@@ -9,6 +9,8 @@ import {
   MEDIA_MAX_BYTES,
   mediaObjectPaths,
   namedPhotoPrefix,
+  OG_MAX_BYTES,
+  ogPath,
   thumbPath,
 } from "@/lib/media";
 import { checkClientRateLimit } from "@/lib/request-ip";
@@ -79,6 +81,25 @@ export async function uploadNamedPhotoAction(
     };
   }
 
+  // Opsional: hanya foto sampul yang mengirimkannya, dan hanya bila peramban
+  // menyerahkan JPEG. Yang bukan JPEG DITOLAK, bukan diterima lalu disimpan
+  // dengan nama menyesatkan — lihat blok unggah di bawah.
+  const ogRaw = formData.get("og");
+  const og =
+    ogRaw instanceof Blob &&
+    ogRaw.type === "image/jpeg" &&
+    ogRaw.size > 0 &&
+    ogRaw.size <= OG_MAX_BYTES
+      ? ogRaw
+      : null;
+  if (ogRaw !== null && og === null) {
+    return {
+      status: "error",
+      reason: "invalid",
+      message: copy.editor.gallery.invalidFile,
+    };
+  }
+
   // Kepemilikan lewat RLS: baris milik orang lain tak terlihat sama sekali.
   const { data: own } = await supabase
     .from("invitations")
@@ -100,6 +121,18 @@ export async function uploadNamedPhotoAction(
       body: await thumb.arrayBuffer(),
       contentType: thumb.type,
     });
+    // Varian pratinjau tautan — hanya dikirim untuk foto sampul, dan hanya
+    // bila peramban benar-benar menyerahkan JPEG. HARUS `image/jpeg`: satori
+    // membaca tipe isinya, jadi berkas bernama `og.jpg` yang isinya bukan JPEG
+    // gagal DIAM-DIAM di sana. Lebih baik tak ada varian (pratinjau jatuh ke
+    // tipografi) daripada ada tetapi tak terbaca.
+    if (og !== null) {
+      await storage.upload({
+        path: ogPath(prefix),
+        body: await og.arrayBuffer(),
+        contentType: og.type,
+      });
+    }
   } catch {
     await Promise.allSettled(
       mediaObjectPaths(prefix).map((p) => storage.delete(p)),

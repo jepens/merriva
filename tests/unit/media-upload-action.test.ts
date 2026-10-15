@@ -180,7 +180,7 @@ describe("uploadGalleryPhotoAction — gerbang sebelum menyentuh storage", () =>
 });
 
 describe("uploadGalleryPhotoAction — kuota paket & kebersihan storage", () => {
-  it("KUOTA PENUH (RPC null) → reason `limit` dan KEDUA objek dibersihkan", async () => {
+  it("KUOTA PENUH (RPC null) → reason `limit` dan objeknya dibersihkan", async () => {
     serverRef.current = makeClient({ rpcData: null }) as never;
 
     const res = await uploadGalleryPhotoAction(INV, form());
@@ -189,8 +189,10 @@ describe("uploadGalleryPhotoAction — kuota paket & kebersihan storage", () => 
     if (res.status === "error") expect(res.reason).toBe("limit");
     // Objek sudah terlanjur terunggah sebelum gerbang atomik → wajib dibuang,
     // kalau tidak kuota penuh justru meninggalkan sampah storage berbayar.
+    // Unggah 2 (galeri memang 2 varian), hapus 3: pembersihan menyapu seluruh
+    // varian yang mungkin ada, termasuk `og.jpg` yang hanya dimiliki sampul.
     expect(storage.upload).toHaveBeenCalledTimes(2);
-    expect(storage.delete).toHaveBeenCalledTimes(2);
+    expect(storage.delete).toHaveBeenCalledTimes(3);
   });
 
   it("RPC error → dibersihkan juga, dan BUKAN dilaporkan sebagai kuota penuh", async () => {
@@ -203,7 +205,7 @@ describe("uploadGalleryPhotoAction — kuota paket & kebersihan storage", () => 
 
     expect(res.status).toBe("error");
     if (res.status === "error") expect(res.reason).toBeUndefined();
-    expect(storage.delete).toHaveBeenCalledTimes(2);
+    expect(storage.delete).toHaveBeenCalledTimes(3);
   });
 
   it("unggah storage gagal → dibersihkan, tak menyentuh RPC", async () => {
@@ -215,7 +217,7 @@ describe("uploadGalleryPhotoAction — kuota paket & kebersihan storage", () => 
 
     expect(res.status).toBe("error");
     expect(client.rpc).not.toHaveBeenCalled();
-    expect(storage.delete).toHaveBeenCalledTimes(2);
+    expect(storage.delete).toHaveBeenCalledTimes(3);
   });
 
   it("sukses → item dikembalikan & tak ada objek yang dihapus", async () => {

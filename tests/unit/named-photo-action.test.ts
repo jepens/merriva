@@ -194,7 +194,7 @@ describe("uploadNamedPhotoAction — hasil", () => {
     expect(a.path).not.toBe(b.path);
   });
 
-  it("satu varian gagal → KEDUA objek dibersihkan, bukan separuh tertinggal", async () => {
+  it("satu varian gagal → SEMUA objek dibersihkan, bukan separuh tertinggal", async () => {
     storage.upload
       .mockImplementationOnce((i: { path: string }) => Promise.resolve(i.path))
       .mockImplementationOnce(() => Promise.reject(new Error("storage")));
@@ -202,7 +202,9 @@ describe("uploadNamedPhotoAction — hasil", () => {
     const res = await uploadNamedPhotoAction(INV, form());
 
     expect(res.status).toBe("error");
-    expect(storage.delete).toHaveBeenCalledTimes(2);
+    // Tiga, bukan dua: pembersihan menyapu seluruh varian yang MUNGKIN sudah
+    // tertulis — termasuk `og.jpg` — supaya tak ada yang tertinggal di disk.
+    expect(storage.delete).toHaveBeenCalledTimes(3);
   });
 
   it("TIDAK menulis apa pun ke database", async () => {
@@ -222,13 +224,14 @@ describe("uploadNamedPhotoAction — hasil", () => {
 describe("deleteNamedPhotoAction — pagar bentuk path", () => {
   const SAH = `inv/${INV}/foto/${FOTO}`;
 
-  it("menghapus kedua varian untuk path yang sah", async () => {
+  it("menghapus SELURUH varian untuk path yang sah", async () => {
     const res = await deleteNamedPhotoAction(INV, SAH);
 
     expect(res.status).toBe("success");
     expect(storage.delete.mock.calls.map((c) => c[0])).toEqual([
       `${SAH}/1600.webp`,
       `${SAH}/400.webp`,
+      `${SAH}/og.jpg`,
     ]);
   });
 
@@ -262,5 +265,80 @@ describe("deleteNamedPhotoAction — pagar bentuk path", () => {
 
     expect(res.status).toBe("error");
     expect(storage.delete).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Varian pratinjau tautan (`og.jpg`) — hanya dikirim oleh bidang foto sampul.
+ *
+ * KENAPA ATURANNYA KERAS: satori (mesin `/api/og`) tidak bisa meraster WebP
+ * DAN tidak melempar saat diberi WebP — ia mencatat "Unsupported image type"
+ * lalu tetap menghasilkan PNG yang sah, hanya tanpa fotonya. Route `/media`
+ * menentukan content-type dari EKSTENSI, jadi berkas bukan-JPEG yang disimpan
+ * bernama `og.jpg` akan disajikan sebagai `image/jpeg`, gagal didekode satori,
+ * dan menghasilkan pratinjau WhatsApp tanpa wajah siapa pun — tanpa satu pun
+ * galat di mana pun. Karena itu: JPEG, atau tidak sama sekali.
+ */
+describe("uploadNamedPhotoAction — varian pratinjau tautan", () => {
+  const OG = `inv/${INV}/foto/`;
+
+  beforeEach(() => {
+    serverRef.current = makeClient() as never;
+  });
+
+  function formDenganOg(og: File | null) {
+    const fd = form();
+    if (og) fd.set("og", og);
+    return fd;
+  }
+
+  it("tanpa `og` → tetap sukses, hanya 2 objek (galeri/mempelai/logo)", async () => {
+    const res = await uploadNamedPhotoAction(INV, formDenganOg(null));
+
+    expect(res.status).toBe("success");
+    expect(storage.upload).toHaveBeenCalledTimes(2);
+  });
+
+  it("`og` JPEG → objek ketiga bernama og.jpg, content-type image/jpeg", async () => {
+    const res = await uploadNamedPhotoAction(
+      INV,
+      formDenganOg(variant("image/jpeg", 9000)),
+    );
+
+    expect(res.status).toBe("success");
+    expect(storage.upload).toHaveBeenCalledTimes(3);
+    const ketiga = storage.upload.mock.calls[2]?.[0] as unknown as {
+      path: string;
+      contentType: string;
+    };
+    expect(ketiga.path.startsWith(OG)).toBe(true);
+    expect(ketiga.path.endsWith("/og.jpg")).toBe(true);
+    expect(ketiga.contentType).toBe("image/jpeg");
+  });
+
+  it.each([
+    ["image/jpg — MIME salah eja, bukan image/jpeg", "image/jpg"],
+    ["PNG", "image/png"],
+    ["WebP — justru format yang satori tak bisa baca", "image/webp"],
+  ])("`og` bukan image/jpeg → DITOLAK (%s)", async (_n, type) => {
+    const res = await uploadNamedPhotoAction(
+      INV,
+      formDenganOg(variant(type, 9000)),
+    );
+
+    expect(res.status).toBe("error");
+    // Ditolak SEBELUM menyentuh storage: lebih baik unggahan gagal terang-
+    // terangan daripada tersimpan lalu gagal diam-diam di pratinjau.
+    expect(storage.upload).not.toHaveBeenCalled();
+  });
+
+  it("`og` kosong → ditolak, bukan disimpan sebagai berkas 0 byte", async () => {
+    const res = await uploadNamedPhotoAction(
+      INV,
+      formDenganOg(variant("image/jpeg", 0)),
+    );
+
+    expect(res.status).toBe("error");
+    expect(storage.upload).not.toHaveBeenCalled();
   });
 });

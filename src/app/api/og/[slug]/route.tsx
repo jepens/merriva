@@ -6,12 +6,15 @@ import { ImageResponse } from "next/og";
 import { copy } from "@/lib/copy";
 import { formatDateOnly, formatEventDateTime } from "@/lib/datetime";
 import { parseContentForRender } from "@/lib/invitation-content";
+import { ogPath } from "@/lib/media";
 import { reportHandledError } from "@/lib/observability";
 import { checkClientRateLimit } from "@/lib/request-ip";
 import { isDraftSlug, isPlausibleSlug, isReservedSlug } from "@/lib/slug";
+import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { dataOrThrow } from "@/lib/supabase/result";
-import { settingsSchema } from "@/lib/validation/content";
+import { type Photo, settingsSchema } from "@/lib/validation/content";
+import { fotoStyle } from "@/themes/_shared/foto";
 
 /**
  * OG image dinamis per undangan (SPEC §4.5 / M2.5) untuk pratinjau tautan di
@@ -68,11 +71,25 @@ const fontsPromise: Promise<[Buffer, Buffer] | null> = Promise.all([
     return null;
   });
 
+// Palet di atas FOTO. Teks gelap di atas paper tak terbaca di atas gambar, dan
+// pratinjau tautan tak punya kesempatan kedua — ia yang dilihat sebelum siapa
+// pun memutuskan mengklik.
+const CF = {
+  scrim: "rgba(18, 12, 12, 0.46)",
+  names: "#ffffff",
+  gold: "#f3e5c9",
+  muted: "rgba(255, 255, 255, 0.9)",
+  line: "rgba(255, 255, 255, 0.55)",
+  divider: "#f3e5c9",
+};
+
 interface OgFields {
   kicker: string;
   names: { groom: string; bride: string } | null;
   eventName: string | null;
   dateLabel: string | null;
+  /** Foto sampul + penyesuaiannya; dirender sebagai latar penuh bila ada. */
+  cover: Photo | null;
 }
 
 /** Potong nama panjang agar layout tetap muat (fallback dari `name` bila tanpa
@@ -165,7 +182,48 @@ async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
     names,
     eventName,
     dateLabel,
+    cover: content.coverPhoto ?? null,
   };
+}
+
+/**
+ * Varian OG foto sampul sebagai data URI — atau `null` bila tak ada.
+ *
+ * Berkasnya diambil SENDIRI alih-alih menyerahkan URL-nya ke satori, karena
+ * satori gagal tanpa suara: diberi WebP ia mencatat "Unsupported image type"
+ * lalu tetap menghasilkan PNG yang sah tanpa fotonya. Dengan mengambil sendiri,
+ * tipe isinya bisa diperiksa SEBELUM render, dan kegagalannya bisa dilaporkan.
+ *
+ * 404 TIDAK dilaporkan: itu berarti foto sampul yang diunggah sebelum varian
+ * OG ada, bukan kerusakan. Pemiliknya cukup mengunggah ulang. Sisanya — tipe
+ * salah, 5xx, jaringan — dilaporkan, karena di sanalah "pratinjau tanpa wajah"
+ * lahir tanpa satu pun gejala lain.
+ */
+async function sampulDataUri(
+  cover: Photo,
+  slug: string,
+): Promise<string | null> {
+  const url = getStorage().getPublicUrl(ogPath(cover.path));
+  try {
+    const res = await fetch(url);
+    const tipe = res.headers.get("content-type") ?? "";
+    if (res.status === 404) return null;
+    if (!res.ok || !tipe.startsWith("image/jpeg")) {
+      reportHandledError(
+        new Error(
+          `varian OG tak terbaca: status ${res.status}, tipe ${tipe || "(kosong)"}`,
+        ),
+        "og.cover",
+        { slug },
+      );
+      return null;
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    return `data:image/jpeg;base64,${buf.toString("base64")}`;
+  } catch (err) {
+    reportHandledError(err, "og.cover", { slug });
+    return null;
+  }
 }
 
 /**
@@ -229,6 +287,11 @@ export async function GET(
   const dateLabel = fields.dateLabel;
   const nameFont = nameFontSize(title, useScript);
 
+  // Foto latar bersifat tambahan: gagal mengambilnya menurunkan gambar ke
+  // tipografi, tak pernah menggagalkan pratinjau.
+  const foto = fields.cover ? await sampulDataUri(fields.cover, slug) : null;
+  const P = foto ? CF : C;
+
   return new ImageResponse(
     <div
       style={{
@@ -242,6 +305,43 @@ export async function GET(
         position: "relative",
       }}
     >
+      {foto && fields.cover ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: WIDTH,
+            height: HEIGHT,
+            display: "flex",
+          }}
+        >
+          {/* Penyesuaian pemilik diterapkan DI SINI, bukan dipanggang saat
+              unggah: satori menghormati object-fit/position dan scale, jadi
+              menggeser foto di editor langsung mengubah pratinjau tanpa unggah
+              ulang — dan tak pernah basi. Helper yang sama dengan tema. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={foto}
+            alt=""
+            style={{
+              width: WIDTH,
+              height: HEIGHT,
+              ...fotoStyle(fields.cover),
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: WIDTH,
+              height: HEIGHT,
+              background: CF.scrim,
+            }}
+          />
+        </div>
+      ) : null}
       <div
         style={{
           display: "flex",
@@ -250,7 +350,7 @@ export async function GET(
           justifyContent: "center",
           width: WIDTH - 96,
           height: HEIGHT - 96,
-          border: `2px solid ${C.line}`,
+          border: `2px solid ${P.line}`,
           borderRadius: 10,
           padding: 48,
         }}
@@ -260,7 +360,7 @@ export async function GET(
             fontSize: 30,
             letterSpacing: 10,
             textTransform: "uppercase",
-            color: C.gold,
+            color: P.gold,
             textAlign: "center",
           }}
         >
@@ -274,7 +374,7 @@ export async function GET(
             fontSize: nameFont,
             fontWeight: 600,
             lineHeight: 1.1,
-            color: C.names,
+            color: P.names,
             marginTop: 20,
             textAlign: "center",
             overflowWrap: "anywhere",
@@ -286,13 +386,13 @@ export async function GET(
           style={{
             width: 96,
             height: 2,
-            background: C.divider,
+            background: P.divider,
             opacity: 0.6,
             margin: "28px 0",
           }}
         />
         {dateLabel ? (
-          <div style={{ fontSize: 40, color: C.muted }}>{dateLabel}</div>
+          <div style={{ fontSize: 40, color: P.muted }}>{dateLabel}</div>
         ) : null}
       </div>
       <div
@@ -301,7 +401,7 @@ export async function GET(
           bottom: 34,
           fontSize: 24,
           letterSpacing: 4,
-          color: C.gold,
+          color: P.gold,
         }}
       >
         merriva.id

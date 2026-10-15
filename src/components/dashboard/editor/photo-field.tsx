@@ -4,9 +4,14 @@ import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
-import { compressToWebpVariants, isSupportedImage } from "@/lib/image/compress";
+import {
+  compressCoverVariants,
+  type CompressedPhoto,
+  compressToWebpVariants,
+  isSupportedImage,
+} from "@/lib/image/compress";
 import { geserFokus } from "@/lib/image/focus";
-import { MEDIA_MAX_BYTES } from "@/lib/media";
+import { MEDIA_MAX_BYTES, OG_VARIANT } from "@/lib/media";
 import { PHOTO_MAX_ZOOM, type Photo } from "@/lib/validation/content";
 import {
   deleteNamedPhotoAction,
@@ -36,6 +41,7 @@ export function PhotoField({
   value,
   initialUrl,
   onChange,
+  withOg = false,
 }: {
   invitationId: string;
   label: string;
@@ -46,6 +52,11 @@ export function PhotoField({
   /** URL varian display foto tersimpan, dirakit di server saat halaman dimuat. */
   initialUrl: string | null;
   onChange: (photo: Photo | undefined) => void;
+  /**
+   * Ikut menghasilkan varian JPEG untuk pratinjau tautan. HANYA foto sampul:
+   * `/api/og` satu-satunya pembacanya, dan satori tak bisa meraster WebP.
+   */
+  withOg?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -77,7 +88,11 @@ export function PhotoField({
     }
     setBusy(true);
     try {
-      const c = await compressToWebpVariants(file);
+      // Anotasi eksplisit: penyempitan `in` pada union ini menghasilkan `{}`,
+      // bukan `Blob`, sehingga `c.og` tak bisa dipakai tanpa cast.
+      const c: CompressedPhoto & { og?: Blob | null } = withOg
+        ? await compressCoverVariants(file)
+        : await compressToWebpVariants(file);
       if (c.display.size > MEDIA_MAX_BYTES.display) {
         setError(copy.editor.gallery.tooLarge);
         return;
@@ -85,6 +100,9 @@ export function PhotoField({
       const fd = new FormData();
       fd.append("display", c.display, "1600.webp");
       fd.append("thumb", c.thumb, "400.webp");
+      // Tak dikirim bila peramban tak menyerahkan JPEG — pratinjau tautan lalu
+      // jatuh ke tipografi, dan unggahannya tetap berhasil.
+      if (c.og) fd.append("og", c.og, OG_VARIANT.file);
       const res = await uploadNamedPhotoAction(invitationId, fd);
       if (res.status !== "success") {
         setError(res.message ?? copy.editor.gallery.error);
