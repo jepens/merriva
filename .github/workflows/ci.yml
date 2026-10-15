@@ -16,6 +16,17 @@ jobs:
   verify:
     name: Lint, Typecheck, Test
     runs-on: ubuntu-latest
+    # Menimpa `contents: read` tingkat workflow (blok job MENGGANTI, bukan
+    # menambah). `pull-requests: read` ada karena gitleaks-action memanggil
+    # `GET /repos/{o}/{r}/pulls/{n}/commits` untuk memindai commit MILIK PR
+    # saja. Tanpa izin itu jawabannya `403 Resource not accessible by
+    # integration` dan job gagal SEBELUM lint/typecheck/test sempat jalan —
+    # jadi kegagalannya tampak seperti "dependensinya rusak" padahal kodenya
+    # tak pernah disentuh. Seluruh PR Dependabot merah karena ini (6 PR, 14 Okt
+    # 2026), termasuk yang membawa patch keamanan.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       # Major versi yang berjalan di runtime Node 24 (Node 20 deprecated di
       # runner GitHub). `cache: pnpm` wajib eksplisit: sejak setup-node v6
@@ -43,10 +54,22 @@ jobs:
       # SUPABASE_SERVICE_ROLE_KEY mem-bypass RLS di SELURUH tabel. Sejarah repo
       # ini bersih hari ini (AUDIT-2026-10-01); yang belum ada adalah mekanisme
       # yang menjaganya tetap bersih. Gratis untuk repo privat.
+      # v3, bukan v2: v2 berhenti didukung 16 September 2026 (tanggal yang SUDAH
+      # lewat) dan runner kini memaksanya ke Node 24 sambil mencetak peringatan
+      # deprecation tiap jalan. v3 menurut rilisnya tanpa perubahan input,
+      # output, maupun perilaku; syaratnya `actions/checkout` >= v6 — di sini
+      # sudah v7.
       - name: Pindai secret (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          # Komentar PR dimatikan agar langkah ini tak pernah butuh izin TULIS.
+          # Pada run yang dipicu Dependabot, GitHub menyerahkan token read-only
+          # dan izin tulis TAK BISA diberikan lewat `permissions:` — jadi
+          # membiarkan komentar aktif berarti menaruh kegagalan kedua di jalur
+          # yang baru saja diperbaiki. Sinyalnya tak hilang: temuan gitleaks
+          # tetap memerahkan job, dan log-nya menyebut berkas & barisnya.
+          GITLEAKS_ENABLE_COMMENTS: false
 
       - name: Lint
         run: pnpm lint
