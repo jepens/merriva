@@ -32,6 +32,18 @@ jobs:
       # runner GitHub). `cache: pnpm` wajib eksplisit: sejak setup-node v6
       # cache otomatis hanya untuk npm.
       - uses: actions/checkout@v7
+        with:
+          # WAJIB untuk gitleaks (contoh resmi README-nya juga memakai 0).
+          # Bawaan checkout adalah klon DANGKAL (depth 1), sedangkan pada event
+          # `pull_request` gitleaks memindai rentang commit PR-nya:
+          #   gitleaks detect --log-opts=... <sha>^..<sha>
+          # Tanpa induknya di klon, git menjawab
+          #   fatal: ambiguous argument '<sha>^..<sha>': unknown revision
+          # dan aksinya berhenti dengan "failed to scan Git repository".
+          # Gejalanya menyesatkan dua kali: job merah di langkah pemindaian
+          # rahasia padahal tak ada rahasia, dan lint/typecheck/test di
+          # bawahnya tak pernah jalan sehingga PR tampak "rusak".
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
