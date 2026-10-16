@@ -4318,6 +4318,46 @@ ter-purge meninggalkan foto wajah mempelai di storage secara permanen.
 
 ---
 
+## #95 — 2026-10-16 · Tiga setelan Auth produksi dikencangkan; HIBP ternyata terkunci Pro
+
+**Keputusan:** `mailer_otp_exp` 3600→**1800** dtk, `password_min_length` 6→**8**
+(menyamakan dengan validasi aplikasi), `smtp_sender_name` `"noreply"`→**"Merriva"**
+— diterapkan lewat Management API, diverifikasi dengan membaca ulang dari
+server. **Leaked Password Protection TIDAK bisa dinyalakan** dan tetap
+dilaporkan GAGAL oleh `pnpm ops:verify`, bukan diturunkan jadi peringatan.
+
+**Alasan:** ketiganya butir Fase 6 yang sudah lama menggantung, dan semuanya
+hanya berlaku saat sandi DIBUAT atau DIUBAH — tak ada pengguna lama yang
+terkunci, admin tidak terpengaruh. `smtp_sender_name` yang terpenting secara
+kasatmata: pelanggan melihat nama itu di inbox.
+
+**Temuan yang tak terduga:** PATCH dengan `password_hibp_enabled: true` dijawab
+
+```
+HTTP 402 — Configuring leaked password protection via HaveIBeenPwned.org
+           is available on Pro Plans and up.
+```
+
+Dan karena PATCH Management API bersifat **atomik**, satu field berbayar itu
+menolak seluruh permintaan — ketiga setelan lain ikut gagal tanpa jejak sampai
+dibaca ulang. Pelajarannya untuk perubahan config berikutnya: pisahkan field
+yang mungkin ber-gate plan, dan SELALU baca ulang dari server alih-alih
+memercayai kode 2xx.
+
+**Ditolak — menurunkan butir HIBP menjadi peringatan.** Menggoda, karena butir
+GAGAL yang tak bisa dikerjakan membuat daftar tak pernah mencapai nol dan
+orang berhenti membacanya. Tetapi ini celah keamanan nyata DAN jalannya ada:
+Supabase Pro sudah wajib di Fase 5 sebelum klien berbayar pertama. Yang salah
+bukan status GAGAL-nya, melainkan pesannya — ia berbunyi "harap true" seolah
+ada toggle yang tinggal diklik, sehingga pemilik akan mencarinya di dashboard
+Auth dan tak menemukan apa pun. Pesannya kini menyebut Pro dan Fase 5.
+
+**Konsekuensi:** `ops:verify` turun dari 9 GAGAL menjadi 7. Yang tersisa:
+`NEXT_PUBLIC_SENTRY_DSN` (butuh rebuild), MX `merriva.id`, HIBP (butuh Pro),
+dan empat cron yang belum terpasang di Easypanel.
+
+---
+
 ## Template entri baru
 
 ```
