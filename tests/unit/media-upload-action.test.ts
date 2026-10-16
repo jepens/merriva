@@ -31,6 +31,16 @@ const { storage } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/storage", () => ({ getStorage: () => storage }));
 
+// Parameter DIDEKLARASIKAN: `vi.fn()` tanpa param membuat `mock.calls[0][1]`
+// gagal typecheck meski vitest hijau.
+const { reportHandledError } = vi.hoisted(() => ({
+  reportHandledError:
+    vi.fn<
+      (err: unknown, area: string, extra?: Record<string, unknown>) => void
+    >(),
+}));
+vi.mock("@/lib/observability", () => ({ reportHandledError }));
+
 const { serverRef } = vi.hoisted(() => ({
   serverRef: { current: null as never },
 }));
@@ -218,6 +228,11 @@ describe("uploadGalleryPhotoAction — kuota paket & kebersihan storage", () => 
     expect(res.status).toBe("error");
     expect(client.rpc).not.toHaveBeenCalled();
     expect(storage.delete).toHaveBeenCalledTimes(3);
+    // Dan BERBUNYI. Pemilik hanya melihat toast "Terjadi kesalahan"; tanpa
+    // laporan ini, kredensial R2 yang salah terlihat persis seperti pelanggan
+    // yang sedang sepi.
+    expect(reportHandledError).toHaveBeenCalledTimes(1);
+    expect(reportHandledError.mock.calls[0][1]).toBe("media.upload");
   });
 
   it("sukses → item dikembalikan & tak ada objek yang dihapus", async () => {

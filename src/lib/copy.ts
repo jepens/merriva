@@ -42,6 +42,20 @@ export const copy = {
     },
     save: "Simpan",
     cancel: "Batal",
+    // Badan respons 503 route unduhan ZIP (galeri & Album Momen). Teks POLOS,
+    // bukan JSX: unduhannya gagal, jadi inilah yang dirender peramban di tab.
+    //
+    // Nadanya ditentukan oleh momennya. Pemilik membuka ini karena email
+    // peringatan pra-purge menyuruhnya menyelamatkan datanya, jadi kalimat
+    // pertama harus langsung menutup ketakutan yang benar ("foto saya hilang")
+    // dan menamai yang sebenarnya terjadi. Kalimat kedua menjelaskan kenapa
+    // tak ada berkas yang terunduh — tanpa itu, "gagal" terbaca sebagai
+    // "datanya tidak ada".
+    arsipPadam: [
+      "Foto Anda masih tersimpan, tetapi saat ini tidak bisa diambil dari penyimpanan.",
+      "Berkas ZIP sengaja tidak dibuat agar Anda tidak menerima arsip kosong yang terlihat seperti arsip yang berhasil.",
+      `Coba lagi beberapa menit lagi. Bila tetap gagal, email ${SUPPORT_EMAIL} dan sebutkan nama undangannya — kami bisa melihat penyebabnya dari sisi kami.`,
+    ].join("\n\n"),
   },
   // Kontak dukungan (AUDIT-2026-10-01 A5). Sebelumnya produk menyuruh "hubungi
   // kami" di kartu pembayaran yang tertahan TANPA memberi alamat apa pun —

@@ -4181,6 +4181,66 @@ image yang salah tak pernah menerima trafik.
 
 ---
 
+## #93 — 2026-10-16 · Padam total dibedakan dari gagal sebagian; lima titik bisu dibunyikan
+
+**Keputusan:** route unduhan ZIP (galeri & Album Momen) kini memisahkan
+SEBAGIAN gagal dari SEMUA gagal lewat `src/server/arsip-zip.ts`. Sebagian gagal
+→ perilaku lama persis (200, yang gagal dilewati, nomor berlubang). Semua gagal
+→ **503** dengan badan teks yang bisa dibaca pemilik, dan tak ada ZIP yang
+dibuat. Keduanya dilaporkan ke Sentry. Ditambah tiga jalur unggah yang selama
+ini menelan galatnya kini melapor: `media.upload`,
+`media.named-photo.upload`, `admin.song.upload`.
+
+**Alasan — kegagalan yang tidak terlihat seperti kegagalan.**
+
+ZIP dirakit lewat generator supaya memori VPS tetap ~1 foto berapa pun besar
+albumnya. Konsekuensinya status HTTP sudah TERKIRIM sebelum satu byte foto pun
+diambil. Digabung dengan aturan "foto yang gagal diambil dilewati" — yang benar
+untuk satu foto rusak — padamnya storage secara total menghasilkan **berkas ZIP
+yang sah, 200 OK, bernama `foto-galeri-<slug>.zip`, dan kosong**.
+
+Konteksnya yang membuatnya mahal: email peringatan pra-purge H-30/H-7 dan
+`/syarat` menyuruh pemilik mengunduh datanya SEBELUM retensi menghapusnya.
+Arsip kosong yang terlihat berhasil, tepat di jalur penyelamatan terakhir itu,
+terbaca oleh pemilik sebagai "berarti foto saya memang sudah hilang". Diamnya
+ganda: pemiliknya salah paham, dan kami tak pernah tahu kejadiannya.
+
+Temuan audit juga menyertakan hal yang lebih tidak enak: **ada test hijau yang
+mengesahkan perilaku itu** (`fetch yang MELEMPAR juga dilewati, bukan
+menggagalkan route` — menegaskan 200 dengan nol berkas). Test itu ditulis ulang
+beserta NIATNYA, bukan hanya angkanya.
+
+Kelima titik bisu ini satu keluarga, dan semuanya menjadi mungkin justru pada
+hari pindah R2: token ber-scope salah menjawab 403 dengan sopan pada setiap
+operasi. Sebelum perubahan ini gejalanya di produksi adalah pelanggan yang
+mengeluh, bukan alarm.
+
+**Ditolak:**
+
+- **Memutus stream di tengah (`ctrl.error`) saat gagal total.** Pemilik mendapat
+  berkas terpotong, dan bila kegagalannya baru muncul di tengah daftar, foto
+  yang SUDAH berhasil ikut hilang. Yang dicari adalah jawaban jujur, bukan
+  kerusakan yang lebih meriah.
+- **Menyelipkan `CATATAN.txt` ke dalam ZIP.** Statusnya tetap 200 — tetap bohong
+  bagi apa pun yang membacanya secara otomatis — dan pemilik yang mengekstrak
+  hanya gambarnya tak pernah membukanya.
+- **Mem-prefetch SELURUH daftar sebelum merespons.** Itu menghapus jaminan
+  memori ~1 foto yang menjadi seluruh alasan desain streaming ini ada.
+- **Membuat kegagalan unggah melempar.** Pelajaran #82: lemparan per-render
+  berubah menjadi 500 bagi setiap orang. Yang dibutuhkan jejak, bukan ledakan.
+
+**Konsekuensi:** satu fetch dimajukan ke sebelum header terkirim — pada arsip
+sehat itu fetch yang memang akan dilakukan juga, dan bodinya tetap belum dibaca
+sehingga memorinya tak berubah. Pada storage yang benar-benar padam seluruh
+daftar dicoba sebelum 503: kerja yang sama persis dengan yang dulu dilakukan
+generator di balik 200, bedanya jawabannya kini benar. `adminAddSongAction`
+mendapat test pertamanya (sebelumnya nol), termasuk pengunci bahwa `redirect()`
+HARUS tetap di luar `try` — ia bekerja dengan melempar `NEXT_REDIRECT`, jadi
+`redirect()` di dalam `try` akan ditelan catch yang sama dan aksinya diam-diam
+lanjut menyisipkan baris `songs` yang menunjuk objek tak-ada.
+
+---
+
 ## Template entri baru
 
 ```

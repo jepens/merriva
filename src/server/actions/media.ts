@@ -13,6 +13,7 @@ import {
   thumbPath,
   toMediaView,
 } from "@/lib/media";
+import { reportHandledError } from "@/lib/observability";
 import { checkClientRateLimit } from "@/lib/request-ip";
 import { getStorage } from "@/lib/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -124,7 +125,12 @@ export async function uploadGalleryPhotoAction(
       body: await thumb.arrayBuffer(),
       contentType: thumb.type,
     });
-  } catch {
+  } catch (err) {
+    // Storage yang menolak = pemilik tak bisa menambah foto SAMA SEKALI, dan
+    // satu-satunya saksinya adalah toast "Terjadi kesalahan" di layarnya.
+    // Tanpa laporan ini, kredensial R2 yang salah atau bucket yang penuh
+    // terlihat identik dengan "pelanggan sedang sepi".
+    reportHandledError(err, "media.upload", { invitationId });
     await cleanup();
     return { status: "error", message: copy.common.error };
   }

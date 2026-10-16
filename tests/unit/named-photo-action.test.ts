@@ -34,6 +34,14 @@ const { storage } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/storage", () => ({ getStorage: () => storage }));
 
+const { reportHandledError } = vi.hoisted(() => ({
+  reportHandledError:
+    vi.fn<
+      (err: unknown, area: string, extra?: Record<string, unknown>) => void
+    >(),
+}));
+vi.mock("@/lib/observability", () => ({ reportHandledError }));
+
 const { serverRef } = vi.hoisted(() => ({
   serverRef: { current: null as never },
 }));
@@ -205,6 +213,12 @@ describe("uploadNamedPhotoAction — hasil", () => {
     // Tiga, bukan dua: pembersihan menyapu seluruh varian yang MUNGKIN sudah
     // tertulis — termasuk `og.jpg` — supaya tak ada yang tertinggal di disk.
     expect(storage.delete).toHaveBeenCalledTimes(3);
+    // Foto sampul yang tak pernah bisa diunggah dulu hanya terlihat sebagai
+    // pemilik yang menyerah di tengah jalan.
+    expect(reportHandledError).toHaveBeenCalledTimes(1);
+    expect(reportHandledError.mock.calls[0][1]).toBe(
+      "media.named-photo.upload",
+    );
   });
 
   it("TIDAK menulis apa pun ke database", async () => {

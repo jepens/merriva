@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { AUDIO_MAX_BYTES, AUDIO_MIME_EXT, songObjectPath } from "@/lib/audio";
 import { isUuid } from "@/lib/id";
+import { reportHandledError } from "@/lib/observability";
 import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { adminSongSchema } from "@/lib/validation/admin";
@@ -55,8 +56,13 @@ export async function adminAddSongAction(formData: FormData): Promise<never> {
       contentType: (file as Blob).type,
     });
     uploaded = true;
-  } catch {
-    // ditangani di bawah (redirect tak boleh di dalam try — NEXT_REDIRECT throw).
+  } catch (err) {
+    // Redirect-nya di bawah, BUKAN di sini: `redirect()` bekerja dengan
+    // melempar NEXT_REDIRECT, dan catch ini akan menelannya bulat-bulat.
+    // Yang dulu ikut tertelan adalah galatnya sendiri — `?msg=song_failed`
+    // memberi tahu admin bahwa unggahan gagal, tanpa pernah memberi tahu
+    // siapa pun MENGAPA.
+    reportHandledError(err, "admin.song.upload", { title: parsed.data.title });
   }
   if (!uploaded) redirect("/admin/lagu?msg=song_failed");
 

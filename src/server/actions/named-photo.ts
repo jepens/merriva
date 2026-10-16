@@ -13,6 +13,7 @@ import {
   ogPath,
   thumbPath,
 } from "@/lib/media";
+import { reportHandledError } from "@/lib/observability";
 import { checkClientRateLimit } from "@/lib/request-ip";
 import { getStorage } from "@/lib/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -133,7 +134,10 @@ export async function uploadNamedPhotoAction(
         contentType: og.type,
       });
     }
-  } catch {
+  } catch (err) {
+    // Sama seperti galeri: tanpa laporan ini, foto sampul/mempelai yang tak
+    // pernah bisa diunggah hanya terlihat sebagai pemilik yang menyerah.
+    reportHandledError(err, "media.named-photo.upload", { invitationId });
     await Promise.allSettled(
       mediaObjectPaths(prefix).map((p) => storage.delete(p)),
     );

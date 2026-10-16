@@ -1,9 +1,11 @@
 import { downloadZip } from "client-zip";
 
+import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import { getStorage } from "@/lib/storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { responsArsipPadam, siapkanArsip, urutan } from "@/server/arsip-zip";
 
 /**
  * Unduh ZIP seluruh album (host, MOMEN-SPEC §5). STREAMING via `client-zip` —
@@ -94,29 +96,22 @@ export async function GET(
   const storage = getStorage();
 
   // Generator async → client-zip menarik satu foto pada satu waktu (memori
-  // terbatas). Foto yang gagal di-fetch dilewati (best-effort). Input = Response
-  // (client-zip mengalirkan body-nya; tipe InputWithMeta, di-infer).
-  async function* files() {
-    let i = 0;
-    for (const p of photos) {
-      i += 1;
-      let res: Response;
-      try {
-        res = await fetch(storage.getPublicUrl(p.storage_path));
-      } catch {
-        continue;
-      }
-      if (!res.ok || !res.body) continue;
-      const seq = String(i).padStart(3, "0");
-      yield {
-        name: `${seq}-${safeName(p.guest_name)}.${extOf(p.storage_path)}`,
-        input: res,
-        lastModified: new Date(p.created_at),
-      };
-    }
-  }
+  // terbatas). Foto yang gagal di-fetch dilewati (best-effort), tetapi PADAM
+  // TOTAL dijawab 503, bukan ZIP kosong 200 — lihat `server/arsip-zip.ts`.
+  // Album tanpa foto visible sama sekali tetap ZIP kosong yang sah: itu bukan
+  // padam, itu memang isinya.
+  const arsip = await siapkanArsip(
+    photos.map((p, k) => ({
+      url: storage.getPublicUrl(p.storage_path),
+      name: `${urutan(k + 1)}-${safeName(p.guest_name)}.${extOf(p.storage_path)}`,
+      lastModified: new Date(p.created_at),
+    })),
+    "zip.momen",
+    { invitationId: id, albumId: album.id },
+  );
+  if (arsip.padam) return responsArsipPadam(copy.common.arsipPadam);
 
-  const zip = downloadZip(files());
+  const zip = downloadZip(arsip.files());
   return new Response(zip.body, {
     headers: {
       "Content-Type": "application/zip",

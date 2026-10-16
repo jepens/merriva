@@ -57,6 +57,16 @@ vi.mock("@/lib/storage", () => ({
   }),
 }));
 
+// Parameter DIDEKLARASIKAN: `mock.calls[0][1]` di bawah tak lolos tsc bila
+// `vi.fn()` dibiarkan tanpa tipe, sementara vitest tetap hijau.
+const { reportHandledError } = vi.hoisted(() => ({
+  reportHandledError:
+    vi.fn<
+      (err: unknown, area: string, extra?: Record<string, unknown>) => void
+    >(),
+}));
+vi.mock("@/lib/observability", () => ({ reportHandledError }));
+
 /** `downloadZip` palsu: habiskan generator & catat nama berkasnya. */
 const { terkumpul } = vi.hoisted(() => ({ terkumpul: [] as string[] }));
 vi.mock("client-zip", () => ({
@@ -178,7 +188,9 @@ describe("ZIP galeri — isi", () => {
 
   it("foto yang gagal diambil DILEWATI, ZIP tetap jadi", async () => {
     // Pemilik yang kehilangan satu foto jauh lebih baik daripada pemilik yang
-    // tak bisa mengunduh apa pun menjelang purge.
+    // tak bisa mengunduh apa pun menjelang purge. Nomornya BERLUBANG, tidak
+    // bergeser: `foto-002` tanpa `foto-001` memberi tahu pemilik ada yang
+    // hilang; menggeser nomornya justru menyembunyikan itu darinya.
     let n = 0;
     vi.stubGlobal(
       "fetch",
@@ -194,15 +206,111 @@ describe("ZIP galeri — isi", () => {
     expect(terkumpul).toEqual(["foto-002.webp"]);
   });
 
-  it("fetch yang MELEMPAR juga dilewati, bukan menggagalkan route", async () => {
+  it("yang hilang sebagian tetap DILAPORKAN, lengkap dengan hitungannya", async () => {
+    // Tanpa ini, satu-satunya saksi atas objek yang dijatuhkan storage adalah
+    // pemilik yang menghitung sendiri isi ZIP-nya.
+    let n = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        n += 1;
+        return n === 1
+          ? new Response(null, { status: 500 })
+          : new Response("bytes", { status: 200 });
+      }),
+    );
+    await jalankan(galeriZip);
+    expect(reportHandledError).toHaveBeenCalledTimes(1);
+    expect(reportHandledError.mock.calls[0][1]).toBe("zip.galeri");
+    expect(reportHandledError.mock.calls[0][2]).toMatchObject({
+      gagal: 1,
+      total: 2,
+    });
+  });
+
+  it("arsip yang utuh TIDAK melapor apa pun", async () => {
+    // Alarm yang berbunyi di hari normal berhenti dibaca orang.
+    await jalankan(galeriZip);
+    expect(reportHandledError).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * PADAM TOTAL — kegagalan yang dulu paling tidak terlihat di repo ini.
+ *
+ * Route ini mengalirkan ZIP lewat generator, jadi status HTTP sudah terkirim
+ * sebelum satu byte foto pun diambil; dan karena foto yang gagal memang sengaja
+ * dilewati, storage yang mati total menghasilkan ZIP yang SAH, 200 OK, bernama
+ * `foto-galeri-andi-sinta.zip`, dan kosong. Sebelum perbaikan ini ada test
+ * hijau yang justru MENGESAHKAN perilaku itu — ia menegaskan 200 dengan nol
+ * berkas dan menyebutnya "dilewati, bukan menggagalkan route".
+ *
+ * Yang membuatnya berbahaya bukan kode-nya, melainkan konteksnya: email
+ * peringatan pra-purge H-30/H-7 dan `/syarat` menyuruh pemilik mengunduh
+ * datanya SEBELUM retensi menghapusnya. Arsip kosong yang terlihat berhasil,
+ * tepat di jalur penyelamatan terakhir itu, terbaca oleh pemilik sebagai
+ * "berarti foto saya memang sudah hilang" — dan kami tak pernah tahu.
+ */
+describe("ZIP — padam total dibedakan dari gagal sebagian", () => {
+  const padamkan = () =>
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
         throw new Error("DNS mati");
       }),
     );
-    expect((await jalankan(galeriZip)).status).toBe(200);
+
+  it("galeri: semua foto gagal → 503, BUKAN zip kosong 200", async () => {
+    padamkan();
+    const res = await jalankan(galeriZip);
+    expect(res.status).toBe(503);
     expect(terkumpul).toEqual([]);
+    expect(res.headers.get("Content-Type")).toContain("text/plain");
+  });
+
+  it("badan 503 menjelaskan bahwa fotonya MASIH ADA", async () => {
+    // Pemilik membacanya di tab peramban karena unduhannya gagal. Kalimat yang
+    // hanya berbunyi "gagal" akan dibaca sebagai "datanya tidak ada".
+    padamkan();
+    // Route dipanggil langsung: `jalankan` menghabiskan body-nya untuk
+    // memaksa generator berjalan, dan body yang sudah terpakai tak bisa
+    // dibaca ulang.
+    const teks = await (await galeriZip(req(), p())).text();
+    expect(teks).toContain("masih tersimpan");
+    expect(teks).toContain("halo@merriva.id");
+  });
+
+  it("padam total dilaporkan ke Sentry dengan jumlah yang dicoba", async () => {
+    padamkan();
+    await jalankan(galeriZip);
+    expect(reportHandledError).toHaveBeenCalledTimes(1);
+    expect(reportHandledError.mock.calls[0][1]).toBe("zip.galeri");
+    expect(reportHandledError.mock.calls[0][2]).toMatchObject({ dicoba: 2 });
+  });
+
+  it("respons 500 yang rapi pun dihitung padam, bukan hanya lemparan", async () => {
+    // Token R2 read-only menjawab 403 dengan sopan — tak ada yang dilempar.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 403 })),
+    );
+    expect((await jalankan(galeriZip)).status).toBe(503);
+  });
+
+  it("momen: album berisi yang gagal total → 503", async () => {
+    padamkan();
+    const res = await jalankan(momenZip);
+    expect(res.status).toBe(503);
+    expect(reportHandledError.mock.calls[0][1]).toBe("zip.momen");
+  });
+
+  it("momen: album KOSONG tetap 200 — itu bukan padam, itu memang isinya", async () => {
+    // Album yang seluruh fotonya dimoderasi keluar menghasilkan ZIP kosong yang
+    // sah. Menjawabnya 503 akan menukar satu kebohongan dengan kebohongan lain.
+    photoRows.data = [];
+    padamkan();
+    expect((await jalankan(momenZip)).status).toBe(200);
+    expect(reportHandledError).not.toHaveBeenCalled();
   });
 });
 
