@@ -149,6 +149,23 @@ pengumuman apa pun**, bukan sebelum langkah teknis lain:
 
 Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 
+**Perintah siap-tempel** (diverifikasi 16 Okt 2026 terhadap image & produksi, bukan dikira-kira):
+
+| Job | Jadwal (UTC) | WIB | Perintah |
+|---|---|---|---|
+| `expire-orders` | `0 * * * *` | tiap jam | `wget -q --post-data="" --header="Authorization: Bearer $CRON_SECRET" -O- http://127.0.0.1:3000/api/cron/expire-orders` |
+| `expire-invitations` | `15 0 * * *` | 07:15 | …`/api/cron/expire-invitations` |
+| `expiry-reminders` | `30 1,13 * * *` | 08:30 & 20:30 | …`/api/cron/expiry-reminders` |
+| `purge-expired` | `45 2,14 * * *` | 09:45 & 21:45 | …`/api/cron/purge-expired` |
+
+Empat hal yang akan membuang waktu Anda bila tidak diketahui lebih dulu:
+
+- **`curl` TIDAK ADA di image.** Runtime-nya `node:22-alpine` dan tahap akhir Dockerfile hanya menyalin output standalone — tak ada paket tambahan. Yang tersedia `wget` busybox (`/bin/busybox`), yang **tidak punya** flag `-f`/`--fail` ala curl. Resep ber-`curl` akan gagal dengan `command not found` dan terlihat seperti masalah jaringan.
+- **Keempat route hanya mengekspor `POST`.** `--post-data=""` itulah yang membuatnya POST; tanpa itu Next menjawab **405**, bukan 401. Penjadwal yang hanya bisa GET tidak akan pernah berhasil.
+- **`wget` busybox keluar dengan kode 1 pada 401**, jadi `CRON_SECRET` yang salah atau bersisipan newline menggagalkan job secara TERLIHAT di riwayat Easypanel. Ini penawar langsung untuk peringatan di bawah ("401 tanpa galat terlihat") — asalkan perintahnya memang `wget`, bukan sesuatu yang menelan status.
+- **`127.0.0.1:3000`, bukan `https://merriva.id`**, bila job dijalankan di dalam container service-nya: jalur ini sudah terbukti dipakai HEALTHCHECK Dockerfile, melewati Cloudflare (tak kena WAF/rate-limit edge), dan tak bergantung DNS. Bila penjadwal Easypanel Anda berjalan di luar container, pakai URL publik dan sadari kedua konsekuensi itu.
+- ⚠️ **Zona waktu belum dipastikan.** Dockerfile tidak menyetel `TZ`, jadi container berjalan UTC; penjadwal Easypanel punya setelannya sendiri. Cek sekali di panel — bila ternyata WIB, kolom WIB di atas yang dipakai sebagai ekspresi, bukan kolom UTC. Jadwal yang melenceng 7 jam tidak merusak apa pun, tetapi email peringatan akan mendarat tengah malam.
+
 - [ ] `POST /api/cron/expire-orders` — tiap ~1 jam (rekonsiliasi + batalkan order > 24 jam + `transactioncancel`)
   - ⚠️ Job ini **juga mengirim kuitansi** bila rekonsiliasi menemukan order yang ternyata sudah lunas — ia jaring penyelamat ketika webhook Pakasir hilang. Tak dijadwalkan = pelanggan yang sudah membayar tak pernah aktif dan tak pernah dapat bukti bayar sampai admin menyentuhnya manual.
   - ⚠️ **Sejak 2026-10-13 job ini punya DUA pass** (DECISIONS #73). Pass pertama merekonsiliasi order `pending` berumur **10 menit – 24 jam**: ia hanya memverifikasi & mengaktifkan, tak pernah membatalkan. Sebelumnya tak ada backstop di bawah 24 jam, jadi webhook yang hilang + pelanggan yang menutup tab = order dibayar menggantung sehari penuh tanpa sinyal. Dengan kadens 1 jam, jendela butanya kini **~1 jam**, bukan ~24 jam.
