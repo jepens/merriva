@@ -32,6 +32,16 @@ const { storage } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/storage", () => ({ getStorage: () => storage }));
 
+// Parameter DIDEKLARASIKAN: `vi.fn()` tanpa param membuat `mock.calls[0][1]`
+// gagal typecheck meski vitest hijau.
+const { reportHandledError } = vi.hoisted(() => ({
+  reportHandledError:
+    vi.fn<
+      (err: unknown, area: string, extra?: Record<string, unknown>) => void
+    >(),
+}));
+vi.mock("@/lib/observability", () => ({ reportHandledError }));
+
 const { refs } = vi.hoisted(() => ({
   refs: { server: null as unknown, admin: null as unknown },
 }));
@@ -112,6 +122,8 @@ beforeEach(() => {
   calls = [];
   terbitkanLink.mockClear();
   storage.delete.mockClear();
+  storage.delete.mockResolvedValue(undefined);
+  reportHandledError.mockClear();
   findPendingMomenOrder.mockResolvedValue(null);
 });
 
@@ -414,6 +426,33 @@ describe("moderateMomenPhotoAction — pencabutan akses sadar-fase", () => {
     expect(storage.delete).toHaveBeenCalledWith("momen/a/p/thumb.webp");
     expect(hidePayload()?.status).toBe("hidden");
     expect(hidePayload()?.purged_at).toEqual(expect.any(String));
+    expect(reportHandledError).not.toHaveBeenCalled();
+  });
+
+  it("PASCA-reveal: penghapusan yang GAGAL dilaporkan, bukan ditelan", async () => {
+    // Satu-satunya penghapusan di produk yang tujuannya memang "objek ini
+    // harus HILANG". Bedanya dengan hapus best-effort lain: pathnya SUDAH
+    // tersebar — tamu melihatnya saat reveal dan bisa menyimpan URL-nya.
+    // Bila DELETE gagal (token R2 read-only menjawab 403 dengan sopan),
+    // `purged_at` tetap terisi dan tombol "Tampilkan" ditolak permanen,
+    // sementara URL-nya terus menjawab 200. Diam di sini membuat UI berbohong.
+    setup(null);
+    storage.delete.mockRejectedValue(new Error("403 AccessDenied"));
+
+    const res = await moderateMomenPhotoAction(INV, {
+      photoId: PHOTO,
+      action: "hide",
+    });
+
+    // Tetap sukses: barisnya memang sudah tercabut, dan menggagalkan aksi
+    // justru membuat tuan rumah mengira fotonya masih tampil.
+    expect(res).toEqual({ status: "success" });
+    expect(reportHandledError).toHaveBeenCalledTimes(1);
+    expect(reportHandledError.mock.calls[0][1]).toBe(
+      "momen.moderate.purge.storage",
+    );
+    // Kedua objek, bukan satu — hitungannya yang memberi tahu seberapa luas.
+    expect(reportHandledError.mock.calls[0][2]).toMatchObject({ failed: 2 });
   });
 
   it("foto yang berkasnya sudah dihapus TIDAK bisa ditampilkan lagi", async () => {

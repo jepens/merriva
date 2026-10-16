@@ -9,6 +9,7 @@ import { isBlankEventDraft, isCompleteLocalDateTime } from "@/lib/event-draft";
 import { draftSlug, isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
 import { mediaObjectPaths } from "@/lib/media";
+import { reportHandledError } from "@/lib/observability";
 import { checkClientRateLimit } from "@/lib/request-ip";
 import { slugSchema } from "@/lib/slug";
 import { getStorage } from "@/lib/storage";
@@ -417,7 +418,7 @@ export async function deleteInvitationAction(
 
     const outcome = res?.[0];
     if (outcome?.result === "purged") {
-      await Promise.allSettled([
+      const hasil = await Promise.allSettled([
         // media_paths = prefix galeri → expand ke 2 varian.
         ...(outcome.media_paths ?? []).flatMap((prefix) =>
           mediaObjectPaths(prefix).map((p) => storage.delete(p)),
@@ -425,6 +426,21 @@ export async function deleteInvitationAction(
         // momen_paths = path objek PENUH foto momen → hapus langsung.
         ...(outcome.momen_paths ?? []).map((p) => storage.delete(p)),
       ]);
+      // Ini RPC yang SAMA dengan cron purge-expired, membersihkan kelas data
+      // yang sama untuk kewajiban yang sama (UU PDP). Di cron hasilnya dihitung
+      // dan dilaporkan; di sini — jalur yang dipicu PEMILIK secara sadar —
+      // dulu dibuang. Dan jalurnya sekali-jalan: RPC sudah menyetel
+      // `purged_at`, sehingga cron berikutnya menyaring barisnya keluar dan tak
+      // akan pernah mencoba ulang. Objek yang gagal dihapus di sini tinggal di
+      // storage selamanya, tanpa rujukan.
+      const gagal = hasil.filter((r) => r.status === "rejected").length;
+      if (gagal > 0) {
+        reportHandledError(
+          new Error(`storage: ${gagal} objek gagal dihapus saat purge pemilik`),
+          "invitation.delete.storage",
+          { invitationId, failed: gagal },
+        );
+      }
     }
     revalidatePath(`/${inv.slug}`); // ISR halaman publik (kini kerangka expired)
   }

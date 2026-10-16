@@ -4241,6 +4241,83 @@ lanjut menyisipkan baris `songs` yang menunjuk objek tak-ada.
 
 ---
 
+## #94 — 2026-10-16 · Purge foto bernama membaca bentuk yang salah; dua penghapusan UU PDP dibunyikan
+
+**Keputusan:** migrasi `20261016111713` memperbaiki ekstraksi path foto bernama
+di `purge_invitation_data` — dari `content->>'key'` (mengira STRING) menjadi
+`jsonb_typeof` yang menangani bentuk OBJEK maupun STRING lama, lalu disaring
+regex bentuk penuh yang terikat `p_invitation_id`. Fixture pgTAP ditulis ulang
+memakai bentuk yang benar-benar ditulis aplikasi. Ditambah dua pelaporan yang
+hilang: `invitation.delete.storage` dan `momen.moderate.purge.storage`.
+
+**Alasan — test hijau di atas bentuk yang tidak ada di produksi.**
+
+`photoSchema` menormalkan SETIAP foto menjadi objek `{path,x,y,zoom}`; migrasi
+`20261014120000` ditulis saat tombol unggahnya belum ada dan `content` masih
+menyimpan string. Tombolnya lalu dibuat, bentuknya berubah, SQL-nya tidak.
+
+`->>` pada objek tidak mengembalikan NULL — ia mengembalikan TEKS JSON-nya.
+Dibuktikan di Postgres, bukan disimpulkan:
+
+```
+select '{"coverPhoto":{"path":"inv/a/foto/b","x":0.5}}'::jsonb ->> 'coverPhoto';
+→ {"x": 0.5, "path": "inv/a/foto/b"}
+```
+
+Akibatnya foto sampul, foto kedua mempelai, dan logo **tidak pernah terhapus**
+saat purge retensi — persis lubang UU PDP yang migrasi itu diklaim menutup —
+sementara `content` di-scrub menjadi `'{}'` beberapa baris kemudian sehingga
+satu-satunya rujukan ke objeknya lenyap. Barisnya di-set `purged_at`, jadi cron
+menyaringnya keluar dan tak akan pernah mencoba ulang.
+
+Yang paling perlu diingat: **fixture pgTAP-nya menulis bentuk STRING**, bentuk
+yang sudah tidak pernah ditulis aplikasi. Delapan assert hijau selama dua hari
+di atas data yang tidak ada. Fixture sekarang memakai bentuk OBJEK untuk
+undangan A, mempertahankan STRING di B sebagai regresi data lama, dan menambah
+D berisi bentuk-bentuk rusak. Dijalankan terhadap fungsi LAMA: **6 dari 12
+merah** — termasuk "tak ada teks JSON yang lolos sebagai path".
+
+**Ditolak:**
+
+- **`coalesce(content->'key'->>'path', content->>'key')`.** Menangani kedua
+  bentuk, tetapi objek RUSAK (tanpa kunci `path`) tetap jatuh ke lengan kedua
+  dan kembali menghasilkan teks JSON — persis kelas galat yang sedang
+  dibetulkan. `case jsonb_typeof` menjawab NULL untuk apa pun di luar dua
+  bentuk sah.
+- **Regex bentuk penuh pada SELURUH `v_paths`.** Array itu memuat DUA bentuk:
+  prefix galeri `inv/<uuid>/<uuid>` dan foto bernama `inv/<uuid>/foto/<uuid>`.
+  Menyaring semuanya dengan pola foto bernama akan membuang setiap prefix
+  galeri — menukar kebocoran foto bernama dengan kebocoran galeri yang jauh
+  lebih luas. Hanya lengan foto bernama yang disaring; galeri sudah dijamin
+  check constraint `media_storage_path_format`.
+
+**Dua penghapusan yang dibunyikan:**
+
+- `deleteInvitationAction` cabang `expired` memanggil RPC purge yang SAMA
+  dengan cron, lalu membuang hasil `Promise.allSettled`-nya. Cron menghitung
+  dan melapor; jalur yang dipicu pemilik tidak. Aksi ini juga mendapat test
+  pertamanya — termasuk boundary CLAUDE.md "jangan pernah hapus undangan yang
+  masih aktif", yang sebelumnya tak dijaga satu test pun.
+- `moderateMomenPhotoAction` pasca-reveal menyetel `purged_at`, menolak tombol
+  "Tampilkan" selamanya, lalu menelan hasil penghapusannya. Ini satu-satunya
+  penghapusan di produk yang tujuannya memang "objek ini harus HILANG", dan
+  pathnya SUDAH tersebar ke tamu saat reveal. Bila DELETE gagal, URL-nya terus
+  menjawab 200 dengan `Cache-Control: immutable` setahun sementara UI
+  mengatakan foto itu sudah dicabut.
+
+**Catatan metode:** audit ini menurunkan empat pemeriksa paralel dengan skeptik
+adversarial per temuan berbobot — 8 diperiksa, **3 bertahan, 5 terbantah**.
+Skeptik juga MENGOREKSI temuan yang bertahan: pemeriksanya menyebut bug ini
+khas R2, padahal driver `local` yang berjalan hari ini pun menolak path itu di
+`segmenObjek()`. Ia laten sama persis sebelum dan sesudah cutover.
+
+**Konsekuensi:** migrasi ini **belum terpasang di produksi** — CI hanya
+fast-forward branch `production`, tidak menjalankan `supabase db push`. Pemilik
+harus menjalankannya. Sampai itu terjadi, setiap undangan yang kedaluwarsa dan
+ter-purge meninggalkan foto wajah mempelai di storage secara permanen.
+
+---
+
 ## Template entri baru
 
 ```
