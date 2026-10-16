@@ -225,10 +225,28 @@ export async function moderateMomenPhotoAction(
 
     if (revealed && !photo.purged_at) {
       const storage = getStorage();
-      await Promise.allSettled([
+      const hasil = await Promise.allSettled([
         storage.delete(photo.storage_path),
         storage.delete(photo.thumb_path),
       ]);
+      // Dilaporkan, tidak ditelan. Ini SATU-SATUNYA penghapusan di produk yang
+      // tujuannya memang "objek ini harus HILANG" — tuan rumah mencabut foto
+      // yang tak pantas, atau orang di dalamnya memintanya turun. Bedanya
+      // dengan hapus best-effort lain yang sengaja dibiarkan bisu (orphan tak
+      // berbahaya, pathnya tak tertebak): di sini pathnya SUDAH tersebar.
+      // Tamu melihatnya saat reveal dan bisa menyimpan URL-nya, dan objeknya
+      // disajikan `Cache-Control: immutable` setahun. `purged_at` sudah
+      // terisi, tombol "Tampilkan" ditolak permanen, foto hilang dari galeri —
+      // sementara URL-nya tetap menjawab 200. UI-nya berbohong, persis yang
+      // diperingatkan docstring fungsi ini.
+      const gagal = hasil.filter((r) => r.status === "rejected").length;
+      if (gagal > 0) {
+        reportHandledError(
+          new Error(`storage: ${gagal} objek foto tercabut gagal dihapus`),
+          "momen.moderate.purge.storage",
+          { albumId: owned.albumId, photoId: photo.id, failed: gagal },
+        );
+      }
     }
   }
 

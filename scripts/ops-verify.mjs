@@ -370,11 +370,17 @@ async function periksaAuth(token, ref) {
     c.password_min_length,
     ">= 8 (samakan dgn aplikasi)",
   );
+  // TETAP GAGAL, bukan diturunkan jadi peringatan: ini celah keamanan nyata,
+  // dan jalannya ADA — beli Pro, yang Fase 5 memang sudah wajibkan sebelum
+  // klien berbayar pertama. Yang dibetulkan hanya pesannya. Sebelum ini ia
+  // berbunyi "harap true" seolah ada toggle yang tinggal diklik; Management API
+  // menjawab HTTP 402 di free tier ("available on Pro Plans and up"), jadi
+  // pemilik akan mencarinya di dashboard dan tak menemukan apa pun.
   harap(
     "Leaked Password Protection",
     c.password_hibp_enabled === true,
     c.password_hibp_enabled,
-    "true",
+    "true — BUTUH Supabase Pro (API 402 di free tier); lihat Fase 5",
   );
 
   // DECISIONS #89 — ini satu-satunya butir yang GAGAL bila AKTIF.

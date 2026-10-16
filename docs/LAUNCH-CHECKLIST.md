@@ -149,6 +149,23 @@ pengumuman apa pun**, bukan sebelum langkah teknis lain:
 
 Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 
+**Perintah siap-tempel** (diverifikasi 16 Okt 2026 terhadap image & produksi, bukan dikira-kira):
+
+| Job | Jadwal (UTC) | WIB | Perintah |
+|---|---|---|---|
+| `expire-orders` | `0 * * * *` | tiap jam | `wget -q --post-data="" --header="Authorization: Bearer $CRON_SECRET" -O- http://127.0.0.1:3000/api/cron/expire-orders` |
+| `expire-invitations` | `15 0 * * *` | 07:15 | …`/api/cron/expire-invitations` |
+| `expiry-reminders` | `30 1,13 * * *` | 08:30 & 20:30 | …`/api/cron/expiry-reminders` |
+| `purge-expired` | `45 2,14 * * *` | 09:45 & 21:45 | …`/api/cron/purge-expired` |
+
+Empat hal yang akan membuang waktu Anda bila tidak diketahui lebih dulu:
+
+- **`curl` TIDAK ADA di image.** Runtime-nya `node:22-alpine` dan tahap akhir Dockerfile hanya menyalin output standalone — tak ada paket tambahan. Yang tersedia `wget` busybox (`/bin/busybox`), yang **tidak punya** flag `-f`/`--fail` ala curl. Resep ber-`curl` akan gagal dengan `command not found` dan terlihat seperti masalah jaringan.
+- **Keempat route hanya mengekspor `POST`.** `--post-data=""` itulah yang membuatnya POST; tanpa itu Next menjawab **405**, bukan 401. Penjadwal yang hanya bisa GET tidak akan pernah berhasil.
+- **`wget` busybox keluar dengan kode 1 pada 401**, jadi `CRON_SECRET` yang salah atau bersisipan newline menggagalkan job secara TERLIHAT di riwayat Easypanel. Ini penawar langsung untuk peringatan di bawah ("401 tanpa galat terlihat") — asalkan perintahnya memang `wget`, bukan sesuatu yang menelan status.
+- **`127.0.0.1:3000`, bukan `https://merriva.id`**, bila job dijalankan di dalam container service-nya: jalur ini sudah terbukti dipakai HEALTHCHECK Dockerfile, melewati Cloudflare (tak kena WAF/rate-limit edge), dan tak bergantung DNS. Bila penjadwal Easypanel Anda berjalan di luar container, pakai URL publik dan sadari kedua konsekuensi itu.
+- ⚠️ **Zona waktu belum dipastikan.** Dockerfile tidak menyetel `TZ`, jadi container berjalan UTC; penjadwal Easypanel punya setelannya sendiri. Cek sekali di panel — bila ternyata WIB, kolom WIB di atas yang dipakai sebagai ekspresi, bukan kolom UTC. Jadwal yang melenceng 7 jam tidak merusak apa pun, tetapi email peringatan akan mendarat tengah malam.
+
 - [ ] `POST /api/cron/expire-orders` — tiap ~1 jam (rekonsiliasi + batalkan order > 24 jam + `transactioncancel`)
   - ⚠️ Job ini **juga mengirim kuitansi** bila rekonsiliasi menemukan order yang ternyata sudah lunas — ia jaring penyelamat ketika webhook Pakasir hilang. Tak dijadwalkan = pelanggan yang sudah membayar tak pernah aktif dan tak pernah dapat bukti bayar sampai admin menyentuhnya manual.
   - ⚠️ **Sejak 2026-10-13 job ini punya DUA pass** (DECISIONS #73). Pass pertama merekonsiliasi order `pending` berumur **10 menit – 24 jam**: ia hanya memverifikasi & mengaktifkan, tak pernah membatalkan. Sebelumnya tak ada backstop di bawah 24 jam, jadi webhook yang hilang + pelanggan yang menutup tab = order dibayar menggantung sehari penuh tanpa sinyal. Dengan kadens 1 jam, jendela butanya kini **~1 jam**, bukan ~24 jam.
@@ -182,6 +199,7 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
 ## Fase 5 — Keandalan database & media
 
 - [ ] **Supabase Pro** (backup harian, retensi 7 hari) — sebelum ada klien berbayar (free tier auto-pause + egress 5 GB tak cukup)
+  - 🔒 **Pro juga membuka _Leaked Password Protection_** (cek HaveIBeenPwned saat sandi dibuat/diubah). Di free tier ia bukan toggle yang terlewat — Management API menolak dengan **HTTP 402** "available on Pro Plans and up" (dicoba 16 Okt 2026). `pnpm ops:verify` menandainya GAGAL dan memang harus begitu; penutupnya ada di butir ini, bukan di dashboard Auth. Begitu Pro aktif, nyalakan dan jalankan `ops:verify` lagi.
 - [ ] **Latihan restore backup 1×** (RUNBOOK): restore ke project sementara, verifikasi jumlah baris & login
 - [ ] **Backup OBJEK MEDIA — belum ada sama sekali.** Supabase Pro mem-backup Postgres, bukan Storage; R2 juga tak punya backup bawaan; driver `local` **paling telanjang** — satu disk, tanpa replikasi, isinya di `/etc/easypanel/projects/etc/merriva/volumes/media`. Karena path media disimpan **relatif** di DB dan URL dibangun saat render, restore DB akan mengembalikan baris `media` yang menunjuk objek yang **tidak ada salinannya di mana pun**. Untuk produk yang menyimpan foto pernikahan pelanggan, ambil keputusan ini sadar sebelum klien berbayar pertama: versioning + lifecycle rule di R2, sinkron periodik ke penyimpanan lain, atau — selama di `local` — masukkan direktori volume itu ke backup VPS.
 - [ ] **Penyaji media WAJIB dari domain sendiri** (SPEC §6.4) — `NEXT_PUBLIC_MEDIA_URL` harus menunjuk host yang menyajikan media; **jangan dikosongkan** (kosong = media 404 **dan editor 500 sejak foto pertama** — ini sudah terjadi sungguhan 14 Okt 2026, DECISIONS #82). Jalur turnkey & compliant: **R2** — isi `R2_*`, `STORAGE_DRIVER=r2`, `NEXT_PUBLIC_MEDIA_URL=https://cdn.merriva.id`, custom domain `cdn.merriva.id` di R2.
@@ -236,6 +254,7 @@ Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
   - `replyTo` SUDAH dipasang di `src/lib/email/send.ts` (2026-10-12) dan menunjuk alamat yang sama dengan halaman hukum — jadi begitu MX + mailbox aktif, balasan pelanggan langsung berfungsi tanpa perubahan kode lagi. Sebelum MX ada, balasan tetap memantul.
 - [ ] Daftar **PSE Kominfo** via OSS
 - [ ] Kebijakan **privasi & refund** tayang (`/privasi`, `/refund` sudah ada — review isi & data kontak)
+- [ ] **Jalankan `supabase db push`** — migrasi `20261016111713` sudah di repo tetapi **belum terpasang di produksi**. CI hanya fast-forward branch `production`; ia tidak pernah menyentuh database. Migrasi ini membetulkan `purge_invitation_data` yang memanen path foto bernama dengan bentuk yang salah (`content->>'coverPhoto'` pada nilai OBJEK mengembalikan teks JSON-nya, bukan path) sehingga **foto sampul dan wajah kedua mempelai tidak pernah terhapus** saat purge retensi — lubang UU PDP yang justru diklaim tertutup. Sekali undangan ter-purge, `purged_at` membuat cron tak akan pernah mencoba ulang. Detail & alasan: DECISIONS #94.
 - [ ] Pastikan **cron `purge-expired`** (Fase 3) terjadwal & jalan — menghapus permanen data tamu/RSVP/media/gift_notes **6 bulan pasca-expired** (UU PDP 27/2022); baris undangan tinggal kerangka statistik, `orders` (retensi keuangan) dipertahankan. Verify di staging: undangan `expired` dengan `active_until` > 6 bln lalu → panggil cron → data pribadi terhapus, `purged_at` terisi. Klien juga bisa "hapus undangan" non-aktif kapan saja dari dashboard.
 
 - [x] **Unduhan ZIP foto galeri** — DIBANGUN 2026-10-13 (DECISIONS #70). Tombolnya di `/dashboard/undangan/{id}/tamu`, yaitu halaman yang DIRUJUK email peringatan pra-purge — sebelum ini tautan email itu mendarat di halaman tanpa unduhan foto. Kalimat `/syarat` dikembalikan menyebut galeri, **dengan batas yang tetap benar**: yang bisa diberikan adalah varian 1600 px, karena foto dikompres di browser dan berkas kamera asli tak pernah sampai ke server (SPEC §4.4).
