@@ -99,6 +99,24 @@ function basisMedia(): string {
   }
 }
 
+/**
+ * Paruh RUNTIME dari pasangan itu. `mediaBase` di atas melaporkan paruh
+ * BUILD-nya; tanpa yang ini, operator melihat separuh pasangan yang justru
+ * ketidakcocokannya menjadi seluruh alasan `periksaPasanganMedia` ada.
+ *
+ * Bukan rahasia — hanya `local` | `r2` | `supabase`, tanpa kredensial apa pun.
+ * `getStorageDriver()` melempar untuk ejaan asing (sengaja, lihat `lib/env.ts`),
+ * dan itu keadaan yang layak terlihat di sini alih-alih menjatuhkan health
+ * dengan sebab yang tak bernama.
+ */
+function driverAktif(): string {
+  try {
+    return getStorageDriver();
+  } catch {
+    return "tak-dikenali";
+  }
+}
+
 export async function GET() {
   const db = await checkDatabase();
   const media = periksaMedia();
@@ -111,6 +129,7 @@ export async function GET() {
       media: media ? media.kode : "ok",
       ...(media ? { mediaPesan: media.pesan } : {}),
       mediaBase: basisMedia(),
+      driver: driverAktif(),
       uptime: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
     },

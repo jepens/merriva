@@ -154,8 +154,18 @@ async function periksaSitus(app) {
     basisMedia = typeof j.mediaBase === "string" ? j.mediaBase : "";
     if (basisMedia) ok("basis media terpasang", basisMedia);
     else lewat("basis media", "tak dilaporkan health (image lama?)");
+
+    // Paruh RUNTIME dari pasangan itu. Dicetak bersebelahan dengan basisnya
+    // supaya operator melihat KEDUANYA dalam satu layar — ketidakcocokan
+    // merekalah yang menjadi seluruh alasan gerbang media ada.
+    if (typeof j.driver === "string" && j.driver) {
+      if (j.driver === "tak-dikenali")
+        gagal("STORAGE_DRIVER", "ejaan tak dikenali — health menolaknya");
+      else ok("driver storage aktif", j.driver);
+    } else {
+      lewat("driver storage", "tak dilaporkan health (image lama?)");
+    }
   }
-  return basisMedia;
 
   const syarat = await ambil(`${app}/syarat`);
   const html = syarat.status === 200 ? await syarat.text() : "";
@@ -165,6 +175,19 @@ async function periksaSitus(app) {
     syarat.status === 200 ? "ada di /syarat" : `status ${syarat.status}`,
     "nama + alamat tampil sebelum pembayaran (PP 80/2019)",
   );
+
+  // HARUS tetap di baris terakhir. Commit b194f69 menaruh `return basisMedia`
+  // tepat sebelum pemeriksaan /syarat di atas, sehingga selama dua hari
+  // pemeriksaan kepatuhan itu TIDAK PERNAH JALAN — dan ketiadaannya tak
+  // terlihat, karena baris yang absen di laporan tampak seperti ketiadaan,
+  // bukan seperti kegagalan.
+  //
+  // Tak ada satu pun gerbang yang melihatnya, dan sebabnya DUA, bukan satu:
+  // `scripts/**` ada di `globalIgnores` ESLint, DAN `no-unreachable` memang tak
+  // pernah aktif di konfigurasi ini sama sekali (`eslint-config-next` tidak
+  // memuat `eslint:recommended`). Keduanya sudah ditutup; `allowUnreachableCode:
+  // false` menutup sisi TypeScript-nya.
+  return basisMedia;
 }
 
 // === 2. Bundel klien (build-arg yang benar-benar ter-inline) =================

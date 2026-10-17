@@ -5,6 +5,13 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    // Kode setelah `return`/`throw` menjadi GALAT, bukan sekadar saran abu-abu
+    // di editor. Tanpa ini tak ada apa pun di gerbang yang melihatnya: tsc
+    // memperlakukannya sebagai suggestion, dan `no-unreachable` milik ESLint
+    // DIMATIKAN typescript-eslint untuk berkas TS justru dengan alasan "tsc
+    // yang menangani". Lubang di antara dua asumsi itu memakan korban nyata
+    // pada 17 Okt 2026 — lihat komentar di `eslint.config.mjs`.
+    "allowUnreachableCode": false,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",

@@ -49,11 +49,64 @@ function rutenyaMilikSendiri(mediaBaseUrl: string, appUrl: string): boolean {
     if (media.origin !== app.origin) return false;
     return media.pathname.replace(/\/+$/, "") === "/media";
   } catch {
-    // URL tak terbaca (kosong/salah bentuk) bukan urusan pemeriksa ini —
-    // `getMediaBaseUrl()` sudah gagal-keras untuk nilai kosong di produksi.
-    // Menebak di sini hanya akan menghasilkan health merah yang salah sebab.
+    // Bentuk sudah diperiksa `periksaBentukBasis` di atas pemanggil; di sini
+    // lemparan hanya berarti `appUrl` yang tak terbaca, dan itu bukan urusan
+    // aturan pasangan.
     return false;
   }
+}
+
+function masalahBentuk(nilai: string, sebab: string): MasalahMedia {
+  return {
+    kode: "media-url-tak-sah",
+    pesan:
+      `NEXT_PUBLIC_MEDIA_URL="${nilai}" ${sebab}. Peramban akan ` +
+      `menyelesaikannya RELATIF terhadap halaman undangan — ` +
+      `"cdn.merriva.id/inv/a/1600.webp" menjadi ` +
+      `"https://merriva.id/cdn.merriva.id/inv/a/1600.webp" — sehingga setiap ` +
+      `foto, lagu, dan gambar OG menjawab 404 polos tanpa satu pun exception. ` +
+      `Isi dengan URL absolut berskema, mis. https://cdn.merriva.id. Nilai ini ` +
+      `dipanggang saat BUILD, jadi memperbaikinya menuntut BANGUN ULANG image.`,
+  };
+}
+
+/**
+ * Aturan BENTUK, berlaku untuk SEMUA driver.
+ *
+ * Terpisah dari aturan pasangan di bawah karena sebabnya berbeda: basis yang
+ * tak bisa menjadi URL absolut merusak `local`, `r2`, dan `supabase` dengan
+ * cara yang sama persis — `getPublicUrl()` hanya merangkai string, tak ada
+ * driver yang memvalidasi apa pun.
+ *
+ * Sebelum ini lubangnya terbuka dan ADA TEST YANG MENGUNCINYA sebagai perilaku
+ * yang diharapkan ("mediaBaseUrl bukan URL" → null). Alasan yang tertulis saat
+ * itu — "nilai kosong sudah punya gerbangnya sendiri di `getMediaBaseUrl()`" —
+ * benar untuk KOSONG dan salah untuk SALAH BENTUK: `getMediaBaseUrl()` hanya
+ * memeriksa string kosong, jadi `cdn.merriva.id` lolos ke produksi, lolos
+ * `/api/health` dengan 200, dan memadamkan seluruh media. Satu dokumen repo ini
+ * (`docs/MUSIC-LIBRARY.md`) bahkan sempat menuliskannya persis tanpa skema.
+ */
+function periksaBentukBasis(mediaBaseUrl: string): MasalahMedia | null {
+  // Kosong memang punya gerbangnya sendiri: `getMediaBaseUrl()` gagal-keras di
+  // runtime production dan health menerjemahkannya jadi `media-env-invalid`.
+  // Di dev, kosong sah.
+  if (mediaBaseUrl === "") return null;
+
+  let basis: URL;
+  try {
+    basis = new URL(mediaBaseUrl);
+  } catch {
+    return masalahBentuk(mediaBaseUrl, "bukan URL absolut");
+  }
+
+  // `new URL("cdn.merriva.id:8080")` TIDAK melempar: titik adalah karakter yang
+  // sah di nama skema, jadi ia terbaca sebagai skema `cdn.merriva.id:` dengan
+  // path `8080`. Tanpa pemeriksaan protokol, bentuk berport itu lolos persis
+  // seperti bentuk tanpa port yang justru tertangkap di atas.
+  if (basis.protocol !== "https:" && basis.protocol !== "http:") {
+    return masalahBentuk(mediaBaseUrl, `memakai skema \`${basis.protocol}\``);
+  }
+  return null;
 }
 
 export function periksaPasanganMedia(args: {
@@ -62,6 +115,10 @@ export function periksaPasanganMedia(args: {
   appUrl: string;
 }): MasalahMedia | null {
   const { driver, mediaBaseUrl, appUrl } = args;
+
+  const bentuk = periksaBentukBasis(mediaBaseUrl);
+  if (bentuk) return bentuk;
+
   if (driver === "local") return null;
   if (!rutenyaMilikSendiri(mediaBaseUrl, appUrl)) return null;
 

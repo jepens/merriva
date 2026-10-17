@@ -117,16 +117,117 @@ describe("masukan rusak tak boleh menjatuhkan health", () => {
   it.each([
     ["mediaBaseUrl kosong", "", APP],
     ["appUrl kosong", "https://merriva.id/media", ""],
-    ["mediaBaseUrl bukan URL", "bukan-url", APP],
     ["keduanya kosong", "", ""],
   ])("%s → null, bukan lemparan", (_n, mediaBaseUrl, appUrl) => {
-    // Nilai kosong sudah punya gerbangnya sendiri di `getMediaBaseUrl()`.
-    // Menebak di sini hanya menghasilkan health merah dengan sebab yang salah.
+    // KOSONG memang punya gerbangnya sendiri di `getMediaBaseUrl()`, yang
+    // gagal-keras di runtime production; health menerjemahkannya menjadi
+    // `media-env-invalid`. Menduplikasinya di sini hanya menghasilkan health
+    // merah dengan sebab yang salah. Di dev, kosong sah.
     expect(() =>
       periksaPasanganMedia({ driver: "r2", mediaBaseUrl, appUrl }),
     ).not.toThrow();
     expect(
       periksaPasanganMedia({ driver: "r2", mediaBaseUrl, appUrl }),
     ).toBeNull();
+  });
+});
+
+/**
+ * BENTUK basis media — aturan yang dulu TIDAK ADA, dan yang ketiadaannya
+ * dikunci test ini sendiri sebagai perilaku yang diharapkan: versi pertama
+ * berkas ini menegaskan `"bukan-url"` → `null`, dengan alasan "nilai kosong
+ * sudah punya gerbangnya sendiri di `getMediaBaseUrl()`".
+ *
+ * Alasan itu benar untuk KOSONG dan salah untuk SALAH BENTUK. `getMediaBaseUrl()`
+ * hanya memeriksa string kosong, jadi `cdn.merriva.id` lolos ke produksi dan
+ * `/api/health` menjawab 200 sementara peramban menyelesaikan nilai itu RELATIF
+ * terhadap halaman undangan: `https://merriva.id/cdn.merriva.id/inv/a/1600.webp`.
+ * Setiap foto, lagu, dan gambar OG padam serentak — 404 polos, nol exception.
+ *
+ * Bukan skenario karangan: `docs/MUSIC-LIBRARY.md` menuliskannya persis tanpa
+ * skema, dan itu dokumen yang dibuka untuk tugas PERTAMA pasca-cutover R2
+ * (mengunggah ulang enam lagu).
+ */
+describe("bentuk basis media — berlaku untuk SEMUA driver", () => {
+  it.each(["r2", "supabase", "local"] as const)(
+    "driver %s: tanpa skema ditandai, bukan diabaikan",
+    (driver) => {
+      const m = periksaPasanganMedia({
+        driver,
+        mediaBaseUrl: "cdn.merriva.id",
+        appUrl: APP,
+      });
+      expect(m?.kode).toBe("media-url-tak-sah");
+      // Pesannya harus menyebut REBUILD: nilainya dipanggang saat build, jadi
+      // memperbaikinya di panel lalu restart tidak akan mengubah apa pun.
+      expect(m?.pesan).toMatch(/BANGUN ULANG|BUILD/i);
+    },
+  );
+
+  it("`local` TIDAK kebal — basis rusak memadamkan semua driver sama rata", () => {
+    // Aturan bentuk sengaja berjalan SEBELUM short-circuit `local` pada aturan
+    // pasangan. `getPublicUrl()` hanya merangkai string; tak ada driver yang
+    // memvalidasi apa pun.
+    expect(
+      periksaPasanganMedia({
+        driver: "local",
+        mediaBaseUrl: "merriva.id/media",
+        appUrl: APP,
+      })?.kode,
+    ).toBe("media-url-tak-sah");
+  });
+
+  it("bentuk berport lolos `new URL` — karena itu protokolnya ikut diperiksa", () => {
+    // `new URL("cdn.merriva.id:8080")` TIDAK melempar: titik sah di nama skema,
+    // jadi ia terbaca sebagai skema `cdn.merriva.id:` dengan path `8080`.
+    // Tanpa pemeriksaan protokol, bentuk ini lolos sementara saudaranya yang
+    // tanpa port tertangkap — lubang yang lebih buruk daripada tak memeriksa
+    // sama sekali, karena ia tampak sudah dijaga.
+    expect(() => new URL("cdn.merriva.id:8080")).not.toThrow();
+    expect(
+      periksaPasanganMedia({
+        driver: "r2",
+        mediaBaseUrl: "cdn.merriva.id:8080",
+        appUrl: APP,
+      })?.kode,
+    ).toBe("media-url-tak-sah");
+  });
+
+  it.each(["ftp://x.test", "file:///tmp/media", "javascript:alert(1)"])(
+    "skema non-HTTP ditolak: %s",
+    (nilai) => {
+      expect(
+        periksaPasanganMedia({
+          driver: "r2",
+          mediaBaseUrl: nilai,
+          appUrl: APP,
+        })?.kode,
+      ).toBe("media-url-tak-sah");
+    },
+  );
+
+  it.each([
+    ["https — bentuk produksi", "https://cdn.merriva.id"],
+    ["http — sah untuk dev lokal", "http://localhost:3000/media"],
+    ["berport", "https://cdn.merriva.id:8443"],
+  ])("%s tetap lolos", (_n, mediaBaseUrl) => {
+    // Pemeriksa yang menolak bentuk sah lebih berbahaya daripada yang diam:
+    // ia memerahkan deployment sehat sampai orang berhenti membaca health.
+    expect(
+      periksaPasanganMedia({ driver: "r2", mediaBaseUrl, appUrl: APP }),
+    ).toBeNull();
+  });
+
+  it("aturan BENTUK didahulukan atas aturan PASANGAN", () => {
+    // Keduanya salah sekaligus. Yang dilaporkan harus bentuknya: pesan
+    // "lakukan rebuild dengan URL yang benar" tak berguna bila nilai yang
+    // dipakai membangun ulang itu sendiri tak bisa diurai.
+    expect(
+      periksaPasanganMedia({
+        driver: "r2",
+        mediaBaseUrl: "merriva.id/media",
+        appUrl: APP,
+      })?.kode,
+    ).toBe("media-url-tak-sah");
   });
 });

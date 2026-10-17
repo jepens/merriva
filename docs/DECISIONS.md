@@ -4358,6 +4358,73 @@ dan empat cron yang belum terpasang di Easypanel.
 
 ---
 
+## #96 — 2026-10-17 · Bentuk `NEXT_PUBLIC_MEDIA_URL` dijaga; dan kode mati yang tak satu pun gerbang lihat
+
+**Keputusan:** (1) `periksaPasanganMedia` mendapat aturan BENTUK yang berjalan
+untuk SEMUA driver, kode `media-url-tak-sah`; (2) `/api/health` ikut
+memancarkan `driver`; (3) `allowUnreachableCode: false` di tsconfig dan
+`scripts/**` tak lagi diabaikan ESLint, dengan `no-unreachable` dkk diminta
+eksplisit di sana.
+
+**Alasan (1) — basis tanpa skema lolos gerbang, lalu memadamkan semuanya.**
+`getMediaBaseUrl()` hanya memeriksa string KOSONG. Nilai seperti
+`cdn.merriva.id` lolos utuh: `new URL()` melempar → `rutenyaMilikSendiri`
+menjawab `false` → `periksaPasanganMedia` mengembalikan `null` → `/api/health`
+menjawab **200**. Peramban lalu menyelesaikannya RELATIF terhadap halaman
+undangan — `https://merriva.id/cdn.merriva.id/inv/a/1600.webp` — sehingga setiap
+foto, lagu, dan gambar OG menjawab 404 polos tanpa satu pun exception.
+
+Bukan skenario karangan: `docs/MUSIC-LIBRARY.md` menuliskannya persis tanpa
+skema, dan itu dokumen yang dibuka untuk tugas PERTAMA pasca-cutover R2
+(mengunggah ulang enam lagu). Dokumennya ikut dibetulkan.
+
+Aturannya berjalan SEBELUM short-circuit `driver === "local"`, karena basis yang
+rusak merusak ketiga driver sama rata — `getPublicUrl()` hanya merangkai string.
+Dan protokolnya ikut diperiksa, bukan hanya "bisa di-parse": `new URL(
+"cdn.merriva.id:8080")` TIDAK melempar (titik sah di nama skema), jadi tanpa itu
+bentuk berport lolos sementara saudaranya tanpa port tertangkap — lubang yang
+lebih buruk daripada tak memeriksa, karena ia tampak sudah dijaga.
+
+**Alasan (3) — satu kode mati, dua lapis kebutaan.** Commit `b194f69` menaruh
+`return basisMedia;` di tengah `periksaSitus()`, sehingga pemeriksaan
+**identitas pelaku usaha** (PP 80/2019) di `ops:verify` tidak pernah berjalan
+selama dua hari. Ketiadaannya tak terlihat: baris yang absen di laporan tampak
+seperti ketiadaan, bukan seperti kegagalan.
+
+Yang membuatnya pantas dicatat bukan bug-nya, melainkan bahwa **tak satu pun
+gerbang bisa melihatnya** — dan sebabnya dua, yang masing-masing menyandarkan
+diri pada yang lain:
+
+- ESLint: `scripts/**` ada di `globalIgnores`, DAN `no-unreachable` tak pernah
+  aktif sama sekali — `eslint-config-next` tidak memuat `eslint:recommended`,
+  sementara untuk berkas TS typescript-eslint MEMATIKANNYA dengan alasan "tsc
+  yang menangani".
+- tsc: tanpa `allowUnreachableCode: false`, TypeScript memperlakukan kode
+  tak-terjangkau sebagai *suggestion* — abu-abu di editor, **senyap** di
+  `tsc --noEmit`. Dibuktikan dengan berkas probe: tanpa flag itu nol galat,
+  dengan flag `error TS7027`.
+
+Jadi "tsc yang menangani" adalah asumsi yang tak pernah benar di repo ini, dan
+lubangnya berlaku untuk SELURUH `src/`, bukan hanya skrip. Keduanya kini
+ditutup, dan masing-masing dibuktikan dengan menyisipkan ulang bug yang sama.
+
+**Ditolak — menaruh validasi bentuk di `getMediaBaseUrl()`.** Pelajaran #82,
+sudah dua kali dihindari: fungsi itu dipanggil per-render lewat `getPublicUrl()`,
+jadi melempar di sana mengubah halaman TERDEGRADASI (teks tampil, gambar 404)
+menjadi halaman MATI (500) bagi setiap tamu — dan karena lazy, container tetap
+lolos healthcheck. Tempat yang benar adalah health, yang membuat image tak cocok
+GAGAL healthcheck sehingga tak pernah menerima trafik.
+
+**Konsekuensi:** `ops:verify` kembali memeriksa identitas pelaku usaha (hijau —
+terbukti tayang di `/syarat`), dan akan menampilkan `driver storage` begitu
+produksi dibangun ulang; sampai itu ia melaporkan "tak dilaporkan health (image
+lama?)", bukan merah palsu. Butir checklist Fase 8 yang masih menyebut identitas
+pelaku usaha "string kosong" dikoreksi — isinya sudah lengkap sejak 15 Okt, dan
+checklist yang salah tentang kesiapan hukum lebih berbahaya daripada butir yang
+hilang.
+
+---
+
 ## Template entri baru
 
 ```

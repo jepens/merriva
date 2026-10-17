@@ -52,4 +52,9 @@ tampil. Simpan bukti lisensi tiap trek di luar aplikasi (mis. catatan ops).
   tersedia" sampai admin menambah minimal satu lagu.
 - Penyimpanan mengikuti `STORAGE_DRIVER` (supabase | r2). Bucket `media` menerima
   audio (migrasi `20260804190000_widen_media_bucket_audio`, batas 8 MB); untuk R2
-  set `NEXT_PUBLIC_MEDIA_URL` = `cdn.merriva.id`.
+  set `NEXT_PUBLIC_MEDIA_URL` = `https://cdn.merriva.id` — **dengan skema**.
+  Tanpa `https://`, peramban menyelesaikannya relatif terhadap halaman undangan
+  (`https://merriva.id/cdn.merriva.id/...`) dan setiap foto, lagu, serta gambar
+  OG menjawab 404. Sejak 17 Okt 2026 `/api/health` menolak bentuk itu
+  (`media-url-tak-sah`), tetapi nilainya dipanggang saat BUILD — jadi
+  memperbaikinya menuntut bangun ulang image, bukan sekadar restart.
