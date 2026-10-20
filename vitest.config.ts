@@ -19,6 +19,16 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    // DIPATOK, bukan diwarisi. Vitest 5 membalik default ini dari `false` ke
+    // `true`, dan 103 dari 155 berkas test di repo ini tak pernah membersihkan
+    // mock-nya sendiri — artinya semantik isolasi antar-test berubah untuk
+    // seluruh suite tanpa satu baris pun ikut berubah warna. Nilainya `true`
+    // karena itu yang lebih benar: `expect(x).not.toHaveBeenCalled()` harus
+    // berarti "tak dipanggil DI TEST INI", bukan menumpang pada kebocoran
+    // state dari test sebelumnya. Yang dipatok di sini adalah KEPASTIANNYA —
+    // supaya pembalikan default berikutnya tak lagi menggeser arti test
+    // diam-diam.
+    clearMocks: true,
     include: [
       "tests/unit/**/*.{test,spec}.{ts,tsx}",
       "src/**/*.{test,spec}.{ts,tsx}",
