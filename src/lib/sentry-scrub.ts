@@ -28,6 +28,50 @@
  * Tanpa `server-only`: dipakai juga oleh konfigurasi Sentry sisi klien.
  */
 
+/**
+ * Baseline `dataCollection` — WAJIB eksplisit sejak SDK v11.
+ *
+ * v11 mengganti `sendDefaultPii` dengan `dataCollection`, dan panduan migrasi
+ * resminya menyatakan hitam di atas putih: "Set the baseline explicitly. Don't
+ * leave `dataCollection` unset — that now enables broader collection." Default
+ * barunya LEBIH PERMISIF daripada v10: IP pengguna, cookie, header, dan badan
+ * request/response ikut terkumpul bila dibiarkan kosong.
+ *
+ * Itu kategori PII baru yang tak pernah dihadapi `scrubSentryEvent`, dan di
+ * produk ini pemiliknya bukan kita: tamu menyerahkan nama, nomor WhatsApp, dan
+ * fotonya tanpa pernah punya hubungan dengan Merriva (UU PDP 27/2022).
+ *
+ * `urlQueryParams: false` SENGAJA lebih ketat daripada resep resmi (yang hanya
+ * mem-`deny` beberapa nama). Satu-satunya query param yang berarti di halaman
+ * undangan adalah `?g={token}` — identitas tamu — jadi membuang seluruh query
+ * string tidak merugikan diagnostik sama sekali, dan ia tetap menutup celah
+ * itu bila kelak seseorang memindahkan `traceLifecycle` ke `stream`.
+ */
+/**
+ * Tanpa `as const`: Sentry menuntut `deny: string[]` yang MUTABLE, dan
+ * `readonly` menolaknya. Dua salinan terpisah, bukan satu array dipakai dua
+ * kali — SDK menerima referensinya dan kita tak menjanjikan apa pun soal
+ * mutasi.
+ */
+const DENY_HEADER = ["forwarded", "-ip", "remote-", "via", "-user"];
+
+export const SENTRY_DATA_COLLECTION = {
+  userInfo: false,
+  cookies: false,
+  httpHeaders: {
+    request: { deny: [...DENY_HEADER] },
+    response: { deny: [...DENY_HEADER] },
+  },
+  // Dibiarkan ter-infer `never[]`: kita memang tak mengumpulkan badan apa pun,
+  // dan `string[]` justru ditolak (`HttpBodyCollectionTarget[]` berupa union).
+  httpBodies: [],
+  urlQueryParams: false,
+  genAI: { inputs: false, outputs: false },
+  databaseQueryData: false,
+  queues: false,
+  graphQL: { document: false, variables: false },
+};
+
 /** `?g=`, `token=`, `guest_token=` — di URL penuh maupun query string telanjang. */
 const SENSITIVE_PARAM =
   /(^|[?&])(g|token|guest_?token|guestToken)=([^&#\s"']*)/gi;

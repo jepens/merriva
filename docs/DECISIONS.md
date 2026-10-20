@@ -4425,6 +4425,80 @@ hilang.
 
 ---
 
+## #97 — 2026-10-20 · Sentry v11: `beforeSendTransaction` mati, dan default PII dibalik
+
+**Keputusan:** `@sentry/nextjs` dinaikkan ke 11.8.0 BERSAMA migrasinya dalam
+satu commit. Tiga berkas init menyetel `traceLifecycle: "static"` dan baseline
+`dataCollection` eksplisit (`SENTRY_DATA_COLLECTION` di `lib/sentry-scrub.ts`);
+`next.config.ts` mengimpor dari `@sentry/nextjs/config` dan menukar
+`disableLogger` dengan `bundleSizeOptimizations.excludeDebugStatements`.
+
+**Alasan — yang dilihat CI adalah masalah paling kecil.** Satu-satunya
+kegagalan yang terlihat gerbang adalah `TS2305: no exported member
+'withSentryConfig'`. Dua perubahan yang sesungguhnya berbahaya tak menyentuh
+satu test pun, dan keduanya menyerang **DECISIONS #46**:
+
+1. **`beforeSendTransaction` NO-OP.** v11 menjadikan span streaming default.
+   Panduan migrasi resmi di tag 11.8.0 menyatakannya dua kali: *"The
+   `beforeSendTransaction` and `ignoreTransactions` options will **no-op**"*
+   (baris 331) dan *"`beforeSendTransaction` no-ops because no transaction
+   events are produced"* (baris 439). Penapis token tamu dipasang di
+   `beforeSend` DAN `beforeSendTransaction`; yang kedua akan diam tanpa satu
+   pun galat, dan `?g={token}` lolos ke atribut span.
+2. **Default `dataCollection` dibalik.** v11 mengganti `sendDefaultPii`
+   dengannya dan membuat default-nya LEBIH PERMISIF: *"Set the baseline
+   explicitly. **Don't leave `dataCollection` unset** — that now enables
+   broader collection"* (baris 212). Yang ikut terkumpul bila dibiarkan: IP
+   tamu, cookie, header, dan badan request/response.
+
+Keduanya diverifikasi dari sumber primer (`MIGRATION.md` di tag 11.8.0),
+bukan dari ringkasan — sebelumnya ada klaim turunan yang ternyata keliru.
+
+**Ditolak:**
+
+- **Port ke `beforeSendSpan` + `ignoreSpans` sekarang.** Itu jalur yang
+  direkomendasikan Sentry untuk jangka panjang, tetapi memindahkan logika
+  KEAMANAN ke bentuk callback baru pada commit yang sama dengan bump mayor
+  adalah dua perubahan berisiko yang saling menutupi. `traceLifecycle:
+  'static'` adalah opt-out RESMI (*"Opting out of span streaming"*, baris 513)
+  dan TIDAK ditandai deprecated. Port-nya ditunda, sadar.
+- **`webpack.treeshake.removeDebugLogging`,** yang justru ke sanalah tabel
+  migrasi memetakan `disableLogger`. `next build` repo ini tanpa flag bundler
+  = Turbopack (default Next 16), dan JSDoc paketnya sendiri menyebut opsi
+  top-level `bundleSizeOptimizations` *"works for both webpack and Turbopack
+  builds"* sementara yang di bawah `webpack.*` tidak. Mengikuti tabel begitu
+  saja menghasilkan typecheck hijau dengan statement debug tetap ikut ke
+  bundel halaman undangan.
+- **Menyaring `event.user` di `scrubSentryEvent`.** Disarankan audit, tetapi
+  repo ini tak pernah memanggil `setUser` — satu-satunya sumbernya
+  `requestDataIntegration`, yang sudah dimatikan `userInfo: false`. Penapis
+  tanpa sumber hanya menambah kode yang tak pernah dieksekusi.
+
+**Waktunya disengaja.** DSN produksi masih kosong, jadi `Sentry.init` tak
+pernah berjalan dan migrasi ini mengubah NOL perilaku runtime hari ini.
+Jendela itu tertutup saat pemilik mengisi DSN — memigrasi sesudahnya berarti
+menukar dua variabel sekaligus pada SDK yang belum pernah terbukti mengirim
+apa pun.
+
+**Konsekuensi:** `tests/unit/sentry-init-config.test.ts` (baru) mengunci
+KONFIGURASInya, bukan penapisnya — `sentry-scrub.test.ts` sudah membuktikan
+penapis bekerja, dan v11 menunjukkan itu tak cukup: penapis sempurna bisa
+terpasang rapi dan tak pernah dipanggil. Dibuktikan dengan mutasi: menghapus
+`traceLifecycle` → `Expected "static", Received undefined`; menghapus
+`dataCollection` → satu test merah. Keduanya sebelumnya tak memerahkan apa pun.
+
+**Ronde dependensi yang sama** juga membawa patch keamanan `next`
+16.4.0→16.4.2 (PR #9), yang melewati **16.4.1**: GHSA-p3m5-59mp-jv5r, High,
+CVSS 8.2, DoS App Router + Server Actions, *"No workaround exists besides
+upgrading"* — produksi sedang terkena. Dua advisory Critical pada versi yang
+sama diperiksa dan TIDAK berlaku: nol pemakaian `use cache`, dan optimizer
+gambar mati (`images.unoptimized: true`; probe nyata `/_next/image` di
+produksi menjawab 404). Rate limit aplikasi tidak meredam DoS itu — ia
+dipanggil dari DALAM badan Server Action, jadi CPU sudah terbakar sebelum
+gerbangnya tercapai.
+
+---
+
 ## Template entri baru
 
 ```

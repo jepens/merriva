@@ -1,4 +1,4 @@
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 import { securityHeaderRules } from "./config/security-headers";
@@ -64,7 +64,14 @@ const config: NextConfig = process.env.NEXT_PUBLIC_SENTRY_DSN
       project: process.env.SENTRY_PROJECT,
       authToken: process.env.SENTRY_AUTH_TOKEN,
       silent: !process.env.CI,
-      disableLogger: true,
+      // BUKAN `webpack.treeshake.removeDebugLogging`, walau ke sanalah tabel
+      // migrasi memetakan `disableLogger` lama. `next build` di repo ini tanpa
+      // flag bundler = Turbopack (default Next 16), dan JSDoc paketnya sendiri
+      // menyebut opsi top-level ini "works for both webpack and Turbopack
+      // builds" sementara yang di bawah `webpack.*` tidak. Mengikuti tabel
+      // begitu saja akan membuat typecheck hijau sambil statement debug SDK
+      // tetap ikut ke bundel halaman undangan — jalur LCP yang dianggarkan.
+      bundleSizeOptimizations: { excludeDebugStatements: true },
       telemetry: false,
       // Upload sourcemap hanya bila auth token tersedia.
       sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
