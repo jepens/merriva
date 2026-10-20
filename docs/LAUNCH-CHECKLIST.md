@@ -116,6 +116,7 @@ pengumuman apa pun**, bukan sebelum langkah teknis lain:
 - [ ] Verify: `curl https://merriva.id/api/health` → `{"status":"ok","db":"up"}`
 
 - [ ] **Easypanel mengawasi branch `production`, bukan `main`** (DECISIONS #64). CI mem-fast-forward `production` hanya setelah `verify` + pgTAP hijau, jadi commit ber-CI-merah tak pernah sampai ke produksi. Sebelum butir ini dikerjakan, gerbangnya **belum berlaku**: deploy tetap jalan paralel dengan CI seperti sekarang.
+  - 🔎 **Terbukti masih `main` per 20 Okt 2026, bukan dugaan.** Pada 17 Okt CI mati tiga hari (tagihan GitHub) sehingga `bfe8cf6` tak pernah diverifikasi dan branch `production` tetap tertahan di `1d554f3`. Namun `/api/health` produksi pada 20 Okt melaporkan field `driver` — field yang HANYA ada di `bfe8cf6`. Jadi commit tak terverifikasi itu tetap naik ke produksi sehari kemudian, lewat `main`. Kebetulan kodenya memang hijau; yang tidak ada adalah gerbangnya. **Cara memastikan sendiri kapan saja:** bandingkan `git log --oneline origin/production -1` dengan apa yang benar-benar disajikan produksi — bila produksi lebih baru, Easypanel masih mengambil dari `main`.
 
 ## Fase 2 — Konfigurasi layanan pihak ketiga
 
