@@ -23,12 +23,30 @@ import { PakasirGateway } from "../../src/lib/payment/pakasir";
  *     tak bisa dibayar lagi).
  */
 
-const SANDBOX =
-  process.env.PAKASIR_PROJECT_SLUG &&
-  process.env.PAKASIR_API_KEY &&
-  process.env.E2E_EMAIL &&
-  process.env.E2E_PASSWORD &&
-  process.env.E2E_INVITATION_ID;
+// Skip yang SENYAP tak bisa dibedakan dari lulus — dan selama ini itulah
+// yang terjadi: runner tak pernah memuat `.env.local`, seluruh spec
+// dilewati, `pnpm test:e2e` keluar 0. Sekarang runner memuatnya
+// (playwright.config.ts) DAN ketiadaannya bersuara.
+const WAJIB = [
+  "PAKASIR_PROJECT_SLUG",
+  "PAKASIR_API_KEY",
+  "E2E_EMAIL",
+  "E2E_PASSWORD",
+  "E2E_INVITATION_ID",
+] as const;
+const KOSONG = WAJIB.filter((k) => !process.env[k]);
+const SANDBOX = KOSONG.length === 0;
+if (!SANDBOX) {
+  console.warn(
+    [
+      "",
+      `[e2e] DILEWATI — variabel kosong: ${KOSONG.join(", ")}`,
+      "      Isi di .env.local (lihat docs/PAYMENT-E2E.md).",
+      "      PASTIKAN PAKASIR_PROJECT_SLUG adalah project SANDBOX, bukan produksi.",
+      "",
+    ].join("\n"),
+  );
+}
 
 /**
  * Order `pending` TERBARU milik satu undangan, dibaca dari DB.

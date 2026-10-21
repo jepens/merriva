@@ -16,7 +16,14 @@ vi.mock("@/lib/payment", () => ({
 
 import { verifyAndActivate } from "@/server/payment/reconcile";
 
-const ORDER = { order_code: "MRV-8F3K2", amount_idr: 99000 };
+// `txn_id` kini kunci WAJIB di `PendingOrder` — fixture tanpa dia tak lagi
+// bisa dikompilasi, dan itulah yang membuat pemanggil produksi berikutnya
+// tak bisa melewatkannya diam-diam seperti ketiga aksi poll dulu.
+const ORDER = {
+  order_code: "MRV-8F3K2",
+  amount_idr: 99000,
+  txn_id: "TXN-8F3K2",
+};
 
 const paid: PaymentVerification = {
   orderCode: "MRV-8F3K2",

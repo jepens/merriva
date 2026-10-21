@@ -69,6 +69,7 @@ const PENDING_ORDER = {
   orderCode: "MRV-1",
   amountIdr: 199000,
   status: "pending",
+  txnId: "TXN-1",
   packageName: "Momen 50",
 };
 
@@ -187,9 +188,14 @@ describe("checkMomenPaymentStatusAction — verifikasi otoritatif", () => {
       status: "active",
     });
     // Order code diteruskan apa adanya; nominal dari DB, bukan dari klien.
+    // `txn_id` ada di fixture DAN di assertion di bawah. Sebelum ini keduanya
+    // tak menyebutnya, dan `toHaveBeenCalledWith` mencocokkan objek TEPAT —
+    // jadi assertion itu bukan sekadar melewatkan bug, ia MENOLAK
+    // perbaikannya: menambahkan txn_id akan memerahkannya.
     expect(verifyAndActivate).toHaveBeenCalledWith(expect.anything(), {
       order_code: "MRV-1",
       amount_idr: 199000,
+      txn_id: "TXN-1",
     });
     expect(notifyOrderPaid).toHaveBeenCalledTimes(1);
     expect(notifyOrderPaid).toHaveBeenCalledWith(expect.anything(), "MRV-1");

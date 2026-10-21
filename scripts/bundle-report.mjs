@@ -52,6 +52,33 @@ const BUDGETS = {
   },
 };
 
+/**
+ * APP SHELL — dimuat SETIAP route, dan sampai 21 Okt 2026 tak pernah diukur
+ * gerbang mana pun.
+ *
+ * Tabel di bawah hanya membaca `entryCSSFiles`/`entryJSFiles`, yaitu berkas
+ * yang khas route itu. Runtime React + router Next hidup di `rootMainFiles`
+ * pada `build-manifest.json` dan tak muncul di sana sama sekali — padahal ia
+ * MUATAN TERBESAR pada halaman undangan: 133 KB gz berbanding 48 KB gz milik
+ * `/[slug]` sendiri.
+ *
+ * Digerbangi TERPISAH, bukan ditambahkan ke tiap route. Menjumlahkannya akan
+ * membuat seluruh route bergerak serentak dan justru MENYEMBUNYIKAN
+ * pertumbuhan per-route — regresi 66bdef4 (`global-error` menyeret `copy.ts`
+ * ke graf klien, +23 KB gz) akan tenggelam di dalam angka 133 KB.
+ *
+ * `polyfillFiles` DILAPORKAN TAPI TIDAK DIGERBANGI: ia di-emit dengan atribut
+ * `noModule`, jadi peramban modern tak pernah mengunduhnya. Memasukkannya ke
+ * anggaran berarti menganggarkan byte yang tak pernah melewati jaringan.
+ *
+ * ANGKANYA MENGANDAIKAN BUILD BER-DSN SENTRY, dan itu disengaja. Diukur
+ * bersebelahan 21 Okt 2026: 133,9 KB gz tanpa DSN vs 181,9 KB gz dengan DSN.
+ * CI kini membangun dengan DSN boneka (ci.yml) supaya yang digerbangi adalah
+ * bentuk yang BENAR-BENAR dipakai produksi. Build lokal tanpa DSN akan tampak
+ * jauh di bawah anggaran — itu bukan headroom, itu bentuk yang berbeda.
+ */
+const SHELL_BUDGET_GZ = 190 * 1024;
+
 const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
 
 /** Lebar kolom route mengikuti nama terpanjang agar tabel tak meleset. */
@@ -150,12 +177,12 @@ console.log("\nAnggaran bundle per route (sumber: manifest resmi Next)\n");
 console.log(
   [
     "ROUTE".padEnd(NAME_W),
-    "CSS gz".padStart(9),
-    "JS gz".padStart(9),
+    "CSS gz".padStart(10),
+    "JS gz".padStart(10),
     "FONT".padStart(14),
   ].join(""),
 );
-console.log("-".repeat(NAME_W + 32));
+console.log("-".repeat(NAME_W + 34));
 
 for (const r of rows) {
   const b = BUDGETS[r.route];
@@ -163,8 +190,8 @@ for (const r of rows) {
   console.log(
     [
       r.route.padEnd(NAME_W),
-      (kb(r.cssGz) + mark(r.cssGz, b?.cssGz)).padStart(9),
-      (kb(r.jsGz) + mark(r.jsGz, b?.jsGz)).padStart(9),
+      (kb(r.cssGz) + mark(r.cssGz, b?.cssGz)).padStart(10),
+      (kb(r.jsGz) + mark(r.jsGz, b?.jsGz)).padStart(10),
       (
         `${r.fontCount}× ${kb(r.fontBytes)}` + mark(r.fontBytes, b?.fontBytes)
       ).padStart(14),
@@ -184,9 +211,55 @@ for (const r of rows) {
   }
 }
 
+// --- App shell: dimuat setiap route, digerbangi sendiri (lihat SHELL_BUDGET_GZ).
+const shell = (() => {
+  const f = join(NEXT_DIR, "build-manifest.json");
+  if (!existsSync(f)) return null;
+  const m = JSON.parse(readFileSync(f, "utf8"));
+  const jumlah = (list) =>
+    [...new Set(list ?? [])].reduce((n, p) => n + assetSize(p).gz, 0);
+  return {
+    utama: jumlah(m.rootMainFiles) + jumlah(m.lowPriorityFiles),
+    polyfill: jumlah(m.polyfillFiles),
+  };
+})();
+
+if (shell) {
+  const lewat = shell.utama > SHELL_BUDGET_GZ;
+  console.log("-".repeat(NAME_W + 34));
+  console.log(
+    [
+      "SHELL (semua route)".padEnd(NAME_W),
+      "".padStart(10),
+      (kb(shell.utama) + (lewat ? " !" : "  ")).padStart(10),
+      "".padStart(14),
+    ].join(""),
+  );
+  console.log(
+    [
+      "  └ polyfill (noModule)".padEnd(NAME_W),
+      "".padStart(10),
+      (kb(shell.polyfill) + "  ").padStart(10),
+      "".padStart(14),
+    ].join(""),
+  );
+  if (lewat) {
+    failures.push(
+      `SHELL — JS gzip ${kb(shell.utama)} melampaui anggaran ${kb(SHELL_BUDGET_GZ)}`,
+    );
+  }
+}
+
 console.log(
   "\nCSS & JS = berkas yang di-emit Next sebagai <link>/<script> untuk route itu.",
 );
+console.log(
+  "SHELL = runtime React + router Next (`rootMainFiles`), dimuat SETIAP route.",
+);
+console.log(
+  "  Polyfill ber-`noModule` dilaporkan tetapi TIDAK digerbangi — peramban",
+);
+console.log("  modern tak pernah mengunduhnya.");
 console.log(
   "FONT = berkas ber-<link rel=preload as=font> (mentah; woff2 sudah terkompresi).",
 );

@@ -74,6 +74,19 @@ kebiasaan (DECISIONS #69).
    SMTP sengaja senyap di sisi pengguna: reset kata sandi selalu menjawab sukses generik
    demi anti-enumerasi. Tanpa Sentry, Anda menyetel SMTP tanpa cara apa pun untuk
    mengetahui ia bekerja.
+   - DSN project `bedul/merriva` (region US). Nilainya **publik by design** — ia
+     ikut terkirim ke setiap peramban; yang rahasia hanya `SENTRY_AUTH_TOKEN`.
+   - 📏 **Menyalakan DSN menambah ±48 KB gz ke SETIAP halaman**, termasuk halaman
+     undangan tamu. Diukur bersebelahan 21 Okt 2026 lewat `docker build`: app
+     shell 133,9 KB gz tanpa DSN vs **181,9 KB gz** dengan DSN. Itu nyata bagi
+     target "LCP < 2,5 dtk di 4G". Sejak tanggal itu CI membangun dengan DSN
+     boneka supaya gerbang anggaran mengukur bentuk yang benar — sebelumnya ia
+     menggerbangi bentuk yang produksi tak pernah pakai. Bila kelak angka itu
+     terasa mahal, yang dipertimbangkan adalah memuat SDK browser hanya di
+     permukaan ter-auth; keputusan itu belum diambil.
+   - Jalur build-nya sudah digladi: `docker build` dengan DSN asli berhasil dan
+     DSN terbukti ter-inline di chunk klien. Cabang `withSentryConfig` tak lagi
+     perawan saat Anda menekan rebuild.
 4. **Custom SMTP → sebelum mengaktifkan `Confirm email`.** Urutan terbalik membuat
    setiap pendaftar baru terkunci di luar akunnya sendiri.
 5. **Naikkan "Emails per hour" dari 2 → sebelum uji 3 akun.** Kalau tidak, pendaftar

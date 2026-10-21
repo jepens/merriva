@@ -76,7 +76,7 @@ export async function checkPaymentStatusAction(
   // Order terbaru untuk undangan ini (RLS: `orders_select` mengizinkan pemilik).
   const { data: order } = await supabase
     .from("orders")
-    .select("order_code, amount_idr, status")
+    .select("order_code, amount_idr, status, txn_id")
     .eq("invitation_id", invitationId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -93,6 +93,7 @@ export async function checkPaymentStatusAction(
   const outcome = await verifyAndActivate(admin, {
     order_code: order.order_code,
     amount_idr: order.amount_idr,
+    txn_id: order.txn_id,
   });
 
   switch (outcome.kind) {

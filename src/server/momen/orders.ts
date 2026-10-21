@@ -16,6 +16,8 @@ export interface MomenOrderSummary {
   orderCode: string;
   amountIdr: number;
   status: string;
+  /** Rujukan transaksi Pakasir v2 — tanpa ini `verifyAndActivate` tak bisa memverifikasi. */
+  txnId: string | null;
   packageName: string | null;
 }
 
@@ -79,7 +81,7 @@ export async function findLatestMomenOrder(
 
   const { data: order } = await admin
     .from("orders")
-    .select("order_code, amount_idr, status, package_id")
+    .select("order_code, amount_idr, status, package_id, txn_id")
     .eq("invitation_id", invitationId)
     .in("package_id", ids)
     .order("created_at", { ascending: false })
@@ -97,6 +99,7 @@ export async function findLatestMomenOrder(
     orderCode: order.order_code,
     amountIdr: order.amount_idr,
     status: order.status,
+    txnId: order.txn_id,
     packageName: pkg?.name ?? null,
   };
 }

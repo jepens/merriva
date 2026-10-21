@@ -117,6 +117,27 @@ function driverAktif(): string {
   }
 }
 
+/**
+ * KEBERADAAN `CRON_SECRET`, bukan nilainya — boolean telanjang, tanpa panjang
+ * dan tanpa sidik jari.
+ *
+ * `src/server/cron/auth.ts` fail-closed saat secret kosong, jadi produksi TANPA
+ * `CRON_SECRET` berperilaku IDENTIK dengan produksi bersecret yang keempat
+ * perintah cron-nya salah: keduanya 401, keduanya diam. Dan `pnpm env:check
+ * --prod` tak bisa membedakannya — ia membaca `.env.production.local` di mesin
+ * pengembang, bukan container; berkas itu bahkan terbukti salah ke arah yang
+ * menenangkan (CRON_SECRET terisi di sana sementara Turnstile/Resend/Pakasir
+ * kosong padahal produksi jelas punya).
+ *
+ * BATASNYA, dan ini harus dibaca bersama nilainya: `true` membuktikan
+ * variabelnya tak kosong di container — BUKAN bahwa nilainya sama dengan yang
+ * ditempel di perintah cron Easypanel. Untuk itu tetap perlu memanggil satu
+ * endpoint cron dan melihat 200, bukan 401.
+ */
+function adaCronSecret(): boolean {
+  return (process.env.CRON_SECRET ?? "").trim().length > 0;
+}
+
 export async function GET() {
   const db = await checkDatabase();
   const media = periksaMedia();
@@ -130,6 +151,7 @@ export async function GET() {
       ...(media ? { mediaPesan: media.pesan } : {}),
       mediaBase: basisMedia(),
       driver: driverAktif(),
+      cronSecret: adaCronSecret(),
       uptime: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
     },

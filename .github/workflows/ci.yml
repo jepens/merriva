@@ -125,12 +125,23 @@ jobs:
           fi
           exit 1
 
-      # Build tanpa NEXT_PUBLIC_SENTRY_DSN → path config polos ikut teruji,
-      # menangkap regresi build standalone sebelum deploy Easypanel.
+      # DSN BONEKA, bukan kosong — dan bukan secret: nilainya literal di sini,
+      # tak pernah mengirim apa pun (tanpa SENTRY_AUTH_TOKEN unggah sourcemap
+      # mati, dan `telemetry: false` sudah terpasang di next.config.ts).
+      #
+      # Sampai 21 Okt 2026 build ini SENGAJA tanpa DSN, dengan alasan "path
+      # config polos ikut teruji". Akibatnya dua hal, keduanya terukur:
+      #   1. cabang `withSentryConfig` (next.config.ts) TIDAK PERNAH dieksekusi
+      #      gerbang mana pun — yang pertama menjalankannya adalah produksi;
+      #   2. gerbang anggaran di bawah mengukur BENTUK YANG BUKAN PRODUKSI.
+      #      Diukur dengan `docker build` bersebelahan: SHELL 133,9 KB gz tanpa
+      #      DSN vs 181,9 KB gz dengan DSN — +48 KB gz di SETIAP halaman,
+      #      termasuk halaman undangan tamu. CI hijau, produksi 36% lebih berat.
       - name: Build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SENTRY_DSN: https://0@o0.ingest.us.sentry.io/0
         run: pnpm build
 
       # Gerbang anggaran bundle (AUDIT-2026-09-04 PER-14). Sejak Next 16 +

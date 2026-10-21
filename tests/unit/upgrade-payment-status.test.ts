@@ -65,6 +65,7 @@ const PENDING = {
   orderCode: "MRV-UPG1",
   amountIdr: 100000,
   status: "pending",
+  txnId: "TXN-UPG1",
   packageId: PKG_PREMIUM,
   packageName: "Premium",
 };
@@ -234,9 +235,14 @@ describe("checkUpgradePaymentStatusAction — hasil verifikasi otoritatif", () =
 
     await checkUpgradePaymentStatusAction(INV);
 
+    // `txn_id` ada di fixture DAN di assertion di bawah. Sebelum ini keduanya
+    // tak menyebutnya, dan `toHaveBeenCalledWith` mencocokkan objek TEPAT —
+    // jadi assertion itu bukan sekadar melewatkan bug, ia MENOLAK
+    // perbaikannya: menambahkan txn_id akan memerahkannya.
     expect(verifyAndActivate).toHaveBeenCalledWith(expect.anything(), {
       order_code: "MRV-UPG1",
       amount_idr: 100000,
+      txn_id: "TXN-UPG1",
     });
   });
 });

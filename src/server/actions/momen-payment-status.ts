@@ -94,6 +94,7 @@ export async function checkMomenPaymentStatusAction(
   const outcome = await verifyAndActivate(admin, {
     order_code: order.orderCode,
     amount_idr: order.amountIdr,
+    txn_id: order.txnId,
   });
 
   switch (outcome.kind) {

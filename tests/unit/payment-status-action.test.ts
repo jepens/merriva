@@ -63,6 +63,7 @@ const PENDING_ORDER = {
   order_code: "MRV-1",
   amount_idr: 299000,
   status: "pending",
+  txn_id: "TXN-1",
 };
 
 beforeEach(() => {
@@ -207,9 +208,14 @@ describe("checkPaymentStatusAction — poll SAJA tak pernah mengaktifkan", () =>
       status: "active",
       slug: SLUG,
     });
+    // `txn_id` ada di fixture DAN di assertion di bawah. Sebelum ini keduanya
+    // tak menyebutnya, dan `toHaveBeenCalledWith` mencocokkan objek TEPAT —
+    // jadi assertion itu bukan sekadar melewatkan bug, ia MENOLAK
+    // perbaikannya: menambahkan txn_id akan memerahkannya.
     expect(verifyAndActivate).toHaveBeenCalledWith(expect.anything(), {
       order_code: "MRV-1",
       amount_idr: 299000,
+      txn_id: "TXN-1",
     });
     expect(notifyOrderPaid).toHaveBeenCalledTimes(1);
   });

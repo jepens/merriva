@@ -13,12 +13,20 @@ export interface PendingOrder {
   order_code: string;
   amount_idr: number;
   /**
-   * Rujukan transaksi gateway (Pakasir v2 `txn_id`). WAJIB diisi pemanggil sejak
-   * v2: status transaksi berkunci `txn_id`, bukan `order_code`. `null` berarti
-   * transaksi belum pernah berhasil dibuat → verifikasi melempar, dan itu
-   * disengaja (lihat `verifyTransaction`).
+   * Rujukan transaksi gateway (Pakasir v2 `txn_id`). Status transaksi berkunci
+   * `txn_id`, bukan `order_code`. `null` berarti transaksi belum pernah
+   * berhasil dibuat → verifikasi melempar, dan itu disengaja (lihat
+   * `verifyTransaction`).
+   *
+   * WAJIB disebut, boleh `null` — dan perbedaan itu bukan gaya. Saat kunci ini
+   * masih OPSIONAL, migrasi ke API v2 (commit fccde12) menyentuh checkout,
+   * webhook, cron, dan berkas ini, tetapi MELEWATKAN ketiga aksi poll "cek
+   * status pembayaran" tanpa satu pun gerbang berbunyi. Akibatnya jalur
+   * aktivasi otoritatif KEDUA gagal deterministik — dan webhook yang sehat
+   * menutupinya, karena poll early-return begitu undangan `active`. Kunci
+   * wajib membuat tsc, bukan mata, yang menemukan pemanggil berikutnya.
    */
-  txn_id?: string | null;
+  txn_id: string | null;
 }
 
 /**

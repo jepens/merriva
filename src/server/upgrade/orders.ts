@@ -22,6 +22,8 @@ export interface UpgradeOrderSummary {
   orderCode: string;
   amountIdr: number;
   status: string;
+  /** Rujukan transaksi Pakasir v2 — tanpa ini `verifyAndActivate` tak bisa memverifikasi. */
+  txnId: string | null;
   /** Paket TUJUAN upgrade — pembanding `invitations.package_id` saat poll. */
   packageId: string;
   packageName: string | null;
@@ -73,7 +75,7 @@ export async function findLatestUpgradeOrder(
 ): Promise<UpgradeOrderSummary | null> {
   const { data: order } = await admin
     .from("orders")
-    .select("order_code, amount_idr, status, package_id")
+    .select("order_code, amount_idr, status, package_id, txn_id")
     .eq("invitation_id", invitationId)
     .eq("purpose", "upgrade")
     .order("created_at", { ascending: false })
@@ -94,6 +96,7 @@ export async function findLatestUpgradeOrder(
     orderCode: order.order_code,
     amountIdr: order.amount_idr,
     status: order.status,
+    txnId: order.txn_id,
     packageId: order.package_id,
     packageName: pkg?.name ?? null,
   };

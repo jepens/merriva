@@ -4499,6 +4499,75 @@ gerbangnya tercapai.
 
 ---
 
+## #98 — 2026-10-21 · Poll pembayaran tak pernah mengirim `txn_id`; dan gerbang bundel mengukur bentuk yang salah
+
+**Keputusan:** enam perbaikan dari audit "apa selanjutnya" (4 lensa + 4 skeptik).
+Dua di antaranya mengubah hal yang sebelumnya tak terlihat gerbang mana pun.
+
+**1 — `PendingOrder.txn_id` jadi WAJIB (boleh `null`).**
+
+Ketiga aksi poll "cek status pembayaran" tak pernah mengirim `txn_id`, dan
+bahkan tak men-`select` kolomnya. Sejak API v2 status transaksi berkunci
+`txn_id`, jadi `verifyTransaction` melempar `PakasirError(transient=false)` →
+`verify_broken` → `{status:"error"}`. **Deterministik.** Pelanggan yang sudah
+membayar mendapat error, bukan undangan aktif.
+
+Jalur aktivasi otoritatif KEDUA — yang ada persis untuk saat pelanggan kembali
+dari Pakasir sebelum webhook tiba — rusak 100%. Webhook dan kedua pass cron
+mengirimnya dengan benar; hanya poll yang terlewat saat migrasi v2 (commit
+`fccde12`), karena kuncinya masih **opsional**.
+
+Yang membuatnya licin: **webhook sehat menutupinya.** Poll early-return begitu
+undangan `active`, jadi uji "bayar production nominal kecil" di Fase 7 akan
+LULUS. Bug-nya baru muncul pada pelanggan pertama yang webhook-nya telat — dan
+cron backstop belum terjadwal.
+
+Dan tiga test menguncinya: `toHaveBeenCalledWith` mencocokkan objek TEPAT, jadi
+assertion-nya bukan sekadar melewatkan bug — ia **menolak perbaikannya**.
+(Ketiga kalinya pola ini muncul; lihat #93, #96.)
+
+Obatnya kunci WAJIB-TAPI-NULLABLE, bukan `string` polos: ada kontrak sah untuk
+order tanpa transaksi, dan `null` eksplisit membuat "pemanggil lupa" tak bisa
+menyamar sebagai "order ini memang belum punya transaksi". tsc menemukan tepat
+tiga pemanggil produksi — bukti tak ada yang keempat.
+
+**2 — Gerbang anggaran bundel mengukur bentuk yang bukan produksi.**
+
+CI sengaja build tanpa DSN Sentry. Diukur bersebelahan lewat `docker build`:
+
+| build | SHELL (gz) |
+|---|---|
+| tanpa DSN (yang diukur CI) | 133,9 KB |
+| dengan DSN (produksi nanti) | **181,9 KB** |
+
+**+48 KB gz di SETIAP halaman**, termasuk halaman undangan tamu yang
+entry-nya sendiri hanya 48 KB gz. CI hijau, produksi 36% lebih berat. CI kini
+membangun dengan DSN **boneka** — literal, bukan secret, dan tanpa
+`SENTRY_AUTH_TOKEN` ia tak mengirim apa pun.
+
+Sekalian: app shell (`rootMainFiles`) tak pernah diukur sama sekali — tabel
+hanya membaca `entryJSFiles` per-route. Kini ia baris BERGERBANG SENDIRI,
+bukan ditambahkan ke tiap route (menjumlahkannya akan menyembunyikan
+pertumbuhan per-route). `polyfillFiles` dilaporkan tapi tidak digerbangi:
+terbukti ber-atribut `noModule`, jadi peramban modern tak mengunduhnya.
+
+**4 perbaikan lain:** rem ledakan Sentry per-area di `reportHandledError`
+(105 pemanggil, 24 di jalur tamu — satu resepsi 300 tamu bisa mengirim ratusan
+event; yang tertahan menumpang event berikutnya, tidak hilang) · `/api/health`
+melaporkan keberadaan `CRON_SECRET` sebagai boolean · skip E2E yang SENYAP
+dibuat bersuara (runner tak pernah memuat `.env.local`, jadi `pnpm test:e2e`
+keluar 0 tanpa menjalankan apa pun) · prosedur rollback di RUNBOOK, yang
+sebelumnya tak punya satu kalimat pun tentang mundur.
+
+**Ditolak:** build CI KEDUA berisi DSN boneka — melipatduakan waktu CI
+selamanya demi satu cabang konfigurasi; menukar DSN pada build yang ada sudah
+cukup. · Menumpang Map milik `lib/rate-limit.ts` untuk rem Sentry — eviction-nya
+membuang bucket berisi paling sedikit, jadi bucket galat yang MELEDAK justru
+bertahan sambil mengusir penghitung rate-limit tamu. · Dependensi `dotenv` baru
+untuk E2E — sepuluh baris `node:fs` cukup.
+
+---
+
 ## Template entri baru
 
 ```

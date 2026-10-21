@@ -18,6 +18,43 @@ Prosedur singkat pemulihan ketika VPS/aplikasi bermasalah. Prinsip inti: **aplik
 2. **Redeploy** (atau restart) app. Easypanel membangun ulang dari `main`.
 3. Verifikasi: `curl -s https://merriva.id/api/health` → `{"status":"ok","db":"up"}`.
 
+## Skenario A2 — Deploy terakhir merusak produksi (mundur ke versi sebelumnya)
+
+Sampai 21 Okt 2026 dokumen ini **tidak punya satu kalimat pun** tentang mundur —
+padahal minggu-minggu go-live berisi beberapa rebuild berturut-turut (DSN
+Sentry, cutover R2, bump dependensi).
+
+**Sebelum apa pun: tentukan apakah deploy itu membawa MIGRASI DB.**
+`git diff <commit-sehat>..HEAD -- supabase/migrations/` — kalau ada isinya,
+**jangan** langsung revert kode. Migrasi tidak ikut mundur, dan kode lama di
+atas skema baru adalah keadaan yang tak pernah diuji. Perbaiki maju
+(`git revert` HANYA bagian kode, lalu migrasi kompensasi), atau pulihkan DB
+lebih dulu dari backup (lihat bagian berikutnya).
+
+**Rollback kode (tanpa migrasi) — forward-only, bukan force-push:**
+
+1. Cari commit sehat terakhir. Yang paling bisa dipercaya bukan `main`
+   melainkan apa yang benar-benar disajikan produksi:
+   `curl -s https://merriva.id/api/health` lalu bandingkan `driver`,
+   `mediaBase`, dan `cronSecret` dengan yang Anda harapkan.
+2. `git revert --no-edit <commit-rusak>` lalu `git push origin main`.
+   **Jangan `git reset --hard` + force-push**: branch `production`
+   di-fast-forward CI tanpa `--force`, jadi `main` yang mundur membuat promosi
+   berikutnya DITOLAK server dan Anda kehilangan gerbangnya.
+3. Easypanel membangun ulang dari `main` (lihat LAUNCH-CHECKLIST Fase 1 — ia
+   masih mengawasi `main`, bukan `production`). Tunggu, lalu verifikasi dengan
+   `uptime` di `/api/health` yang kembali kecil.
+4. `pnpm ops:verify` untuk memastikan tak ada butir yang ikut mundur.
+
+**Yang TIDAK bisa dimundurkan dengan revert kode — ketahui sebelum menekan:**
+
+| Perubahan | Kenapa |
+|---|---|
+| `NEXT_PUBLIC_*` (DSN Sentry, `MEDIA_URL`) | Dipanggang saat BUILD. Mengembalikan nilainya di panel lalu **restart** tidak mengubah apa pun — wajib rebuild. |
+| Cutover R2 setelah ada unggahan baru | Objek baru hanya ada di R2. Kembali ke `local` membuat foto-foto itu 404; yang benar adalah memperbaiki maju. |
+| Migrasi DB | Lihat peringatan di atas. |
+| Email yang sudah terkirim | Kuitansi/pengingat tidak bisa ditarik. |
+
 ## Skenario B — VPS mati total
 
 1. Provision VPS baru, pasang **Easypanel**.

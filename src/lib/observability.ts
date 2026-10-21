@@ -31,6 +31,62 @@ function toError(err: unknown): Error {
 }
 
 /**
+ * REM LEDAKAN PER-AREA.
+ *
+ * 105 pemanggil `reportHandledError` tersebar di 31 berkas, dan 24 area di
+ * antaranya ada di jalur TAMU — dipanggil sekali per tamu, bukan sekali per
+ * hari. Satu resepsi 300 tamu dengan storage bermasalah mengirim ratusan event
+ * identik dalam hitungan menit. Dedupe bawaan Sentry tidak menolong: ia hanya
+ * menyimpan SATU event sebelumnya, jadi dua area yang berselang-seling
+ * melewatinya seluruhnya.
+ *
+ * Batasnya PER AREA, bukan `sampleRate` global: pemangkasan rata juga membuang
+ * `payment.verify` dan `cron.purge-expired.storage` yang justru harus utuh —
+ * keduanya jarang, jadi rem ini tak pernah menyentuhnya.
+ *
+ * Yang tertahan TIDAK hilang diam-diam: hitungannya menumpang event BERIKUTNYA
+ * di area yang sama sebagai `tertahanSebelumnya`. Konsekuensi jujurnya — bila
+ * ledakan itu kejadian terakhir di area tersebut, hitungannya baru muncul saat
+ * area itu bersuara lagi. Itu ditukar sadar dengan tidak memasang timer di
+ * proses server.
+ *
+ * Spike protection milik Sentry TIDAK menggantikan ini: ia membuang lintas
+ * seluruh proyek tanpa pandang bulu. Keduanya saling melengkapi.
+ */
+const JENDELA_MS = 60_000;
+const MAKS_PER_AREA = 5;
+/** Batas Map sendiri — Map tak berbatas pada jalur galat adalah kebocoran. */
+const MAKS_AREA = 200;
+
+type Ember = { mulai: number; terkirim: number; tertahan: number };
+const ember = new Map<string, Ember>();
+
+/** `null` = tahan. Angka = kirim, dengan sekian event tertahan sebelumnya. */
+function remBicara(area: string, kini: number): number | null {
+  let e = ember.get(area);
+  if (!e || kini - e.mulai >= JENDELA_MS) {
+    const tertahan = e && kini - e.mulai >= JENDELA_MS ? e.tertahan : 0;
+    e = { mulai: kini, terkirim: 1, tertahan: 0 };
+    ember.set(area, e);
+    if (ember.size > MAKS_AREA) {
+      // Buang yang jendelanya paling tua — bukan yang paling sepi. Ember yang
+      // sedang meledak justru yang harus bertahan.
+      const tertua = [...ember.entries()].reduce((a, b) =>
+        a[1].mulai <= b[1].mulai ? a : b,
+      );
+      if (tertua[0] !== area) ember.delete(tertua[0]);
+    }
+    return tertahan;
+  }
+  if (e.terkirim >= MAKS_PER_AREA) {
+    e.tertahan += 1;
+    return null;
+  }
+  e.terkirim += 1;
+  return 0;
+}
+
+/**
  * Laporkan error tertangani ke Sentry. `area` menjadi tag pencarian (mis.
  * `payment.verify`, `momen.upload`) — JANGAN memasukkan rahasia atau PII ke
  * `extra`; nilai di sini ikut terkirim ke Sentry.
@@ -40,5 +96,10 @@ export function reportHandledError(
   area: string,
   extra?: Record<string, unknown>,
 ): void {
-  Sentry.captureException(toError(err), { tags: { area }, extra });
+  const tertahan = remBicara(area, Date.now());
+  if (tertahan === null) return;
+  Sentry.captureException(toError(err), {
+    tags: { area },
+    extra: tertahan > 0 ? { ...extra, tertahanSebelumnya: tertahan } : extra,
+  });
 }

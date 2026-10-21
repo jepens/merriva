@@ -177,8 +177,13 @@ describe("txn_id diteruskan ke gateway", () => {
     );
   });
 
-  it("txn_id absen diteruskan sebagai null, bukan undefined", async () => {
+  it("txn_id null diteruskan sebagai null, bukan undefined", async () => {
     // Gateway membedakan keduanya untuk melempar galat yang jelas.
+    //
+    // Dulu butir ini MENGHILANGKAN `txn_id` sepenuhnya, karena kuncinya masih
+    // opsional. Kini ia wajib-tapi-nullable, jadi order tanpa transaksi harus
+    // menyebut `null` terang-terangan — dan "pemanggil lupa" tak lagi bisa
+    // menyamar sebagai "order ini memang belum punya transaksi".
     verifyTransaction.mockRejectedValue(
       new PakasirError("tak punya txn_id", null, false),
     );
@@ -186,6 +191,7 @@ describe("txn_id diteruskan ke gateway", () => {
     await verifyAndActivate(admin as any, {
       order_code: ORDER.order_code,
       amount_idr: ORDER.amount_idr,
+      txn_id: null,
     });
     expect(verifyTransaction).toHaveBeenCalledWith(
       ORDER.order_code,

@@ -165,6 +165,20 @@ async function periksaSitus(app) {
     } else {
       lewat("driver storage", "tak dilaporkan health (image lama?)");
     }
+
+    // `CRON_SECRET` KOSONG dan `CRON_SECRET` SALAH terlihat identik dari luar:
+    // keduanya 401, keduanya diam. Yang ini memisahkan keduanya — selebihnya
+    // tetap harus dibuktikan dengan satu panggilan cron yang 200, bukan 401.
+    if (typeof j.cronSecret === "boolean") {
+      harap(
+        "CRON_SECRET terpasang",
+        j.cronSecret,
+        j.cronSecret,
+        "true — tanpa ini keempat cron dijawab 401 selamanya",
+      );
+    } else {
+      lewat("CRON_SECRET", "tak dilaporkan health (image lama?)");
+    }
   }
 
   const syarat = await ambil(`${app}/syarat`);
