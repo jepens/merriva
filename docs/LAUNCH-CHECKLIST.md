@@ -182,6 +182,26 @@ dari **crontab root di host VPS**. Endpoint-nya terbukti dapat dijangkau dari
 luar (diuji 21 Okt 2026: `POST` tanpa auth → **401**, `GET` → **405** pada
 keempatnya), jadi penjadwal mana pun di luar container bisa menggerakkannya.
 
+> ✅ **TERPASANG 21 Okt 2026** di `root@72.61.213.237` (host `Etc/UTC`, jadi
+> kolom UTC di bawah berlaku apa adanya). Keempatnya diuji langsung dari host
+> dengan perintah cron yang sebenarnya: `exit=0`, `{"ok":true}`, seluruh
+> penghitung nol. `ops:verify` bagian "Data produksi" hijau. Entri backup
+> Directus milik proyek lain di VPS itu dipertahankan utuh; cadangan crontab
+> lama di `/root/crontab.sebelum-merriva.*`.
+
+**Cara memasangnya** (dan memasang ulang setelah VPS dibangun ulang) — satu
+perintah, idempoten, tak menyentuh entri crontab milik proyek lain:
+
+```bash
+scp scripts/pasang-cron-host.sh <vps>:/root/
+grep -m1 '^CRON_SECRET=' .env.production.local | cut -d= -f2- \
+  | ssh <vps> 'bash /root/pasang-cron-host.sh'
+```
+
+Secret mengalir lewat STDIN — tak pernah masuk argumen perintah, `ps`, riwayat
+shell, maupun isi crontab. Yang di bawah ini isi yang dihasilkannya, bila Anda
+lebih suka memasangnya manual.
+
 **Sekali di awal** — simpan header di berkas khusus supaya secret tak pernah
 muncul di crontab maupun di `ps`:
 

@@ -59,10 +59,22 @@ lebih dulu dari backup (lihat bagian berikutnya).
 
 > 🔁 **Jangan lupa crontab root.** Keempat cron Merriva hidup di crontab host,
 > bukan di Easypanel (yang tak punya penjadwal — lihat LAUNCH-CHECKLIST Fase 3)
-> dan bukan di repo. VPS baru = crontab kosong, dan keempatnya diam tanpa satu
-> pun sinyal: `/api/health` tak membaca cron sama sekali. Pasang ulang
-> `/etc/merriva-cron.conf` (chmod 600) beserta keempat barisnya, lalu buktikan
-> dengan `pnpm ops:verify` — bagian "Data produksi" membaca `cron_runs`.
+> dan bukan di dalam image. VPS baru = crontab kosong, dan keempatnya diam
+> tanpa satu pun sinyal: `/api/health` tak membaca cron sama sekali.
+>
+> Pasang ulang dengan satu perintah — skripnya idempoten, mencadangkan crontab
+> yang ada lebih dulu, dan tidak menyentuh entri milik proyek lain di VPS yang
+> sama:
+>
+> ```bash
+> scp scripts/pasang-cron-host.sh <vps>:/root/
+> grep -m1 '^CRON_SECRET=' .env.production.local | cut -d= -f2- \
+>   | ssh <vps> 'bash /root/pasang-cron-host.sh'
+> ```
+>
+> Secret mengalir lewat STDIN — tak pernah masuk argumen perintah, `ps`, atau
+> riwayat shell. Lalu buktikan dengan `pnpm ops:verify`: bagian "Data produksi"
+> membaca `cron_runs`, jadi ia hijau hanya setelah job benar-benar jalan.
 
 
 1. Provision VPS baru, pasang **Easypanel**.
