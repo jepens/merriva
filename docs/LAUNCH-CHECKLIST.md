@@ -159,26 +159,78 @@ pengumuman apa pun**, bukan sebelum langkah teknis lain:
 - [ ] **Confirm email** aktif (Auth → Providers → Email) — prasyarat SPEC §4.2; setel SETELAH Custom SMTP jalan.
 - [ ] **Kebijakan kata sandi** (Supabase → Auth → Policies), kebijakan final + alasannya di [`AUTH-SETUP.md` §5](AUTH-SETUP.md): **Leaked Password Protection aktif** (tolak kata sandi yang pernah bocor, HaveIBeenPwned) · **minimum length 8** (samakan dengan aplikasi & `supabase/config.toml`; bila dashboard lebih longgar, aturan aplikasi hanya berlaku selama setiap penulisan kata sandi melewati form Merriva — jalur reset Supabase tidak) · **password requirements dibiarkan kosong** (aturan komposisi mendorong pola `Password1!`). _Toggle dashboard, bukan kode._
 
-## Fase 3 — Cron (Easypanel scheduled jobs)
+## Fase 3 — Cron (crontab host VPS)
 
-Keempat endpoint dipanggil dengan header `Authorization: Bearer $CRON_SECRET`:
+> ⚠️ **KOREKSI 21 Okt 2026 — Easypanel TIDAK punya penjadwal bawaan.** Judul
+> bagian ini dulu berbunyi "Easypanel scheduled jobs" dan tabelnya memberi
+> perintah untuk penjadwal yang berjalan DI DALAM container. Fitur itu tidak
+> ada: dokumentasi Easypanel mencantumkan sembilan service type (App, MySQL,
+> MariaDB, Postgres, Mongo, Redis, WordPress, Box, Compose — tak ada cron), dan
+> service App punya tab Source/Build/Deployments/Environment/Domains/Redirects/
+> Scripts/Security/Resources/Maintenance/Storage/Advanced — **tak ada
+> Schedules**. Satu-satunya yang terjadwal adalah backup volume di tab Storage,
+> dan `Scripts` dijalankan MANUAL dari menu Shell.
+>
+> Panduan resmi `easypanel.io/docs/guides/cron-job` menawarkan dua jalan, dan
+> yang pertama **merusak aplikasi ini**: ia memasang crontab ke dalam image lalu
+> menyetel `CMD ["/usr/sbin/crond", "-f"]`, yang MENGGANTIKAN
+> `CMD ["node", "server.js"]` di `Dockerfile:68`. Container berhenti melayani
+> HTTP dan hanya menjalankan daemon cron. Jangan dipakai apa adanya.
 
-**Perintah siap-tempel** (diverifikasi 16 Okt 2026 terhadap image & produksi, bukan dikira-kira):
+Keempat endpoint dipanggil dengan header `Authorization: Bearer <CRON_SECRET>`,
+dari **crontab root di host VPS**. Endpoint-nya terbukti dapat dijangkau dari
+luar (diuji 21 Okt 2026: `POST` tanpa auth → **401**, `GET` → **405** pada
+keempatnya), jadi penjadwal mana pun di luar container bisa menggerakkannya.
 
-| Job | Jadwal (UTC) | WIB | Perintah |
-|---|---|---|---|
-| `expire-orders` | `0 * * * *` | tiap jam | `wget -q --post-data="" --header="Authorization: Bearer $CRON_SECRET" -O- http://127.0.0.1:3000/api/cron/expire-orders` |
-| `expire-invitations` | `15 0 * * *` | 07:15 | …`/api/cron/expire-invitations` |
-| `expiry-reminders` | `30 1,13 * * *` | 08:30 & 20:30 | …`/api/cron/expiry-reminders` |
-| `purge-expired` | `45 2,14 * * *` | 09:45 & 21:45 | …`/api/cron/purge-expired` |
+**Sekali di awal** — simpan header di berkas khusus supaya secret tak pernah
+muncul di crontab maupun di `ps`:
 
-Empat hal yang akan membuang waktu Anda bila tidak diketahui lebih dulu:
+```bash
+printf 'header = "Authorization: Bearer %s"\n' 'NILAI-CRON-SECRET-ANDA' \
+  > /etc/merriva-cron.conf
+chmod 600 /etc/merriva-cron.conf
+```
 
-- **`curl` TIDAK ADA di image.** Runtime-nya `node:22-alpine` dan tahap akhir Dockerfile hanya menyalin output standalone — tak ada paket tambahan. Yang tersedia `wget` busybox (`/bin/busybox`), yang **tidak punya** flag `-f`/`--fail` ala curl. Resep ber-`curl` akan gagal dengan `command not found` dan terlihat seperti masalah jaringan.
-- **Keempat route hanya mengekspor `POST`.** `--post-data=""` itulah yang membuatnya POST; tanpa itu Next menjawab **405**, bukan 401. Penjadwal yang hanya bisa GET tidak akan pernah berhasil.
-- **`wget` busybox keluar dengan kode 1 pada 401**, jadi `CRON_SECRET` yang salah atau bersisipan newline menggagalkan job secara TERLIHAT di riwayat Easypanel. Ini penawar langsung untuk peringatan di bawah ("401 tanpa galat terlihat") — asalkan perintahnya memang `wget`, bukan sesuatu yang menelan status.
-- **`127.0.0.1:3000`, bukan `https://merriva.id`**, bila job dijalankan di dalam container service-nya: jalur ini sudah terbukti dipakai HEALTHCHECK Dockerfile, melewati Cloudflare (tak kena WAF/rate-limit edge), dan tak bergantung DNS. Bila penjadwal Easypanel Anda berjalan di luar container, pakai URL publik dan sadari kedua konsekuensi itu.
-- ⚠️ **Zona waktu belum dipastikan.** Dockerfile tidak menyetel `TZ`, jadi container berjalan UTC; penjadwal Easypanel punya setelannya sendiri. Cek sekali di panel — bila ternyata WIB, kolom WIB di atas yang dipakai sebagai ekspresi, bukan kolom UTC. Jadwal yang melenceng 7 jam tidak merusak apa pun, tetapi email peringatan akan mendarat tengah malam.
+**`sudo crontab -e`**, lalu tempel:
+
+```cron
+# Merriva — jam dalam zona waktu HOST (cek: timedatectl). Kolom WIB di bawah
+# mengandaikan host UTC.
+0  *    * * * curl -fsS -m 600 -X POST -K /etc/merriva-cron.conf https://merriva.id/api/cron/expire-orders      >>/var/log/merriva-cron.log 2>&1
+15 0    * * * curl -fsS -m 600 -X POST -K /etc/merriva-cron.conf https://merriva.id/api/cron/expire-invitations >>/var/log/merriva-cron.log 2>&1
+30 1,13 * * * curl -fsS -m 600 -X POST -K /etc/merriva-cron.conf https://merriva.id/api/cron/expiry-reminders   >>/var/log/merriva-cron.log 2>&1
+45 2,14 * * * curl -fsS -m 600 -X POST -K /etc/merriva-cron.conf https://merriva.id/api/cron/purge-expired      >>/var/log/merriva-cron.log 2>&1
+```
+
+| Job | Jadwal (host UTC) | WIB |
+|---|---|---|
+| `expire-orders` | `0 * * * *` | tiap jam |
+| `expire-invitations` | `15 0 * * *` | 07:15 |
+| `expiry-reminders` | `30 1,13 * * *` | 08:30 & 20:30 |
+| `purge-expired` | `45 2,14 * * *` | 09:45 & 21:45 |
+
+Yang akan membuang waktu Anda bila tidak diketahui lebih dulu:
+
+- **Keempat route hanya mengekspor `POST`.** `-X POST` itu wajib; tanpa itu Next
+  menjawab **405**, bukan 401. Penjadwal yang hanya bisa GET tak akan pernah
+  berhasil — itu menyingkirkan sebagian layanan cron gratis.
+- **`-fsS` wajib, bukan hiasan.** Tanpa `-f`, curl keluar dengan kode 0 pada 401
+  dan cron menganggapnya sukses — persis "401 tanpa galat terlihat" yang
+  diperingatkan di bawah. Dengan `-fsS`, job gagal dan pesannya masuk log.
+- **`-K`, bukan `-H "...$VAR"`.** Header di baris perintah ikut terlihat di `ps`
+  bagi proses mana pun di host. Berkas config 600 menutup itu, dan crontab-nya
+  jadi aman dibaca/dibagikan.
+- **Zona waktu HOST, bukan container.** `timedatectl` untuk memastikan. Jadwal
+  yang melenceng 7 jam tak merusak apa pun, tetapi email peringatan pra-purge
+  akan mendarat tengah malam di kotak masuk pelanggan.
+- 🔁 **Crontab host TIDAK ada di repo.** Ia hilang bila VPS dibangun ulang —
+  lihat RUNBOOK Skenario B, yang kini menyebutkannya.
+
+Alternatif bila Anda lebih suka terkelola: Cloudflare Workers Cron Triggers
+(gratis, dan DNS sudah di sana) atau layanan seperti cron-job.org yang
+disarankan panduan Easypanel. **GitHub Actions sengaja TIDAK disarankan**:
+±870 jalan/bulan akan memakan kuota menit repo privat, dan tagihan Actions
+sudah pernah menghentikan CI selama tiga hari pada 17 Okt 2026.
 
 - [ ] `POST /api/cron/expire-orders` — tiap ~1 jam (rekonsiliasi + batalkan order > 24 jam + `transactioncancel`)
   - ⚠️ Job ini **juga mengirim kuitansi** bila rekonsiliasi menemukan order yang ternyata sudah lunas — ia jaring penyelamat ketika webhook Pakasir hilang. Tak dijadwalkan = pelanggan yang sudah membayar tak pernah aktif dan tak pernah dapat bukti bayar sampai admin menyentuhnya manual.

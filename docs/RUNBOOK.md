@@ -57,6 +57,14 @@ lebih dulu dari backup (lihat bagian berikutnya).
 
 ## Skenario B — VPS mati total
 
+> 🔁 **Jangan lupa crontab root.** Keempat cron Merriva hidup di crontab host,
+> bukan di Easypanel (yang tak punya penjadwal — lihat LAUNCH-CHECKLIST Fase 3)
+> dan bukan di repo. VPS baru = crontab kosong, dan keempatnya diam tanpa satu
+> pun sinyal: `/api/health` tak membaca cron sama sekali. Pasang ulang
+> `/etc/merriva-cron.conf` (chmod 600) beserta keempat barisnya, lalu buktikan
+> dengan `pnpm ops:verify` — bagian "Data produksi" membaca `cron_runs`.
+
+
 1. Provision VPS baru, pasang **Easypanel**.
 2. Buat app dari repo Git (Dockerfile), port `3000` — lihat [`DEPLOYMENT.md`](DEPLOYMENT.md) §3–4.
 3. Isi ulang **environment variables** di panel (dari password manager) — lihat [`../.env.example`](../.env.example).
