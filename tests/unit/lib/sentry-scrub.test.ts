@@ -37,6 +37,24 @@ describe("redactGuestToken", () => {
     );
   });
 
+  it("menyensor KREDENSIAL di query string, bukan hanya identitas tamu", () => {
+    // Bukan skenario karangan. Kandidat pengganti Pakasir, WijayaPay, memanggil
+    // endpoint cek status sebagai GET dengan api_key di QUERY STRING:
+    //   /api/get-status?code_merchant=WP..&api_key=RAHASIA&ref_id=..
+    // Itu endpoint yang paling sering kita panggil (poll tiap ~4 detik), dan
+    // setiap kegagalannya mendarat di `reportHandledError`. Tanpa baris ini,
+    // satu galat jaringan menumpahkan kunci API ke Sentry.
+    //
+    // Berlaku lintas-vendor: `api_key` adalah nama generik, dan aturan "jangan
+    // taruh rahasia di URL" tak pernah bisa kita paksakan pada pihak ketiga.
+    const KUNCI = "sk-rahasia-sekali-jangan-bocor"; // gitleaks:allow
+    expect(redactGuestToken(`https://x.test/s?api_key=${KUNCI}&ref_id=9`)).toBe(
+      "https://x.test/s?api_key=[redacted]&ref_id=9",
+    );
+    expect(redactGuestToken(`?apikey=${KUNCI}`)).toBe("?apikey=[redacted]");
+    expect(redactGuestToken(`?api-key=${KUNCI}`)).toBe("?api-key=[redacted]");
+  });
+
   it("tak menyentuh parameter lain — `g` harus parameter utuh, bukan akhiran", () => {
     const url = "https://merriva.id/a?slug=budi&lang=id&tag=g";
     expect(redactGuestToken(url)).toBe(url);

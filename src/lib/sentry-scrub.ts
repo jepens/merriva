@@ -72,9 +72,20 @@ export const SENTRY_DATA_COLLECTION = {
   graphQL: { document: false, variables: false },
 };
 
-/** `?g=`, `token=`, `guest_token=` — di URL penuh maupun query string telanjang. */
+/**
+ * Dua kelas nilai yang tak boleh ikut ke Sentry, di URL penuh maupun query
+ * string telanjang:
+ *
+ *  1. IDENTITAS TAMU — `?g=`, `token=`, `guest_token=` (DECISIONS #46).
+ *  2. KREDENSIAL — `api_key=` dan ejaannya. Ditambahkan 25 Okt 2026 saat
+ *     menilai pengganti Pakasir: WijayaPay memanggil endpoint cek status
+ *     sebagai GET dengan api_key DI QUERY STRING. Itu endpoint yang paling
+ *     sering dipanggil (poll ~4 detik), dan setiap kegagalannya mendarat di
+ *     `reportHandledError`. Aturan "jangan taruh rahasia di URL" tak pernah
+ *     bisa kita paksakan pada pihak ketiga, jadi penyaringnya ada di sini.
+ */
 const SENSITIVE_PARAM =
-  /(^|[?&])(g|token|guest_?token|guestToken)=([^&#\s"']*)/gi;
+  /(^|[?&])(g|token|guest_?token|guestToken|api[-_]?key)=([^&#\s"']*)/gi;
 
 const REDACTED = "[redacted]";
 
@@ -92,6 +103,10 @@ const SENSITIVE_KEYS = new Set([
   "guest_token",
   "guesttoken",
   "turnstiletoken",
+  // Kredensial — lihat catatan pada SENSITIVE_PARAM di atas.
+  "api_key",
+  "apikey",
+  "api-key",
 ]);
 
 /** Header yang dibuang utuh: isinya kredensial, bukan diagnostik. */
