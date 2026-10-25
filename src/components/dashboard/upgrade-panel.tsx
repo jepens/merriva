@@ -41,6 +41,7 @@ export function UpgradePanel({
   activeUntilLabel,
   daysLeft,
   choices,
+  free = false,
 }: {
   invitationId: string;
   currentName: string;
@@ -48,6 +49,8 @@ export function UpgradePanel({
   activeUntilLabel: string;
   daysLeft: number | null;
   choices: UpgradeChoice[];
+  /** Akun Admin/Pro (DECISIONS #100): aksi yang sama langsung menaikkan paket. */
+  free?: boolean;
 }) {
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -121,16 +124,20 @@ export function UpgradePanel({
                     {choice.name}
                   </h2>
                   <p className="text-2xl font-bold tracking-tight">
-                    {formatIdr(choice.differenceIdr)}
+                    {free
+                      ? copy.checkout.freePrice
+                      : formatIdr(choice.differenceIdr)}
                   </p>
                   {/* Dibaca sebagai aritmetika, bukan dua label berdampingan:
                       "Selisih harga: Premium Rp199.000 − Basic Rp99.000". Nama
                       paket yang menerangkan angkanya, bukan kata "harga paket
                       tujuan" yang justru menenggelamkannya. */}
-                  <p className="text-muted-foreground text-xs">
-                    {u.payHint}: {choice.name} {formatIdr(choice.priceIdr)} −{" "}
-                    {currentName} {formatIdr(currentPriceIdr)}
-                  </p>
+                  {free ? null : (
+                    <p className="text-muted-foreground text-xs">
+                      {u.payHint}: {choice.name} {formatIdr(choice.priceIdr)} −{" "}
+                      {currentName} {formatIdr(currentPriceIdr)}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-muted-foreground text-xs font-medium">
@@ -155,8 +162,10 @@ export function UpgradePanel({
                   {isBusy ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
-                      {u.redirecting}
+                      {free ? copy.checkout.freeActivating : u.redirecting}
                     </>
+                  ) : free ? (
+                    u.freeCta
                   ) : (
                     u.cta
                   )}
@@ -180,22 +189,26 @@ export function UpgradePanel({
       ) : null}
 
       {/* Titik tempat uang berpindah (AUDIT-2026-10-01 A2) — sama dengan
-          pemilih paket aktivasi. */}
-      <p className="text-muted-foreground text-center text-xs">
-        {copy.checkout.termsNoticeBefore}{" "}
-        <Link href="/syarat" className="underline underline-offset-4">
-          {copy.marketing.legal.terms.title}
-        </Link>{" "}
-        {copy.checkout.termsNoticeAnd}{" "}
-        <Link href="/refund" className="underline underline-offset-4">
-          {copy.marketing.legal.refund.title}
-        </Link>
-        .
-      </p>
+          pemilih paket aktivasi. Tak ada uang berpindah saat `free`. */}
+      {free ? null : (
+        <>
+          <p className="text-muted-foreground text-center text-xs">
+            {copy.checkout.termsNoticeBefore}{" "}
+            <Link href="/syarat" className="underline underline-offset-4">
+              {copy.marketing.legal.terms.title}
+            </Link>{" "}
+            {copy.checkout.termsNoticeAnd}{" "}
+            <Link href="/refund" className="underline underline-offset-4">
+              {copy.marketing.legal.refund.title}
+            </Link>
+            .
+          </p>
 
-      <p className="text-muted-foreground text-center text-xs">
-        {copy.checkout.securedBy}
-      </p>
+          <p className="text-muted-foreground text-center text-xs">
+            {copy.checkout.securedBy}
+          </p>
+        </>
+      )}
     </div>
   );
 }

@@ -22,6 +22,12 @@ const PAGE_SIZE = 25;
 const SCAN_PER_PAGE = 100;
 const MAX_SCAN_PAGES = 20; // pindai hingga ~2000 user (skala MVP)
 const c = copy.admin.users;
+// Pro = klien yang tak pernah ditagih (DECISIONS #100).
+const ROLE_LABEL: Record<ProfileRole, string> = {
+  client: c.roleClient,
+  pro: c.rolePro,
+  admin: c.roleAdmin,
+};
 const selectClass =
   "border-input bg-background h-8 rounded-md border px-2 text-xs";
 
@@ -200,9 +206,7 @@ export default async function AdminUsersPage({
                       <td className="px-4 py-2">
                         {r.phone ?? copy.admin.common.dash}
                       </td>
-                      <td className="px-4 py-2">
-                        {r.role === "admin" ? c.roleAdmin : c.roleClient}
-                      </td>
+                      <td className="px-4 py-2">{ROLE_LABEL[r.role]}</td>
                       <td className="px-4 py-2">
                         {r.banned ? (
                           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
@@ -235,6 +239,7 @@ export default async function AdminUsersPage({
                                 aria-label={c.colRole}
                               >
                                 <option value="client">{c.roleClient}</option>
+                                <option value="pro">{c.rolePro}</option>
                                 <option value="admin">{c.roleAdmin}</option>
                               </select>
                               <button

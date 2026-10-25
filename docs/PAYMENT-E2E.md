@@ -5,7 +5,7 @@ Verifikasi jalur bayar end-to-end (SPEC §4.8): **checkout → pembayaran simula
 ## Prasyarat
 
 - **Project SANDBOX Pakasir**: `PAKASIR_PROJECT_SLUG` + `PAKASIR_API_KEY` sandbox.
-- **Akun uji** terverifikasi di DB target (email + kata sandi) → `E2E_EMAIL`, `E2E_PASSWORD`.
+- **Akun uji** terverifikasi di DB target (email + kata sandi), ber-peran `client` — admin/Pro tak pernah ditagih sehingga tak pernah melihat pemilih paket berbayar (DECISIONS #100) → `E2E_EMAIL`, `E2E_PASSWORD`.
 - **Undangan uji** milik akun itu, status `draft`/`expired`, dengan **slug asli** (bukan `draft-…`) dan **minimal satu sesi jadwal yang tanggal & jam mulainya lengkap** → `E2E_INVITATION_ID`. Checkout MENOLAK slug `draft-…` (alamat terkunci setelah aktif → wajib diatur dulu) dan undangan tanpa sesi berjam (tamu tak tahu kapan acaranya — DECISIONS #44); halaman aktivasi lalu menampilkan daftar syarat, bukan pemilih paket. Reset undangan ke `draft` sebelum menjalankan ulang.
 - DB target (Supabase staging/lokal) sudah dimigrasi (`supabase db push`).
 - Untuk uji **webhook** sungguhan (Pakasir → kita), app harus punya **URL publik** (staging) yang di-set sebagai webhook di dashboard Pakasir. Uji **jalur poll** (`/bayar`) tak butuh URL publik — `transactiondetail` dipanggil OUTBOUND dari server kita.

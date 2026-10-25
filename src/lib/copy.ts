@@ -275,6 +275,7 @@ export const copy = {
       methodLabel: {
         qris: "QRIS",
         manual: "Dicatat manual oleh tim Merriva",
+        gratis: "Gratis (akun Admin/Pro)",
       } as Record<string, string>,
       invitationDeleted: "Undangan ini sudah dihapus",
       viewReceipt: "Lihat kuitansi",
@@ -493,6 +494,12 @@ export const copy = {
     popular: "Terpopuler",
     choose: "Pilih paket ini",
     redirecting: "Mengalihkan ke pembayaran…",
+    // Akun Admin/Pro tak pernah ditagih (DECISIONS #100).
+    freeSubtitle:
+      "Akun Anda (Admin/Pro) tidak perlu membayar — undangan langsung aktif dengan paket teratas.",
+    freePrice: "Gratis",
+    freeCta: "Aktifkan gratis",
+    freeActivating: "Mengaktifkan…",
     // Ditampilkan tepat di atas tombol bayar — titik tempat uang berpindah.
     termsNoticeBefore: "Dengan melanjutkan pembayaran, Anda menyetujui",
     termsNoticeAnd: "dan",
@@ -586,6 +593,10 @@ export const copy = {
     gainsTitle: "Yang Anda dapat setelah upgrade",
     cta: "Bayar selisih & upgrade",
     redirecting: "Mengalihkan ke pembayaran…",
+    // Akun Admin/Pro tak pernah ditagih (DECISIONS #100).
+    freeSubtitle:
+      "Akun Anda (Admin/Pro) tidak perlu membayar — paket langsung naik untuk sisa masa aktif.",
+    freeCta: "Upgrade gratis",
     error: "Gagal memulai pembayaran upgrade. Silakan coba lagi.",
     // Gerbang: undangan belum/tidak bisa di-upgrade.
     needActiveTitle: "Upgrade hanya untuk undangan aktif",
@@ -1724,7 +1735,8 @@ export const copy = {
     },
     users: {
       title: "Pengguna",
-      subtitle: "Kelola peran & status akun. Cari berdasarkan email / nama.",
+      subtitle:
+        "Kelola peran & status akun. Cari berdasarkan email / nama. Peran Pro: aktivasi undangan & Album Momen tanpa bayar.",
       searchPlaceholder: "Cari email / nama…",
       colEmail: "Email",
       colName: "Nama",
@@ -1735,6 +1747,7 @@ export const copy = {
       colJoined: "Bergabung",
       roleAdmin: "Admin",
       roleClient: "Klien",
+      rolePro: "Pro",
       statusActive: "Aktif",
       statusBanned: "Ditangguhkan",
       selfLabel: "Anda",

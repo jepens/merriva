@@ -71,7 +71,10 @@ describe("copy.dashboard.orders", () => {
   it("methodLabel hanya memuat channel yang benar-benar diketahui", () => {
     // Menambah tebakan di sini membuat `formatPaymentMethod` berhenti
     // meneruskan nilai mentah, dan kuitansi mulai menampilkan label karangan.
+    // `manual` & `gratis` bukan tebakan: keduanya ditulis RPC kita sendiri
+    // (`admin_activate_invitation`, `activate_free_order` — DECISIONS #100).
     expect(Object.keys(copy.dashboard.orders.methodLabel).sort()).toEqual([
+      "gratis",
       "manual",
       "qris",
     ]);

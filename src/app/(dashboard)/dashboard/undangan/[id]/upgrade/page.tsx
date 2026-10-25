@@ -17,7 +17,7 @@ import { resolveLimits } from "@/lib/limits";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { daysUntil, upgradeOptions } from "@/lib/upgrade";
-import { requireUser } from "@/server/guards/auth";
+import { isPaymentExempt, requireUser } from "@/server/guards/auth";
 import { findLatestUpgradeOrder } from "@/server/upgrade/orders";
 
 export const metadata: Metadata = { title: copy.upgrade.title };
@@ -39,13 +39,13 @@ export default async function UpgradePackagePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireUser();
+  const user = await requireUser();
   if (!isUuid(id)) notFound();
 
   const supabase = await createSupabaseServerClient();
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, slug, status, package_id, active_until, purged_at")
+    .select("id, slug, status, package_id, active_until, purged_at, user_id")
     .eq("id", id)
     .maybeSingle();
   if (!inv) notFound();
@@ -62,11 +62,11 @@ export default async function UpgradePackagePage({
     </Link>
   );
 
-  const frame = (node: React.ReactNode) => (
+  const frame = (node: React.ReactNode, subtitle: string = u.subtitle) => (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="space-y-1">
         <h1 className="text-xl font-semibold tracking-tight">{u.title}</h1>
-        <p className="text-muted-foreground text-sm">{u.subtitle}</p>
+        <p className="text-muted-foreground text-sm">{subtitle}</p>
       </div>
       {node}
       {back}
@@ -164,6 +164,11 @@ export default async function UpgradePackagePage({
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
+  // Admin & Pro tak pernah ditagih (DECISIONS #100) — hanya undangan MILIK
+  // sendiri (admin melihat semua undangan lewat RLS).
+  const free =
+    inv.user_id === user.id && (await isPaymentExempt(supabase, user.id));
+
   return frame(
     <UpgradePanel
       invitationId={id}
@@ -176,6 +181,8 @@ export default async function UpgradePackagePage({
       }
       daysLeft={daysUntil(inv.active_until, nowMs)}
       choices={choices}
+      free={free}
     />,
+    free ? u.freeSubtitle : u.subtitle,
   );
 }

@@ -16,7 +16,8 @@ import { logAdminAction } from "@/server/admin/log";
 import { requireAdmin } from "@/server/guards/auth";
 
 /**
- * Kelola akun pengguna (SPEC §4.9): ubah peran (client↔admin) + tangguhkan/
+ * Kelola akun pengguna (SPEC §4.9): ubah peran (client/pro/admin — Pro = tak
+ * pernah ditagih, DECISIONS #100) + tangguhkan/
  * pulihkan akun (ban login). Pola wajib: **auth(admin) → validasi → mutasi
  * (service_role) → audit → revalidate**. Umpan balik lewat `redirect(?msg=)`
  * dibaca halaman /admin/pengguna.
@@ -37,7 +38,7 @@ function back(msg: string): never {
   redirect(`${LIST}?msg=${msg}`);
 }
 
-/** Ubah peran pengguna (client↔admin). */
+/** Ubah peran pengguna (client/pro/admin). */
 export async function adminSetUserRoleAction(
   userId: string,
   formData: FormData,

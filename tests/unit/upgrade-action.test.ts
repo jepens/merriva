@@ -150,9 +150,14 @@ function setup(
     currentPrice?: number | null;
     targetPrice?: number | null;
     insertErrors?: ({ code: string } | null)[];
+    /** `profiles.role` pemanggil (bawaan: tak ada baris → klien). */
+    role?: string;
   } = {},
 ) {
-  refs.server = makeClient({ invitations: inv }, calls);
+  refs.server = makeClient(
+    { invitations: inv, profiles: opts.role ? { role: opts.role } : null },
+    calls,
+  );
   refs.admin = makeClient({ orders: opts.pendingUpgrade ?? null }, calls, {
     insertErrors: opts.insertErrors,
     packagesById:
@@ -418,5 +423,65 @@ describe("createUpgradeCheckoutAction — efek samping", () => {
     expect(res.status).toBe("error");
     expect(ordersInserted()).toHaveLength(1);
     expect(terbitkanLink).not.toHaveBeenCalled();
+  });
+});
+
+describe("createUpgradeCheckoutAction — akun Admin/Pro tak pernah ditagih (DECISIONS #100)", () => {
+  const LAIN = "66666666-6666-4666-8666-666666666666";
+  const MILIK = { ...AKTIF, user_id: USER };
+
+  function setupBebas(
+    inv: unknown,
+    role: string,
+    opts: { targetPrice?: number } = {},
+  ) {
+    setup(inv, { role, ...opts });
+    const rpc = vi.fn(async (_fn: string, _args: Record<string, unknown>) => ({
+      data: [{ result: "activated", slug: "andi-sinta" }],
+      error: null,
+    }));
+    Object.assign(refs.admin as object, { rpc });
+    return rpc;
+  }
+
+  it("Pro pemilik → paket naik TANPA Pakasir: RPC atomik ber-purpose upgrade", async () => {
+    const rpc = setupBebas(MILIK, "pro");
+
+    const res = await createUpgradeCheckoutAction(INV, "premium");
+
+    expect(res).toEqual({ status: "redirect", url: "/dashboard" });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc.mock.calls[0][0]).toBe("activate_free_order");
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      p_invitation_id: INV,
+      p_package_id: PKG_PREMIUM,
+      p_purpose: "upgrade",
+      p_actor_id: USER,
+    });
+    expect(terbitkanLink).not.toHaveBeenCalled();
+    expect(ordersInserted()).toHaveLength(0);
+    expect(invitationWrites()).toHaveLength(0);
+  });
+
+  it("admin pada undangan MILIK ORANG LAIN → bayar selisih seperti biasa", async () => {
+    const rpc = setupBebas({ ...AKTIF, user_id: LAIN }, "admin");
+
+    const res = await createUpgradeCheckoutAction(INV, "premium");
+
+    expect(res.status).toBe("redirect");
+    expect(rpc).not.toHaveBeenCalled();
+    expect(terbitkanLink).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ amountIdr: 100000 }),
+    );
+  });
+
+  it("gerbang selisih tetap berlaku: paket tujuan tak lebih mahal → ditolak", async () => {
+    const rpc = setupBebas(MILIK, "pro", { targetPrice: 99000 });
+
+    const res = await createUpgradeCheckoutAction(INV, "premium");
+
+    expect(res).toMatchObject({ message: copy.upgrade.noDifference });
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

@@ -10,6 +10,8 @@ import {
   MOMEN_FREE_CODE,
 } from "@/lib/momen/package-codes";
 import { generateOrderCode } from "@/lib/order";
+import { isPaymentExempt } from "@/server/guards/auth";
+import { aktifkanGratis } from "@/server/payment/gratis";
 import { terbitkanLink } from "@/server/payment/link";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -59,10 +61,11 @@ export async function createMomenCheckoutAction(
   if (!parsed.success) return { status: "error" };
   const code = parsed.data;
 
-  // Kepemilikan + status (RLS membatasi ke baris milik pemanggil).
+  // Kepemilikan + status (RLS membatasi ke baris milik pemanggil — kecuali
+  // admin, yang melihat semua undangan).
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status")
+    .select("id, status, user_id")
     .eq("id", invitationId)
     .maybeSingle();
   if (!inv) return { status: "error" };
@@ -97,6 +100,21 @@ export async function createMomenCheckoutAction(
     .maybeSingle();
   if (!pkg) {
     return { status: "error", message: copy.checkout.momenPackageUnavailable };
+  }
+
+  // Admin & Pro tak pernah ditagih (DECISIONS #100) — hanya undangan MILIK
+  // sendiri. Diletakkan SETELAH penahan order add-on yang belum lunas: album
+  // gratis yang mendahului pembayaran berjalan membuat pembayaran itu no-op.
+  if (inv.user_id === user.id && (await isPaymentExempt(supabase, user.id))) {
+    const ok = await aktifkanGratis(admin, {
+      invitationId,
+      packageId: pkg.id,
+      purpose: "purchase",
+      actorId: user.id,
+    });
+    if (!ok) return { status: "error", message: copy.common.error };
+    revalidatePath(momenManagePath(invitationId));
+    return { status: "redirect", url: momenManagePath(invitationId) };
   }
 
   // Order + payment link hanya lewat service_role. TIDAK menyentuh undangan.

@@ -747,6 +747,19 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      activate_free_order: {
+        Args: {
+          p_actor_id: string;
+          p_invitation_id: string;
+          p_order_code: string;
+          p_package_id: string;
+          p_purpose: string;
+        };
+        Returns: {
+          result: string;
+          slug: string;
+        }[];
+      };
       activate_paid_order: {
         Args: {
           p_amount: number;
@@ -1004,7 +1017,7 @@ export type Database = {
         "draft" | "pending_payment" | "active" | "expired" | "suspended";
       media_type: "photo";
       order_status: "pending" | "paid" | "expired" | "failed" | "refunded";
-      profile_role: "client" | "admin";
+      profile_role: "client" | "admin" | "pro";
       rsvp_attendance: "yes" | "no";
       theme_tier: "standard" | "premium";
     };
@@ -1148,7 +1161,7 @@ export const Constants = {
       ],
       media_type: ["photo"],
       order_status: ["pending", "paid", "expired", "failed", "refunded"],
-      profile_role: ["client", "admin"],
+      profile_role: ["client", "admin", "pro"],
       rsvp_attendance: ["yes", "no"],
       theme_tier: ["standard", "premium"],
     },

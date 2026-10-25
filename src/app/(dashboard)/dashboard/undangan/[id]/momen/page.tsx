@@ -19,7 +19,7 @@ import { isUuid } from "@/lib/id";
 import { resolveAlbumPhase } from "@/lib/momen/album-phase";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireUser } from "@/server/guards/auth";
+import { isPaymentExempt, requireUser } from "@/server/guards/auth";
 import { findLatestMomenOrder } from "@/server/momen/orders";
 import {
   fetchMomenAlbumStats,
@@ -42,14 +42,14 @@ export default async function MomenManagePage({
   searchParams: Promise<{ foto?: string }>;
 }) {
   const { id } = await params;
-  await requireUser();
+  const user = await requireUser();
   if (!isUuid(id)) notFound();
 
-  // Kepemilikan via RLS (undangan milik pemanggil saja).
+  // Kepemilikan via RLS (undangan milik pemanggil saja — kecuali admin).
   const supabase = await createSupabaseServerClient();
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, slug, status")
+    .select("id, slug, status, user_id")
     .eq("id", id)
     .maybeSingle();
   if (!inv) notFound();
@@ -159,10 +159,18 @@ export default async function MomenManagePage({
             : null,
       };
     });
+    // Admin & Pro tak pernah ditagih (DECISIONS #100) — hanya undangan MILIK
+    // sendiri; langsung tier teratas (urutan harga naik → yang terakhir).
+    const free =
+      inv.user_id === user.id && (await isPaymentExempt(supabase, user.id));
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <h1 className="text-xl font-semibold tracking-tight">{a.title}</h1>
-        <MomenActivatePanel invitationId={id} tiers={tiers} />
+        <MomenActivatePanel
+          invitationId={id}
+          tiers={free ? tiers.slice(-1) : tiers}
+          free={free}
+        />
         {back}
       </div>
     );

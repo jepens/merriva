@@ -15,7 +15,8 @@ import { PakasirGateway } from "../../src/lib/payment/pakasir";
  * Prasyarat env (set di `.env.local` untuk `pnpm dev` yang dipakai Playwright,
  * dan di environment test untuk `simulatePayment`):
  *   PAKASIR_PROJECT_SLUG, PAKASIR_API_KEY  → project SANDBOX Pakasir
- *   E2E_EMAIL, E2E_PASSWORD                → akun terverifikasi di DB target
+ *   E2E_EMAIL, E2E_PASSWORD                → akun terverifikasi di DB target,
+ *     ber-peran `client` (admin/Pro tak pernah ditagih — DECISIONS #100)
  *   E2E_INVITATION_ID                      → undangan milik akun itu, status
  *     `draft`/`expired`, dengan **slug asli** (BUKAN `draft-…`) dan **minimal satu
  *     sesi jadwal bertanggal-jam mulai lengkap** (syarat bayar, DECISIONS #44).

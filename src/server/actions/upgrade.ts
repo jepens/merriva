@@ -7,6 +7,8 @@ import { appUrl } from "@/lib/env";
 import { isUuid } from "@/lib/id";
 import { UPGRADABLE_STATUSES } from "@/lib/invitation-status";
 import { generateOrderCode } from "@/lib/order";
+import { isPaymentExempt } from "@/server/guards/auth";
+import { aktifkanGratis } from "@/server/payment/gratis";
 import { terbitkanLink } from "@/server/payment/link";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -55,7 +57,7 @@ export async function createUpgradeCheckoutAction(
   // Kepemilikan + status + paket sekarang (RLS membatasi ke baris pemanggil).
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status, package_id, purged_at")
+    .select("id, status, package_id, purged_at, user_id")
     .eq("id", invitationId)
     .maybeSingle();
   if (!inv) return { status: "error" };
@@ -118,6 +120,20 @@ export async function createUpgradeCheckoutAction(
   const differenceIdr = upgradeDifference(current.price_idr, target.price_idr);
   if (differenceIdr === null) {
     return { status: "error", message: copy.upgrade.noDifference };
+  }
+
+  // Admin & Pro tak pernah ditagih (DECISIONS #100) — hanya undangan MILIK
+  // sendiri; semua syarat di atas tetap berlaku.
+  if (inv.user_id === user.id && (await isPaymentExempt(supabase, user.id))) {
+    const ok = await aktifkanGratis(admin, {
+      invitationId,
+      packageId: target.id,
+      purpose: "upgrade",
+      actorId: user.id,
+    });
+    if (!ok) return { status: "error", message: copy.common.error };
+    revalidatePath(upgradePath(invitationId));
+    return { status: "redirect", url: "/dashboard" };
   }
 
   // Order hanya lewat service_role. TIDAK menyentuh undangan sama sekali:

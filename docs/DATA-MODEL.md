@@ -8,7 +8,7 @@ Prinsip: konten undangan yang fleksibel per kategori disimpan sebagai JSONB terv
 
 ## 1. Tabel
 
-**profiles** — 1:1 dengan `auth.users`. `id uuid PK (=auth.users.id)`, `full_name`, `phone` (WA, format E.164), `role` `'client'|'admin'` default `'client'` (di-set admin manual via SQL — tidak ada UI), `created_at`.
+**profiles** — 1:1 dengan `auth.users`. `id uuid PK (=auth.users.id)`, `full_name`, `phone` (WA, format E.164), `role` `'client'|'pro'|'admin'` default `'client'` (diubah admin dari `/admin/pengguna`; kolom tak bisa ditulis klien; `pro` & `admin` tak pernah ditagih — DECISIONS #100), `created_at`.
 
 **themes** — katalog tema (metadata; kode tema di repo). `id`, `slug unique` (= folder `src/themes/`), `name`, `categories text[]` (`wedding|corporate|family`), `tier` `'standard'|'premium'`, `preview_image`, `demo_slug` (undangan demo), `is_active`, `sort_order`.
 

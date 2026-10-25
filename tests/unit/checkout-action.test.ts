@@ -140,6 +140,8 @@ function setup(
     errors?: Record<string, unknown>;
     /** Order pending yang sudah ada untuk undangan+paket yang sama. */
     pendingOrder?: unknown;
+    /** `profiles.role` pemanggil (bawaan: tak ada baris → klien). */
+    role?: string;
   } = {},
 ) {
   refs.server = makeClient(
@@ -147,6 +149,7 @@ function setup(
       invitations: inv,
       packages: pkg,
       invitation_events: "events" in server ? server.events : [BERJAM],
+      profiles: server.role ? { role: server.role } : null,
     },
     calls,
     { errors: server.errors },
@@ -538,5 +541,141 @@ describe("createCheckoutAction — ketahanan pembuatan order", () => {
 
     expect(res.status).toBe("error");
     expect(terbitkanLink).not.toHaveBeenCalled();
+  });
+});
+
+describe("createCheckoutAction — akun Admin/Pro tak pernah ditagih (DECISIONS #100)", () => {
+  const LAIN = "66666666-6666-4666-8666-666666666666";
+  interface Hasil {
+    data: unknown;
+    error: unknown;
+  }
+  const AKTIF: Hasil = {
+    data: [{ result: "activated", slug: "andi-sinta" }],
+    error: null,
+  };
+
+  /**
+   * Undangan + peran pemanggil. RPC `activate_free_order` menjawab `hasil`
+   * berurutan — order Rp0 dibuat DI DALAM RPC (satu transaksi), jadi aksi ini
+   * sendiri tak boleh meng-insert order apa pun.
+   */
+  function setupBebas(
+    inv: Record<string, unknown>,
+    role: string,
+    hasil: Hasil[] = [AKTIF],
+    pendingOrder: unknown = null,
+  ) {
+    setup(inv, PKG, {}, { role, pendingOrder });
+    const rpc = vi.fn(
+      async (_fn: string, _args: Record<string, unknown>) =>
+        hasil.shift() ?? AKTIF,
+    );
+    Object.assign(refs.admin as object, { rpc });
+    return rpc;
+  }
+
+  const DRAFT = { id: INV, status: "draft", slug: "andi-sinta", user_id: USER };
+
+  it.each(["pro", "admin"])(
+    "%s pemilik → aktif TANPA Pakasir lewat satu RPC atomik, lalu ke dashboard",
+    async (role) => {
+      const rpc = setupBebas(DRAFT, role);
+
+      const res = await createCheckoutAction(INV, "premium");
+
+      expect(res).toEqual({ status: "redirect", url: "/dashboard" });
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(rpc.mock.calls[0][0]).toBe("activate_free_order");
+      expect(rpc.mock.calls[0][1]).toMatchObject({
+        p_invitation_id: INV,
+        p_package_id: "pkg-premium",
+        p_purpose: "purchase",
+        p_actor_id: USER,
+      });
+      expect(terbitkanLink).not.toHaveBeenCalled();
+      expect(orders()).toHaveLength(0);
+      expect(
+        calls.some((c) => c.table === "invitations" && c.op === "update"),
+      ).toBe(false);
+    },
+  );
+
+  it("admin pada undangan MILIK ORANG LAIN → jalur bayar biasa (RLS memperlihatkan semua undangan ke admin)", async () => {
+    const rpc = setupBebas({ ...DRAFT, user_id: LAIN }, "admin");
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res).toEqual({
+      status: "redirect",
+      url: "https://pakasir.test/pay/XYZ",
+    });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(orders()).toHaveLength(1);
+  });
+
+  it("klien pemilik → jalur bayar biasa", async () => {
+    const rpc = setupBebas(DRAFT, "client");
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res.status).toBe("redirect");
+    expect(rpc).not.toHaveBeenCalled();
+    expect(terbitkanLink).toHaveBeenCalledTimes(1);
+  });
+
+  it("syarat tetap berlaku: alamat `draft-…` ditolak sebelum aktivasi", async () => {
+    const rpc = setupBebas({ ...DRAFT, slug: "draft-a1b2c3" }, "pro");
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res).toMatchObject({ message: copy.checkout.setSlugFirst });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("order Pakasir yang masih PENDING tidak dipakai ulang — tetap gratis", async () => {
+    const rpc = setupBebas(
+      { ...DRAFT, status: "pending_payment" },
+      "pro",
+      [AKTIF],
+      { order_code: "MRV-LAMA01", amount_idr: 299000 },
+    );
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res).toEqual({ status: "redirect", url: "/dashboard" });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(terbitkanLink).not.toHaveBeenCalled();
+  });
+
+  it("bentrok order_code → dicoba lagi dengan kode BARU", async () => {
+    const rpc = setupBebas(DRAFT, "pro", [
+      { data: [{ result: "order_code_conflict", slug: null }], error: null },
+      AKTIF,
+    ]);
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res).toEqual({ status: "redirect", url: "/dashboard" });
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc.mock.calls[0][1].p_order_code).not.toBe(
+      rpc.mock.calls[1][1].p_order_code,
+    );
+  });
+
+  it.each([
+    ["galat RPC", { data: null, error: { message: "boom" } }],
+    [
+      "RPC menolak",
+      { data: [{ result: "not_allowed", slug: null }], error: null },
+    ],
+  ])("%s → galat, dan TIDAK jatuh ke Pakasir", async (_label, hasil) => {
+    setupBebas(DRAFT, "pro", [hasil]);
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res).toEqual({ status: "error", message: copy.common.error });
+    expect(terbitkanLink).not.toHaveBeenCalled();
+    expect(orders()).toHaveLength(0);
   });
 });

@@ -1,9 +1,12 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { notFound, redirect } from "next/navigation";
 
+import { SupabaseReadError } from "@/lib/supabase/result";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ProfileRole } from "@/types";
+import type { Database } from "@/types/database";
 
 /** User terautentikasi (terverifikasi via Supabase Auth), atau null bila belum login. */
 export async function getSessionUser() {
@@ -41,6 +44,27 @@ export async function getCurrentRole(): Promise<ProfileRole | null> {
     .single<{ role: ProfileRole }>();
 
   return data?.role ?? "client";
+}
+
+/**
+ * Admin & Pro tak pernah ditagih (DECISIONS #100). Dibaca dari `profiles.role`
+ * — kolom yang tak bisa ditulis klien (grant kolom, init_schema §6b). Galat
+ * baca DILEMPAR: menelannya berarti diam-diam mengirim admin ke pembayaran.
+ *
+ * Pemanggil WAJIB juga mensyaratkan undangan MILIK user: RLS memperlihatkan
+ * semua undangan kepada admin.
+ */
+export async function isPaymentExempt(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw new SupabaseReadError("profiles.role", error);
+  return data?.role === "admin" || data?.role === "pro";
 }
 
 /**

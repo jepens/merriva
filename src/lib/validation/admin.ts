@@ -66,7 +66,7 @@ export const adminDeleteAccountSchema = z.object({
 
 /** Ubah peran pengguna (SPEC §4.9 "kelola user"). Enum selaras `profile_role`. */
 export const adminUserRoleSchema = z.object({
-  role: z.enum(["client", "admin"]),
+  role: z.enum(["client", "pro", "admin"]),
 });
 
 const CATEGORY_VALUES = ["wedding", "corporate", "family"] as const;

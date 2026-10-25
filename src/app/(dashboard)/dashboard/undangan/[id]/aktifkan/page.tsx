@@ -19,7 +19,7 @@ import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import { resolveLimits } from "@/lib/limits";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireUser } from "@/server/guards/auth";
+import { isPaymentExempt, requireUser } from "@/server/guards/auth";
 
 export const metadata: Metadata = { title: copy.checkout.title };
 
@@ -34,13 +34,13 @@ export default async function ActivateInvitationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireUser();
+  const user = await requireUser();
   if (!isUuid(id)) notFound();
 
   const supabase = await createSupabaseServerClient();
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status, slug, purged_at")
+    .select("id, status, slug, purged_at, user_id")
     .eq("id", id)
     .maybeSingle();
   if (!inv) notFound();
@@ -98,6 +98,12 @@ export default async function ActivateInvitationPage({
     limits: resolveLimits(p.limits),
   }));
 
+  // Admin & Pro tak pernah ditagih (DECISIONS #100) — hanya undangan MILIK
+  // sendiri (admin melihat semua undangan lewat RLS). Langsung paket teratas:
+  // urutan harga naik, jadi yang terakhir.
+  const free =
+    inv.user_id === user.id && (await isPaymentExempt(supabase, user.id));
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="space-y-1">
@@ -105,13 +111,17 @@ export default async function ActivateInvitationPage({
           {copy.checkout.title}
         </h1>
         <p className="text-muted-foreground text-sm">
-          {copy.checkout.subtitle}
+          {free ? copy.checkout.freeSubtitle : copy.checkout.subtitle}
         </p>
       </div>
 
       <UnscheduledNote invitationId={inv.id} names={readiness.unscheduled} />
 
-      <PackageChooser invitationId={id} packages={packages} />
+      <PackageChooser
+        invitationId={id}
+        packages={free ? packages.slice(-1) : packages}
+        free={free}
+      />
 
       <Link
         href="/dashboard"

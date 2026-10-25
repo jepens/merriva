@@ -100,3 +100,25 @@ describe("PackageChooser — penolakan server", () => {
     }
   });
 });
+
+describe("PackageChooser — akun Admin/Pro (DECISIONS #100)", () => {
+  it("tanpa harga & notis pembayaran; 'Aktifkan gratis' memanggil aksi yang sama", async () => {
+    // Galat agar klik tak memicu navigasi (jsdom tak mengenal `location.assign`).
+    checkout.mockResolvedValue({ status: "error", message: "x" });
+    const user = userEvent.setup();
+    render(<PackageChooser invitationId="inv-1" packages={[PAKET[1]]} free />);
+
+    expect(screen.getByText(copy.checkout.freePrice)).toBeInTheDocument();
+    expect(screen.queryByText(/Rp\s?199\.000/)).toBeNull();
+    expect(screen.queryByText(copy.checkout.securedBy)).toBeNull();
+    expect(screen.queryByText(copy.checkout.popular)).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: copy.checkout.choose }),
+    ).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: copy.checkout.freeCta }),
+    );
+    expect(checkout).toHaveBeenCalledWith("inv-1", "premium");
+  });
+});

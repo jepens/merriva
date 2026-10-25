@@ -27,13 +27,19 @@ export interface CheckoutPackage {
  * Pemilih paket + tombol bayar (M3.1). Memanggil `createCheckoutAction` lalu
  * meng-alihkan browser ke payment link Pakasir. Nominal & durasi hanya untuk
  * TAMPILAN — server mengambil harga otoritatif dari `packages` saat membuat order.
+ *
+ * `free` = akun Admin/Pro (DECISIONS #100): aksi yang sama langsung
+ * mengaktifkan lalu mengarahkan ke dashboard, jadi tak ada harga maupun notis
+ * pembayaran yang ditampilkan.
  */
 export function PackageChooser({
   invitationId,
   packages,
+  free = false,
 }: {
   invitationId: string;
   packages: CheckoutPackage[];
+  free?: boolean;
 }) {
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,14 +85,14 @@ export function PackageChooser({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-semibold">{pkg.name}</h2>
-                    {highlight ? (
+                    {highlight && !free ? (
                       <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[11px] font-medium">
                         {copy.checkout.popular}
                       </span>
                     ) : null}
                   </div>
                   <p className="text-2xl font-bold tracking-tight">
-                    {formatIdr(pkg.priceIdr)}
+                    {free ? copy.checkout.freePrice : formatIdr(pkg.priceIdr)}
                   </p>
                 </div>
                 <ul className="space-y-1.5 text-sm">
@@ -111,8 +117,12 @@ export function PackageChooser({
                   {isBusy ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
-                      {copy.checkout.redirecting}
+                      {free
+                        ? copy.checkout.freeActivating
+                        : copy.checkout.redirecting}
                     </>
+                  ) : free ? (
+                    copy.checkout.freeCta
                   ) : (
                     copy.checkout.choose
                   )}
@@ -140,22 +150,26 @@ export function PackageChooser({
 
       {/* Titik tempat uang berpindah — pelanggan tak boleh bisa berargumen tak
           pernah diberi tahu bahwa masa aktif berbatas dan refund diatur
-          terpisah (AUDIT-2026-10-01 A2). */}
-      <p className="text-muted-foreground text-center text-xs">
-        {copy.checkout.termsNoticeBefore}{" "}
-        <Link href="/syarat" className="underline underline-offset-4">
-          {copy.marketing.legal.terms.title}
-        </Link>{" "}
-        {copy.checkout.termsNoticeAnd}{" "}
-        <Link href="/refund" className="underline underline-offset-4">
-          {copy.marketing.legal.refund.title}
-        </Link>
-        .
-      </p>
+          terpisah (AUDIT-2026-10-01 A2). Tak ada uang berpindah saat `free`. */}
+      {free ? null : (
+        <>
+          <p className="text-muted-foreground text-center text-xs">
+            {copy.checkout.termsNoticeBefore}{" "}
+            <Link href="/syarat" className="underline underline-offset-4">
+              {copy.marketing.legal.terms.title}
+            </Link>{" "}
+            {copy.checkout.termsNoticeAnd}{" "}
+            <Link href="/refund" className="underline underline-offset-4">
+              {copy.marketing.legal.refund.title}
+            </Link>
+            .
+          </p>
 
-      <p className="text-muted-foreground text-center text-xs">
-        {copy.checkout.securedBy}
-      </p>
+          <p className="text-muted-foreground text-center text-xs">
+            {copy.checkout.securedBy}
+          </p>
+        </>
+      )}
     </div>
   );
 }

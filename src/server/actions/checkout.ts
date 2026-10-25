@@ -13,6 +13,8 @@ import { isUuid } from "@/lib/id";
 import { merchantIdentityReady } from "@/lib/merchant";
 import { reportHandledError } from "@/lib/observability";
 import { generateOrderCode } from "@/lib/order";
+import { isPaymentExempt } from "@/server/guards/auth";
+import { aktifkanGratis } from "@/server/payment/gratis";
 import { terbitkanLink } from "@/server/payment/link";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -81,10 +83,11 @@ export async function createCheckoutAction(
   if (!parsedCode.success) return { status: "error" };
   const code = parsedCode.data;
 
-  // Kepemilikan + status (RLS membatasi ke baris milik pemanggil).
+  // Kepemilikan + status (RLS membatasi ke baris milik pemanggil — KECUALI
+  // admin, yang melihat semua undangan; lihat cabang bebas-bayar di bawah).
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status, slug, purged_at")
+    .select("id, status, slug, purged_at, user_id")
     .eq("id", invitationId)
     .maybeSingle();
   if (!inv) return { status: "error" };
@@ -142,6 +145,26 @@ export async function createCheckoutAction(
 
   // Order + payment link hanya lewat service_role.
   const admin = createSupabaseAdminClient();
+
+  // Admin & Pro tak pernah ditagih (DECISIONS #100): yang dilewati HANYA
+  // pembayarannya — semua syarat di atas (status, purge, alamat, jadwal, paket)
+  // tetap berlaku. Hanya untuk undangan MILIK sendiri: undangan pelanggan
+  // digratiskan lewat aktivasi manual ber-audit di panel admin.
+  //
+  // Sengaja SEBELUM pemakaian-ulang order `pending` di bawah: pemilik yang
+  // sempat membuka Pakasir sebelum menjadi Pro tak boleh tertahan 24 jam
+  // menunggu cron. Order lamanya tetap menggantung sampai cron
+  // mengedaluwarsakannya (risiko yang diterima — DECISIONS #100).
+  if (inv.user_id === user.id && (await isPaymentExempt(supabase, user.id))) {
+    const ok = await aktifkanGratis(admin, {
+      invitationId,
+      packageId: pkg.id,
+      purpose: "purchase",
+      actorId: user.id,
+    });
+    if (!ok) return { status: "error", message: copy.common.error };
+    return { status: "redirect", url: "/dashboard" };
+  }
 
   // Order PENDING untuk paket yang SAMA dipakai ulang, bukan ditimpa order baru
   // (AUDIT-2026-10-01 A3). Penahan ini sudah ada di jalur add-on tetapi tak

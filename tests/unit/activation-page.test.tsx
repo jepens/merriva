@@ -23,6 +23,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/server/guards/auth", () => ({
   requireUser: vi.fn(async () => ({ id: "u-1" })),
+  isPaymentExempt: vi.fn(async (_s: unknown, _u: string) => refs.exempt),
 }));
 vi.mock("@/server/actions/checkout", () => ({
   createCheckoutAction: vi.fn(),
@@ -33,6 +34,10 @@ const { refs } = vi.hoisted(() => ({
     inv: null as unknown,
     events: [] as unknown,
     eventsError: null as unknown,
+    /** Peran pemanggil admin/Pro (DECISIONS #100). */
+    exempt: false,
+    /** Katalog paket, urut harga naik seperti query halaman. */
+    packages: [] as unknown[],
   },
 }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -52,19 +57,7 @@ vi.mock("@/lib/supabase/server", () => ({
           table === "invitation_events"
             ? { data: refs.events, error: refs.eventsError }
             : table === "packages"
-              ? {
-                  data: [
-                    {
-                      code: "basic",
-                      name: "Basic",
-                      price_idr: 99000,
-                      duration_months: 3,
-                      limits: {},
-                      is_active: true,
-                    },
-                  ],
-                  error: null,
-                }
+              ? { data: refs.packages, error: null }
               : { data: null, error: null },
         ).then(ok, fail);
       return chain;
@@ -77,6 +70,20 @@ import { copy } from "@/lib/copy";
 
 const ID = "9a500f03-f12d-4d66-85fc-af8ebcedd350";
 const BERJAM = { name: "Akad", start_at: "2026-08-15T01:00:00Z" };
+const BASIC = {
+  code: "basic",
+  name: "Basic",
+  price_idr: 99000,
+  duration_months: 3,
+  limits: {},
+  is_active: true,
+};
+const PREMIUM = {
+  ...BASIC,
+  code: "premium",
+  name: "Premium",
+  price_idr: 199000,
+};
 
 async function buka() {
   render(await ActivateInvitationPage({ params: Promise.resolve({ id: ID }) }));
@@ -90,6 +97,48 @@ beforeEach(() => {
   refs.inv = { id: ID, status: "draft", slug: "andi-sinta", purged_at: null };
   refs.events = [BERJAM];
   refs.eventsError = null;
+  refs.exempt = false;
+  refs.packages = [BASIC];
+});
+
+describe("halaman aktivasi — akun Admin/Pro (DECISIONS #100)", () => {
+  it("pemilik bebas bayar → HANYA paket teratas, tombol 'Aktifkan gratis', tanpa pemilih berbayar", async () => {
+    refs.exempt = true;
+    refs.packages = [BASIC, PREMIUM];
+    refs.inv = {
+      id: ID,
+      status: "draft",
+      slug: "andi-sinta",
+      purged_at: null,
+      user_id: "u-1",
+    };
+    await buka();
+
+    expect(screen.getByText(copy.checkout.freeSubtitle)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Premium" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Basic" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: copy.checkout.freeCta }),
+    ).toBeInTheDocument();
+    expect(tombolPaket()).toBeNull();
+  });
+
+  it("undangan MILIK ORANG LAIN (admin lewat RLS) → halaman bayar biasa", async () => {
+    refs.exempt = true;
+    refs.inv = {
+      id: ID,
+      status: "draft",
+      slug: "andi-sinta",
+      purged_at: null,
+      user_id: "u-lain",
+    };
+    await buka();
+
+    expect(screen.getByText(copy.checkout.subtitle)).toBeInTheDocument();
+    expect(tombolPaket()).not.toBeNull();
+  });
 });
 
 describe("halaman aktivasi — daftar syarat sebelum bayar", () => {

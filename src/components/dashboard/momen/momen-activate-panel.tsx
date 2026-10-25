@@ -26,13 +26,18 @@ const m = copy.momen.activate;
  * Panel aktivasi add-on Album Momen (dashboard). Tier gratis (`momen_5`) =
  * `activateFreeMomenAction` lalu refresh (album muncul → manager). Tier berbayar
  * = `createMomenCheckoutAction` → alih ke Pakasir (pola sama PackageChooser).
+ *
+ * `free` = akun Admin/Pro (DECISIONS #100): halaman hanya mengirim tier
+ * teratas, dan aksi berbayar yang sama mengaktifkannya tanpa Pakasir.
  */
 export function MomenActivatePanel({
   invitationId,
   tiers,
+  free = false,
 }: {
   invitationId: string;
   tiers: MomenTier[];
+  free?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -84,6 +89,9 @@ export function MomenActivatePanel({
       <div className="grid gap-3 sm:grid-cols-2">
         {tiers.map((t) => {
           const isFree = t.priceIdr === 0;
+          // Label saja; jalurnya tetap ditentukan `isFree` (tier gratis punya
+          // aksinya sendiri, tier lain lewat checkout yang membebaskan Admin/Pro).
+          const gratis = free || isFree;
           const isBusy = pending === t.code;
           const highlight = t.quotaPeserta === null; // tier ∞
           return (
@@ -97,7 +105,7 @@ export function MomenActivatePanel({
                     {pesertaLabel(t.quotaPeserta)}
                   </h3>
                   <p className="text-xl font-bold tracking-tight">
-                    {isFree ? m.free : formatIdr(t.priceIdr)}
+                    {gratis ? m.free : formatIdr(t.priceIdr)}
                   </p>
                 </div>
                 <ul className="text-muted-foreground space-y-1 text-xs">
@@ -129,9 +137,9 @@ export function MomenActivatePanel({
                   {isBusy ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
-                      {isFree ? m.freeActivating : m.redirecting}
+                      {gratis ? m.freeActivating : m.redirecting}
                     </>
-                  ) : isFree ? (
+                  ) : gratis ? (
                     m.freeCta
                   ) : (
                     m.paidCta
@@ -147,7 +155,11 @@ export function MomenActivatePanel({
           {error}
         </p>
       ) : null}
-      <p className="text-muted-foreground text-center text-xs">{m.securedBy}</p>
+      {free ? null : (
+        <p className="text-muted-foreground text-center text-xs">
+          {m.securedBy}
+        </p>
+      )}
     </div>
   );
 }

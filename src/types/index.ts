@@ -3,7 +3,7 @@
  * Tipe struktur konten per kategori (Zod-inferred) ada di `lib/validation/content`.
  */
 
-export type ProfileRole = "client" | "admin";
+export type ProfileRole = "client" | "admin" | "pro";
 
 export type ThemeTier = "standard" | "premium";
 

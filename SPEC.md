@@ -112,7 +112,7 @@ Halaman publik berisi value proposition, katalog tema (filter per kategori acara
 
 ### 4.2 Autentikasi & akun
 
-Supabase Auth: email+password (dengan verifikasi email) dan Google OAuth. Reset password via email, dan ganti kata sandi dari dalam akun di halaman profil (wajib memasukkan kata sandi saat ini). Setiap field kata sandi punya tombol lihat/sembunyikan (bukan kolom konfirmasi — mayoritas pengguna mendaftar dari HP, tempat mengetik dua kali justru disiasati salin-tempel), dan syarat panjang ditampilkan sebelum submit, bukan sebagai pesan penolakan. Profil minimal: nama, no. WhatsApp. Role: `client` (default) dan `admin` (di-set manual di database — tidak ada UI pendaftaran admin).
+Supabase Auth: email+password (dengan verifikasi email) dan Google OAuth. Reset password via email, dan ganti kata sandi dari dalam akun di halaman profil (wajib memasukkan kata sandi saat ini). Setiap field kata sandi punya tombol lihat/sembunyikan (bukan kolom konfirmasi — mayoritas pengguna mendaftar dari HP, tempat mengetik dua kali justru disiasati salin-tempel), dan syarat panjang ditampilkan sebelum submit, bukan sebagai pesan penolakan. Profil minimal: nama, no. WhatsApp. Role: `client` (default), `pro`, dan `admin` — diubah admin dari `/admin/pengguna` (tidak ada pendaftaran mandiri sebagai admin/Pro). **Admin & Pro tidak pernah ditagih** (§4.8).
 
 **Kriteria terima:** register→verifikasi→login berjalan di HP → kata sandi yang diketik bisa diperiksa pengguna sebelum dikirim, dan tombol pemeriksanya tidak ikut mengirim formulir → ganti kata sandi dari dalam akun menolak kata sandi saat ini yang salah, dan gerbang rate limit-nya dievaluasi sebelum verifikasi sehingga form itu tak bisa dipakai menebak kata sandi → halaman atur-ulang kata sandi hanya menerima sesi yang baru lahir dari klik tautan email, sehingga sesi yang sudah lama masuk di sebuah perangkat tidak bisa mengambil alih akun → Google OAuth berjalan → reset password berjalan → user tidak bisa mengakses data user lain (diverifikasi lewat test RLS) → sesi bertahan (refresh token) sehingga klien tidak sering dipaksa login ulang.
 
@@ -196,13 +196,17 @@ Halaman "cek status pembayaran" di dashboard mem-poll `transactiondetail` — un
 
 **Kriteria terima:** order upgrade lunas menukar paket TANPA mengubah `active_until`, `published_at`, atau `status` → selisih ≤ 0 (paket sama, downgrade, atau harga katalog berubah) ditolak sebelum order dibuat → order `pending` aktivasi dan order `pending` upgrade tidak pernah dipakai-ulang silang, sehingga pelanggan tak pernah ditagih nominal jalur yang lain → order upgrade tidak pernah mengaku membeli masa aktif di kuitansi maupun riwayat pesanan → pemilik yang kembali dari Pakasir melihat upgrade-nya direkonsiliasi tanpa menunggu webhook → refund order upgrade menurunkan paket kembali tanpa mematikan undangan yang masa aktifnya dibayar order lain.
 
+**Akun Admin & Pro tidak pernah ditagih (DECISIONS #100).** Untuk undangan MILIKNYA SENDIRI, aktivasi, perpanjangan, upgrade, dan add-on Album Momen langsung aktif tanpa Pakasir: halaman menawarkan satu tombol "Aktifkan gratis" dengan paket/tier teratas. Server mencatatnya sebagai order Rp0 bermetode `gratis` lewat RPC `activate_free_order` — satu transaksi bersama `activate_paid_order`, sehingga hasilnya identik dengan aktivasi berbayar dan tercatat di riwayat pesanan tanpa menambah omzet. Syarat alamat & jadwal (langkah 0) tetap berlaku. Undangan milik orang lain tetap lewat jalur bayar biasa walau dibuka admin; menggratiskan undangan pelanggan memakai aktivasi manual di panel admin yang ter-audit.
+
+**Kriteria terima:** admin/Pro pemilik tidak pernah diarahkan ke Pakasir di keempat jalur → admin yang membuka undangan pelanggan tetap melihat jalur bayar → aktivasi gratis yang gagal tidak meninggalkan order apa pun → klien tidak bisa memberi dirinya peran Pro/admin (test DB).
+
 **Dokumen legal (AUDIT-2026-10-01 A2).** Tiga halaman publik: `/syarat` (Syarat & Ketentuan), `/privasi`, `/refund`. Identitas pelaku usaha berasal dari SATU sumber (`copy.marketing.legal.merchant`) dan dirender di ketiganya; hanya field terisi yang tampil. Baris notis persetujuan — menautkan S&K + Privasi di `/daftar`, dan S&K + Refund tepat di atas tombol bayar — bukan checkbox, karena dasar pemrosesannya perjanjian. **Kriteria terima:** setiap klausul S&K cocok dengan perilaku kode (retensi, penangguhan, batas paket); identitas penjual tampil sebelum pembayaran.
 
 ### 4.9 Panel admin
 
 **Hapus akun (AUDIT-2026-10-01 A6).** Admin dapat menghapus akun permanen dari `/admin/pengguna` (alasan wajib + email akun diketik ulang dan dicocokkan di server). Data pribadi tiap undangan di-purge berikut objek storage-nya; baris `orders` dan kerangka `invitations` DIPERTAHANKAN dengan `user_id` NULL untuk kewajiban pembukuan. Akun yang masih punya undangan `active` DITOLAK. Prosedurnya di `docs/RUNBOOK.md`.
 
-Ringkasan metrik (undangan/hari, konversi draft→paid, revenue bulan berjalan) · daftar & pencarian semua user/undangan/order · aksi: aktivasi manual (mis. bayar di luar sistem), perpanjang masa aktif, suspend undangan (konten bermasalah — **dua isian alasan: catatan internal untuk audit log, dan alasan untuk pelanggan yang dikirim lewat email beserta jalur banding**), ganti kepemilikan (untuk klien jasa EO) · CRUD paket & harga · CRUD metadata tema (kode tema tetap di repo; admin mengatur nama, kategori, status aktif, tier) · log aktivitas admin.
+Ringkasan metrik (undangan/hari, konversi draft→paid, revenue bulan berjalan) · daftar & pencarian semua user/undangan/order · ubah peran pengguna (klien / Pro / admin — Pro tak pernah ditagih, §4.8) · aksi: aktivasi manual (mis. bayar di luar sistem), perpanjang masa aktif, suspend undangan (konten bermasalah — **dua isian alasan: catatan internal untuk audit log, dan alasan untuk pelanggan yang dikirim lewat email beserta jalur banding**), ganti kepemilikan (untuk klien jasa EO) · CRUD paket & harga · CRUD metadata tema (kode tema tetap di repo; admin mengatur nama, kategori, status aktif, tier) · log aktivitas admin.
 
 **Kriteria terima:** role `client` tidak bisa membuka satu pun route/API admin (test RLS + middleware) → aktivasi manual menghasilkan status yang identik dengan aktivasi via pembayaran → perubahan harga langsung tercermin di landing & checkout tanpa deploy.
 
@@ -216,7 +220,7 @@ Via Resend (atau SMTP VPS sebagai fallback): verifikasi akun, kuitansi pembayara
 
 Kamera sekali-pakai berbasis browser untuk tamu di lokasi acara. Tamu memindai QR meja / membuka tombol melayang di undangan → memasukkan nama (Turnstile) → memotret dengan jatah jepretan terbatas + 6 filter film → foto **tersembunyi sampai waktu reveal**, lalu terbuka serentak sebagai galeri bersama. Host memoderasi (sembunyikan/hapus), mencetak QR meja A6, dan mengunduh album sebagai ZIP.
 
-**Dijual per JUMLAH PESERTA** (peserta = `device_id` unik yang pernah memotret), bukan per foto: `momen_5` gratis · `momen_50` Rp199.000 · `momen_100` Rp349.000 · `momen_200` Rp649.000 · `momen_unlimited` Rp1.099.000 (ber-`photo_ceiling` 8.000 sebagai rem biaya storage). Add-on dibeli untuk undangan yang **sudah aktif** dan TIDAK mengubah status/masa-aktif undangan; album mengikuti retensi undangan induknya, bukan `duration_months` paket. Upgrade tier belum tersedia.
+**Dijual per JUMLAH PESERTA** (peserta = `device_id` unik yang pernah memotret), bukan per foto: `momen_5` gratis · `momen_50` Rp199.000 · `momen_100` Rp349.000 · `momen_200` Rp649.000 · `momen_unlimited` Rp1.099.000 (ber-`photo_ceiling` 8.000 sebagai rem biaya storage). Admin & Pro mendapat tier teratas tanpa bayar untuk undangan miliknya (§4.8). Add-on dibeli untuk undangan yang **sudah aktif** dan TIDAK mengubah status/masa-aktif undangan; album mengikuti retensi undangan induknya, bukan `duration_months` paket. Upgrade tier belum tersedia.
 
 Pemrosesan gambar **hanya di browser** (bake filter piksel + encode 2 varian WebP, fallback JPEG untuk iOS) — server memvalidasi tipe/ukuran/magic-byte lalu menyimpan via `lib/storage/`. Jalur uang memakai-ulang alur order + Pakasir + webhook yang sudah ada; **tak ada alur bayar kedua**.
 
@@ -229,7 +233,7 @@ Pemrosesan gambar **hanya di browser** (bake filter piksel + encode 2 varian Web
 ## 5. Model Data (PostgreSQL / Supabase)
 
 ```
-profiles          id (=auth.users.id), full_name, phone, role('client'|'admin'), created_at
+profiles          id (=auth.users.id), full_name, phone, role('client'|'pro'|'admin'), created_at
 themes            id, slug, name, categories[], tier('standard'|'premium'), preview_image,
                   demo_slug, is_active, sort_order
 packages          id, code('basic'|'premium'), name, price_idr int, duration_months,

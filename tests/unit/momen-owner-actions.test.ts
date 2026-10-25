@@ -230,6 +230,76 @@ describe("createMomenCheckoutAction — jalur uang add-on", () => {
   });
 });
 
+describe("createMomenCheckoutAction — akun Admin/Pro tak pernah ditagih (DECISIONS #100)", () => {
+  const LAIN = "66666666-6666-4666-8666-666666666666";
+
+  function setupBebas(ownerId: string, role: string) {
+    refs.server = makeClient(
+      {
+        invitations: { id: INV, status: "active", user_id: ownerId },
+        profiles: { role },
+      },
+      calls,
+    );
+    const rpc = vi.fn(async (_fn: string, _args: Record<string, unknown>) => ({
+      data: [{ result: "activated", slug: "andi-sinta" }],
+      error: null,
+    }));
+    refs.admin = {
+      ...makeClient(
+        {
+          momen_albums: null,
+          packages: { id: "pkg-unlimited", price_idr: 1099000 },
+        },
+        calls,
+      ),
+      rpc,
+    };
+    return rpc;
+  }
+
+  it("Pro pemilik → album aktif TANPA Pakasir, kembali ke halaman kelola", async () => {
+    const rpc = setupBebas(USER, "pro");
+
+    const res = await createMomenCheckoutAction(INV, "momen_unlimited");
+
+    expect(res).toEqual({
+      status: "redirect",
+      url: `/dashboard/undangan/${INV}/momen`,
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc.mock.calls[0][0]).toBe("activate_free_order");
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      p_invitation_id: INV,
+      p_package_id: "pkg-unlimited",
+      p_purpose: "purchase",
+      p_actor_id: USER,
+    });
+    expect(terbitkanLink).not.toHaveBeenCalled();
+    expect(calls.some((c) => c.table === "orders")).toBe(false);
+  });
+
+  it("admin pada undangan MILIK ORANG LAIN → jalur bayar biasa", async () => {
+    const rpc = setupBebas(LAIN, "admin");
+
+    const res = await createMomenCheckoutAction(INV, "momen_unlimited");
+
+    expect(res.status).toBe("redirect");
+    expect(rpc).not.toHaveBeenCalled();
+    expect(terbitkanLink).toHaveBeenCalledTimes(1);
+  });
+
+  it("ada order add-on PENDING → tetap ditolak (album gratis tak boleh mendahului pembayaran berjalan)", async () => {
+    const rpc = setupBebas(USER, "pro");
+    findPendingMomenOrder.mockResolvedValue({ orderCode: "MRV-PENDING" });
+
+    const res = await createMomenCheckoutAction(INV, "momen_unlimited");
+
+    expect(res.status).toBe("error");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
 describe("activateFreeMomenAction — tier gratis", () => {
   it("undangan belum aktif → ditolak", async () => {
     refs.server = makeClient(

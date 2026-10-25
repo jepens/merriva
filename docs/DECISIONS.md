@@ -4805,6 +4805,78 @@ kalau tidak, satu sesi sandbox terbuang pada perkakas yang berbohong.
 
 ---
 
+## #100 — 2026-10-26 · Admin & Pro tak pernah ditagih: peran `pro` + `activate_free_order`
+
+**Keputusan (pemilik, 25 Okt 2026):** akun ber-peran `admin` tak pernah
+diminta membayar, dan admin bisa memberi peran baru **`pro`** ke email terdaftar
+dari dropdown peran yang sudah ada di `/admin/pengguna`. Untuk undangan
+**miliknya sendiri**, admin/Pro mengaktifkan, memperpanjang, meng-upgrade, dan
+membeli Album Momen tanpa Pakasir, langsung dengan paket/tier teratas.
+
+Bentuknya, sengaja sekecil mungkin:
+
+- Satu nilai enum `profile_role` baru. `profiles.role` sudah tak bisa ditulis
+  klien (grant kolom, init_schema §6b), dan `is_admin()` tetap `role = 'admin'`
+  saja, jadi Pro tak mendapat kuasa admin apa pun. Kini dijaga test DB.
+- RPC `activate_free_order`: order Rp0 bermetode `gratis` + `activate_paid_order`
+  dalam SATU transaksi (pola `admin_activate_invitation`). Hasilnya identik
+  dengan aktivasi berbayar di keempat jalur (cabang aktivasi, upgrade, add-on
+  sudah ada di RPC itu), dan tetap tercatat di riwayat pesanan.
+- Di ketiga server action, cabang bebas-bayar menggantikan langkah Pakasir
+  SETELAH semua syarat yang ada (status, purge, alamat, jadwal, paket, selisih
+  harga, order add-on/upgrade yang menggantung).
+
+**Alasan:**
+
+- **Hanya undangan milik sendiri.** RLS memperlihatkan SEMUA undangan kepada
+  admin; menurunkan "bebas bayar" dari peran saja berarti admin yang membuka
+  undangan pelanggan memberinya Premium gratis tanpa jejak audit, dengan order
+  atas nama admin yang tak pernah muncul di riwayat pelanggan. Diperiksa di
+  action DAN di RPC.
+- **SQL atomik, bukan dua panggilan dari server.** Order `pending` tanpa
+  `txn_id` tak pernah di-expire cron. Gagal di antara insert & aktivasi akan
+  meninggalkan order Rp0 yatim yang menahan halaman Album Momen/upgrade di
+  poller pembayaran selamanya. Hasil selain `activated` (mis. `held`) di-raise
+  → seluruh transaksi batal, tak ada order lunas tanpa efek.
+- **Order Rp0, bukan aktivasi tanpa order.** Memakai ulang RPC aktivasi yang
+  otoritatif (masa aktif, reset pengingat H-14, cabang upgrade/add-on) daripada
+  menyalin logikanya — `reminder_sent_at` sudah dua kali hilang saat fungsi itu
+  disalin ulang.
+
+**Ditolak:**
+
+- *Membebaskan berdasarkan peran saja* — lihat alasan pertama.
+- *Melewati gerbang identitas merchant untuk admin/Pro* — kode mati (identitas
+  sudah terisi) dan memecahkan test yang ada.
+- *Menolak aktivasi gratis selama masih ada order Pakasir `pending`* — justru
+  mengunci skenario yang memicu keputusan ini (admin yang sempat membuka
+  Pakasir) sampai 24 jam, dan selamanya untuk order tanpa `txn_id`.
+- *Mengubah `admin_month_revenue`* agar tak menghitung order Rp0 — lihat
+  konsekuensi; dicatat, bukan ditambal.
+
+**Konsekuensi:**
+
+- **Risiko yang diterima:** pemilik yang sempat membuka Pakasir lalu menjadi Pro
+  masih punya link bayar hidup sampai cron mengedaluwarsakannya (≤ 24 jam).
+  Bila ia tetap membayarnya, RPC mengembalikan `held`: uang tercatat lunas tanpa
+  efek dan perlu direfund manual. Untuk Album Momen & upgrade, order `pending`
+  justru MENAHAN jalur gratis (penahan yang sudah ada, KUA-2a) sampai lunas atau
+  kedaluwarsa — dan TANPA batas bila order itu tak punya `txn_id` (link gagal
+  terbit): cron melewatinya dan poller berakhir di layar galat. Tak ada
+  tombolnya di `/admin/order`; lepaskan lewat SQL
+  `select * from public.expire_pending_order('<order_code>')`.
+- Metrik admin: omzet tetap benar (Rp0), tetapi "N order lunas bulan ini" dan
+  konversi draft→bayar ikut menghitung aktivasi gratis.
+- Refund order Rp0 di `/admin/order` mencabut aktivasi gratis itu — berguna
+  bila status Pro dicabut.
+- Akun E2E pembayaran (`E2E_EMAIL`) wajib ber-peran `client`: admin/Pro tak
+  pernah melihat pemilih paket berbayar.
+- **Urutan rilis:** migrasi `20261026090000_peran_pro_aktivasi_gratis` WAJIB
+  diterapkan ke Supabase cloud SEBELUM kode di-push — Easypanel membangun `main`
+  paralel dengan CI, dan aksi admin/Pro memanggil RPC baru.
+
+---
+
 ## Template entri baru
 
 ```

@@ -17,7 +17,8 @@ import { PakasirGateway } from "../../src/lib/payment/pakasir";
  *
  * Prasyarat env (sama seperti test poll, plus satu undangan lagi):
  *   PAKASIR_PROJECT_SLUG, PAKASIR_API_KEY   → project SANDBOX Pakasir
- *   E2E_EMAIL, E2E_PASSWORD                 → akun terverifikasi di DB target
+ *   E2E_EMAIL, E2E_PASSWORD                 → akun terverifikasi di DB target,
+ *     ber-peran `client` (admin/Pro tak pernah ditagih — DECISIONS #100)
  *   E2E_INVITATION_ID_WEBHOOK               → undangan milik akun itu, status
  *     `draft`/`expired`, dengan **slug asli** dan **minimal satu sesi jadwal
  *     bertanggal-jam mulai lengkap** (syarat bayar, DECISIONS #44). Reset ke
