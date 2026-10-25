@@ -4679,6 +4679,91 @@ saja diperbaiki (#98). Yang kurang hanya merender QR dan hitung mundur di
 halaman yang SUDAH mem-poll. Estimasi "berminggu-minggu" yang sempat saya
 sebutkan salah, dan ini koreksinya.
 
+### Riset sumber primer, sore 25 Okt 2026: empat dari lima pertentangan tutup
+
+Setelah entri di atas ditulis, muncul kecurigaan yang layak diuji: SNAP
+mendefinisikan tanda tangan *service request* sebagai **lima** komponen
+ber-HMAC-SHA512 yang memuat access token. Bila itu berlaku, modul tanda tangan
+yang sudah dikirim salah algoritma, salah kunci, dan kehilangan satu langkah
+autentikasi — dan 21 testnya tak akan menangkapnya, karena test itu membuat
+pasangan kuncinya sendiri dan hanya membuktikan modul konsisten dengan DIRINYA
+SENDIRI. Itu bukan hal yang boleh diputuskan dari ingatan.
+
+**Sumber yang memutuskan ternyata bukan dokumentasi, melainkan SDK resmi mereka**
+(`binderpay-nodejs`) — kode yang benar-benar memanggil server mereka, jadi
+bobotnya di atas prosa dan jauh di atas contoh JSON.
+
+**Modul tanda tangan kita BENAR; tak ada yang diubah.** Cocok baris per baris:
+`[method.toUpperCase(), endpointUrl, hashBody(minifiedBody), timestamp].join(":")`
+dengan `createSign("RSA-SHA256")`, stempel waktu `+07:00` tanpa milidetik,
+toleransi callback 300 detik, dan verifikasi callback empat komponen yang sama.
+Kecurigaan lima komponen benar untuk SNAP **default**, tetapi ASPI mendefinisikan
+dua jalur dan BinderPay memakai tipe 2, **"Asymmetric Signature without Get
+Token"** — cabang resmi bernama, bukan penyimpangan. Winpay dan Faspay memakai
+jalur yang sama. Jalur HMAC bahkan mustahil dibangun di sini: ia menuntut
+`clientSecret` dan access token, dan BinderPay tak menerbitkan keduanya —
+`HMAC`, `SHA512`, `Bearer`, `clientSecret`, `grant_type` nol kemunculan di docs
+maupun di kedua SDK resmi mereka.
+
+Yang ikut terkunci dari SDK, dan tak satu pun saya tebak sebelumnya:
+
+| Hal | Kebenaran | Yang saya tulis semula |
+|---|---|---|
+| `CHANNEL-ID` | `"QRIS"` (daftar tertutup) | `"MERRIVA"` — karangan |
+| Access token | tidak ada, tidak ada `Authorization` | (benar, tak ada) |
+| `additionalInfo.isStatic` | **wajib**, boolean | tidak dikirim sama sekali |
+| `merchantId` | tidak ada di tipe mereka | dikirim |
+| Kunci query | `additionalInfo.contractId` (bersarang) | dibaca dari akar |
+| `originalReferenceNo` | **tidak diterima** `qr-mpm-query` | dikirim sebagai kunci |
+
+Catatan tajam: `referenceNo` **tidak ada sama sekali** di bagian QRIS BinderPay.
+Konsensus tujuh PJP lain dan SNAP ASPI ("simpan `referenceNo`, kirim sebagai
+`originalReferenceNo`") justru jawaban yang SALAH di sini — contoh bahwa standar
+hanya memberi tahu apa yang mungkin mereka maksud, bukan apa yang mereka terima.
+
+**Dua bahaya baru yang sebelumnya tak terlihat sama sekali:**
+
+1. **`orders.txn_id` punya UNIQUE INDEX** (`20261013120000_orders_txn_id.sql`).
+   Bila `contractId` ternyata "ID kontrak **merchant**" — salah satu dari empat
+   rumusan dokumen mereka — nilainya konstan, dan **order kedua gagal dengan
+   unique violation**; `terbitkanLink` mengembalikan `null` dan pelanggan tak
+   bisa membayar sama sekali. Rancangan yang aman di kedua cabang: `txn_id` =
+   `partnerReferenceNo` buatan kita (unik secara konstruksi, non-null, dan
+   memang kunci yang diterima query), `contractId` di kolom terpisah yang
+   nullable tanpa unique index.
+2. **`X-EXTERNAL-ID` ditolak bila berulang di hari yang sama** (galat
+   `4094700`), sementara halaman bayar kita mem-poll tiap ~4 detik — dan SDK
+   vendor justru membangkitkan id **deterministik** (`qris-query-{ref}`). Salah
+   satu dari keduanya pasti keliru. Bila aturan itu berlaku untuk query, poll
+   kedua langsung gagal. Probe sekarang mengujinya dengan tiga panggilan.
+
+**Yang TETAP tak terjawab, dan memang tak bisa dijawab dokumen:** arti `amount`.
+BinderPay tak punya satu pun tabel spesifikasi response QRIS, dan dua contoh
+mereka sendiri untuk transaksi yang IDENTIK saling membantah pada dua field
+sekaligus (generate: `amount` 50550 + fee 550; query: `amount` 50000 + fee
+1000). `feeAmount` tak pernah mereka definisikan di mana pun dan **tidak ada
+sama sekali di tipe SDK** — jadi memulihkan nominal pokok dari callback mungkin
+mustahil. Angka-angka contohnya pun tak cocok dengan tarif terbit mereka
+sendiri (0,7%), tanda angka itu diketik tangan.
+
+**Pengukuran yang menyelesaikannya tanpa menunggu siapa pun memindai QR:**
+dekode `qrContent` sebagai EMVCo TLV dan baca **tag 54 (Transaction Amount)** —
+itulah angka yang benar-benar ditagihkan ke pembayar. Probe sekarang
+melakukannya (parsernya diuji terhadap QR dinamis, QR statis tanpa nominal, dan
+masukan rusak). Ia juga menandai tag 55–57 (*convenience fee*), yang bila muncul
+berarti model biaya ketiga yang tak terbaca dari dokumen mana pun.
+
+**Gerbang nominal `reconcile.ts` tetap kesetaraan KETAT, apa pun hasilnya.** Yang
+berubah hanya nominal mana yang driver isikan ke perbandingan itu — satu cabang
+yang ditetapkan probe, bukan dipilih saat runtime. "Terima bila salah satu
+cocok" tetap ditolak: itu persis melubangi penjaga bayar-kurang.
+
+**Probe versi pertama akan pulang "sukses" tanpa menguji apa pun.** Karena
+`contractId` dibaca dari akar, nilainya `undefined`, dan ternary di bawahnya
+melewati panggilan query sepenuhnya — ketiga pertanyaan dijawab "—" dengan
+status keluar 0. Keenam cacatnya diperbaiki sebelum kredensial pertama dipakai;
+kalau tidak, satu sesi sandbox terbuang pada perkakas yang berbohong.
+
 **Ditolak:**
 
 - **Tetap di Pakasir.** Bukan pilihan: mereka tutup. (Satu rekomendasi

@@ -24,6 +24,20 @@
  *
  * Satu kali jalan di sini menyelesaikan ketiganya.
  *
+ * SUDAH TERJAWAB TANPA PROBE (riset 25 Okt 2026, lihat DECISIONS #99). Sumber
+ * yang memutuskan bukan halaman dokumentasi melainkan SDK RESMI mereka
+ * (`binderpay-nodejs`) — kode yang benar-benar memanggil server mereka:
+ *   - Tanda tangan: empat komponen RSA-SHA256, TANPA access token. Itu cabang
+ *     resmi SNAP "Asymmetric Signature without Get Token", bukan penyimpangan.
+ *   - Tidak ada langkah ambil token. Tidak ada header Authorization.
+ *   - `CHANNEL-ID` bernilai "QRIS". Nilai karangan ditolak dengan pesan generik
+ *     yang mudah sekali salah dibaca sebagai tanda tangan salah.
+ *   - `additionalInfo.isStatic` wajib boolean; `merchantId` tidak ada di tipe
+ *     mereka; `qr-mpm-query` menuntut `additionalInfo.contractId` dan TIDAK
+ *     menerima `originalReferenceNo`.
+ * Versi pertama probe ini salah di kelima hal itu dan akan pulang "sukses"
+ * tanpa menguji apa pun — lihat JALUR_KONTRAK di bawah.
+ *
  * CATATAN SALINAN KODE. Penandatanganan di bawah MENYALIN
  * `src/lib/payment/binderpay-signature.ts` (modul kanonik, 21 test). Ia tak
  * bisa diimpor dari sini: berkasnya TypeScript tanpa runner, dan ber-`import
@@ -149,7 +163,7 @@ function stempelWaktuWib(ms) {
 
 let urutan = 0;
 
-async function panggil(path, muatan) {
+async function panggil(path, muatan, externalIdPaksa) {
   // Bodi di-hash PERSIS seperti yang dikirim — satu string, tak pernah
   // di-stringify dua kali. Ini sebab paling umum tanda tangan "seharusnya
   // benar" tetapi ditolak.
@@ -157,7 +171,8 @@ async function panggil(path, muatan) {
   const waktu = stempelWaktuWib(Date.now());
   const bahan = { metode: "POST", path, bodi, waktu };
   const s2s = stringUntukDitandatangani(bahan);
-  const externalId = `${Date.now()}${String(++urutan).padStart(3, "0")}`;
+  const externalId =
+    externalIdPaksa ?? `${Date.now()}${String(++urutan).padStart(3, "0")}`;
 
   console.log(`\n── POST ${path}`);
   console.log(`   string-to-sign : ${s2s}`);
@@ -173,7 +188,10 @@ async function panggil(path, muatan) {
         "X-SIGNATURE": tandaTangani(bahan),
         "X-PARTNER-ID": PARTNER_ID,
         "X-EXTERNAL-ID": externalId,
-        "CHANNEL-ID": "MERRIVA",
+        // "QRIS", bukan nama merchant. Daftar nilainya tertutup, dan nilai
+        // karangan ditolak dengan pesan generik yang SANGAT mudah salah dibaca
+        // sebagai "tanda tangan salah".
+        "CHANNEL-ID": "QRIS",
       },
       body: bodi,
       signal: AbortSignal.timeout(20_000),
@@ -184,8 +202,20 @@ async function panggil(path, muatan) {
     return null;
   }
 
+  console.log(`   X-EXTERNAL-ID  : ${externalId}`);
   console.log(`   HTTP           : ${res.status}`);
   console.log(`   jawaban        : ${teks}`);
+
+  // Stempel waktu IKUT ditandatangani, jadi jam yang menyimpang menolak SETIAP
+  // panggilan dengan pesan yang terbaca persis seperti "tanda tangan salah".
+  // Periksa ini SEBELUM menyalahkan kripto.
+  const tanggalServer = res.headers.get("date");
+  if (tanggalServer) {
+    const selisih = Math.round((Date.parse(tanggalServer) - Date.now()) / 1000);
+    const catatan =
+      Math.abs(selisih) > 60 ? "  ← JAM MENYIMPANG, perbaiki dulu" : "";
+    console.log(`   selisih jam    : ${selisih} dtk${catatan}`);
+  }
 
   try {
     return JSON.parse(teks);
@@ -204,27 +234,75 @@ console.log(
   `partner ${PARTNER_ID.slice(0, 6)}… · nominal Rp${NOMINAL} · ${ref}`,
 );
 
-// Bentuk bodi di bawah mengikuti SNAP QRIS MPM. Bila BinderPay menuntut field
-// lain, jawabannya akan mengatakannya — dan pesan galat itu pun jawaban yang
-// kita cari. Sesuaikan di sini lalu jalankan lagi.
-const generate = await panggil("/v1.0/qr/qr-mpm-generate", {
-  partnerReferenceNo: ref,
+const PATH_GENERATE = "/v1.0/qr/qr-mpm-generate";
+const PATH_QUERY = "/v1.0/qr/qr-mpm-query";
+
+// Bodi mengikuti `QrisGenerateParams` di SDK RESMI BinderPay, bukan contoh di
+// halaman dokumentasinya. Tiga hal yang membedakannya dan ketiganya menggigit:
+// `additionalInfo.isStatic` wajib dan harus BOOLEAN (SDK melempar keras
+// tanpanya), `validityPeriod` wajib bila isStatic=false, dan `merchantId` TIDAK
+// ADA di tipe mereka — ia field SNAP umum, bukan milik BinderPay.
+const bodiGenerate = (referensi) => ({
+  partnerReferenceNo: referensi, // pola ^[a-zA-Z0-9_-]{5,50}$
   amount: { value: `${NOMINAL}.00`, currency: "IDR" },
-  merchantId: env.get("BINDERPAY_MERCHANT_ID") || undefined,
-  terminalId: env.get("BINDERPAY_TERMINAL_ID") || undefined,
   validityPeriod: stempelWaktuWib(Date.now() + 60 * 60_000),
+  additionalInfo: { isStatic: false },
 });
 
-const refGateway =
-  generate?.referenceNo ?? generate?.contractId ?? generate?.data?.referenceNo;
+const generate = await panggil(PATH_GENERATE, bodiGenerate(ref));
 
-const query = refGateway
-  ? await panggil("/v1.0/qr/qr-mpm-query", {
-      originalPartnerReferenceNo: ref,
-      originalReferenceNo: refGateway,
-      serviceCode: "47",
-    })
+// `contractId` BERSARANG di `additionalInfo` menurut dokumen mereka. Dicoba
+// berurutan, dan jalur yang terpakai DICETAK — versi pertama probe ini hanya
+// membaca akar, sehingga nilainya `undefined`, panggilan query terlewat
+// diam-diam, dan probe pulang "sukses" tanpa menguji apa pun.
+const JALUR_KONTRAK = [
+  ["additionalInfo.contractId", (o) => o?.additionalInfo?.contractId],
+  ["contractId (akar)", (o) => o?.contractId],
+  ["referenceNo (akar)", (o) => o?.referenceNo],
+  [
+    "data.additionalInfo.contractId",
+    (o) => o?.data?.additionalInfo?.contractId,
+  ],
+];
+
+function cariKontrak(jawaban) {
+  for (const [nama, ambil] of JALUR_KONTRAK) {
+    const v = ambil(jawaban);
+    if (v !== undefined && v !== null) return { nilai: v, jalur: nama };
+  }
+  return { nilai: undefined, jalur: "(tak ditemukan)" };
+}
+
+const kontrak = cariKontrak(generate);
+
+// Badan query menuntut KETIGANYA, dan `originalReferenceNo` BUKAN salah satunya
+// — ia tak ada di tabel request mereka maupun di tipe SDK, meski tujuh PJP lain
+// memakainya. `serviceCode` 47 merujuk transaksi ASAL (generate), bukan 51.
+const bodiQuery = {
+  originalPartnerReferenceNo: ref,
+  serviceCode: "47",
+  additionalInfo: { contractId: kontrak.nilai },
+};
+
+// R1 — halaman bayar kita mem-poll tiap ~4 detik. Bila query menegakkan
+// keunikan X-EXTERNAL-ID per hari (galat 4094700), poll KEDUA langsung gagal
+// dan poller harus membangkitkan id segar tiap panggilan. SDK vendor justru
+// memakai id deterministik, jadi salah satu dari keduanya pasti keliru.
+const idTetap = `probe-query-${Date.now()}`;
+const query = kontrak.nilai
+  ? await panggil(PATH_QUERY, bodiQuery, idTetap)
   : null;
+const queryIdSama = kontrak.nilai
+  ? await panggil(PATH_QUERY, bodiQuery, idTetap)
+  : null;
+const queryIdBaru = kontrak.nilai ? await panggil(PATH_QUERY, bodiQuery) : null;
+
+// R2 — `contractId` per-transaksi, atau konstanta merchant? Ini memutuskan
+// apakah skema kita pecah: `orders.txn_id` punya UNIQUE INDEX, jadi nilai
+// konstan membuat order KEDUA gagal dan pelanggan tak bisa membayar sama sekali.
+const refB = `${ref}-B`;
+const generateB = await panggil(PATH_GENERATE, bodiGenerate(refB));
+const kontrakB = cariKontrak(generateB);
 
 // --- yang kita datang untuk mengetahuinya -----------------------------------
 
@@ -236,35 +314,77 @@ const nilai = (o, ...jalan) => {
   return "—";
 };
 
+/**
+ * EMVCo TLV: tiap elemen = tag(2) + panjang(2) + nilai. Tag 54 = Transaction
+ * Amount, yaitu angka yang BENAR-BENAR ditagihkan ke pembayar — bukti paling
+ * menentukan untuk pertentangan #5, dan terbaca tanpa seorang pun memindai QR.
+ * Tag 55-57 = convenience fee; kehadirannya berarti model biaya ketiga yang tak
+ * terbaca dari dokumen mana pun.
+ */
+function bacaTlv(qr) {
+  const out = new Map();
+  let i = 0;
+  while (typeof qr === "string" && i + 4 <= qr.length) {
+    const tag = qr.slice(i, i + 2);
+    const len = Number(qr.slice(i + 2, i + 4));
+    if (!Number.isInteger(len) || i + 4 + len > qr.length) break;
+    out.set(tag, qr.slice(i + 4, i + 4 + len));
+    i += 4 + len;
+  }
+  return out;
+}
+
+const qrContent = nilai(generate, "qrContent", "data.qrContent");
+const tlv = bacaTlv(qrContent);
+const tag54 = tlv.get("54") ?? "—";
+const tagBiaya = ["55", "56", "57"].filter((t) => tlv.has(t));
+
+const hasilHttp = (j) => (j ? "jawaban diterima" : "gagal/ditolak");
+
 console.log(`\n${"─".repeat(68)}`);
-console.log("JAWABAN ATAS TIGA PERTENTANGAN (DECISIONS #99)\n");
+console.log("JAWABAN ATAS PERTENTANGAN DOKUMENTASI (DECISIONS #99)\n");
 
 console.log(`  nominal yang KITA kirim         : ${NOMINAL}.00`);
+console.log(`  tag 54 di dalam QR (ditagihkan) : ${tag54}`);
+if (tagBiaya.length) {
+  console.log(`  ⚠ tag biaya tambahan hadir      : ${tagBiaya.join(", ")}`);
+}
 console.log(
-  `  #5 amount dari generate         : ${nilai(generate, "amount.value", "data.amount.value")}`,
+  `  amount generate / query         : ${nilai(generate, "amount.value", "data.amount.value")}` +
+    ` / ${nilai(query, "amount.value", "data.amount.value")}`,
 );
 console.log(
-  `  #5 amount dari query            : ${nilai(query, "amount.value", "data.amount.value")}`,
-);
-console.log(
-  `  #4 feeAmount generate / query   : ${nilai(generate, "feeAmount.value", "data.feeAmount.value")}` +
+  `  feeAmount generate / query      : ${nilai(generate, "feeAmount.value", "data.feeAmount.value")}` +
     ` / ${nilai(query, "feeAmount.value", "data.feeAmount.value")}`,
 );
+console.log(`  contractId ditemukan di         : ${kontrak.jalur}`);
+console.log(`  contractId A / B                : ${kontrak.nilai ?? "—"}`);
+console.log(`                                    ${kontrakB.nilai ?? "—"}`);
 console.log(
-  `  #3 contractId / referenceNo     : ${nilai(generate, "contractId", "data.contractId")}` +
-    ` / ${nilai(generate, "referenceNo", "data.referenceNo")}`,
+  `  query: id sama ulang / id baru  : ${hasilHttp(queryIdSama)} / ${hasilHttp(queryIdBaru)}`,
 );
 
 console.log(
   [
     "",
-    "  Yang menentukan: apakah `amount` dari QUERY sama dengan yang kita kirim.",
-    "  SAMA   → `reconcile.ts` tetap memakai kesetaraan ketat, tanpa perubahan.",
-    "  BEDA   → nominal yang dibandingkan harus nominal ASLI, dan `orders`",
-    "           menyimpan keduanya; gerbangnya TIDAK dilonggarkan.",
+    "  CARA MEMBACANYA",
     "",
-    "  Lalu: mana di antara contractId / referenceNo yang diterima query di atas?",
-    "  Itulah yang menjadi `txnId` kita.",
+    "  tag 54 == nominal kita     → biaya TIDAK dibebankan ke pembayar;",
+    "                               `amount` hampir pasti nominal pokok.",
+    "  tag 54 == nominal + fee    → biaya dilipat ke tagihan; driver harus",
+    "                               menormalkan ke pokok sebelum dibandingkan.",
+    "  tag 55/56/57 muncul        → model biaya ketiga. BERHENTI, rancang ulang.",
+    "",
+    "  contractId A == B          → KONSTANTA merchant. JANGAN pernah ditulis ke",
+    "                               orders.txn_id: unique index-nya akan menolak",
+    "                               order kedua dan pelanggan tak bisa membayar.",
+    "  contractId A != B          → per-transaksi; simpan per-order.",
+    "",
+    "  id sama DITOLAK, id baru OK → poller WAJIB membangkitkan X-EXTERNAL-ID",
+    "                               segar tiap panggilan (jangan tiru SDK vendor).",
+    "",
+    "  Gerbang nominal di reconcile.ts TETAP kesetaraan ketat apa pun hasilnya.",
+    "  Yang berubah hanya nominal mana yang diisikan driver ke perbandingan itu.",
     "",
   ].join("\n"),
 );
