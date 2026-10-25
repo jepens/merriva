@@ -20,6 +20,7 @@
     "typecheck": "node scripts/build-theme-css.mjs && tsc --noEmit",
     "env:check": "node scripts/check-env.mjs",
     "ops:verify": "node scripts/ops-verify.mjs",
+    "probe:binderpay": "node scripts/probe-binderpay.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

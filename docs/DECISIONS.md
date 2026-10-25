@@ -4568,6 +4568,158 @@ untuk E2E — sepuluh baris `node:fs` cukup.
 
 ---
 
+## #99 — 2026-10-25 · Pakasir tutup; pindah ke BinderPay (SNAP), QRIS saja
+
+**Keputusan:** pindahkan jalur uang dari Pakasir ke **BinderPay** dengan API
+**SNAP** (Standar Nasional Open API Pembayaran, standar Bank Indonesia), kanal
+**QRIS saja**. Potongan pertama yang dikerjakan BUKAN drivernya, melainkan modul
+tanda tangan `src/lib/payment/binderpay-signature.ts` — lihat "Urutan" di bawah.
+
+**Ini bukan preferensi, ini tenggat.** Pemilik memberi tahu bahwa **Pakasir
+tutup bulan depan**. Jadi pertanyaannya bukan "apakah pindah sepadan", melainkan
+"mana yang paling tidak berbahaya untuk dipindahi dalam waktu sempit". Dua
+kandidat dinilai: WijayaPay dan BinderPay. Akun merchant pemilik sudah disetujui
+di keduanya, jadi tak ada biaya peralihan yang membedakan.
+
+### Kenapa BinderPay, bukan WijayaPay
+
+Tiga alasan, dua di antaranya saya verifikasi sendiri alih-alih memercayai
+materi pemasaran:
+
+1. **Halaman legal WijayaPay tidak ada.** `/syarat-ketentuan`,
+   `/kebijakan-privasi`, dan `/contact` ketiganya menjawab **404**; padanan
+   BinderPay ketiganya **200**. Untuk pihak yang akan memegang uang pelanggan
+   kita, ketiadaan syarat & ketentuan bukan soal kerapian — ia menghilangkan
+   satu-satunya dokumen yang menyebut kewajiban mereka saat ada sengketa.
+   Kita sendiri baru saja menjadikan identitas pelaku usaha sebagai gerbang
+   rilis (DECISIONS #88); memakai penyedia yang tak memenuhinya akan ganjil.
+2. **SNAP adalah standar Bank Indonesia, bukan dialek satu vendor.** Bila
+   BinderPay kelak bermasalah, penerus yang juga SNAP memakai bentuk tanda
+   tangan dan amplop yang sama — modul tanda tangan kita ikut pindah. API
+   WijayaPay bentuknya milik sendiri; pindah dari sana berarti mulai nol lagi.
+   Setelah baru saja terjebak vendor yang tutup, itu bukan pertimbangan kecil.
+3. **WijayaPay menaruh `api_key` di QUERY STRING** pada endpoint cek status
+   (`GET /api/get-status?code_merchant=..&api_key=..&ref_id=..`). Itu endpoint
+   yang paling sering kita panggil — poll tiap ~4 detik — dan setiap
+   kegagalannya mendarat di `reportHandledError`, artinya kunci API ikut
+   mengalir ke Sentry. Penyaringnya sudah kita pasang (commit `8fcade9`), tetapi
+   aturan "jangan taruh rahasia di URL" tak pernah bisa kita paksakan pada pihak
+   ketiga; lebih baik tidak memilih pihak yang melanggarnya sejak awal.
+
+### Yang sudah diverifikasi, bukan diasumsikan
+
+- **Kunci publik produksi BinderPay berukuran 1023 bit**
+  (`openssl rsa -pubin -text -noout` → `Public-Key: (1023 bit)`). Di bawah
+  ambang yang layak, dan ganjil — RSA biasanya 2048. Konsekuensinya tercatat di
+  bawah; singkatnya, ini memperkuat aturan yang sudah kita pegang dan tidak
+  mengubah apa pun pada arsitektur.
+- **Bentuk string-to-sign:** `{METHOD}:{endpointPath}:{sha256hex(body)}:{timestamp}`,
+  bodi di-hash SHA-256 hex huruf kecil, hasil akhir RSA-SHA256 lalu Base64.
+  Sudah dikunci test (21 test, pasangan kunci dibuat di dalam test — tanpa akun,
+  tanpa jaringan).
+- **String itu tak bisa dipecah dengan `split(":")`**: stempel waktunya sendiri
+  memuat titik dua, jadi hasilnya enam bagian, bukan empat. Tak menjadi masalah
+  saat merakit, tetapi menyesatkan saat membandingkan dengan string milik mereka
+  ketika men-debug penolakan.
+
+### Lima pertentangan di dokumentasi mereka — dan kenapa drivernya ditunda
+
+Dokumentasi BinderPay membantah dirinya sendiri di lima tempat. Tiga pertama
+tidak berbahaya; **dua terakhir menyentuh jalur uang**:
+
+| # | Pertentangan | Akibat bila ditebak salah |
+|---|---|---|
+| 1 | Kebijakan ulang-kirim callback: "3 retries" vs "1,5,15,30,60 menit sampai 5 kali" | kosmetik; memengaruhi penalaran idempotensi saja |
+| 2 | Contoh nilai `X-Signature` berbentuk JWT (`eyJhbGciOiJSUzI1NiIs`), bertentangan dengan Base64 RSA-SHA256 | contoh yang salah; bentuk sebenarnya sudah dikunci test |
+| 3 | `contractId` dijelaskan sebagai "ID kontrak merchant" DAN "kode referensi untuk request terkait" | **ia kandidat `txnId` kita yang wajib non-null** |
+| 4 | `feeAmount` **550** di satu contoh, **1000** di contoh lain, untuk transaksi yang sama | nominal yang dibandingkan meleset |
+| 5 | **`amount` berarti hal berbeda per endpoint**: `qr-mpm-generate` → `50550.00` (sudah termasuk fee), `qr-mpm-query` → `50000.00` (asli), callback → `35490` | **lihat di bawah** |
+
+Pertentangan #5 menabrak langsung `src/server/payment/reconcile.ts:112`:
+
+```ts
+if (verification.amountIdr !== order.amount_idr) { … return { kind: "mismatch" }; }
+```
+
+Kesetaraan **ketat** itu adalah penjaga yang menghentikan orang membayar
+Rp10.000 untuk paket Rp199.000. Bila `qr-mpm-query` ternyata mengembalikan
+nominal ber-fee, penjaga ini menolak **setiap** pembayaran yang sah. Bila kita
+melonggarkannya lebih dulu "untuk aman", penjaga itu berhenti berbunyi justru
+pada kasus yang ia ada untuk menangkapnya. Kedua arah salahnya mahal, dan satu
+panggilan sandbox menyelesaikannya.
+
+**Karena itu driver, webhook, dan halaman QR sengaja BELUM ditulis.** Menulis
+integrasi di atas dokumen yang membantah dirinya sendiri adalah cara termahal
+untuk menemukan jawabannya: salahnya baru ketahuan pada pembayaran pelanggan
+pertama.
+
+### Urutan: kenapa tanda tangan lebih dulu
+
+Tanda tangan adalah bagian yang paling mudah salah dan paling sulit
+didiagnosis. Server menolaknya dengan pesan generik, dan "meleset satu karakter"
+tak bisa dibedakan dari "kredensial salah". Dengan mengunci dan mengujinya lebih
+dulu — sepenuhnya offline — saat sandbox menolak kita nanti, kita tahu bukan itu
+sebabnya. Tiga jebakan ikut ditutup di sana: bodi di-hash sebagai string yang
+BENAR-BENAR dikirim (fungsinya menerima string, bukan objek, supaya tak ada
+serialisasi kedua), stempel waktu `+07:00` tanpa milidetik (`toISOString()`
+memberi zona lain, milidetik, dan huruf Z — ketiganya mengubah string), dan
+catatan bahwa webhook WAJIB membaca `req.text()`, bukan `req.json()`.
+
+### Celah kontrak yang sudah pasti (bukan ambiguitas)
+
+`CreatedPaymentLink.url` mengandaikan ada **halaman bayar hosted**. QRIS SNAP
+memakai *Merchant Presented Mode*: `qr-mpm-generate` mengembalikan **string QR**,
+bukan URL halaman — memang tak ada halaman untuk dituju. Jadi antarmuka
+`src/lib/payment/types.ts` harus berubah saat drivernya masuk.
+
+Kabar baiknya, ini **mengecilkan** pekerjaan, bukan membesarkannya: halaman
+`/dashboard/undangan/[id]/bayar` sudah ada lengkap dengan auth, cek kepemilikan
+RLS, status awal yang dihitung di server, dan `PaymentStatusPoller` yang baru
+saja diperbaiki (#98). Yang kurang hanya merender QR dan hitung mundur di
+halaman yang SUDAH mem-poll. Estimasi "berminggu-minggu" yang sempat saya
+sebutkan salah, dan ini koreksinya.
+
+**Ditolak:**
+
+- **Tetap di Pakasir.** Bukan pilihan: mereka tutup. (Satu rekomendasi
+  "tetap-pakasir" sempat muncul dari agen peninjau — ia dijalankan sebelum
+  pemilik menyebut penutupan itu, jadi premisnya basi. Dicatat di sini supaya
+  tak muncul lagi sebagai "tapi dulu pernah disarankan".)
+- **Menulis driver sekarang di atas asumsi,** lalu memperbaikinya setelah
+  sandbox. Ditolak karena asumsi yang salah pada #4/#5 tidak gagal keras: ia
+  gagal sebagai penolakan pembayaran yang sah, atau sebagai penjaga yang diam.
+- **Melonggarkan gerbang nominal menjadi "terima salah satu"** (asli ATAU
+  ber-fee). Itu membuang satu-satunya pertahanan terhadap pembayaran kurang
+  bayar demi menghindari satu panggilan probe.
+- **Menyimpan kunci privat sebagai path berkas.** Diganti PEM ter-base64 di env:
+  satu mekanisme yang sama persis di dev dan di panel Easypanel, dan PEM mentah
+  mengandung baris-baru yang tak selamat melewati kolom env.
+- **Memaku kunci publik BinderPay di kode.** Rotasi di sisi mereka akan menuntut
+  rilis dari kita; ia env.
+
+**Konsekuensi:**
+
+- **Kunci 1023-bit itu tidak mengubah arsitektur, hanya menegaskannya.**
+  Aktivasi kita memang sudah tak pernah bergantung pada tanda tangan callback:
+  payload webhook = sinyal, bukti datang dari cek status otoritatif (SPEC §4.8,
+  CLAUDE.md). Kalau arsitekturnya tidak begitu, temuan ini akan menjadi
+  penghalang rilis.
+- Empat variabel baru ada di `.env.example` tetapi **sengaja belum masuk**
+  `scripts/env-manifest.mjs`: di sana ada test "entri yatim" yang menolak
+  variabel yang belum dibaca kode mana pun. Keduanya didaftarkan bersamaan saat
+  driver masuk.
+- **Masa dua-gateway.** Order lama tetap diverifikasi lewat Pakasir sampai
+  lunas/kedaluwarsa; order baru lewat BinderPay. `getPaymentGateway()` adalah
+  seam-nya.
+- Dua hal yang masih harus dipastikan pemilik ke Pakasir: **tanggal pasti
+  penutupan**, dan **nasib dana yang belum di-settle** pada hari itu.
+- Pekerjaan berikutnya terkunci pada kredensial sandbox
+  (`BINDERPAY_PARTNER_ID`, `BINDERPAY_BASE_URL`, `BINDERPAY_PRIVATE_KEY_B64`,
+  `BINDERPAY_PUBLIC_KEY_B64`). `scripts/probe-binderpay.mjs` menyelesaikan
+  pertentangan #3, #4, dan #5 dalam satu kali jalan begitu keempatnya terisi.
+
+---
+
 ## Template entri baru
 
 ```
