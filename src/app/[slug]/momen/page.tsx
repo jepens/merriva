@@ -26,7 +26,10 @@ import type { Json } from "@/types/database";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: `${copy.momen.brand} — Merriva`,
+  // Tanpa "— Merriva": layout akar sudah memakai template "%s · Merriva",
+  // jadi menuliskannya lagi di sini menghasilkan "Merriva Momen — Merriva ·
+  // Merriva" di tab dan di pratinjau tautan QR meja.
+  title: copy.momen.brand,
   robots: { index: false, follow: false },
 };
 

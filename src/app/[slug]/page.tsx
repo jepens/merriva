@@ -85,9 +85,18 @@ export async function generateMetadata({
 
   const content = parseContentForRender(inv.content, inv.category);
   const names = coupleNames(content);
+  // Non-pernikahan memakai `eventName`, SAMA seperti gambar OG (route
+  // `/api/og/[slug]`). Dulu seluruh kategori selain wedding jatuh ke nama
+  // brand, dan karena layout menambahkan "· Merriva", judul yang tersebar
+  // berbunyi "Merriva · Merriva" — pratinjau WhatsApp sebuah undangan khitanan
+  // tak menyebut acaranya sama sekali, padahal GAMBAR OG-nya sudah benar.
+  // Itu memukul tepat di fitur Sebar: judul inilah yang dilihat tamu lebih
+  // dulu, sebelum gambarnya termuat.
   const title = names
     ? `${names.groom} & ${names.bride} — ${copy.public.cover.weddingKicker}`
-    : copy.brand.name;
+    : content.category !== "wedding" && content.eventName
+      ? content.eventName
+      : copy.brand.name;
   const description =
     content.category === "wedding" && content.greetingOpen
       ? content.greetingOpen.slice(0, 160)

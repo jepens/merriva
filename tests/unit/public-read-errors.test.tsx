@@ -252,6 +252,56 @@ describe("/{slug} (ISR) — setiap bacaan wajib berhasil", () => {
   });
 });
 
+/**
+ * Menumpang perkakas tiruan di berkas ini (bukan berkas baru) karena hanya di
+ * sini `generateMetadata` sudah punya klien Supabase palsu yang lengkap.
+ *
+ * Judul inilah yang DILIHAT TAMU LEBIH DULU saat tautan ditempel di WhatsApp —
+ * sebelum gambar OG termuat. Dulu setiap kategori selain pernikahan jatuh ke
+ * nama brand, dan karena layout menambahkan "· Merriva", undangan khitanan
+ * tersebar dengan judul "Merriva · Merriva" tanpa menyebut acaranya sama
+ * sekali. Gambar OG-nya sendiri sudah benar, jadi tak ada yang terlihat salah
+ * sampai seseorang membaca judulnya.
+ */
+describe("/{slug} — judul metadata (pratinjau tautan WhatsApp)", () => {
+  const judul = async (slug = "andi-sinta") =>
+    (await generateMetadata({ params: Promise.resolve({ slug }) })).title;
+
+  // Kategori yang SAH hanya tiga: wedding, corporate, family. Khitanan/aqiqah/
+  // ulang tahun semuanya `family` dengan `eventName` sebagai nama acaranya —
+  // jadi satu kategori ini mewakili sebagian besar undangan non-pernikahan.
+  /** Ganti isi undangan pada fixture, pertahankan sisanya. */
+  function pakaiIsi(category: "wedding" | "family", isi: object) {
+    const row = refs.tables.invitations.data as Record<string, unknown>;
+    row.category = category;
+    row.content = { ...emptyContent(category), ...isi };
+  }
+
+  it("pernikahan: nama kedua mempelai", async () => {
+    pakaiIsi("wedding", {
+      groom: { name: "Andi", nickname: "" },
+      bride: { name: "Sinta", nickname: "" },
+    });
+    expect(await judul()).toContain("Andi & Sinta");
+  });
+
+  it("non-pernikahan memakai nama acara, BUKAN nama brand", async () => {
+    pakaiIsi("family", { eventName: "Khitanan Rafa" });
+    const t = await judul();
+    expect(t).toBe("Khitanan Rafa");
+    // Penjaga sesungguhnya: layout menambahkan "· Merriva", jadi judul yang
+    // berisi nama brand menghasilkan "Merriva · Merriva".
+    expect(t).not.toBe("Merriva");
+  });
+
+  it("non-pernikahan tanpa nama acara → nama brand (bukan string kosong)", async () => {
+    // Kosong tak boleh lolos: judul kosong membuat WhatsApp menampilkan URL
+    // mentah, yang lebih buruk daripada nama brand.
+    pakaiIsi("family", { eventName: "" });
+    expect(await judul()).toBe("Merriva");
+  });
+});
+
 describe("/preview/{id} — pratinjau pemilik tak menampilkan isian palsu", () => {
   const buka = (embed?: string) =>
     PreviewPage({
