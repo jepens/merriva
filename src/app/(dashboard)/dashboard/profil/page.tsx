@@ -33,6 +33,15 @@ export default async function ProfilePage() {
 
   return (
     <div className="max-w-lg space-y-6">
+      {/*
+        Satu-satunya halaman dashboard yang dulu TAK punya `h1` sama sekali:
+        isinya hanya Card, dan `CardTitle` dipaku ke `h2`. Akibatnya pembaca
+        layar yang menavigasi antar-heading mendarat di halaman tanpa judul
+        tingkat atas, dan urutan headingnya melompat dari h2.
+        `sr-only`, bukan judul terlihat: kartu pertama sudah berjudul "Profil",
+        jadi judul kedua yang terlihat hanya akan menduplikasinya.
+      */}
+      <h1 className="sr-only">{copy.dashboard.profileTitle}</h1>
       <Card>
         <CardHeader>
           <CardTitle>{copy.dashboard.profileTitle}</CardTitle>
