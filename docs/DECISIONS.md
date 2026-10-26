@@ -4796,8 +4796,20 @@ kalau tidak, satu sesi sandbox terbuang pada perkakas yang berbohong.
 - **Masa dua-gateway.** Order lama tetap diverifikasi lewat Pakasir sampai
   lunas/kedaluwarsa; order baru lewat BinderPay. `getPaymentGateway()` adalah
   seam-nya.
-- Dua hal yang masih harus dipastikan pemilik ke Pakasir: **tanggal pasti
-  penutupan**, dan **nasib dana yang belum di-settle** pada hari itu.
+- **TERJAWAB 27 Okt 2026 — tak ada dana menggantung, dan memang tak pernah ada.**
+  Pemilik memastikan tidak ada dana yang belum di-settle. Diperiksa sendiri di
+  produksi dan cocok: dari empat baris `orders`, satu-satunya yang `paid`
+  adalah `MRV-E6GKXZ` dengan **nominal 0 dan `txn_id` NULL** — itu aktivasi
+  gratis jalur admin/Pro (#bc2585a), bukan pembayaran. Tiga sisanya (199rb,
+  199rb, 99rb) `pending` dan tak pernah dibayar. Jadi **belum pernah ada satu
+  rupiah pun melewati Pakasir**: tak ada rekonsiliasi, refund, atau sengketa
+  yang perlu dijaga saat berpindah.
+- **Pakasir TIDAK dihapus sekarang** (keputusan pemilik, 27 Okt 2026). Ia tetap
+  hidup sampai driver BinderPay terbukti jalan, lalu keduanya ditukar dalam
+  SATU peralihan. Alasannya bukan dana — melainkan agar tak ada jendela waktu
+  ketika pelanggan tak punya jalur bayar sama sekali, dan agar tak ada kode
+  yang dihapus lalu ditulis ulang. Aktivasi admin/Pro tak terpengaruh apa pun:
+  ia gratis dan tak pernah menyentuh gateway.
 - Pekerjaan berikutnya terkunci pada kredensial sandbox
   (`BINDERPAY_PARTNER_ID`, `BINDERPAY_BASE_URL`, `BINDERPAY_PRIVATE_KEY_B64`,
   `BINDERPAY_PUBLIC_KEY_B64`). `scripts/probe-binderpay.mjs` menyelesaikan
