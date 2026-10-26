@@ -5,6 +5,8 @@ import { DeleteInvitationButton } from "@/components/dashboard/delete-invitation
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
+import { utcToLocal } from "@/lib/datetime";
+import { settingsSchema } from "@/lib/validation/content";
 import { cn } from "@/lib/utils";
 import { dataOrThrow } from "@/lib/supabase/result";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -37,12 +39,58 @@ export default async function DashboardPage() {
     dataOrThrow(
       await supabase
         .from("invitations")
-        .select("id, slug, category, status, event_date, package_id")
+        .select("id, slug, category, status, event_date, settings, package_id")
         .eq("user_id", user.id)
         .is("purged_at", null)
         .order("created_at", { ascending: false }),
       "invitations (daftar dashboard)",
     ) ?? [];
+
+  /**
+   * Tanggal cadangan dari SESI JADWAL, bila `event_date` kosong.
+   *
+   * Gerbang aktivasi hanya menuntut satu sesi jadwal yang lengkap — bukan
+   * `event_date` — jadi undangan bisa AKTIF dan benar di mana-mana (halaman
+   * tamu, gambar OG, berkas kalender semuanya menurunkan tanggal dari sesi)
+   * sementara kartu di sini satu-satunya yang berkata "Tanggal belum diatur".
+   * Pemiliknya lalu mencari-cari isian yang sebenarnya tak pernah wajib.
+   *
+   * `data ?? []`, BUKAN `dataOrThrow`: kehilangan label tanggal jauh lebih
+   * murah daripada memerahkan seluruh dashboard (alasan yang sama dengan
+   * katalog harga di bawah).
+   */
+  const { data: sesiRows } = await supabase
+    .from("invitation_events")
+    .select("invitation_id, start_at")
+    .in(
+      "invitation_id",
+      invitations.map((i) => i.id),
+    )
+    // Sesi tanpa jam DISARING, lalu diurutkan `sort_order` dulu: tanpa itu sesi
+    // draf tanpa jam di urutan pertama menutupi sesi berjam sesudahnya
+    // (DECISIONS #42).
+    .not("start_at", "is", null)
+    .order("sort_order", { ascending: true })
+    .order("start_at", { ascending: true });
+
+  /** invitation_id → `YYYY-MM-DD` sesi paling awal, di zona undangan itu. */
+  const tanggalSesi = new Map<string, string>();
+  const zonaById = new Map(
+    invitations.map((i) => [
+      i.id,
+      settingsSchema.safeParse(i.settings).data?.timezone ?? "Asia/Jakarta",
+    ]),
+  );
+  for (const s of sesiRows ?? []) {
+    if (tanggalSesi.has(s.invitation_id) || !s.start_at) continue;
+    // `.slice(0, 10)` dari bentuk `YYYY-MM-DDTHH:mm` → sama persis dengan
+    // bentuk `event_date`, jadi kedua sumber tampil seragam.
+    const lokal = utcToLocal(
+      s.start_at,
+      zonaById.get(s.invitation_id) ?? "Asia/Jakarta",
+    );
+    if (lokal) tanggalSesi.set(s.invitation_id, lokal.slice(0, 10));
+  }
 
   // Harga paket undangan — untuk memutuskan apakah tombol "Upgrade paket"
   // masuk akal (ada paket aktif yang lebih mahal dari paket undangan ini).
@@ -110,7 +158,9 @@ export default async function DashboardPage() {
                     <div className="min-w-0">
                       <p className="truncate font-medium">/{inv.slug}</p>
                       <p className="text-muted-foreground text-xs">
-                        {inv.event_date ?? "Tanggal belum diatur"}
+                        {inv.event_date ??
+                          tanggalSesi.get(inv.id) ??
+                          "Tanggal belum diatur"}
                       </p>
                     </div>
                     <span

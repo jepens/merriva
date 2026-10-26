@@ -56,6 +56,15 @@ export function allowedTurnstileHosts(
     if (process.env.NODE_ENV !== "production") {
       set.add("localhost");
       set.add("127.0.0.1");
+      // Kunci UJI resmi Cloudflare (`1x00000000000000000000AA`) selalu menjawab
+      // `hostname: "example.com"`, apa pun domain yang menyajikan widgetnya.
+      // Tanpa baris ini, resep dev yang ditulis di `.env.example` kita SENDIRI
+      // membuat setiap form gagal — RSVP, ucapan, amplop, unggah Momen,
+      // pendaftaran — dengan pesan "Verifikasi anti-bot gagal" yang menuduh
+      // tempat yang salah.
+      // Aman: cabang ini memang tak pernah berjalan di produksi, alasan yang
+      // sama persis seperti `localhost` (DECISIONS #78).
+      set.add("example.com");
     }
     return set;
   } catch {

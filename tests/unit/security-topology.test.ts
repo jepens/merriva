@@ -70,6 +70,26 @@ describe("daftar host Turnstile", () => {
     expect(set.has("127.0.0.1")).toBe(true);
   });
 
+  it("DI PRODUKSI example.com ditolak — hostname kunci uji Cloudflare", async () => {
+    // Kunci uji Cloudflare selalu menjawab `hostname: "example.com"`. Bila
+    // host itu pernah diterima di produksi, siapa pun bisa menyelesaikan
+    // tantangan memakai kunci uji di mesinnya lalu mengirim tokennya ke sini.
+    const { allowedTurnstileHosts } = await turnstile("https://merriva.id");
+    expect(allowedTurnstileHosts()!.has("example.com")).toBe(false);
+  });
+
+  it("di luar produksi example.com diterima — tanpa itu resep dev kita sendiri rusak", async () => {
+    // `.env.example` menganjurkan kunci uji resmi untuk dev. Sebelum ini,
+    // mengikuti anjuran itu membuat SETIAP form gagal dengan "Verifikasi
+    // anti-bot gagal" — pesan yang menuduh tempat yang salah, karena yang
+    // sebenarnya terjadi adalah hostname token ditolak.
+    const { allowedTurnstileHosts } = await turnstile(
+      "http://localhost:3000",
+      "development",
+    );
+    expect(allowedTurnstileHosts()!.has("example.com")).toBe(true);
+  });
+
   it("apex dan www saling melengkapi, dua arah", async () => {
     const { allowedTurnstileHosts } = await turnstile("https://merriva.id");
     expect([...allowedTurnstileHosts()!].sort()).toEqual([
