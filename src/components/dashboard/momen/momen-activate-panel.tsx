@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -155,10 +156,29 @@ export function MomenActivatePanel({
           {error}
         </p>
       ) : null}
+      {/* Titik tempat uang berpindah — pelanggan tak boleh bisa berargumen tak
+          pernah diberi tahu (AUDIT-2026-10-01 A2). Add-on ini menagih sampai
+          Rp1.099.000 dan sampai 27 Okt 2026 satu-satunya yang ditampilkannya
+          adalah "diproses oleh Pakasir": `PackageChooser` sudah memuat notis
+          ini sejak lama, panel add-on melewatkannya karena ditulis belakangan.
+          Tak ada uang berpindah saat `free`. */}
       {free ? null : (
-        <p className="text-muted-foreground text-center text-xs">
-          {m.securedBy}
-        </p>
+        <>
+          <p className="text-muted-foreground text-center text-xs">
+            {copy.checkout.termsNoticeBefore}{" "}
+            <Link href="/syarat" className="underline underline-offset-4">
+              {copy.marketing.legal.terms.title}
+            </Link>{" "}
+            {copy.checkout.termsNoticeAnd}{" "}
+            <Link href="/refund" className="underline underline-offset-4">
+              {copy.marketing.legal.refund.title}
+            </Link>
+            .
+          </p>
+          <p className="text-muted-foreground text-center text-xs">
+            {m.securedBy}
+          </p>
+        </>
       )}
     </div>
   );

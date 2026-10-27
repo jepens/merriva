@@ -9,6 +9,8 @@ import {
   momenPaidCodeSchema,
   MOMEN_FREE_CODE,
 } from "@/lib/momen/package-codes";
+import { merchantIdentityReady } from "@/lib/merchant";
+import { reportHandledError } from "@/lib/observability";
 import { generateOrderCode } from "@/lib/order";
 import { isPaymentExempt } from "@/server/guards/auth";
 import { aktifkanGratis } from "@/server/payment/gratis";
@@ -56,6 +58,22 @@ export async function createMomenCheckoutAction(
   } = await supabase.auth.getUser();
   if (!user) return { status: "error", message: copy.auth.genericAuthError };
   if (!isUuid(invitationId)) return { status: "error" };
+
+  // Gerbang identitas pelaku usaha, SAMA PERSIS dengan `createCheckoutAction`
+  // (PP 80/2019, Permendag 31/2020). Jalur add-on ditulis belakangan dan
+  // melewatkannya — padahal ia menagih sampai Rp1.099.000 lewat aggregator yang
+  // sama, dan `/syarat` merender bagian identitas KOSONG dengan anggun bila
+  // belum diisi. Hanya di PRODUCTION, agar alur bayar tetap bisa ditelusuri di
+  // dev & test.
+  if (process.env.NODE_ENV === "production" && !merchantIdentityReady()) {
+    reportHandledError(
+      new Error(
+        "identitas pelaku usaha belum diisi (copy.marketing.legal.merchant) — checkout add-on ditutup",
+      ),
+      "checkout.merchant-identity",
+    );
+    return { status: "error", message: copy.checkout.merchantMissing };
+  }
 
   const parsed = momenPaidCodeSchema.safeParse(packageCode);
   if (!parsed.success) return { status: "error" };

@@ -40,6 +40,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { createCheckoutAction } from "@/server/actions/checkout";
+import { createMomenCheckoutAction } from "@/server/actions/momen-checkout";
 
 const INV = "44444444-4444-4444-8444-444444444444";
 
@@ -122,6 +123,44 @@ describe("gerbang terbuka", () => {
 
     await createCheckoutAction(INV, "premium");
 
+    expect(reportHandledError).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Jalur KEDUA yang memindahkan uang: add-on Album Momen, sampai Rp1.099.000
+ * lewat aggregator yang sama. Ditulis belakangan dan melewatkan gerbang ini —
+ * tak terlihat selama kelima tier-nya nonaktif, lalu empat tier berbayarnya
+ * dibuka 27 Okt 2026. Gerbang yang hanya berdiri di satu dari dua pintu bukan
+ * gerbang.
+ */
+describe("add-on Album Momen melewati pintu yang sama", () => {
+  it("produksi tanpa identitas → ditolak, dilaporkan, tanpa menyentuh DB", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const client = makeClient();
+    serverRef.current = client as never;
+
+    const res = await createMomenCheckoutAction(INV, "momen_unlimited");
+
+    expect(res.status).toBe("error");
+    if (res.status === "error") expect(res.message).toMatch(/halo@merriva\.id/);
+    expect(reportHandledError.mock.calls[0]?.[1]).toBe(
+      "checkout.merchant-identity",
+    );
+    expect(client.from).not.toHaveBeenCalled();
+  });
+
+  it("identitas lengkap → gerbang tak ikut campur", async () => {
+    // Pembeda: tanpa ini, gerbang yang menolak SEMUANYA juga lulus test di atas.
+    vi.stubEnv("NODE_ENV", "production");
+    merchantIdentityReady.mockReturnValue(true);
+
+    const res = await createMomenCheckoutAction(INV, "momen_unlimited");
+
+    expect(res.status).toBe("error"); // undangan tiruan tak ada
+    if (res.status === "error") {
+      expect(res.message ?? "").not.toMatch(/halo@merriva\.id/);
+    }
     expect(reportHandledError).not.toHaveBeenCalled();
   });
 });

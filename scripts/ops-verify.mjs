@@ -550,9 +550,13 @@ async function periksaData(env, app, basisMedia) {
     "packages",
     "&kind=eq.addon_momen&is_active=eq.true",
   );
+  // Dikunci pada KODE, bukan harga. `activateFreeMomenAction` mengenali jalur
+  // tanpa-order dari `MOMEN_FREE_CODE` (`momen_5`) — jadi harga yang diubah di
+  // `/admin/paket` menggeser alarm ini menjauh dari gerbang yang sebenarnya:
+  // `momen_5` berharga membuat alarm diam sementara jalur gratis tetap terbuka.
   const momenGratis = await hitung(
     "packages",
-    "&kind=eq.addon_momen&is_active=eq.true&price_idr=eq.0",
+    "&kind=eq.addon_momen&is_active=eq.true&code=eq.momen_5",
   );
   if ((momenGratis ?? 0) > 0) {
     warn(

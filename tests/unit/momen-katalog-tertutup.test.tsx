@@ -102,13 +102,17 @@ describe("halaman add-on Album Momen", () => {
     // Pembedaan yang menentukan: pesan "belum dibuka" tak boleh menelan
     // keadaan normal — kalau ia muncul juga di sini, test pertama lulus
     // karena alasan yang salah.
+    //
+    // Tier BERBAYAR, bukan `momen_5`: sejak 27 Okt 2026 justru tier gratis yang
+    // tertutup di produksi, jadi memakainya sebagai kontrol akan menguji dunia
+    // yang tak ada — dan melewatkan satu-satunya jalur yang memindahkan uang.
     refs.data.packages = {
       data: [
         {
           id: "pkg-1",
-          code: "momen_5",
-          price_idr: 0,
-          limits: { quota_peserta: 5 },
+          code: "momen_unlimited",
+          price_idr: 1099000,
+          limits: { quota_peserta: null, photo_ceiling: 8000 },
         },
       ],
       error: null,
@@ -117,7 +121,34 @@ describe("halaman add-on Album Momen", () => {
     render(await halaman());
 
     expect(screen.getByText(a.intro)).toBeTruthy();
-    expect(screen.getByText(a.peserta(5))).toBeTruthy();
+    expect(screen.getByText(a.pesertaUnlimited)).toBeTruthy();
+    expect(screen.getByRole("button", { name: a.paidCta })).toBeTruthy();
     expect(screen.queryByText(a.closedTitle)).toBeNull();
+  });
+
+  it("tier berbayar menyebut Syarat & Ketentuan dan Kebijakan Refund", async () => {
+    // Titik tempat uang berpindah (AUDIT-2026-10-01 A2). `PackageChooser` sudah
+    // lama memuat notis ini; panel add-on ditulis belakangan dan melewatkannya,
+    // lalu empat tier berbayarnya dibuka 27 Okt 2026.
+    refs.data.packages = {
+      data: [
+        {
+          id: "pkg-1",
+          code: "momen_unlimited",
+          price_idr: 1099000,
+          limits: { quota_peserta: null },
+        },
+      ],
+      error: null,
+    };
+
+    render(await halaman());
+
+    expect(
+      screen.getByRole("link", { name: copy.marketing.legal.terms.title }),
+    ).toHaveAttribute("href", "/syarat");
+    expect(
+      screen.getByRole("link", { name: copy.marketing.legal.refund.title }),
+    ).toHaveAttribute("href", "/refund");
   });
 });
