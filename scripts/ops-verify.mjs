@@ -540,20 +540,29 @@ async function periksaData(env, app, basisMedia) {
     ">= 1 (tanpa ini /admin tak terjangkau)",
   );
 
+  // Yang berisiko bukan "ada tier aktif" melainkan tier GRATIS + self-service:
+  // ia membuat album tanpa order sama sekali, jadi siapa pun dengan undangan
+  // aktif bisa menumpuk objek media tanpa satu rupiah masuk. Tier BERBAYAR
+  // justru keadaan yang dituju — memperingatkannya membuat alarm ini berbunyi
+  // selamanya dengan alasan yang keliru (dibuka 27 Okt 2026: 4 tier berbayar
+  // menyala, `momen_5` tetap tertutup).
   const momen = await hitung(
     "packages",
     "&kind=eq.addon_momen&is_active=eq.true",
   );
-  if ((momen ?? 0) > 0) {
+  const momenGratis = await hitung(
+    "packages",
+    "&kind=eq.addon_momen&is_active=eq.true&price_idr=eq.0",
+  );
+  if ((momenGratis ?? 0) > 0) {
     warn(
       "add-on Album Momen",
-      `${momen} tier AKTIF — tier momen_5 gratis & self-service`,
+      `tier GRATIS self-service AKTIF — album bisa dibuat tanpa order (${momen} tier aktif)`,
     );
+  } else if ((momen ?? 0) > 0) {
+    ok("add-on Album Momen", `${momen} tier berbayar aktif; tier gratis tutup`);
   } else {
-    ok(
-      "add-on Album Momen",
-      "nonaktif (sesuai keputusan sampai media pindah R2)",
-    );
+    ok("add-on Album Momen", "seluruh tier nonaktif");
   }
 
   // --- jalur uang -----------------------------------------------------------
