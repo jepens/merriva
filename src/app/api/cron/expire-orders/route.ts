@@ -167,8 +167,25 @@ export async function POST(req: Request) {
     // seperti ini lahir dari penerbitan link yang gagal — artinya pelanggan tak
     // pernah menerima link, jadi tak ada pembayaran yang hilang. DIHITUNG, bukan
     // dilewati diam-diam: angka yang tumbuh berarti penerbitan link sering gagal.
+    //
+    // DI-EXPIRE, bukan ditinggalkan `pending` selamanya. `terbitkanLink`
+    // (server/payment/link.ts) TIDAK PERNAH mengarahkan pelanggan bila `txn_id`
+    // gagal tersimpan, jadi baris ini pasti tak pernah sampai ke tangan siapa
+    // pun — sementara statusnya yang abadi itu mengunci pembelian berikutnya:
+    // `findPendingMomenOrder` dan penahan serupa di jalur upgrade menolak order
+    // baru selama ada yang `pending`, tanpa batas umur dan tanpa jalan keluar
+    // dari UI mana pun. Pemilik yang sekali kena galat jaringan Pakasir tak akan
+    // pernah bisa membeli add-on untuk undangan itu lagi.
+    //
+    // Tanpa panggilan Pakasir: tak ada transaksi yang bisa dinamai untuk
+    // dibatalkan, dan RPC-nya mengunci baris + memeriksa ulang `status =
+    // 'pending'`, jadi order yang keburu lunas tetap menang.
     if (!o.txn_id) {
       tanpaTxn += 1;
+      const { data: lepas } = await admin.rpc("expire_pending_order", {
+        p_order_code: o.order_code,
+      });
+      if (lepas?.[0]?.result === "expired") expired += 1;
       continue;
     }
     if (!(await pakaiAnggaran())) {

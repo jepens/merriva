@@ -265,3 +265,58 @@ describe("halaman aktivasi — daftar syarat sebelum bayar", () => {
     expect(tombolPaket()).toBeNull();
   });
 });
+
+/**
+ * Katalog paket bisa kosong — admin menonaktifkannya di `/admin/paket`, atau
+ * kuerinya gagal sesaat. Halaman ini dulu tetap merangkai halaman beli:
+ * subjudul "Pilih paket … Pembayaran aman via QRIS" dan — lebih buruk — notis
+ * "Dengan melanjutkan pembayaran…" + "diproses oleh Pakasir" yang `PackageChooser`
+ * taruh DI LUAR daftar kartunya. Hasilnya legalese pembayaran di atas grid tanpa
+ * satu pun barang: bukan "belum ada pilihan", melainkan halaman yang tampak rusak.
+ */
+describe("halaman aktivasi — katalog paket kosong", () => {
+  it("menyebut paket tak tersedia, tanpa ajakan beli maupun notis pembayaran", async () => {
+    refs.packages = [];
+    await buka();
+
+    expect(
+      screen.getByText(copy.checkout.packageUnavailable),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(copy.checkout.subtitle)).toBeNull();
+    expect(screen.queryByText(copy.checkout.securedBy)).toBeNull();
+    expect(tombolPaket()).toBeNull();
+  });
+
+  it("katalog bebas-bayar yang kosong juga, bukan 'langsung aktif' di atas ruang kosong", async () => {
+    // `packages.slice(-1)` dari array kosong tetap kosong — jalur Admin/Pro
+    // melewati cabang yang sama dan tak boleh lolos dengan subjudul gratisnya.
+    refs.exempt = true;
+    refs.packages = [];
+    refs.inv = {
+      id: ID,
+      status: "draft",
+      slug: "andi-sinta",
+      purged_at: null,
+      user_id: "u-1",
+    };
+    await buka();
+
+    expect(
+      screen.getByText(copy.checkout.packageUnavailable),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(copy.checkout.freeSubtitle)).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: copy.checkout.freeCta }),
+    ).toBeNull();
+  });
+
+  it("katalog berisi TETAP menampilkan pemilih paket", async () => {
+    // Pembeda yang menentukan: tanpa ini cabang kosong bisa menelan halaman
+    // dan kedua test di atas tetap hijau.
+    refs.packages = [BASIC];
+    await buka();
+
+    expect(screen.queryByText(copy.checkout.packageUnavailable)).toBeNull();
+    expect(tombolPaket()).toBeInTheDocument();
+  });
+});

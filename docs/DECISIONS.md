@@ -4877,6 +4877,8 @@ Bentuknya, sengaja sekecil mungkin:
   terbit): cron melewatinya dan poller berakhir di layar galat. Tak ada
   tombolnya di `/admin/order`; lepaskan lewat SQL
   `select * from public.expire_pending_order('<order_code>')`.
+  **Ditutup 27 Okt 2026 oleh #101** — cron kini meng-expire sendiri order tanpa
+  `txn_id`, jadi penahannya lepas dalam ≤ 24 jam tanpa SQL manual.
 - Metrik admin: omzet tetap benar (Rp0), tetapi "N order lunas bulan ini" dan
   konversi draft→bayar ikut menghitung aktivasi gratis.
 - Refund order Rp0 di `/admin/order` mencabut aktivasi gratis itu — berguna
@@ -4886,6 +4888,50 @@ Bentuknya, sengaja sekecil mungkin:
 - **Urutan rilis:** migrasi `20261026090000_peran_pro_aktivasi_gratis` WAJIB
   diterapkan ke Supabase cloud SEBELUM kode di-push — Easypanel membangun `main`
   paralel dengan CI, dan aksi admin/Pro memanggil RPC baru.
+
+---
+
+## #101 — 2026-10-27 · Order `pending` tanpa `txn_id` di-expire cron, bukan dibiarkan abadi
+
+**Keputusan:** Pass 2 `/api/cron/expire-orders` memanggil `expire_pending_order`
+untuk order `pending` berumur > 24 jam yang `txn_id`-nya `null`, alih-alih
+menghitungnya lalu `continue`. Tanpa panggilan Pakasir apa pun. Penghitung
+`tanpaTxn` tetap ada — ia mengukur seberapa sering penerbitan link gagal, dan
+itu pertanyaan yang berbeda dari "berapa yang dibatalkan".
+
+**Alasan:** `terbitkanLink` tidak pernah mengarahkan pelanggan bila `txn_id`
+gagal tersimpan, jadi baris seperti ini **pasti tak pernah sampai ke tangan
+siapa pun** — tak ada pembayaran yang bisa hilang. Yang hilang justru di sisi
+sebaliknya: statusnya yang abadi menahan pembelian berikutnya. Penahan
+`findPendingMomenOrder` (add-on) dan padanannya di jalur upgrade tak punya batas
+umur, tak ada permukaan UI yang bisa membatalkan order `pending`, dan poller
+halaman kelola terus menampilkan "menunggu pembayaran" atas transaksi yang tak
+pernah ada. Satu galat jaringan Pakasir = upsell mati permanen untuk undangan
+itu. Risikonya baru benar-benar terpapar sejak empat tier berbayar Album Momen
+dibuka hari ini: jalur bayar Pakasir belum pernah dilewati satu rupiah pun, jadi
+pelanggan pertama yang menekan "Pilih & bayar" adalah uji produksi pertamanya.
+
+**Ditolak:**
+
+- *Memakai ulang order `pending` di `createMomenCheckoutAction`* (seperti
+  `createCheckoutAction` pada jalur undangan) — membuka kunci seketika, bukan
+  ≤ 24 jam, tetapi lebih besar dan hanya menambal satu jalur:
+  `findPendingMomenOrder` tak mengembalikan `package_id`/`amount_idr`, lookup
+  paketnya ada SESUDAH gerbang, helper itu punya pemanggil kedua, dan cabang
+  bebas-bayar sengaja ditaruh setelah gerbang. Lubang identik di jalur upgrade
+  tetap terbuka. Masih layak dikerjakan kelak sebagai perbaikan UX; keputusan
+  ini menutup kelasnya lebih dulu dengan tiga baris.
+- *Ikut membatalkan ke Pakasir* — tak ada `txn_id` untuk dinamai. Panggilan
+  dengan `order_code` saja hanya membakar plafon 2 permintaan/detik yang dipakai
+  bersama poller pelanggan, untuk transaksi yang kemungkinan besar tak pernah
+  lahir.
+
+**Konsekuensi:** residual — bila kegagalannya terjadi SETELAH gateway membuat
+transaksi (penulisan `txn_id` yang gagal), link Pakasir bisa tetap hidup
+sementara order lokal sudah `expired`. Kelas residual yang sama sudah diterima
+pada `cancelFailed`. Pembayaran atasnya tetap tak bisa diverifikasi (v2 berkunci
+`txn_id`) dan karena itu tak mengaktifkan apa pun — tapi pelanggan tak pernah
+menerima link itu untuk dibayar.
 
 ---
 

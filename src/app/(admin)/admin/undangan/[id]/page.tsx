@@ -242,25 +242,40 @@ export default async function AdminInvitationDetailPage({
         </CardHeader>
         <CardContent className="grid gap-6 md:grid-cols-2">
           {PAYABLE.has(status) ? (
-            <form
-              action={adminActivateInvitationAction.bind(null, id)}
-              className="space-y-2"
-            >
-              <p className="text-sm font-medium">{d.activateTitle}</p>
-              <p className="text-muted-foreground text-xs">{d.activateHint}</p>
-              <div className="flex gap-2">
-                <select name="packageCode" className={fieldClass} required>
-                  {(packages ?? []).map((p) => (
-                    <option key={p.code} value={p.code}>
-                      {p.name} — {formatIdr(p.price_idr)}
-                    </option>
-                  ))}
-                </select>
-                <Button type="submit" size="sm">
-                  {d.activateCta}
-                </Button>
+            // Katalog kosong → `<select required>` tanpa `<option>`: dropdown
+            // buntu dan tombol yang menolak terkirim, tanpa sebab yang terbaca.
+            // Satu-satunya jalan keluar manual dari order macet tak boleh
+            // tampak rusak justru saat dibutuhkan.
+            (packages ?? []).length > 0 ? (
+              <form
+                action={adminActivateInvitationAction.bind(null, id)}
+                className="space-y-2"
+              >
+                <p className="text-sm font-medium">{d.activateTitle}</p>
+                <p className="text-muted-foreground text-xs">
+                  {d.activateHint}
+                </p>
+                <div className="flex gap-2">
+                  <select name="packageCode" className={fieldClass} required>
+                    {(packages ?? []).map((p) => (
+                      <option key={p.code} value={p.code}>
+                        {p.name} — {formatIdr(p.price_idr)}
+                      </option>
+                    ))}
+                  </select>
+                  <Button type="submit" size="sm">
+                    {d.activateCta}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{d.activateTitle}</p>
+                <p className="text-muted-foreground text-xs">
+                  {copy.checkout.packageUnavailable}
+                </p>
               </div>
-            </form>
+            )
           ) : null}
 
           {(status === "active" || status === "expired") && (

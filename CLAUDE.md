@@ -1,6 +1,6 @@
 # CLAUDE.md — Merriva
 
-Platform SaaS undangan digital + digital guestbook untuk pasar Indonesia. Fase saat ini: **MVP Fase 1 — undangan digital self-service**. Status kode: **belum ada — mulai dari Milestone M0** (lihat `docs/ROADMAP.md`).
+Platform SaaS undangan digital + digital guestbook untuk pasar Indonesia. Fase saat ini: **MVP Fase 1 — undangan digital self-service**. Status kode: **M0–M4 selesai; produksi hidup di merriva.id dengan undangan berbayar pertama**. Sisa pekerjaan bersifat operasional — lihat `docs/LAUNCH-CHECKLIST.md`, bukan `docs/ROADMAP.md`.
 
 Domain: **merriva.id** · Bahasa UI: **Indonesia** · Semua timestamp disimpan UTC, ditampilkan sesuai timezone acara (WIB/WITA/WIT).
 

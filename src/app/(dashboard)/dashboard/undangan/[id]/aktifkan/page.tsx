@@ -98,6 +98,32 @@ export default async function ActivateInvitationPage({
     limits: resolveLimits(p.limits),
   }));
 
+  // Katalog kosong → JANGAN rangkai halaman beli. Dua hal di bawah terbit
+  // tanpa bergantung pada isi daftar: subjudulnya menjanjikan "Pilih paket …
+  // Pembayaran aman via QRIS", dan `PackageChooser` menaruh notis "Dengan
+  // melanjutkan pembayaran…" + "diproses oleh Pakasir" DI LUAR `.map` kartunya.
+  // Jadi katalog kosong menghasilkan legalese pembayaran di atas grid tanpa
+  // satu pun barang — lebih buruk daripada sekadar daftar kosong. Halaman harga
+  // publik sudah menggerbangi keduanya dengan cara yang sama.
+  if (packages.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <h1 className="text-xl font-semibold tracking-tight">
+          {copy.checkout.title}
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          {copy.checkout.packageUnavailable}
+        </p>
+        <Link
+          href="/dashboard"
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          {copy.checkout.back}
+        </Link>
+      </div>
+    );
+  }
+
   // Admin & Pro tak pernah ditagih (DECISIONS #100) — hanya undangan MILIK
   // sendiri (admin melihat semua undangan lewat RLS). Langsung paket teratas:
   // urutan harga naik, jadi yang terakhir.
