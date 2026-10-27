@@ -280,6 +280,8 @@ sudah pernah menghentikan CI selama tiga hari pada 17 Okt 2026.
   update public.packages set is_active = false where kind = 'addon_momen';
   ```
   Tanpa ini, pelanggan pertama bisa mengisi kuota 1 GB lewat tier gratis, tanpa satu rupiah masuk.
+
+  **27 Okt 2026 — premisnya berubah, gerbangnya belum.** Media produksi tak lagi mendarat di Supabase Storage sejak cutover ke driver `local`: `/api/health` melaporkan `driver: "local"` + `mediaBase: https://merriva.id/media`, objek terakhir di bucket Supabase bertanggal 14 Okt, sedangkan foto `lala-lele` (25 Okt) tersaji dari disk VPS. Argumen "kuota free 1 GB" karena itu sudah lewat — yang tersisa risiko yang **berbeda**: driver `local` tak punya backup objek sama sekali (butir Fase 5) dan disk VPS tidak elastis. Jadi keputusan membuka kembali add-on kini bertumpu pada backup media + ruang disk, bukan lagi pada kuota Supabase. Halaman pemiliknya sendiri sudah tak lagi tampak rusak selagi gerbang tertutup: katalog kosong menampilkan "Album Momen belum dibuka", bukan ajakan memilih di atas grid tanpa pilihan.
 - [ ] **Master audio pustaka lagu disimpan di penyimpanan ber-backup.** `.gitignore` membuang `handoff/music/wav|mp3/` dengan alasan "sumber kebenaran = Supabase storage (sudah di-seed)" — itu benar untuk project dev yang ter-link, **bukan** untuk project prod baru: tak ada migrasi yang menyisipkan baris `songs`, dan [`MUSIC-LIBRARY.md`](MUSIC-LIBRARY.md) menyatakan sendiri pustaka mulai kosong di production. Masternya kini hanya ada di satu disk dan tak tercakup backup apa pun.
 
 ## Fase 5 — Keandalan database & media

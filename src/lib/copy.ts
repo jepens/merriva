@@ -1246,6 +1246,15 @@ export const copy = {
       needActiveTitle: "Aktifkan undangan dulu",
       needActiveBody:
         "Album Momen hanya bisa diaktifkan untuk undangan yang sudah aktif.",
+      // Katalog add-on bisa ditutup SELURUHNYA — kelima baris `packages`
+      // ber-`kind='addon_momen'` di-`is_active=false` (gerbang rilis
+      // LAUNCH-CHECKLIST Fase 4). Tanpa pesan ini halaman tetap merender panel:
+      // pemilik membaca "Pilih kapasitas peserta:" lalu tak menemukan satu pun
+      // kartu di bawahnya — halaman yang tampak rusak, bukan fitur yang
+      // sengaja belum dibuka.
+      closedTitle: "Album Momen belum dibuka",
+      closedBody:
+        "Add-on ini masih kami siapkan dan belum bisa diaktifkan. Undangan Anda tetap berjalan normal — kami kabari begitu Album Momen tersedia.",
       intro:
         "Kamera bersama untuk tamu — jatah jepret terbatas + filter film + foto terbuka serentak saat reveal. Pilih kapasitas peserta:",
       peserta: (n: number) => `${n} peserta`,

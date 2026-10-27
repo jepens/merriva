@@ -159,6 +159,29 @@ export default async function MomenManagePage({
             : null,
       };
     });
+    // Katalog add-on bisa KOSONG seluruhnya: kelima tier di-`is_active=false`
+    // adalah gerbang rilis yang memang dipakai (LAUNCH-CHECKLIST Fase 4 —
+    // jangan jual sebelum media pindah dari penyimpanan berkuota). Panelnya
+    // dulu tetap dirender di keadaan itu, jadi pemilik mendapat ajakan "Pilih
+    // kapasitas peserta:" di atas grid kosong — persis seperti halaman gagal
+    // memuat. Gerbang yang disengaja harus mengatakan dirinya sendiri.
+    if (tiers.length === 0) {
+      return (
+        <div className="mx-auto max-w-2xl space-y-6">
+          <h1 className="text-xl font-semibold tracking-tight">{a.title}</h1>
+          <Card>
+            <CardContent className="space-y-3 py-8 text-center">
+              <h2 className="text-lg font-medium">{a.closedTitle}</h2>
+              <p className="text-muted-foreground mx-auto max-w-md text-sm">
+                {a.closedBody}
+              </p>
+            </CardContent>
+          </Card>
+          {back}
+        </div>
+      );
+    }
+
     // Admin & Pro tak pernah ditagih (DECISIONS #100) — hanya undangan MILIK
     // sendiri; langsung tier teratas (urutan harga naik → yang terakhir).
     const free =
