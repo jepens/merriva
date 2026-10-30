@@ -4878,10 +4878,48 @@ ulang lewat `qr-mpm-query`.
   di produksi pembayar ditagih pokok + fee, pelanggan membayar Rp200.393 untuk
   paket Rp199.000 — itu keputusan bisnis, dan biayanya wajib tampil SEBELUM
   bayar. Butuh konfirmasi BinderPay atau satu QR produksi yang dibaca tag 54-nya.
+  Keputusannya diambil 31 Okt 2026 — lihat subbagian berikut.
 - **Isi callback.** Simulator mengirim callback ke URL proyek, tetapi route-nya
   belum ada (404), jadi bentuk `amount` di callback dan path tanda tangan
   `/v1.0/qr/qr-mpm-notify` masih berasal dari dokumen, belum terukur. Aktivasi
   tak bergantung padanya: bukti lunas tetap dari query.
+
+### Fee ditanggung merchant (keputusan pemilik, 31 Okt 2026)
+
+**Keputusan:** pelanggan membayar **persis** harga paket; fee kanal ditanggung
+merchant (SPEC §4.8, termasuk kriteria terimanya).
+
+**BinderPay tak punya tombolnya.** Halaman harga (`binderpay.id/price`) hanya
+menyebut QRIS 0,7%, settlement H+1 hari kerja; dokumentasi diam soal siapa
+menanggung. Request `qr-mpm-generate` tak punya parameter fee, dan kata "fee"
+muncul NOL kali di kode sumber kedua SDK resmi. Jadi penyerapannya terjadi di
+sisi kita.
+
+**Diukur di sandbox:**
+
+- `fee = round(0,7% × pokok)` — pembulatan biasa ke rupiah, bilangan bulat
+  (10.071 → 70 karena 70,497; 10.072 → 71 karena 70,504). Nominal QR =
+  pokok + fee; `amount` query = pokok.
+- Pokok yang diturunkan tepat sasaran: 197.617 → QR **199.000** (fee 1.383);
+  98.312 → QR **99.000** (fee 688).
+
+**Rancangan untuk driver** (tanpa kolom baru):
+
+- Kirim pokok `P` = nilai TERBESAR dengan `P + round(0,007·P) ≤ harga`. Karena
+  pembulatan, sebagian total terlewati; aturan "≤" memastikan pelanggan tak
+  pernah membayar lebih dari katalog — paling buruk Rp1 lebih murah.
+- `orders.amount_idr` tetap harga (yang dibayar pelanggan). Gerbang
+  `reconcile.ts` membandingkan `amount` query dengan `P` yang dihitung ulang
+  dari `amount_idr` lewat fungsi yang SAMA — tetap kesetaraan ketat.
+- Biaya efektif per transaksi: Premium diterima 197.617, Basic 98.312.
+
+**Yang wajib dipastikan SEBELUM driver dipakai pelanggan:** bahwa pembayar
+memang ditagih nominal QR (pokok + fee). Bila ternyata BinderPay memotong fee
+dari settlement dan pembayar hanya ditagih pokok, rancangan di atas justru
+membuat pelanggan membayar 197.617 dan kita menerima lebih sedikit lagi — dan
+yang benar adalah mengirim harga apa adanya. Sumber jawabannya: rincian
+transaksi yang disimulasikan di dashboard sandbox (Transaksi/Mutasi), support
+BinderPay, atau tag 54 dari satu QR produksi.
 
 ---
 
