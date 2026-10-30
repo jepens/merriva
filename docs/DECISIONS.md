@@ -4913,13 +4913,13 @@ sisi kita.
   dari `amount_idr` lewat fungsi yang SAMA — tetap kesetaraan ketat.
 - Biaya efektif per transaksi: Premium diterima 197.617, Basic 98.312.
 
-**Yang wajib dipastikan SEBELUM driver dipakai pelanggan:** bahwa pembayar
-memang ditagih nominal QR (pokok + fee). Bila ternyata BinderPay memotong fee
-dari settlement dan pembayar hanya ditagih pokok, rancangan di atas justru
-membuat pelanggan membayar 197.617 dan kita menerima lebih sedikit lagi — dan
-yang benar adalah mengirim harga apa adanya. Sumber jawabannya: rincian
-transaksi yang disimulasikan di dashboard sandbox (Transaksi/Mutasi), support
-BinderPay, atau tag 54 dari satu QR produksi.
+**Terkonfirmasi 31 Okt 2026: pembayar ditagih pokok + fee.** Rincian transaksi
+yang disimulasikan di dashboard sandbox (menu Transaksi) mencantumkan Jumlah
+Rp10.000, Biaya Rp70, **Total Rp10.070** — cocok dengan `amount` generate
+(nominal QR) dan `amount` query (pokok). Jadi rancangan di atas berlaku. Satu
+hal yang belum diperiksa: saldo yang masuk di menu Mutasi (diharapkan sebesar
+pokok). Itu tidak mengubah jaminan ke pelanggan, hanya angka "diterima" di
+atas.
 
 ---
 
