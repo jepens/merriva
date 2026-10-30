@@ -339,13 +339,26 @@ const tlv = bacaTlv(qrContent);
 const tag54 = tlv.get("54") ?? "—";
 const tagBiaya = ["55", "56", "57"].filter((t) => tlv.has(t));
 
-const hasilHttp = (j) => (j ? "jawaban diterima" : "gagal/ditolak");
+// Dari `responseCode` (2xx SNAP), BUKAN dari "jawaban JSON terbaca": penolakan
+// pun berbentuk JSON. Versi sebelumnya melaporkan 409 "Duplicate X-EXTERNAL-ID
+// for today" sebagai "jawaban diterima" (jalan pertama, 30 Okt 2026).
+const hasilHttp = (j) =>
+  j && String(j.responseCode ?? "").startsWith("2")
+    ? "diterima"
+    : `DITOLAK${j?.responseCode ? ` (${j.responseCode})` : ""}`;
 
 console.log(`\n${"─".repeat(68)}`);
 console.log("JAWABAN ATAS PERTENTANGAN DOKUMENTASI (DECISIONS #99)\n");
 
 console.log(`  nominal yang KITA kirim         : ${NOMINAL}.00`);
 console.log(`  tag 54 di dalam QR (ditagihkan) : ${tag54}`);
+if (!tlv.has("54")) {
+  // Sandbox memberi QR TIRUAN: TLV-nya terpotong di tag 26, tanpa tag 54 & 63
+  // (CRC). Nominal yang ditagihkan hanya terukur dari QR produksi.
+  console.log(
+    "    ↳ QR tak terbaca sebagai EMVCo utuh — ukur dari QR produksi",
+  );
+}
 if (tagBiaya.length) {
   console.log(`  ⚠ tag biaya tambahan hadir      : ${tagBiaya.join(", ")}`);
 }

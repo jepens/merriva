@@ -4834,6 +4834,55 @@ kalau tidak, satu sesi sandbox terbuang pada perkakas yang berbohong.
   sudah ditandatangani kunci privat kita. Pertimbangkan mengisinya SETELAH
   driver hidup di produksi, lalu uji satu transaksi segera sesudahnya.
 
+### Probe sandbox 30 Okt 2026 — jawaban terukur
+
+Empat jalan `scripts/probe-binderpay.mjs` ditambah satu pembayaran lewat
+**Payment Simulator** di dashboard sandbox, lalu status transaksinya dibaca
+ulang lewat `qr-mpm-query`.
+
+- **Tanda tangan, kunci, dan Partner ID diterima** (HTTP 200 di generate &
+  query). Modul tanda tangan kini terbukti terhadap server sungguhan, bukan
+  hanya konsisten dengan dirinya sendiri.
+- **#3 `contractId`:** ada di `additionalInfo.contractId`, dan BERBEDA per
+  transaksi (`bp-sandbox-<uuid>`) — bukan konstanta merchant, jadi aman
+  disimpan per order. Query menuntutnya bersama `originalPartnerReferenceNo`.
+- **#4 `feeAmount`:** 70 untuk nominal 10.000 (0,7%, cocok tarif terbit), sama
+  di generate & query. Angka 550/1000 di dokumen hanyalah contoh ketikan.
+- **#5 `amount`:** generate → `10070.00` (pokok + fee); query → `10000.00`
+  (pokok), **sebelum maupun sesudah lunas**. Transaksi yang disimulasikan
+  (`PROBE-1793366300046-B`) menjawab status `00` "Success", `paidTime`
+  terisi, `rrn` `SANDBOX-…`, dan `amount` tetap `10000.00`. Driver karenanya
+  membandingkan **`amount` dari query** dengan `orders.amount_idr`; gerbang
+  `reconcile.ts` tetap kesetaraan ketat. Nominal dari generate akan menolak
+  setiap pembayaran yang sah.
+- **X-EXTERNAL-ID:** id berulang di hari yang sama ditolak `409`
+  `4095100 "Duplicate X-EXTERNAL-ID for today"`. Poller WAJIB membangkitkan id
+  segar tiap panggilan; id deterministik ala SDK vendor gagal sejak poll kedua.
+- **`qrUrl`** adalah gambar SVG kode QR di domain vendor, bukan halaman bayar:
+  tanpa nominal, tanpa tombol kembali. QR tetap ditampilkan di
+  `/dashboard/undangan/[id]/bayar` (ia bisa menjadi `<img>` tanpa pustaka QR,
+  asalkan CSP `img-src` mengizinkan domainnya).
+- Status query: `01` Initiated, `00` Success. Kode sukses: generate
+  `2004700`, query `2005100`. Jawaban memuat `buyerReff: "winpay"` —
+  BinderPay berjalan di atas Winpay.
+- Pada satu dari empat jalan, dua query gagal TANPA kode SNAP (output mentahnya
+  tak tersimpan) dan tak terulang di dua jalan berikutnya. Poller harus
+  memperlakukan jawaban tanpa `responseCode` sebagai transien.
+- Ringkasan probe sempat melaporkan 409 di atas sebagai "jawaban diterima",
+  karena setiap jawaban JSON dianggap sukses. Kini dinilai dari `responseCode`.
+
+**Yang BELUM terukur:**
+
+- **Siapa menanggung fee 0,7%.** QR sandbox adalah TIRUAN (TLV terpotong di
+  tag 26, tanpa tag 54 dan CRC), dan simulator menampilkan "Rp 10.000". Bila
+  di produksi pembayar ditagih pokok + fee, pelanggan membayar Rp200.393 untuk
+  paket Rp199.000 — itu keputusan bisnis, dan biayanya wajib tampil SEBELUM
+  bayar. Butuh konfirmasi BinderPay atau satu QR produksi yang dibaca tag 54-nya.
+- **Isi callback.** Simulator mengirim callback ke URL proyek, tetapi route-nya
+  belum ada (404), jadi bentuk `amount` di callback dan path tanda tangan
+  `/v1.0/qr/qr-mpm-notify` masih berasal dari dokumen, belum terukur. Aktivasi
+  tak bergantung padanya: bukti lunas tetap dari query.
+
 ---
 
 ## #100 — 2026-10-26 · Admin & Pro tak pernah ditagih: peran `pro` + `activate_free_order`
