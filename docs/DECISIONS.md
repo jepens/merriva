@@ -4814,6 +4814,25 @@ kalau tidak, satu sesi sandbox terbuang pada perkakas yang berbohong.
   (`BINDERPAY_PARTNER_ID`, `BINDERPAY_BASE_URL`, `BINDERPAY_PRIVATE_KEY_B64`,
   `BINDERPAY_PUBLIC_KEY_B64`). `scripts/probe-binderpay.mjs` menyelesaikan
   pertentangan #3, #4, dan #5 dalam satu kali jalan begitu keempatnya terisi.
+- **Isian proyek di dashboard BinderPay (30 Okt 2026).** URL Callback =
+  `https://merriva.id/api/webhooks/binderpay`, mengikuti
+  `/api/webhooks/pakasir` (`/webhook` jatuh ke route undangan `/[slug]` dan
+  justru slug terlarang). Route-nya lahir bersama driver; sebelum itu callback
+  menjawab 404, yang aman selama belum ada transaksi BinderPay.
+  **Path itu TIDAK ikut ditandatangani:** callback QRIS ditandatangani dengan
+  path SNAP tetap `/v1.0/qr/qr-mpm-notify` (binderpay.id/docs "Signature
+  Callback Validation"; `verifyCallbackSignature` di kedua SDK resmi).
+  Memverifikasi dengan `new URL(req.url).pathname` akan menolak SETIAP callback
+  yang sah.
+- **Whitelist IP sengaja KOSONG.** Kolomnya opsional dan tak dijelaskan di
+  dokumentasi maupun kedua SDK; tak ada pula kode galat soal IP. API mereka di
+  belakang Cloudflare dan punya AAAA, jadi IP mana yang mereka lihat dari VPS
+  (`72.61.213.237`, atau IPv6) belum pasti. Isian yang salah menggagalkan
+  SETIAP panggilan dengan galat generik — tak terbedakan dari tanda tangan atau
+  kredensial yang salah, jebakan yang sama yang dicatat di atas — dan akan
+  memblokir probe sandbox yang dijalankan dari mesin lokal. Setiap permintaan
+  sudah ditandatangani kunci privat kita. Pertimbangkan mengisinya SETELAH
+  driver hidup di produksi, lalu uji satu transaksi segera sesudahnya.
 
 ---
 
