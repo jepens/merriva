@@ -54,6 +54,7 @@ lebih dulu dari backup (lihat bagian berikutnya).
 | Cutover R2 setelah ada unggahan baru | Objek baru hanya ada di R2. Kembali ke `local` membuat foto-foto itu 404; yang benar adalah memperbaiki maju. |
 | Migrasi DB | Lihat peringatan di atas. |
 | Email yang sudah terkirim | Kuitansi/pengingat tidak bisa ditarik. |
+| Peralihan ke BinderPay (`BINDERPAY_PARTNER_ID` terisi) | Order BinderPay `pending` (≤ 24 jam) menyimpan `contractId` di `txn_id`. Mengosongkan env — atau me-revert kodenya — mengembalikan verifikasi ke Pakasir yang tak mengenalnya, dan callback-nya tak lagi diproses. Mundur hanya bila tak ada order BinderPay `pending` (LAUNCH-CHECKLIST Fase 2b langkah 8). |
 
 ## Skenario B — VPS mati total
 
@@ -79,7 +80,7 @@ lebih dulu dari backup (lihat bagian berikutnya).
 
 1. Provision VPS baru, pasang **Easypanel**.
 2. Buat app dari repo Git (Dockerfile), port `3000` — lihat [`DEPLOYMENT.md`](DEPLOYMENT.md) §3–4.
-3. Isi ulang **environment variables** di panel (dari password manager) — lihat [`../.env.example`](../.env.example).
+3. Isi ulang **environment variables** di panel (dari password manager) — lihat [`../.env.example`](../.env.example). Bila whitelist IP proyek BinderPay sudah diisi, daftarkan IP VPS baru — kalau tidak, setiap panggilan BinderPay gagal dengan galat generik (DECISIONS #99).
 4. **Buat kembali volume media** `/app/data/media` (DEPLOYMENT §4a) lalu **restore isinya dari backup**. Lewati langkah ini dan hasilnya adalah kegagalan yang paling menyesatkan di dokumen ini: situs hidup, dasbor normal, setiap undangan merender — dengan semua fotonya 404, karena baris `media` menyimpan path relatif ke objek yang sudah tak ada salinannya.
 5. Attach domain `merriva.id` + SSL.
 6. Cloudflare → arahkan DNS `merriva.id` ke IP/host VPS baru (proxy ON).
@@ -132,8 +133,9 @@ lewat SQL editor.
 
 Riwayat pesanan sengaja dipertahankan ter-anonimisasi: tanpanya laporan omzet
 kehilangan transaksi yang benar-benar terjadi dan rekonsiliasi dengan mutasi
-rekening Pakasir jadi mustahil. UU PDP mengizinkan retensi untuk kewajiban
-hukum; nominal dan tanggalnya bukan data pribadi setelah pemiliknya dilepas.
+saldo gateway (BinderPay; Pakasir sebelum peralihan) jadi mustahil. UU PDP
+mengizinkan retensi untuk kewajiban hukum; nominal dan tanggalnya bukan data
+pribadi setelah pemiliknya dilepas.
 
 **Bila gagal di tengah**
 
@@ -173,7 +175,9 @@ kembali, bukan untuk MENCABUT.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_*` lainnya | Supabase / Cloudflare | **WAJIB REBUILD.** `Dockerfile` menerimanya sebagai `ARG` dan Next meng-INLINE-nya ke bundel saat build — mengganti nilainya di Environment saja tidak berpengaruh sampai image dibangun ulang. |
 | `CRON_SECRET` | Buat sendiri (`openssl rand -hex 32`) | Dipakai BERSAMA oleh 4 scheduled job. `isAuthorizedCron` fail-closed: begitu secretnya diganti tanpa memperbarui perintah cron di Easypanel, keempatnya mulai dijawab 401 **tanpa satu pun galat yang terlihat** — retensi UU PDP dan rekonsiliasi pembayaran berhenti diam-diam. Ganti env DAN keempat perintah cron dalam satu sesi. |
 | `MOMEN_SESSION_SECRET` | Buat sendiri (`openssl rand -hex 32`) | **MEMBATALKAN SELURUH SESI TAMU Album Momen seketika.** Tamu yang sedang memotret di tengah resepsi akan terlempar keluar dan harus masuk ulang. **Jangan pernah dirotasi saat ada acara berlangsung.** Di produksi variabel ini WAJIB terisi — server gagal-keras bila kosong. |
-| `PAKASIR_API_KEY` | Dashboard Pakasir | Verifikasi pembayaran (`transactiondetail`) berhenti sampai env diperbarui. Order yang sudah dibayar tidak hilang — cron `expire-orders` merekonsiliasinya setelah kunci baru aktif. |
+| `PAKASIR_API_KEY` | Dashboard Pakasir | Hanya selama Pakasir masih jalur bayar (sampai LAUNCH-CHECKLIST Fase 2b). Verifikasi pembayaran (`transaction-status`) berhenti sampai env diperbarui. Order yang sudah dibayar tidak hilang — cron `expire-orders` merekonsiliasinya setelah kunci baru aktif. |
+| `BINDERPAY_PRIVATE_KEY_B64` | Pasangan kunci baru buatan sendiri; ganti kunci PUBLIK yang terdaftar di proyek produksi dashboard BinderPay | Kunci privat KITA: dengannya siapa pun bisa menandatangani panggilan API BinderPay atas nama Merriva. Selama kunci publik di BinderPay dan kunci privat di env tak berpasangan, SETIAP panggilan BinderPay ditolak — tak ada QR terbit (`payment.create-link`) dan tak ada verifikasi lunas (`payment.verify` / `payment.verify.broken`), jadi callback pun tak bisa mengaktifkan. Ganti di BinderPay dan env + redeploy dalam SATU sesi. Pembayaran di jendela itu tidak hilang — cron merekonsiliasinya setelah pasangannya cocok lagi. Terpisah dari pasangan sandbox. |
+| `BINDERPAY_PUBLIC_KEY_B64` | Dirotasi BINDERPAY, bukan kita — ambil yang baru dari dashboard proyek produksi | Bukan rahasia. Nilai basi membuat SETIAP callback ditolak 401 **tanpa laporan Sentry** — lihat "Callback ditolak 401" di bawah. |
 | `RESEND_API_KEY` | Dashboard Resend | Email berhenti terkirim; `sendTransactionalEmail` mengembalikan `skipped`/`error` tanpa menggagalkan aksinya. Perhatikan: ini juga password SMTP Supabase Auth bila Custom SMTP sudah disetel — perbarui di KEDUA tempat. |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile | Pendaftaran, reset kata sandi, dan sesi Album Momen ditolak sampai env diperbarui. Site key-nya `NEXT_PUBLIC_*` → bila ikut diganti, **butuh rebuild**. |
 | `R2_SECRET_ACCESS_KEY` (saat `STORAGE_DRIVER=r2`) | Cloudflare R2 | Unggah & hapus media gagal; media yang sudah ada tetap tersaji karena disajikan lewat domain sendiri. |
@@ -183,16 +187,125 @@ di atas di-inline saat build, dan separuh lagi dipakai bersama oleh beberapa
 konsumen. Mengganti nilainya di satu tempat lalu menganggap selesai adalah
 kesalahan yang paling mungkin terjadi — dan yang paling senyap.
 
-**Belum ada:** kebijakan rotasi berkala. Kunci pihak ketiga (Pakasir, Resend)
-berumur tak terbatas. Latihan rotasi `service_role` 1× layak dijadwalkan sebelum
-launch, sejajar latihan restore backup.
+**Belum ada:** kebijakan rotasi berkala. Kunci pihak ketiga (Pakasir, Resend) dan
+pasangan kunci BinderPay berumur tak terbatas. Latihan rotasi `service_role` 1×
+layak dijadwalkan sebelum launch, sejajar latihan restore backup.
+
+## Insiden pembayaran BinderPay
+
+Berlaku setelah peralihan (LAUNCH-CHECKLIST Fase 2b). Prinsipnya tetap: callback =
+sinyal, bukti lunas hanya dari `qr-mpm-query` — jadi tak satu pun prosedur di bawah
+mengaktifkan order berdasarkan callback atau tangkapan layar pelanggan saja.
+
+**Callback ditolak 401**
+
+`/api/webhooks/binderpay` menjawab 401 bila tanda tangan tak cocok dengan
+`BINDERPAY_PUBLIC_KEY_B64` atau `X-TIMESTAMP` meleset lebih dari ±5 menit dari jam
+server — **tanpa laporan Sentry**, karena ditolak sebelum menyentuh apa pun. Uangnya
+tidak hilang: poller halaman bayar (±6 menit, selama pelanggan di sana) dan cron
+`expire-orders` (order ≥ 10 menit, tiap jam) tetap memverifikasi lewat query. Yang
+hilang kecepatannya — pelanggan yang menutup tab baru aktif saat cron jalan.
+
+Gejalanya: `mudaActivated` di kartu cron `/admin` terus > 0, dan di `/admin/order` tak
+ada lagi order yang diaktifkan callback (*Lihat payload* callback memuat
+`originalPartnerReferenceNo`; aktivasi poller/cron berisi `"source": "status_poll"`).
+
+1. **Kunci publik.** BinderPay yang merotasinya, bukan kita — atau yang terpasang
+   kunci sandbox. Ambil kunci publik proyek PRODUKSI dari dashboard BinderPay →
+   base64 satu baris → `BINDERPAY_PUBLIC_KEY_B64` di Easypanel → redeploy.
+2. **Jam server.** `timedatectl` di host VPS harus menyebut
+   `System clock synchronized: yes`; bandingkan `date -u` dengan header `Date` dari
+   `curl -sI https://api.binderpay.id`. Header itu akurat; field waktu di bodi mereka
+   tidak (`cancelTime` tertinggal ±90 detik).
+3. **Yang belum terukur** (DECISIONS #102). 401 sejak callback produksi PERTAMA →
+   curigai nama header atau bentuk tanda tangan, bukan kunci. Hanya ULANGAN yang 401
+   → ulangan mungkin membawa stempel waktu lama; yang tiba > 5 menit kemudian pasti
+   ditolak.
+
+Callback dari transaksi SANDBOX (uji dev, bila URL callback proyek sandbox juga
+menunjuk `merriva.id`) tak pernah mengaktifkan apa pun di produksi — verifikasinya
+bertanya ke BinderPay PRODUKSI dengan order & kredensial kita. 401 darinya boleh
+diabaikan.
+
+**`payment.webhook.partner-lain`** bukan kegagalan: callback ber-`X-PARTNER-ID` yang
+bukan Partner ID kita tetap diproses (query yang memutuskan). Laporannya membawa
+nilai `partnerId` yang diterima. Bila muncul untuk callback PRODUKSI, nilai itulah isi
+header callback produksi yang sebenarnya — catat di DECISIONS #102 (belum terukur).
+
+**`payment.webhook.unconfirmed`**
+
+Callback bertanda tangan SAH menyatakan lunas (`00`), tetapi `qr-mpm-query` belum.
+Route menjawab 503 agar BinderPay mengulang (dokumen mereka menyebut 3 kali; jumlah
+dan jedanya belum terukur); tak ada yang diaktifkan.
+
+- Sekali-sekali, lalu order menjadi **Lunas** di `/admin/order` (cari lewat tag
+  `orderCode`) → jeda status antar-sistem yang sembuh sendiri lewat ulangan
+  callback, poller, atau cron. Selesai.
+- Masih **Menunggu** setelah satu jalan cron → query dan callback berselisih paham.
+  Cocokkan dengan menu Transaksi & Mutasi di dashboard BinderPay, laporkan ke
+  BinderPay, dan bila uangnya terbukti masuk ikuti bagian berikut.
+
+**Order sudah dibayar tetapi tak aktif**
+
+Pemicu utamanya laporan Sentry **`payment.cancel`** berpesan `HTTP 409 4097700`
+*"Transaction has already been paid and cannot be cancelled"* (`cancelFailed` > 0 pada
+jalan cron itu): cron baru saja meng-`expired`-kan order yang ternyata SUDAH dibayar —
+pelanggan membayar di antara verifikasi dan pembatalan. Order `expired` tak bisa lagi
+diaktifkan webhook, poller, maupun cron. Pemicu lain: `payment.webhook.unconfirmed`
+yang menetap (di atas), `payment.mismatch` (nominal tak cocok; order tetap
+`pending`), dan **`payment.webhook.pakasir-pasca-peralihan`** — webhook Pakasir yang
+tiba SESUDAH saklar BinderPay hidup; tak satu pun jalur bisa memverifikasinya lagi,
+jadi periksa di dashboard Pakasir (bila memang lunas di sana, lanjutkan langkah di
+bawah; bila tidak, abaikan — laporan ini juga bisa dipicu siapa pun bila
+`PAKASIR_WEBHOOK_SECRET` kosong).
+
+1. Pastikan uangnya masuk: dashboard BinderPay → Transaksi (cari kode order) dan
+   Mutasi (bertambah sebesar POKOK = harga − fee, bukan harga). Order era Pakasir:
+   dashboard Pakasir.
+2. Bila order aslinya masih `pending`, tutup dulu dengan
+   `select * from public.expire_pending_order('<kode>');` supaya tak teraktivasi dua
+   kali.
+3. Kabari pelanggan, lalu pilih satu:
+   - **Aktivasi manual** — hanya order pembelian/perpanjangan undangan:
+     `/admin/undangan/<id>` → *Aktivasi manual* dengan paket yang sama. Ia membuat
+     order `manual` baru dan mengirim kuitansi; order aslinya tetap `expired`.
+   - **Refund** — satu-satunya jalan untuk order **upgrade** dan **add-on Album
+     Momen** (*Aktivasi manual* hanya mengenal paket undangan dan menolak undangan
+     yang sedang aktif). Lihat berikut.
+
+Pesan `payment.cancel` 404 `4047701` berarti BinderPay tak mengenal transaksinya:
+order era Pakasir (`qr_content` NULL) yang lolos LAUNCH-CHECKLIST Fase 2b langkah 4 —
+periksa **dashboard Pakasir**, bukan Mutasi BinderPay; link Pakasir-nya tak pernah
+dibatalkan. Pesan lain (timeout, `anggaran Pakasir habis`) berarti QR-nya tak
+terbatalkan, dan cron tak mengulangnya. QR itu sudah lewat masa berlaku 23
+jam, tetapi apakah QR kedaluwarsa benar-benar ditolak saat dibayar belum terukur — dan
+pembayaran atas order `expired` dijawab 200 **tanpa laporan apa pun**: jejaknya hanya
+Mutasi dan keluhan pelanggan.
+
+**Pengembalian dana (refund)**
+
+Merriva tak punya API refund — uangnya dikembalikan di **dashboard BinderPay** (order
+yang dibayar lewat Pakasir: dashboard Pakasir).
+Dokumen BinderPay mengenal status `04 Refunded`, tetapi alurnya belum pernah dicoba;
+bila dashboard tak menyediakannya, hubungi dukungan BinderPay.
+
+- **Nominal:** pelanggan membayar `amount_idr` (harga katalog), sedangkan saldo kita
+  hanya menerima POKOK (harga − fee 0,7%; Basic 99.000 → 98.312). Apakah refund ikut
+  mengembalikan fee belum diketahui — periksa yang benar-benar diterima pelanggan.
+- **Order Lunas** (mis. pembayaran ganda): setelah uangnya kembali, `/admin/order` →
+  *Tandai refund* beserta alasan. Ini mencabut layanannya dan menyesuaikan laporan;
+  uangnya TIDAK ikut bergerak.
+- **Order Kedaluwarsa** yang ternyata dibayar: tak ada yang ditandai — tombolnya hanya
+  untuk order Lunas, dan order kedaluwarsa memang tak dihitung omzet. Cukup
+  kembalikan uangnya.
 
 ## Checklist kredensial pemulihan (simpan di password manager)
 
 - Supabase: URL + anon + service_role (prod), Access Token, DB password
 - Easypanel: akses panel VPS
 - Cloudflare: akses akun/DNS
-- Domain registrar, Pakasir, Resend, Sentry (sesuai milestone)
+- BinderPay: akses dashboard + PEM kunci privat PRODUKSI (hilang = buat pasangan baru, lihat tabel rotasi)
+- Domain registrar, Pakasir (sampai peralihan), Resend, Sentry (sesuai milestone)
 
 ## Verifikasi pasca-pemulihan
 

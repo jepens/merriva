@@ -30,6 +30,7 @@ const { reportHandledError } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/observability", () => ({ reportHandledError }));
 
+import { BinderPayError } from "@/lib/payment/binderpay";
 import { PakasirError } from "@/lib/payment/pakasir";
 import { verifyAndActivate } from "@/server/payment/reconcile";
 
@@ -85,6 +86,28 @@ describe("klasifikasi kegagalan verifikasi", () => {
     verifyTransaction.mockRejectedValue(err);
     expect(await jalankan()).toEqual({ kind: "verify_broken" });
     expect(laporan()[0][1]).toBe("payment.verify.broken");
+  });
+
+  // BinderPay (DECISIONS #99) memakai semantik `transient` yang sama. Tanpa
+  // dikenali di sini, kunci/tanda tangan yang salah (401) akan dicoba ulang
+  // selamanya sebagai gangguan jaringan biasa.
+  it.each([
+    [
+      "BinderPay 401 tanda tangan/kunci",
+      new BinderPayError("4015100", 401, false),
+      "verify_broken",
+      "payment.verify.broken",
+    ],
+    [
+      "BinderPay 500 gangguan",
+      new BinderPayError("5005100", 500, true),
+      "verify_error",
+      "payment.verify",
+    ],
+  ])("%s → %s", async (_n, err, kind, area) => {
+    verifyTransaction.mockRejectedValue(err);
+    expect(await jalankan()).toEqual({ kind });
+    expect(laporan()[0][1]).toBe(area);
   });
 
   it("galat BUKAN PakasirError (DNS, abort timeout) → transien", async () => {

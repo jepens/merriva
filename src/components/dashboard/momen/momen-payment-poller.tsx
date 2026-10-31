@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { QrisBayar } from "@/components/dashboard/qris-bayar";
 import { SupportContact } from "@/components/support-contact";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import {
   checkMomenPaymentStatusAction,
   type MomenPaymentState,
 } from "@/server/actions/momen-payment-status";
+import type { QrisSiapBayar } from "@/server/payment/qris";
 
 /**
  * Poller status pembayaran add-on Album Momen (AUDIT-2026-09-04 KUA-2b / UXA-7).
@@ -42,11 +44,14 @@ export function MomenPaymentPoller({
   orderCode,
   amountIdr,
   packageName,
+  qr = null,
 }: {
   invitationId: string;
   orderCode: string;
   amountIdr: number;
   packageName: string | null;
+  /** QRIS untuk dibayar di halaman ini (BinderPay) — lihat `PaymentStatusPoller`. */
+  qr?: QrisSiapBayar | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("pending");
@@ -204,6 +209,7 @@ export function MomenPaymentPoller({
         title={c.timeoutTitle}
         body={c.timeoutBody}
       >
+        {qr ? <QrisBayar qr={qr} orderCode={orderCode} /> : null}
         <Summary
           packageName={packageName}
           amountIdr={amountIdr}
@@ -236,6 +242,7 @@ export function MomenPaymentPoller({
       title={a.pendingTitle}
       body={a.pendingBody(orderCode)}
     >
+      {qr ? <QrisBayar qr={qr} orderCode={orderCode} /> : null}
       <Summary
         packageName={packageName}
         amountIdr={amountIdr}

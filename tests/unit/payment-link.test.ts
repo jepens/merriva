@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { CreatedPaymentLink } from "@/lib/payment/types";
+
 /**
  * `terbitkanLink` — urutan terbitkan → SIMPAN `txn_id` → baru arahkan
  * (AUDIT-2026-10-13, DECISIONS #72).
@@ -13,7 +15,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createPaymentLink } = vi.hoisted(() => ({
   createPaymentLink: vi.fn(
-    async (_input: { orderCode: string; amountIdr: number }) => ({
+    async (_input: {
+      orderCode: string;
+      amountIdr: number;
+    }): Promise<CreatedPaymentLink> => ({
       url: "https://app.pakasir.com/pay-v2/abc?redirect=x",
       txnId: "abc",
     }),
@@ -34,13 +39,20 @@ const ORDER = "MRV-8F3K2Q";
 
 /** Klien admin palsu yang MEREKAM update dan bisa dibuat gagal. */
 function adminClient(gagal = false) {
-  const jejak: { txn_id?: string | null; order_code?: string }[] = [];
+  const jejak: {
+    txn_id?: string | null;
+    qr_content?: string | null;
+    order_code?: string;
+  }[] = [];
   const client = {
     jejak,
     from: vi.fn(() => {
       const chain: Record<string, unknown> = {};
-      chain.update = (v: { txn_id?: string | null }) => {
-        jejak.push({ txn_id: v.txn_id });
+      chain.update = (v: {
+        txn_id?: string | null;
+        qr_content?: string | null;
+      }) => {
+        jejak.push({ txn_id: v.txn_id, qr_content: v.qr_content });
         return chain;
       };
       chain.eq = (_k: string, v: string) => {
@@ -90,6 +102,27 @@ describe("jalur sukses", () => {
     await terbitkanLink(adminClient() as any, input);
     expect(reportHandledError).not.toHaveBeenCalled();
   });
+
+  it("QR (BinderPay) ditulis dalam UPDATE yang SAMA dengan txn_id", async () => {
+    // Dua update terpisah bisa meninggalkan rujukan tanpa QR (tak bisa
+    // dibayar) atau QR tanpa rujukan (tak bisa diverifikasi) — dan BinderPay
+    // menolak menerbitkan QR kedua untuk nomor order yang sama.
+    createPaymentLink.mockResolvedValue({
+      url: input.redirectUrl,
+      txnId: "bp-sandbox-1",
+      qrContent: "00020101021126580011ID",
+    });
+    const admin = adminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(await terbitkanLink(admin as any, input)).toBe(input.redirectUrl);
+    expect(admin.jejak).toEqual([
+      {
+        txn_id: "bp-sandbox-1",
+        qr_content: "00020101021126580011ID",
+        order_code: ORDER,
+      },
+    ]);
+  });
 });
 
 describe("gateway gagal", () => {
@@ -118,7 +151,7 @@ describe("penyimpanan txn_id gagal — kasus yang paling mudah salah", () => {
     // Transaksi SUDAH ada di Pakasir, tetapi rujukannya tak tersimpan.
     // Mengembalikan URL di sini akan mengarahkan pelanggan ke pembayaran yang
     // kelak tak bisa diverifikasi — tepatnya keadaan yang urutan ini cegah.
-    // Percobaan ulang aman: find-or-create mengembalikan txn_id yang sama.
+    // Order seperti ini tak dipakai ulang; cron meng-expire-nya (DECISIONS #101).
     const admin = adminClient(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(await terbitkanLink(admin as any, input)).toBeNull();

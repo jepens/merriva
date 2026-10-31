@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { toDbJson } from "@/lib/json";
 import { reportHandledError } from "@/lib/observability";
 import { getPaymentGateway } from "@/lib/payment";
+import { BinderPayError } from "@/lib/payment/binderpay";
 import { PakasirError } from "@/lib/payment/pakasir";
 import type { Database, Json } from "@/types/database";
 
@@ -96,8 +97,10 @@ export async function verifyAndActivate(
     // `transient` dipakai untuk MEMBEDAKAN, bukan untuk memutuskan apakah
     // melaporkan: keduanya tetap dilaporkan, tetapi dengan area berbeda supaya
     // "kontrak putus" tidak tenggelam di antara gangguan jaringan biasa. Galat
-    // yang bukan `PakasirError` (mis. DNS, abort timeout) diperlakukan transien.
-    const putus = err instanceof PakasirError && !err.transient;
+    // yang bukan galat gateway (mis. DNS, abort timeout) diperlakukan transien.
+    const putus =
+      (err instanceof PakasirError || err instanceof BinderPayError) &&
+      !err.transient;
     reportHandledError(
       err,
       putus ? "payment.verify.broken" : "payment.verify",

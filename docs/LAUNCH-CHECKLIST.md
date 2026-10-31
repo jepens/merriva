@@ -6,6 +6,8 @@ webhook Pakasir + cron + email + enforcement limit, panel admin + 10 tema +
 marketing + driver R2 + harness k6). **Sisa menuju launch = eksekusi OPS** yang
 tak bisa dilakukan dari repo (deploy, DNS, monitoring eksternal, plan berbayar,
 uji lapangan). Checklist ini mengurutkannya dari nol → go-live.
+Pakasir tutup (DECISIONS #99): driver penggantinya, **BinderPay** (QRIS), sudah di
+kode tetapi belum aktif — peralihannya di **Fase 2b**.
 
 > Detail langkah infra: [`DEPLOYMENT.md`](DEPLOYMENT.md) · pemulihan bencana:
 > [`RUNBOOK.md`](RUNBOOK.md) · arsitektur/integrasi: [`ARCHITECTURE.md`](ARCHITECTURE.md).
@@ -98,10 +100,11 @@ kebiasaan (DECISIONS #69).
    admin, `/admin/lagu`, `/admin/paket`, `/admin/tema`, kartu kesehatan cron, aktivasi
    manual, dan penandaan refund semuanya tak terjangkau — termasuk satu-satunya jalan
    keluar manual dari order yang macet.
-8. **Webhook Pakasir terdaftar → sebelum menerima uang dari siapa pun.** Tanpa webhook,
-   satu-satunya backstop adalah cron `expire-orders`, dan ia hanya menyentuh order yang
-   berumur **> 24 jam**. Jendela buta minimalnya ~24 jam, bukan ~1 jam, dan menjadwalkan
-   cron lebih sering TIDAK memperpendeknya.
+8. **Webhook Pakasir / URL callback BinderPay terdaftar → sebelum menerima uang lewat
+   gateway itu.** Tanpanya, pelanggan yang menutup halaman bayar baru aktif saat cron
+   `expire-orders` jalan — pass rekonsiliasi muda, order ≥ 10 menit, tiap jam
+   (DECISIONS #73) — bukan dalam hitungan detik. Peralihan ke BinderPay punya urutan
+   wajibnya sendiri: Fase 2b.
 
 Dua urutan terakhir berlaku di arah sebaliknya — hal yang harus dikerjakan **sebelum
 pengumuman apa pun**, bukan sebelum langkah teknis lain:
@@ -133,7 +136,7 @@ pengumuman apa pun**, bukan sebelum langkah teknis lain:
 
 ## Fase 2 — Konfigurasi layanan pihak ketiga
 
-- [ ] **Pakasir (API v2)**: project production; set webhook URL → `https://merriva.id/api/webhooks/pakasir`; isi `PAKASIR_PROJECT_SLUG` + `PAKASIR_API_KEY` + **`PAKASIR_WEBHOOK_SECRET`**
+- [ ] **Pakasir (API v2)** — jalur bayar LAMA, dipensiunkan di Fase 2b: project production; set webhook URL → `https://merriva.id/api/webhooks/pakasir`; isi `PAKASIR_PROJECT_SLUG` + `PAKASIR_API_KEY` + **`PAKASIR_WEBHOOK_SECRET`**
   - ⚠️ **API v1 dihentikan 20 Oktober 2026.** Kode sudah dimigrasi ke v2 (DECISIONS #72). Yang perlu Anda lakukan: salin **secret webhook** dari BAGIAN BAWAH halaman detail project Pakasir ke `PAKASIR_WEBHOOK_SECRET`. Kosongnya tidak menolak webhook (menolak akan mematikan seluruh aktivasi bila belum disalin) tetapi dilaporkan ke Sentry sebagai `payment.webhook.secret-unset`.
   - ⚠️ **Tanyakan ke dukungan Pakasir**: apakah `transaction-status` dan `cancel-transaction` v2 adalah endpoint RESMI yang didukung. Keduanya **tidak ada di dokumen mana pun** — ditemukan dengan menebak URL lalu dibedakan dari route yang tak ada lewat bentuk pesan galatnya. Verifikasi pembayaran bergantung pada yang pertama; satu jawaban dari mereka menghilangkan risiko ini.
   - ⚠️ `paymentsimulation` tetap endpoint v1 (tak ada padanan v2). Hanya dipakai E2E/dev, dan sudah dilarang di production — tetapi bila v1 benar-benar dimatikan seluruhnya, suite E2E jalur bayar kehilangan satu-satunya cara melunasi transaksi uji.
@@ -158,6 +161,33 @@ pengumuman apa pun**, bukan sebelum langkah teknis lain:
   - Verify: daftar **3 akun uji dengan alamat di luar anggota tim project** dalam satu jam → ketiganya menerima email dari domain sendiri → klik tautan → berhasil masuk. Lalu `select confirmation_sent_at, email_confirmed_at from auth.users` — keduanya harus terisi. (Per 2026-10-01 `auth.users` hanya berisi 1 admin buatan manual: jalur ini **belum pernah** berhasil — AUDIT-2026-10-01 A1.)
 - [ ] **Confirm email** aktif (Auth → Providers → Email) — prasyarat SPEC §4.2; setel SETELAH Custom SMTP jalan.
 - [ ] **Kebijakan kata sandi** (Supabase → Auth → Policies), kebijakan final + alasannya di [`AUTH-SETUP.md` §5](AUTH-SETUP.md): **Leaked Password Protection aktif** (tolak kata sandi yang pernah bocor, HaveIBeenPwned) · **minimum length 8** (samakan dengan aplikasi & `supabase/config.toml`; bila dashboard lebih longgar, aturan aplikasi hanya berlaku selama setiap penulisan kata sandi melewati form Merriva — jalur reset Supabase tidak) · **password requirements dibiarkan kosong** (aturan komposisi mendorong pola `Password1!`). _Toggle dashboard, bukan kode._
+
+## Fase 2b — Peralihan Pakasir → BinderPay (DECISIONS #99, #102)
+
+Saklarnya SATU env dan berlaku global: begitu `BINDERPAY_PARTNER_ID` terisi, **seluruh**
+penerbitan QR, verifikasi, dan pembatalan lewat BinderPay — termasuk order yang lahir di
+Pakasir. Selama kosong (termasuk produksi hari ini), Pakasir tetap jalur bayarnya.
+Kerjakan berurutan; yang sama sekali tak boleh ditukar: 1 → 2 dan 4 → 5.
+
+- [ ] **1. Migrasi `20261031100000_orders_qr_content.sql` ke produksi — SEBELUM kode di-push** (deploy = `git push`, DECISIONS #100). Checkout dan halaman bayar (undangan, upgrade, Album Momen) memilih kolom `orders.qr_content`. Tanpa kolom itu kegagalannya SENYAP: checkout undangan menolak dengan galat umum (terlapor `checkout.pending-lookup`), `/bayar` memantulkan pelanggan ke `/aktifkan`, dan `/upgrade` & `/momen` menyembunyikan order pending-nya. Cek sebelum push: `select qr_content from public.orders limit 0;` — galat 42703 = belum termigrasi. Non-destruktif (satu kolom `text` nullable) dan tak dibaca kode lama, jadi aman diterapkan kapan pun lebih dulu.
+- [ ] **2. Deploy kode.** Selama `BINDERPAY_PARTNER_ID` kosong, Pakasir tetap jalur bayarnya dan `/api/webhooks/binderpay` menjawab 200 tanpa memproses apa pun. Teks UI (checkout, FAQ, `/privasi`) sudah menyebut BinderPay/QRIS sejak deploy ini, padahal yang memproses masih Pakasir — jangan biarkan jarak langkah 2 → 5 berlarut.
+- [ ] **3. Pasangan kunci PRODUKSI, terpisah dari sandbox.** Unggah kunci publik KITA ke proyek produksi di dashboard BinderPay, dan ambil kunci publik produksi BINDERPAY. PEM kunci privatnya disimpan di password manager (RUNBOOK — checklist kredensial).
+- [ ] **4. Tutup order `pending` era Pakasir (ber-`txn_id`, `qr_content` NULL) SEBELUM saklar dibalik:**
+  ```sql
+  select order_code, created_at from public.orders
+    where status = 'pending' and txn_id is not null and qr_content is null;
+  select * from public.expire_pending_order('<kode>');  -- per order
+  ```
+  Tanpa ini checkout menerbitkan QR BinderPay untuk nomor order lama (umur QR-nya melewati batas umur order), dan webhook Pakasir yang masih hidup mengakui pembayaran yang tak lagi kita verifikasi.
+  - ⚠️ RPC itu **tidak memverifikasi** apa pun — ia hanya meng-`expired`-kan baris yang masih `pending`; di jalur normal cron-lah yang memverifikasi lebih dulu. Pastikan di dashboard Pakasir transaksinya belum dibayar. Pembayaran atas link Pakasir lama SESUDAH langkah ini tak mengaktifkan apa pun → RUNBOOK "Order sudah dibayar tetapi tak aktif".
+- [ ] **5. Isi keempat `BINDERPAY_*` di Easypanel, lalu redeploy** (Lampiran). `BINDERPAY_BASE_URL` = host PRODUKSI `https://api.binderpay.id` — host sandbox ditolak di produksi. URL Callback proyek produksi di dashboard BinderPay = `https://merriva.id/api/webhooks/binderpay`. **Whitelist IP tetap kosong** sampai satu transaksi produksi terbukti; bila kelak diisi, uji satu transaksi segera sesudahnya (DECISIONS #99).
+  - **Begitu redeploy ini hidup** (checkout baru mendarat di `/bayar` ber-QR), **ULANGI query langkah 4**: order yang lahir selama build masih ber-link Pakasir, dan sesudah saklar tak satu pun jalur bisa memverifikasinya. Tangani barisnya persis seperti langkah 4. Webhook Pakasir yang tiba sesudah saklar dilaporkan `payment.webhook.pakasir-pasca-peralihan` → RUNBOOK "Order sudah dibayar tetapi tak aktif".
+- [ ] **6. Cron `expire-orders` WAJIB jalan** (Fase 3) — pastikan lewat kartu cron `/admin` atau `pnpm ops:verify`. Pass muda adalah jaring saat callback gagal; pass kedua meng-expire order > 24 jam lalu membatalkannya lewat `qr-mpm-cancel` — QR yang lewat masa berlaku tetap `01 Initiated` selamanya, statusnya tak pernah berubah sendiri.
+- [ ] **7. Satu transaksi produksi kecil sungguhan** — dari akun ber-peran `client` (admin/Pro tak pernah ditagih, DECISIONS #100), harga uji minimal **Rp101** (pokok minimum QRIS Rp100 + fee Rp1; cara menurunkan harga dan risikonya: Fase 7). Periksa:
+  - QR tampil di halaman bayar, dan nominal di aplikasi pembayar = harga uji PERSIS. QR sandbox adalah tiruan (tanpa tag 54), jadi inilah pembuktian pertama janji "tak pernah ditagih di atas harga katalog".
+  - Aktif lewat **callback**, bukan poller: simpan gambar QR, TUTUP halaman bayar, baru bayar; pantau dari `/admin/order` (membuka ulang halaman bayar menyalakan poller lagi). Callback jalan = Lunas dalam hitungan detik dan *Lihat payload* berisi field callback (`originalPartnerReferenceNo`, …), bukan `"source": "status_poll"`. Baru Lunas saat cron jalan = callback gagal; pilah lewat Sentry: TANPA laporan → RUNBOOK "Callback ditolak 401"; `payment.webhook.shape` → bentuk payload nyata berbeda (503, BinderPay mengulang); `payment.webhook.unconfirmed` yang menetap → RUNBOOK bagiannya. `payment.webhook.partner-lain` bukan penyebab gagal (callback tetap diproses) — catat nilai `partnerId` di laporannya: itulah isi `X-PARTNER-ID` callback produksi. Inilah pengukuran pertama callback nyata (DECISIONS #102).
+  - Kuitansi email terkirim; Mutasi BinderPay bertambah sebesar POKOK (harga − fee), bukan harga (settlement produksi H+1 belum terukur).
+- [ ] **8. Rollback TIDAK aman selama ada order BinderPay `pending` (≤ 24 jam).** Mengosongkan `BINDERPAY_PARTNER_ID` mengembalikan verifikasi ke Pakasir, sedangkan `txn_id` order itu berisi `contractId` BinderPay yang tak dikenal Pakasir → verifikasi putus untuk order itu (callback-nya pun dijawab 200 tanpa diproses). Mundur hanya bila `select count(*) from public.orders where status = 'pending' and qr_content is not null;` → 0 — dan **ulangi hitungannya begitu redeploy rollback hidup**: order yang lahir selama build ber-QR BinderPay. Hasil > 0 → per order cek dashboard BinderPay: belum dibayar → `expire_pending_order` (QR-nya tak lagi bisa dibatalkan dari Merriva, dan cron tak akan menutupnya — verifikasinya putus); sudah dibayar → RUNBOOK "Order sudah dibayar tetapi tak aktif".
 
 ## Fase 3 — Cron (crontab host VPS)
 
@@ -252,11 +282,11 @@ disarankan panduan Easypanel. **GitHub Actions sengaja TIDAK disarankan**:
 ±870 jalan/bulan akan memakan kuota menit repo privat, dan tagihan Actions
 sudah pernah menghentikan CI selama tiga hari pada 17 Okt 2026.
 
-- [ ] `POST /api/cron/expire-orders` — tiap ~1 jam (rekonsiliasi + batalkan order > 24 jam + `transactioncancel`)
-  - ⚠️ Job ini **juga mengirim kuitansi** bila rekonsiliasi menemukan order yang ternyata sudah lunas — ia jaring penyelamat ketika webhook Pakasir hilang. Tak dijadwalkan = pelanggan yang sudah membayar tak pernah aktif dan tak pernah dapat bukti bayar sampai admin menyentuhnya manual.
+- [ ] `POST /api/cron/expire-orders` — tiap ~1 jam (rekonsiliasi + expire order > 24 jam + batalkan transaksinya di gateway: Pakasir `cancel-transaction`, BinderPay `qr-mpm-cancel`)
+  - ⚠️ Job ini **juga mengirim kuitansi** bila rekonsiliasi menemukan order yang ternyata sudah lunas — ia jaring penyelamat ketika webhook Pakasir / callback BinderPay hilang. Tak dijadwalkan = pelanggan yang sudah membayar tak pernah aktif dan tak pernah dapat bukti bayar sampai admin menyentuhnya manual.
   - ⚠️ **Sejak 2026-10-13 job ini punya DUA pass** (DECISIONS #73). Pass pertama merekonsiliasi order `pending` berumur **10 menit – 24 jam**: ia hanya memverifikasi & mengaktifkan, tak pernah membatalkan. Sebelumnya tak ada backstop di bawah 24 jam, jadi webhook yang hilang + pelanggan yang menutup tab = order dibayar menggantung sehari penuh tanpa sinyal. Dengan kadens 1 jam, jendela butanya kini **~1 jam**, bukan ~24 jam.
-  - ⚠️ Pass kedua (> 24 jam) yang membatalkan link. Keduanya berbagi **satu anggaran panggilan Pakasir per jalan** (`PAKASIR_BUDGET`), karena plafonnya 2 permintaan/detik; pass pertama memakainya lebih dulu, sebab di sanalah ada pelanggan yang mungkin sudah membayar dan sedang menunggu.
-  - Pantau di **`/admin`** — kartu cron kini menampilkan seluruh angka `cron_runs.stats` (DECISIONS #74), dengan yang perlu perhatian ditandai amber. Yang paling bermakna: `mudaActivated` (webhook hilang, cron yang menyelamatkan pelanggan), `budgetHabis` (anggaran Pakasir habis → naikkan kadens atau turunkan BATCH), `tanpaTxn` (penerbitan link sering gagal), `cancelFailed`.
+  - ⚠️ Pass kedua (> 24 jam) yang meng-expire lalu membatalkan transaksinya di gateway. Keduanya berbagi **satu anggaran panggilan gateway per jalan** (`PAKASIR_BUDGET` — namanya warisan Pakasir, tetapi ia membatasi panggilan BinderPay juga), karena plafon Pakasir 2 permintaan/detik; pass pertama memakainya lebih dulu, sebab di sanalah ada pelanggan yang mungkin sudah membayar dan sedang menunggu.
+  - Pantau di **`/admin`** — kartu cron kini menampilkan seluruh angka `cron_runs.stats` (DECISIONS #74), dengan yang perlu perhatian ditandai amber. Yang paling bermakna: `mudaActivated` (webhook hilang, cron yang menyelamatkan pelanggan), `budgetHabis` (anggaran panggilan gateway habis → naikkan kadens atau turunkan BATCH), `tanpaTxn` (penerbitan link sering gagal), `cancelFailed` (BinderPay: laporan Sentry `payment.cancel` berpesan `409 … already been paid` = order yang baru di-expire ternyata SUDAH dibayar → tangani manual, RUNBOOK "Order sudah dibayar tetapi tak aktif").
 - [ ] `POST /api/cron/expire-invitations` — harian (undangan `active` lewat masa aktif → `expired` + revalidate ISR + **email notis "masa aktif berakhir"** ke pemiliknya). Emailnya dibatasi 100 per jalan; bila `notifyTruncated` di `/admin` pernah > 0, naikkan kadensnya.
 - [ ] `POST /api/cron/expiry-reminders` — **tiap 12 jam** (bukan harian). Alasannya sama dengan `purge-expired` dan sudah tertulis di docstring route-nya: "tandai hanya saat terkirim" bersifat at-least-once, jadi email yang terkirim tetapi gagal menandai `reminder_sent_at` akan terpilih lagi — dan satu-satunya penjaga kirim-ganda adalah `idempotencyKey` Resend yang hanya berlaku 24 jam. `JADWAL_JAM` di `src/server/cron/status.ts` sempat menulis 24 dan bertentangan dengan route-nya; diperbaiki 2026-10-12.
 - [ ] `POST /api/cron/purge-expired` — **tiap 12 jam** (bukan harian: job ini juga mengirim peringatan pra-purge H-30 & H-7, dan `idempotencyKey` Resend hanya 24 jam — kadens di bawah itu mencegah peringatan ganda. `JADWAL_JAM` di `src/server/cron/status.ts` HARUS cocok, kalau tidak panel admin menuduh job yang sehat). Retensi UU PDP: hapus permanen data tamu/RSVP/media/gift_notes undangan `expired` > 6 bulan; baris undangan tinggal kerangka, `orders` dipertahankan)
@@ -331,8 +361,8 @@ sudah pernah menghentikan CI selama tiga hari pada 17 Okt 2026.
 
 - [ ] Buka undangan dari **WA in-app browser di Android & iOS asli** (bukan hanya Chrome desktop)
 - [ ] **Lighthouse mobile ≥ 90 pada 3 tema** (LCP < 2,5 dtk di 4G)
-- [ ] **Bayar production nominal kecil end-to-end** → aktif + kuitansi email masuk < 1 menit. Ini satu-satunya pembuktian bahwa webhook + `transactiondetail` + Resend + domain terverifikasi bekerja BERSAMA.
-  - ⚠️ **"Paket uji" tidak bisa dibuat.** `/admin/paket` hanya meng-UPDATE paket yang ada (tak ada INSERT di seluruh repo), dan checkout memvalidasi kode paket terhadap `z.enum(["basic","premium"])` — kode lain gagal validasi Zod sebelum menyentuh DB. Satu-satunya cara: **turunkan harga `basic` sementara**.
+- [ ] **Bayar production nominal kecil end-to-end** → aktif + kuitansi email masuk < 1 menit. Ini satu-satunya pembuktian bahwa webhook/callback + verifikasi status otoritatif + Resend + domain terverifikasi bekerja BERSAMA. Untuk BinderPay butir ini = Fase 2b langkah 7.
+  - ⚠️ **"Paket uji" tidak bisa dibuat.** `/admin/paket` hanya meng-UPDATE paket yang ada (tak ada INSERT di seluruh repo), dan checkout memvalidasi kode paket terhadap `z.enum(["basic","premium"])` — kode lain gagal validasi Zod sebelum menyentuh DB. Satu-satunya cara: **turunkan harga `basic` sementara**. Untuk BinderPay **minimal Rp101** (pokok minimum QRIS Rp100 + fee Rp1) — di bawahnya checkout gagal (`payment.create-link`).
   - ⚠️ Menurunkan harga itu **terbit ke publik SEKETIKA** (`adminUpdatePackageAction` me-revalidate `/` dan `/harga`, dan checkout mengambil harga otoritatif dari DB). Selama jendela uji siapa pun bisa membeli Basic pada harga itu. Lakukan **sebelum pengumuman apa pun**, catat harga aslinya lebih dulu, pulihkan segera, lalu buka `/harga` untuk memastikan benar-benar kembali.
 - [ ] **Satu mutasi lewat domain publik dari HP** — simpan satu perubahan di editor dan kirim satu RSVP dari `https://merriva.id` sungguhan. `next.config.ts` menyetel `bodySizeLimit` tanpa `allowedOrigins`; bila host yang diteruskan Cloudflare/Traefik tak sama dengan domain, SELURUH Server Action gagal 403 sementara semua halaman tetap tampil normal dan `/api/health` tetap 200.
 - [ ] **ISR benar-benar meng-cache**: `curl -sI https://merriva.id/<slug>` dua kali → header `x-nextjs-cache` `MISS` lalu `HIT`. Bila direktori cache tak writable, Next jatuh ke render per-request secara SENYAP — halaman tetap benar, anggaran performa hari-H hilang tanpa galat.
@@ -387,7 +417,9 @@ sudah pernah menghentikan CI selama tiga hari pada 17 Okt 2026.
 | 🏗️ `NEXT_PUBLIC_MEDIA_URL` | Fase 1 | **WAJIB** host penyaji media dari domain sendiri. **Kosong = SELURUH foto/musik undangan 404 DAN editor 500 begitu ada satu foto** (app gagal-keras di runtime prod). `local`: `https://merriva.id/media`. R2: `https://cdn.merriva.id`. Tetap Supabase storage: domain proxy sendiri, atau sementara (deviasi §6.4) `https://<ref>.supabase.co/storage/v1/object/public/media` |
 | `CRON_SECRET` | Fase 1/3 | string acak panjang (`openssl rand -hex 32`). **Gerbang fail-closed untuk keempat cron** — mengganti nilainya tanpa memperbarui keempat perintah di Easypanel membuat semuanya dijawab `401` tanpa satu pun galat terlihat: rekonsiliasi pembayaran DAN retensi UU PDP berhenti diam-diam. Jangan sampai ada newline tersisip. |
 | `MOMEN_SESSION_SECRET` | Fase 1 | **WAJIB produksi, dan sebelumnya tidak ada di tabel ini.** `openssl rand -hex 32`. Rahasia HMAC cookie sesi tamu Album Momen. Melempar di produksi bila kosong — tetapi **lazily**: aplikasi start normal dan semua halaman jalan, yang 500 hanya `/[slug]/momen` pada saat tamu di acara mencoba mengunggah foto. |
-| `PAKASIR_PROJECT_SLUG` / `PAKASIR_API_KEY` | Fase 2 | project production |
+| `PAKASIR_PROJECT_SLUG` / `PAKASIR_API_KEY` | Fase 2 | project production — jalur bayar sampai Fase 2b; `env:check --prod` tetap menagihnya sampai kode Pakasir dihapus (route webhook-nya masih hidup sesudah peralihan) |
+| `BINDERPAY_PARTNER_ID` | Fase 2b | **Saklar gateway, global.** Terisi = SEMUA penerbitan QR, verifikasi, dan pembatalan lewat BinderPay, termasuk order era Pakasir; kosong = Pakasir. Manifest menandainya `opsional` sampai kode Pakasir dihapus, jadi `env:check --prod` TIDAK menagihnya — jangan diisi sebelum langkah 1–4 Fase 2b. |
+| `BINDERPAY_BASE_URL` / `BINDERPAY_PRIVATE_KEY_B64` / `BINDERPAY_PUBLIC_KEY_B64` | Fase 2b | `https://api.binderpay.id` (host sandbox ditolak di produksi). Kunci privat KITA (**RAHASIA**) dan kunci publik BinderPay: PEM ter-base64 satu baris, pasangan PRODUKSI. Base URL/kunci privat kosong saat `BINDERPAY_PARTNER_ID` terisi = checkout & verifikasi galat keras, tidak jatuh ke Pakasir. Kunci publik kosong tidak menolak callback, tetapi dilaporkan `payment.webhook.binderpay-key-unset`. |
 | `RESEND_API_KEY` / `EMAIL_FROM` | Fase 2 | domain terverifikasi |
 | 🏗️ `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Fase 2 | anti-spam RSVP |
 | 🏗️ `NEXT_PUBLIC_SENTRY_DSN` (+ `SENTRY_ORG/PROJECT/AUTH_TOKEN`) | Fase 6 | kosong = non-aktif |

@@ -21,7 +21,7 @@ Keputusan (26 Agu 2026):
 
 **Tamu:** buka `merriva.id/{slug}/momen` (dari QR meja atau tombol "Album Momen" di undangan) → isi nama (sekali; Turnstile) → layar kamera: live preview + pilih filter + sisa jatah → jepret (atau pilih dari galeri, bila host mengizinkan) → foto dibake filter + dikompres **di HP tamu**, diunggah, lalu berstatus *tersembunyi* → setelah jatah habis: layar "terima kasih" + hitung mundur reveal → saat reveal: galeri terbuka untuk semua, foto ber-atribusi nama, unduh per foto.
 
-**Host (pembeli):** dashboard undangan → beli add-on Momen (Pakasir, alur order yang sama) → atur: jatah/tamu, mode reveal, filter default, izinkan-upload-galeri → unduh/cetak QR (halaman cetak A6 per meja) → selama acara: pantau jumlah foto & **moderasi** (host selalu bisa melihat semua foto sebelum reveal; sembunyikan/hapus yang tak pantas) → setelah reveal: unduh **ZIP** seluruh album.
+**Host (pembeli):** dashboard undangan → beli add-on Momen (alur order & gateway yang sama dengan aktivasi undangan) → atur: jatah/tamu, mode reveal, filter default, izinkan-upload-galeri → unduh/cetak QR (halaman cetak A6 per meja) → selama acara: pantau jumlah foto & **moderasi** (host selalu bisa melihat semua foto sebelum reveal; sembunyikan/hapus yang tak pantas) → setelah reveal: unduh **ZIP** seluruh album.
 
 **Reveal:** disimpan sebagai satu nilai `reveal_at` (NULL = instan). UI host menawarkan 3 mode yang semuanya bermuara ke nilai itu: *Langsung tampil* (NULL) · *Usai acara* (diisi otomatis = akhir hari acara terakhir, 23:59 WIB, bisa digeser) · *Jadwal sendiri* (datetime picker). Host dapat menggeser `reveal_at` kapan pun, termasuk mempercepat ("reveal sekarang").
 
@@ -106,10 +106,10 @@ Add-on per undangan, dibeli dari dashboard. Tier dijual per **jumlah peserta** (
 | Tier | Maks peserta (`quota_peserta`) | Harga | Aktivasi |
 |---|---|---|---|
 | Gratis | 5 | **Gratis** | server action langsung (tanpa order/Pakasir) |
-| 50 peserta | 50 | Rp199.000 | order Pakasir (webhook 2 lapis) |
-| 100 peserta | 100 | Rp349.000 | order Pakasir |
-| 200 peserta | 200 | Rp649.000 | order Pakasir |
-| Tak terbatas | ∞ (`NULL`) | Rp1.099.000 | order Pakasir |
+| 50 peserta | 50 | Rp199.000 | order berbayar (webhook 2 lapis) |
+| 100 peserta | 100 | Rp349.000 | order berbayar |
+| 200 peserta | 200 | Rp649.000 | order berbayar |
+| Tak terbatas | ∞ (`NULL`) | Rp1.099.000 | order berbayar |
 
 Tier ∞ punya **plafon foto internal** (`photo_ceiling`, mis. 8.000 ≈ 3GB) sebagai rem darurat storage — tak diiklankan, praktis tak tercapai di acara wajar. Margin tebal (biaya storage < Rp1rb/album 6 bln sampai purge). Tier gratis 5 peserta = paritas satualbum + funnel. Upgrade kapasitas di tengah acara = backlog (§9).
 

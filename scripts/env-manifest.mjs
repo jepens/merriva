@@ -72,10 +72,42 @@ export const MANIFEST = [
       "melempar di produksi, tetapi LAZILY: app start normal, yang 500 hanya /[slug]/momen saat tamu di acara mengunggah foto",
   },
   // --- Pembayaran -----------------------------------------------------------
+  // BinderPay menggantikan Pakasir (DECISIONS #99): terpilih begitu
+  // BINDERPAY_PARTNER_ID terisi — saklar GLOBAL. Manifest mencerminkan produksi
+  // HARI INI: Pakasir masih jalur bayar (wajib), BinderPay `opsional` sampai
+  // peralihan (LAUNCH-CHECKLIST Fase 2b). Saat kode Pakasir dihapus, tes "entri
+  // yatim" memaksa entri PAKASIR_* dicabut — saat itulah BINDERPAY_* menjadi
+  // `prod` (DECISIONS #102).
+  {
+    key: "BINDERPAY_PARTNER_ID",
+    kapan: "opsional",
+    rusak:
+      "JANGAN diisi sebelum LAUNCH-CHECKLIST Fase 2b langkah 1–4 — mengisinya membalik saklar GLOBAL ke BinderPay. Kosong = checkout masih lewat Pakasir",
+  },
+  {
+    key: "BINDERPAY_BASE_URL",
+    kapan: "opsional",
+    rusak:
+      "checkout & verifikasi BinderPay gagal (galat konfigurasi). Produksi: https://api.binderpay.id — host SANDBOX ditolak di produksi",
+  },
+  {
+    key: "BINDERPAY_PRIVATE_KEY_B64",
+    kapan: "opsional",
+    rahasia: true,
+    rusak:
+      "setiap panggilan BinderPay ditolak (tanda tangan) → tak ada QR terbit dan tak ada verifikasi lunas",
+  },
+  {
+    key: "BINDERPAY_PUBLIC_KEY_B64",
+    kapan: "opsional",
+    rusak:
+      "callback BinderPay TIDAK terautentikasi. Kosongnya sengaja tidak menolak (aktivasi tetap menunggu query otoritatif) tetapi dilaporkan ke Sentry sebagai `payment.webhook.binderpay-key-unset`",
+  },
   {
     key: "PAKASIR_PROJECT_SLUG",
     kapan: "prod",
-    rusak: "tombol bayar/checkout mati dengan galat generik",
+    rusak:
+      "selama BINDERPAY_PARTNER_ID kosong (sebelum peralihan): tombol bayar/checkout mati dengan galat generik",
   },
   {
     key: "PAKASIR_API_KEY",

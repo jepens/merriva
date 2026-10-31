@@ -4795,7 +4795,9 @@ kalau tidak, satu sesi sandbox terbuang pada perkakas yang berbohong.
   driver masuk.
 - **Masa dua-gateway.** Order lama tetap diverifikasi lewat Pakasir sampai
   lunas/kedaluwarsa; order baru lewat BinderPay. `getPaymentGateway()` adalah
-  seam-nya.
+  seam-nya. **Digantikan #102 (31 Okt 2026):** saklarnya GLOBAL — order era
+  Pakasir pun diverifikasi lewat BinderPay, jadi order itu ditutup sebelum
+  peralihan (LAUNCH-CHECKLIST Fase 2b langkah 4).
 - **TERJAWAB 27 Okt 2026 — tak ada dana menggantung, dan memang tak pernah ada.**
   Pemilik memastikan tidak ada dana yang belum di-settle. Diperiksa sendiri di
   produksi dan cocok: dari empat baris `orders`, satu-satunya yang `paid`
@@ -4919,7 +4921,7 @@ Rp10.000, Biaya Rp70, **Total Rp10.070** — cocok dengan `amount` generate
 (nominal QR) dan `amount` query (pokok). Jadi rancangan di atas berlaku. Satu
 hal yang belum diperiksa: saldo yang masuk di menu Mutasi (diharapkan sebesar
 pokok). Itu tidak mengubah jaminan ke pelanggan, hanya angka "diterima" di
-atas.
+atas. **Terjawab 31 Okt 2026:** Mutasi bertambah Rp10.000 — pokok (#102).
 
 ---
 
@@ -5038,6 +5040,180 @@ sementara order lokal sudah `expired`. Kelas residual yang sama sudah diterima
 pada `cancelFailed`. Pembayaran atasnya tetap tak bisa diverifikasi (v2 berkunci
 `txn_id`) dan karena itu tak mengaktifkan apa pun — tapi pelanggan tak pernah
 menerima link itu untuk dibayar.
+
+---
+
+## #102 — 2026-10-31 · Driver BinderPay: QR di halaman kita, satu QR per order, saklar env
+
+**Keputusan:** driver QRIS BinderPay (`src/lib/payment/binderpay.ts`) masuk di
+balik saklar env — `getPaymentGateway()` memilih BinderPay begitu
+`BINDERPAY_PARTNER_ID` terisi, Pakasir sampai saat itu. Bentuknya ditentukan
+pengukuran sandbox (#99 dan subbagian "Terukur" di bawah), bukan dokumen:
+
+1. **QR dirender di halaman KITA** (`/bayar`, `/upgrade`, `/momen`) sebagai PNG
+   yang dibuat server dari string `qrContent`, plus tombol "Simpan gambar QR".
+   "Link bayar" yang dikembalikan driver adalah halaman `/bayar` itu sendiri.
+2. **Kolom baru `orders.qr_content`**; `txn_id` = `contractId`. Keduanya ditulis
+   `terbitkanLink` dalam SATU update.
+3. **Satu QR per order, tak pernah diterbitkan ulang.** Checkout undangan memakai
+   ulang order `pending` hanya selama QR-nya masih berlaku; selain itu order baru.
+4. **QR berlaku 23 jam** = `UMUR_MAKS_ORDER_PENDING_MS` (24 jam, kini satu
+   konstanta di `src/lib/payment/types.ts` yang juga dipakai cron) − 1 jam.
+5. **Cron membatalkan lewat `qr-mpm-cancel`**, bukan no-op.
+6. **Fee diserap di dalam driver**: pokok dikirim, pokok dari query diterjemahkan
+   kembali ke harga hanya bila persis pokok untuk harga itu. Gerbang ketat
+   `reconcile.ts` dan RPC `activate_paid_order` tak berubah.
+7. **Callback** (`/api/webhooks/binderpay`): tanda tangan RSA atas bodi mentah
+   dan path tetap `/v1.0/qr/qr-mpm-notify`, jendela ±5 menit, ditolak 401
+   sebelum menyentuh DB. Bukti lunas tetap dari query dengan pasangan
+   `order_code` + `txn_id` dari baris order.
+
+**Terukur di sandbox, 31 Okt 2026** (melengkapi #99):
+
+- QR yang lewat `validityPeriod` dan belum dibayar tetap dijawab query
+  `01 Initiated` — statusnya **tak pernah berubah sendiri**.
+- `qr-mpm-cancel` (`2007700`) idempoten, berhasil juga atas QR yang lewat
+  tenggat, dan query sesudahnya `05 Canceled`. Rujukan tak dikenal → 404
+  `4047701`. Transaksi yang SUDAH dibayar → **409 `4097700` "Transaction has
+  already been paid and cannot be cancelled"**, status tetap `00`. Dokumen
+  BinderPay menyebut `4097700` sebagai X-EXTERNAL-ID ganda — pertentangan
+  keenam.
+- Field `cancelTime` tertinggal ±90 detik dari jam sebenarnya (header HTTP
+  `Date` mereka akurat). Tak dipakai.
+- **Mutasi: saldo bertambah Rp10.000 untuk transaksi Total Rp10.070** —
+  pokok, sesuai dugaan #99. Butir terbuka itu tertutup.
+- E2E lokal: checkout Basic → order `MRV-Z7Q2ZH`, QR tampil di `/bayar`
+  ("berlaku sampai … 01.59 WIB", 23 jam), query sandbox `98312.00` + fee
+  `688.00` = Rp99.000 — persis harga katalog.
+
+**Alasan:**
+
+- **QR di halaman kita, bukan `qrUrl` vendor.** `qrUrl` adalah SVG tanpa nominal
+  di domain vendor. Aplikasi e-wallet/m-banking memindai dari galeri, dan tak
+  satu pun membaca SVG — padahal pelanggan yang membuka dashboard dari HP yang
+  sama dengan aplikasi pembayarannya HANYA bisa membayar lewat gambar yang
+  disimpan. PNG dari pustaka `qrcode` yang sudah ada tak menambah dependency,
+  tak menambah JS klien, dan tak bergantung CSP `img-src`.
+- **`txn_id` = `contractId`, bukan rancangan #99** (`txn_id` = nomor order +
+  `contractId` di kolom lain). Rancangan itu menjaga cabang "`contractId`
+  konstan per merchant", dan pengukuran menutup cabang itu: nilainya per
+  transaksi, jadi UNIQUE index aman. Nomor order sudah ada di `order_code`;
+  kolom kedua hanya akan menggandakannya.
+- **Satu QR per order** karena generate kedua dengan `partnerReferenceNo` yang
+  sama dijawab 500 `5004700` — bukan find-or-create. Order yang `txn_id`-nya
+  gagal tersimpan tak bisa ditolong dengan mencoba lagi; ia ditutup cron (#101)
+  dan percobaan berikutnya memakai order baru.
+- **23 jam, dari satu konstanta.** QR harus mati sebelum cron bisa meng-expire
+  order-nya, kalau tidak pelanggan bisa membayar order yang sudah ditutup. Dua
+  angka yang ditulis terpisah di dua modul akan bergeser sendiri suatu hari;
+  turunan dari satu konstanta tidak.
+- **Pembatalan eksplisit** karena status QR yang lewat tenggat tak berubah
+  sendiri, dan apakah QR yang mati benar-benar ditolak saat dibayar belum bisa
+  diukur. Cron memverifikasi DULU (yang ternyata lunas diaktifkan, bukan
+  dibatalkan), meng-expire secara atomik, baru membatalkan — urutan #73 yang
+  sama.
+- **Fee di driver, bukan di `reconcile.ts`.** Tes aksi dan `terbitkanLink`
+  sengaja memaku `amountIdr` = harga; hanya driver yang tahu fee. Pokok yang
+  tak persis pokok-untuk-harga dilaporkan sebagai pokok + fee, sehingga gerbang
+  ketat menolaknya — "terima bila salah satu cocok" tetap ditolak seperti di #99.
+- **Callback "lunas" yang belum dikonfirmasi query → 503**, bukan 200. HTTP 200
+  mengakhiri pengulangan, dan dokumen hanya menjanjikan ±3 kali; jeda status
+  antar-sistem bukan alasan menunggu poller atau cron. Dilaporkan
+  (`payment.webhook.unconfirmed`) supaya perselisihan yang menetap terlihat.
+- **`raw_notification` = daftar putih field callback.** `additionalInfo.buyerRef`
+  adalah NAMA pembayar dari penerbit e-wallet: data pribadi yang tak kita
+  perlukan dan tak disebut kebijakan privasi. Skema zod-nya sekaligus daftar
+  putihnya (kunci tak dikenal dibuang saat parse).
+- **`X-PARTNER-ID` hanya DILAPORKAN, tak pernah membuang callback.** Dokumen tak
+  menjanjikan header itu di callback dan SDK resmi memverifikasi tanpa
+  membacanya. Bila ada dan berbeda, laporan `payment.webhook.partner-lain`
+  membawa nilainya, dan callback tetap diproses: membuangnya akan mematikan
+  SETIAP callback sah bila BinderPay ternyata mengirim nilai lain, sementara
+  callback proyek lain (mis. sandbox) memang tak bisa terkonfirmasi lewat order &
+  kredensial kita. (Versi awal membuangnya — diubah setelah review, di bawah.)
+- **Saklar global, bukan gateway per order.** Belum pernah satu rupiah pun
+  melewati Pakasir (#99, 27 Okt), dan ketiga order `pending` era Pakasir tak
+  pernah dibayar. Kolom gateway per order akan menjadi skema permanen untuk masa
+  peralihan yang tak punya satu pun pembayaran untuk dijaga; menutup ketiga
+  order itu saat peralihan cukup.
+
+**Ditolak:**
+
+- *`<img src={qrUrl}>`* — lihat alasan pertama; juga menyajikan aset pembayaran
+  dari domain vendor.
+- *Menyimpan QR di `raw_notification`* (jsonb yang sudah ada) alih-alih kolom
+  baru. Kolom itu milik bukti pembayaran: ditimpa `activate_paid_order`,
+  ditampilkan admin sebagai notifikasi mentah, dan sengaja tak pernah dipilih
+  halaman pemilik (riwayat pesanan memaku larangannya). Menaruh alat bayar di
+  sana mencampur dua makna dan memaksa halaman bayar memilih kolom terlarang.
+- *Menerbitkan ulang QR untuk order yang QR-nya mati* — mustahil (`5004700`).
+- *Cancel no-op yang mengandalkan masa berlaku saja* — versi awal driver ini.
+  Dibatalkan setelah peta menemukan endpoint-nya dan sandbox membuktikannya.
+
+**Konsekuensi:**
+
+- **Prasyarat peralihan** (urutannya di `docs/LAUNCH-CHECKLIST.md`): migrasi
+  `20261031100000_orders_qr_content.sql` diterapkan ke produksi SEBELUM kode
+  di-deploy (halaman bayar & checkout memilih `qr_content`); order `pending`
+  era Pakasir ditutup (`select * from public.expire_pending_order('<kode>')`)
+  sebelum `BINDERPAY_PARTNER_ID` diisi — kalau tidak, checkout menerbitkan QR
+  BinderPay untuk nomor order lama yang umurnya sudah hampir habis; pasangan
+  kunci produksi terpisah dari sandbox; cron `expire-orders` wajib berjalan.
+- **Rollback tidak aman selama ada order BinderPay `pending` (≤ 24 jam).**
+  Mengosongkan `BINDERPAY_PARTNER_ID` mengembalikan verifikasi ke Pakasir, yang
+  tak mengenal `contractId` di `txn_id` → verifikasi putus untuk order itu.
+- **Omzet dari `orders.amount_idr` melebihkan penerimaan sebesar fee**
+  (Premium 199.000 → diterima 197.617). Rekonsiliasi admin terhadap Mutasi
+  BinderPay harus memperhitungkannya.
+- 409 `4097700` di laporan `payment.cancel` berarti order yang baru di-expire
+  ternyata SUDAH dibayar di antara verifikasi dan pembatalan → tangani manual
+  (aktivasi manual admin atau refund). Pesan vendornya ikut di laporan.
+- Spec Playwright `payment-simulation`/`payment-webhook` khusus Pakasir: keduanya
+  time-out bila `BINDERPAY_PARTNER_ID` terisi di `.env.local` (tak berjalan di
+  CI). Tak ada padanan `simulatePayment` di API BinderPay — simulasi hanya lewat
+  Payment Simulator di dashboard sandbox.
+- **Belum terukur:** bentuk & header callback nyata, jeda ulangnya, apakah
+  ulangan memakai stempel waktu lama; apakah QR yang mati/dibatalkan benar-benar
+  ditolak saat dibayar; perilaku QR produksi (tag 54).
+- `CLAUDE.md` (Stack, Boundaries) masih menyebut Pakasir sebagai satu-satunya
+  gateway — diperbarui pemilik saat peralihan.
+
+### Review adversarial, 31 Okt 2026 — yang diubah sebelum commit
+
+Lima dimensi (driver, webhook, siklus order, UI, dokumen); tiap temuan diuji
+agen kedua yang mencoba membantahnya. Yang bertahan dan diperbaiki:
+
+- **Route webhook Pakasir meneruskan `txn_id` dari PAYLOAD** bila baris order
+  belum punya (`order.txn_id ?? p.txn_id`). Begitu saklar global menyala,
+  verifikasinya bertanya ke BinderPay — yang menggemakan pasangan rujukan apa
+  pun — sehingga `contractId` transaksi lunas milik order LAIN berharga sama
+  bisa "membuktikan" order yang belum dibayar, bila `PAKASIR_WEBHOOK_SECRET`
+  kosong. Kini HANYA `order.txn_id`, seperti route BinderPay.
+- **Webhook Pakasir sesudah peralihan** dulu berakhir `not_confirmed` → 200
+  senyap: BinderPay tak mengenal transaksi Pakasir, jadi pembayaran sah atas link
+  Pakasir yang masih hidup hilang tanpa jejak. Kini dijawab 200 TANPA verifikasi
+  dan dilaporkan `payment.webhook.pakasir-pasca-peralihan` untuk ditangani
+  manual; LAUNCH-CHECKLIST mengulang langkah 4 begitu redeploy hidup (order yang
+  lahir selama build).
+- **Checkout memakai ulang order pending paket yang sama, padahal `/bayar`
+  menampilkan order TERBARU** — Basic → Premium → Basic menampilkan QR Premium.
+  Kini yang dipakai ulang hanya order pending TERBARU, dan hanya bila paketnya
+  sama; selain itu order baru. Galat bacaan lookup itu kini gagal-tertutup dan
+  dilaporkan (`checkout.pending-lookup`) — sebelumnya ia diam-diam menghapus
+  penahan pembayaran-ganda, termasuk saat kolom `qr_content` belum dimigrasi.
+- **Manifest env membalik wajib/opsional untuk produksi hari ini.** Kini
+  mencerminkan produksi saat ini: `PAKASIR_*` wajib, `BINDERPAY_*` `opsional`
+  dengan peringatan "JANGAN diisi sebelum Fase 2b". Saat kode Pakasir dihapus,
+  tes "entri yatim" memaksa entri `PAKASIR_*` dicabut dan `BINDERPAY_*` menjadi
+  `prod`.
+- Teks: refund admin menyebut gateway yang memproses order (Pakasir untuk order
+  era Pakasir); petunjuk bayar dari HP yang sama menyebut tangkapan layar (tombol
+  unduh di iPhone masuk ke Files, bukan Foto).
+
+Dibantah dan TIDAK diubah: celah 1–2 jam antara QR mati (23 jam) dan cron
+meng-expire order (24 jam + kadens) — margin keselamatan yang disengaja, bukan
+regresi; callback `00` untuk order `expired` dijawab tanpa laporan — pembatalan
+yang gagal sudah dilaporkan per order (`payment.cancel`) saat risikonya muncul.
 
 ---
 

@@ -18,6 +18,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { daysUntil, upgradeOptions } from "@/lib/upgrade";
 import { isPaymentExempt, requireUser } from "@/server/guards/auth";
+import { qrisUntukOrder } from "@/server/payment/qris";
 import { findLatestUpgradeOrder } from "@/server/upgrade/orders";
 
 export const metadata: Metadata = { title: copy.upgrade.title };
@@ -99,6 +100,17 @@ export default async function UpgradePackagePage({
   // poller-nya sekaligus jalur aktivasi otoritatif kedua.
   const order = await findLatestUpgradeOrder(admin, id);
   if (order && order.status === "pending") {
+    // QRIS dibayar di halaman ini (BinderPay). Waktu per-request disengaja.
+    // eslint-disable-next-line react-hooks/purity
+    const sekarang = Date.now();
+    const qr = await qrisUntukOrder(
+      {
+        status: order.status,
+        qr_content: order.qrContent,
+        created_at: order.createdAt,
+      },
+      sekarang,
+    );
     return frame(
       <UpgradePaymentPoller
         invitationId={id}
@@ -106,6 +118,7 @@ export default async function UpgradePackagePage({
         orderCode={order.orderCode}
         amountIdr={order.amountIdr}
         packageName={order.packageName}
+        qr={qr}
       />,
     );
   }

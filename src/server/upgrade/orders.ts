@@ -27,6 +27,9 @@ export interface UpgradeOrderSummary {
   /** Paket TUJUAN upgrade — pembanding `invitations.package_id` saat poll. */
   packageId: string;
   packageName: string | null;
+  /** QRIS untuk dibayar di halaman kita (BinderPay) — `null` untuk Pakasir. */
+  qrContent: string | null;
+  createdAt: string;
 }
 
 /**
@@ -75,7 +78,9 @@ export async function findLatestUpgradeOrder(
 ): Promise<UpgradeOrderSummary | null> {
   const { data: order } = await admin
     .from("orders")
-    .select("order_code, amount_idr, status, package_id, txn_id")
+    .select(
+      "order_code, amount_idr, status, package_id, txn_id, qr_content, created_at",
+    )
     .eq("invitation_id", invitationId)
     .eq("purpose", "upgrade")
     .order("created_at", { ascending: false })
@@ -99,5 +104,7 @@ export async function findLatestUpgradeOrder(
     txnId: order.txn_id,
     packageId: order.package_id,
     packageName: pkg?.name ?? null,
+    qrContent: order.qr_content,
+    createdAt: order.created_at,
   };
 }

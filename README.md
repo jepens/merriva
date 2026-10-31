@@ -7,7 +7,7 @@ Dokumen sumber kebenaran ada di [`SPEC.md`](SPEC.md) dan folder [`docs/`](docs/)
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript strict · Tailwind CSS v4 + shadcn/ui · Supabase cloud (Postgres + RLS + Auth + Storage) · media via `lib/storage/` (driver `supabase` | `r2`) · pembayaran Pakasir · email Resend · anti-spam Turnstile · Sentry · deploy Dockerfile (Next standalone) → Easypanel di VPS.
+Next.js 16 (App Router) · TypeScript strict · Tailwind CSS v4 + shadcn/ui · Supabase cloud (Postgres + RLS + Auth + Storage) · media via `lib/storage/` (driver `supabase` | `r2`) · pembayaran Pakasir → BinderPay QRIS (beralih saat `BINDERPAY_PARTNER_ID` diisi — DECISIONS #102) · email Resend · anti-spam Turnstile · Sentry · deploy Dockerfile (Next standalone) → Easypanel di VPS.
 
 ## Prasyarat
 

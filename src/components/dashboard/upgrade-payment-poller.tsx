@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { QrisBayar } from "@/components/dashboard/qris-bayar";
 import { SupportContact } from "@/components/support-contact";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import {
   checkUpgradePaymentStatusAction,
   type UpgradePaymentState,
 } from "@/server/actions/upgrade-payment-status";
+import type { QrisSiapBayar } from "@/server/payment/qris";
 
 /**
  * Poller status pembayaran UPGRADE paket (AUDIT-2026-10-01 B3).
@@ -39,12 +41,15 @@ export function UpgradePaymentPoller({
   orderCode,
   amountIdr,
   packageName,
+  qr = null,
 }: {
   invitationId: string;
   slug: string;
   orderCode: string;
   amountIdr: number;
   packageName: string | null;
+  /** QRIS untuk dibayar di halaman ini (BinderPay) — lihat `PaymentStatusPoller`. */
+  qr?: QrisSiapBayar | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("pending");
@@ -211,6 +216,7 @@ export function UpgradePaymentPoller({
         title={c.timeoutTitle}
         body={c.timeoutBody}
       >
+        {qr ? <QrisBayar qr={qr} orderCode={orderCode} /> : null}
         {summary}
         <div className="flex flex-wrap justify-center gap-2">
           <button
@@ -239,6 +245,7 @@ export function UpgradePaymentPoller({
       title={c.pendingTitle}
       body={c.pendingBody(orderCode)}
     >
+      {qr ? <QrisBayar qr={qr} orderCode={orderCode} /> : null}
       {summary}
       <p className="text-muted-foreground mx-auto max-w-md text-xs">
         {c.pendingHint}

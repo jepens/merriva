@@ -501,6 +501,7 @@ export type Database = {
           paid_at: string | null;
           payment_method: string | null;
           purpose: string;
+          qr_content: string | null;
           raw_notification: Json | null;
           status: Database["public"]["Enums"]["order_status"];
           user_id: string | null;
@@ -516,6 +517,7 @@ export type Database = {
           paid_at?: string | null;
           payment_method?: string | null;
           purpose?: string;
+          qr_content?: string | null;
           raw_notification?: Json | null;
           status?: Database["public"]["Enums"]["order_status"];
           user_id: string;
@@ -531,6 +533,7 @@ export type Database = {
           paid_at?: string | null;
           payment_method?: string | null;
           purpose?: string;
+          qr_content?: string | null;
           raw_notification?: Json | null;
           status?: Database["public"]["Enums"]["order_status"];
           user_id?: string;

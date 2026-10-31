@@ -5,6 +5,7 @@ import { reportHandledError } from "@/lib/observability";
 import {
   checkWebhookSecret,
   pakasirWebhookSchema,
+  readBodyCapped,
 } from "@/lib/payment/webhook";
 import { checkClientRateLimit } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -38,42 +39,6 @@ function json(body: unknown, status: number): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
-}
-
-/**
- * Baca body sebagai teks dengan CAP BYTE KERAS — batalkan stream begitu melewati
- * `maxBytes`, jadi TIDAK bergantung pada Content-Length (yang bisa absen pada
- * body chunked / dipalsukan). Return null bila melebihi batas.
- */
-async function readBodyCapped(
-  req: Request,
-  maxBytes: number,
-): Promise<string | null> {
-  const reader = req.body?.getReader();
-  if (!reader) {
-    const t = await req.text();
-    return new TextEncoder().encode(t).length > maxBytes ? null : t;
-  }
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-    total += value.byteLength;
-    if (total > maxBytes) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-  const buf = new Uint8Array(total);
-  let off = 0;
-  for (const c of chunks) {
-    buf.set(c, off);
-    off += c.byteLength;
-  }
-  return new TextDecoder().decode(buf);
 }
 
 export async function POST(req: Request) {
@@ -133,6 +98,20 @@ export async function POST(req: Request) {
     );
   }
 
+  // Sesudah peralihan ke BinderPay (DECISIONS #102), saklar `getPaymentGateway`
+  // berlaku GLOBAL: verifikasi di bawah akan bertanya ke BinderPay, yang tak
+  // mengenal transaksi Pakasir — pembayaran Pakasir yang SAH tak mungkin
+  // terkonfirmasi di sini. Dilaporkan agar ditangani manual (cek dashboard
+  // Pakasir), bukan di-ack senyap sebagai "belum lunas".
+  if (process.env.BINDERPAY_PARTNER_ID) {
+    reportHandledError(
+      new Error("webhook Pakasir sesudah peralihan — tak bisa diverifikasi"),
+      "payment.webhook.pakasir-pasca-peralihan",
+      { orderCode: p.order_id },
+    );
+    return json({ ok: true, activated: false }, 200);
+  }
+
   // Webhook SANDBOX yang tiba di produksi = salah konfigurasi project, dan
   // mengaktifkannya berarti memberi layanan atas pembayaran yang tak pernah ada.
   // Ack 200 (tak ada gunanya Pakasir mencoba ulang) tetapi LAPORKAN.
@@ -187,9 +166,11 @@ export async function POST(req: Request) {
     {
       order_code: order.order_code,
       amount_idr: order.amount_idr,
-      // v2 memverifikasi lewat `txn_id`; bila baris order belum punya (link
-      // gagal tersimpan), pakai yang dibawa webhook.
-      txn_id: order.txn_id ?? p.txn_id ?? null,
+      // HANYA dari baris order, tak pernah dari payload: rujukan pilihan
+      // pemanggil membuka jalan bagi transaksi lunas milik order LAIN untuk
+      // "membuktikan" order ini. Order tanpa `txn_id` tak pernah sampai ke
+      // pelanggan (`terbitkanLink`), jadi tak ada pembayaran sah yang hilang.
+      txn_id: order.txn_id,
     },
     toDbJson(p),
   );

@@ -7,6 +7,7 @@ import { isUuid } from "@/lib/id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { PaymentStatusState } from "@/server/actions/payment-status";
 import { requireUser } from "@/server/guards/auth";
+import { qrisUntukOrder } from "@/server/payment/qris";
 
 export const metadata: Metadata = { title: copy.paymentStatus.title };
 
@@ -37,7 +38,9 @@ export default async function PaymentStatusPage({
   // Order terbaru untuk undangan ini (RLS `orders_select` → hanya milik pemilik).
   const { data: order } = await supabase
     .from("orders")
-    .select("order_code, amount_idr, status, package_id")
+    .select(
+      "order_code, amount_idr, status, package_id, qr_content, created_at",
+    )
     .eq("invitation_id", id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -61,6 +64,13 @@ export default async function PaymentStatusPage({
 
   const initialStatus = resolveInitialStatus(inv.status, order?.status);
 
+  // QRIS dibayar DI HALAMAN INI (BinderPay tak punya halaman hosted).
+  // Server Component dinamis (dashboard = SSR ter-auth) — waktu per-request
+  // disengaja; aturan purity react-hooks tak berlaku di sini.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  const qr = order ? await qrisUntukOrder(order, nowMs) : null;
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="space-y-1">
@@ -76,6 +86,7 @@ export default async function PaymentStatusPage({
         amountIdr={order?.amount_idr ?? 0}
         packageName={packageName}
         initialStatus={initialStatus}
+        qr={qr}
       />
     </div>
   );

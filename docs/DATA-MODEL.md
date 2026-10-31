@@ -26,7 +26,7 @@ Prinsip: konten undangan yang fleksibel per kategori disimpan sebagai JSONB terv
 
 **gift_notes** — konfirmasi amplop/kado, **privat untuk pemilik**. `id`, `invitation_id FK cascade`, `guest_name`, `type` `'transfer'|'gift'`, `amount int null`, `note`, `created_at`.
 
-**orders** — pembayaran. `id`, `user_id`, `invitation_id`, `package_id`, `amount_idr int`, `status` `'pending'|'paid'|'expired'|'failed'|'refunded'`, `order_code unique` (mis. `MRV-8F3K2` — dikirim sebagai `order_id` ke Pakasir), `payment_method null`, `paid_at null`, `raw_notification jsonb null` (payload webhook untuk rekonsiliasi), `created_at`.
+**orders** — pembayaran. `id`, `user_id`, `invitation_id`, `package_id`, `amount_idr int` (harga yang dibayar pelanggan; dengan BinderPay saldo yang masuk = pokok, yaitu harga − fee — DECISIONS #102), `status` `'pending'|'paid'|'expired'|'failed'|'refunded'`, `order_code unique` (mis. `MRV-8F3K2` — nomor order kita di gateway: `order_id` Pakasir, `partnerReferenceNo` BinderPay), `txn_id text null` (rujukan transaksi gateway, kunci cek status & pembatalan — Pakasir: `txn_id` Pakasir; BinderPay: `contractId`, berbeda per transaksi, dikirim berpasangan dengan `order_code`. **Unique partial** `where txn_id is not null`. NULL = tak ada transaksi gateway: order gratis/manual, atau penerbitan link gagal — order `pending` begitu tak dipakai ulang dan ditutup cron, DECISIONS #101), `qr_content text null` (string QRIS — hanya BinderPay, NULL untuk Pakasir; ditulis bersama `txn_id` dalam SATU update dan satu-satunya salinan, karena QR tak bisa diterbitkan ulang untuk nomor order yang sama — DECISIONS #102), `payment_method null`, `paid_at null`, `raw_notification jsonb null` (untuk rekonsiliasi: Pakasir → payload webhook; BinderPay → daftar putih field callback, `buyerRef` (nama pembayar) dibuang; aktivasi lewat poller/cron → `{source:'status_poll', transaction}` hasil verifikasi, nominalnya harga — bukan pokok BinderPay), `created_at`.
 
 **songs** — library musik royalty-free. `id`, `title`, `artist`, `storage_path`, `is_active`.
 
@@ -36,11 +36,11 @@ Prinsip: konten undangan yang fleksibel per kategori disimpan sebagai JSONB terv
 
 **momen_photos** — foto tamu. **PRIVAT sampai `reveal_at`.** `id`, `album_id FK cascade`, `guest_name`, `device_id uuid` (identitas peserta dari localStorage → dasar kuota peserta & jatah), `filter_id`, `storage_path`/`thumb_path` (constraint regex `momen/<album>/<photo>/(display|thumb).(webp|jpg)`), `width`, `height`, `bytes`, `status` `'visible'|'hidden'` (hidden = dimoderasi host), `created_at`.
 
-`packages` memperoleh `kind` `'invitation'|'addon_momen'` — add-on adalah baris `packages` biasa, sehingga `orders.package_id` tak berubah bentuk dan jalur uang memakai-ulang alur order/Pakasir/webhook yang sudah ada.
+`packages` memperoleh `kind` `'invitation'|'addon_momen'` — add-on adalah baris `packages` biasa, sehingga `orders.package_id` tak berubah bentuk dan jalur uang memakai-ulang alur order/gateway/webhook yang sudah ada.
 
 ## 2. Transisi status
 
-`invitations`: `draft` →(checkout dibuat)→ `pending_payment` →(order paid)→ `active` →(cron lewat `active_until`)→ `expired` →(bayar perpanjangan)→ `active`. `suspended` hanya oleh admin (konten bermasalah), bisa kembali ke status sebelumnya — `admin_reinstate_invitation` memulihkannya **dari `active_until`**, jadi undangan yang masa aktifnya sudah lewat kembali sebagai `expired`, bukan `active`. Kedua transisi mengirim email ke pemilik; alasan yang dikirim berasal dari `p_public_reason` (kolom terpisah dari catatan internal `p_reason` yang hanya masuk `admin_logs` — DECISIONS #68). Catatan: `draft` → langsung `active` juga sah lewat aktivasi manual admin (klien jasa EO). `orders`: `pending` → `paid` | `expired` (cron 24 jam + cancel ke Pakasir) | `failed`; `refunded` hanya manual admin.
+`invitations`: `draft` →(checkout dibuat)→ `pending_payment` →(order paid)→ `active` →(cron lewat `active_until`)→ `expired` →(bayar perpanjangan)→ `active`. `suspended` hanya oleh admin (konten bermasalah), bisa kembali ke status sebelumnya — `admin_reinstate_invitation` memulihkannya **dari `active_until`**, jadi undangan yang masa aktifnya sudah lewat kembali sebagai `expired`, bukan `active`. Kedua transisi mengirim email ke pemilik; alasan yang dikirim berasal dari `p_public_reason` (kolom terpisah dari catatan internal `p_reason` yang hanya masuk `admin_logs` — DECISIONS #68). Catatan: `draft` → langsung `active` juga sah lewat aktivasi manual admin (klien jasa EO). `orders`: `pending` → `paid` | `expired` (cron 24 jam + pembatalan ke gateway) | `failed`; `refunded` hanya manual admin.
 
 ## 3. RLS matrix (semua tabel: RLS ON)
 
@@ -61,7 +61,7 @@ Data yang boleh tampil di halaman undangan publik (di-serve server-side): `conte
 
 ## 4. Index penting
 
-`invitations(slug)` unique · `invitations(user_id, status)` · `guests(token)` unique · `guests(invitation_id)` · `rsvps(invitation_id, created_at desc)` · unique partial `rsvps(invitation_id, guest_id)` · `orders(order_code)` unique · `orders(status, created_at)` untuk cron · `invitation_events(invitation_id, sort_order)` · `momen_photos(album_id, created_at)` (paginasi keyset galeri) · `momen_photos(album_id, device_id)` (jatah per perangkat & hitung peserta).
+`invitations(slug)` unique · `invitations(user_id, status)` · `guests(token)` unique · `guests(invitation_id)` · `rsvps(invitation_id, created_at desc)` · unique partial `rsvps(invitation_id, guest_id)` · `orders(order_code)` unique · unique partial `orders(txn_id)` where `txn_id is not null` · `orders(status, created_at)` untuk cron · `invitation_events(invitation_id, sort_order)` · `momen_photos(album_id, created_at)` (paginasi keyset galeri) · `momen_photos(album_id, device_id)` (jatah per perangkat & hitung peserta).
 
 ## 5. Lifecycle & retensi data (UU PDP 27/2022)
 

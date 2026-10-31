@@ -44,14 +44,21 @@ export async function terbitkanLink(
     return null;
   }
 
+  // QR (BinderPay) ditulis BERSAMA `txn_id`, dalam satu UPDATE: QR tanpa
+  // rujukan tak bisa diverifikasi, rujukan tanpa QR tak bisa dibayar.
   const { error } = await admin
     .from("orders")
-    .update({ txn_id: hasil.txnId })
+    .update({
+      txn_id: hasil.txnId,
+      ...(hasil.qrContent ? { qr_content: hasil.qrContent } : {}),
+    })
     .eq("order_code", input.orderCode);
   if (error) {
-    // Transaksi SUDAH ada di Pakasir tetapi rujukannya gagal tersimpan. JANGAN
-    // arahkan: pembayaran atasnya tak akan bisa diverifikasi. Percobaan ulang
-    // aman — `find-or-create` mengembalikan `txn_id` yang sama.
+    // Transaksi SUDAH ada di gateway tetapi rujukannya gagal tersimpan. JANGAN
+    // arahkan: pembayaran atasnya tak akan bisa diverifikasi. Order tanpa
+    // `txn_id` tak dipakai ulang checkout dan di-expire cron (DECISIONS #101) —
+    // BinderPay menolak QR kedua untuk nomor order yang sama, jadi percobaan
+    // berikutnya memakai order baru.
     reportHandledError(error, "payment.create-link.persist", {
       orderCode: input.orderCode,
     });

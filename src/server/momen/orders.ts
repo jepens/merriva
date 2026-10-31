@@ -19,6 +19,9 @@ export interface MomenOrderSummary {
   /** Rujukan transaksi Pakasir v2 — tanpa ini `verifyAndActivate` tak bisa memverifikasi. */
   txnId: string | null;
   packageName: string | null;
+  /** QRIS untuk dibayar di halaman kita (BinderPay) — `null` untuk Pakasir. */
+  qrContent: string | null;
+  createdAt: string;
 }
 
 /**
@@ -81,7 +84,9 @@ export async function findLatestMomenOrder(
 
   const { data: order } = await admin
     .from("orders")
-    .select("order_code, amount_idr, status, package_id, txn_id")
+    .select(
+      "order_code, amount_idr, status, package_id, txn_id, qr_content, created_at",
+    )
     .eq("invitation_id", invitationId)
     .in("package_id", ids)
     .order("created_at", { ascending: false })
@@ -101,5 +106,7 @@ export async function findLatestMomenOrder(
     status: order.status,
     txnId: order.txn_id,
     packageName: pkg?.name ?? null,
+    qrContent: order.qr_content,
+    createdAt: order.created_at,
   };
 }

@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getPaymentGateway } from "@/lib/payment";
+import { UMUR_MAKS_ORDER_PENDING_MS as PENDING_MAX_AGE_MS } from "@/lib/payment/types";
 import { reportHandledError } from "@/lib/observability";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { recordCronRun } from "@/server/cron/record";
@@ -25,7 +26,9 @@ import { verifyAndActivate } from "@/server/payment/reconcile";
  * order diverifikasi OTORITATIF via `transactiondetail` (`verifyAndActivate`) —
  * bila ternyata LUNAS, diaktifkan (atau `held` utk suspended, pembayaran tetap
  * tercatat), BUKAN dibatalkan. Hanya order yang API pastikan BELUM lunas yang
- * dibatalkan ke Pakasir (`transactioncancel`, best-effort) lalu di-`expired`.
+ * di-`expired` lalu dibatalkan ke gateway (best-effort; BinderPay:
+ * `qr-mpm-cancel`, karena QR yang lewat tenggat tak pernah berubah status
+ * sendiri — DECISIONS #102).
  *
  * Auth: header `Authorization: Bearer <CRON_SECRET>`. Mutasi → service_role.
  */
@@ -33,7 +36,6 @@ import { verifyAndActivate } from "@/server/payment/reconcile";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 // Batasi kerja per-jalankan. Sisa diambil jalankan berikutnya.
 const BATCH = 100;
 
@@ -249,10 +251,11 @@ export async function POST(req: Request) {
       );
     } catch (err) {
       cancelFailed += 1;
-      // `cancel-transaction` v2 TIDAK TERDOKUMENTASI — ditemukan dengan menebak
-      // URL. Kegagalannya karena itu wajib terlihat, bukan hanya jadi angka:
-      // bila Pakasir mengubah atau menghapus route itu, inilah satu-satunya
-      // tempat yang akan memberi tahu kita.
+      // Wajib terlihat, bukan hanya jadi angka: `cancel-transaction` Pakasir v2
+      // TIDAK TERDOKUMENTASI (ditemukan dengan menebak URL), dan BinderPay
+      // menjawab 409 "already been paid" bila pelanggan membayar di antara
+      // verifikasi dan pembatalan — order yang kini `expired` itu SUDAH dibayar
+      // dan perlu ditangani manual.
       reportHandledError(err, "payment.cancel", { orderCode: o.order_code });
     }
   }

@@ -13,6 +13,7 @@ import { isUuid } from "@/lib/id";
 import { merchantIdentityReady } from "@/lib/merchant";
 import { reportHandledError } from "@/lib/observability";
 import { generateOrderCode } from "@/lib/order";
+import { MASA_BERLAKU_QR_MS } from "@/lib/payment/binderpay";
 import { isPaymentExempt } from "@/server/guards/auth";
 import { aktifkanGratis } from "@/server/payment/gratis";
 import { terbitkanLink } from "@/server/payment/link";
@@ -181,25 +182,50 @@ export async function createCheckoutAction(
   // mengaktifkan/memperpanjang undangan akan dipakaikan ulang order Rp100.000
   // itu dan mendapat masa aktif penuh dengan membayar selisih. Gerbangnya
   // dua arah — `findPendingUpgradeOrder` memfilter ke sisi sebaliknya.
-  const { data: pending } = await admin
+  //
+  // Yang dipakai ulang hanya order pending TERBARU, dan hanya bila paketnya
+  // sama: /bayar selalu menampilkan order TERBARU undangan, jadi memakai ulang
+  // order paket yang sama tetapi lebih tua membuat /bayar menampilkan QR paket
+  // LAIN (Basic → Premium → Basic menampilkan QR Premium).
+  const halamanBayar = `${appUrl}/dashboard/undangan/${invitationId}/bayar`;
+  const { data: terbaru, error: pendingErr } = await admin
     .from("orders")
-    .select("order_code, amount_idr, txn_id")
+    .select(
+      "order_code, amount_idr, package_id, txn_id, qr_content, created_at",
+    )
     .eq("invitation_id", invitationId)
-    .eq("package_id", pkg.id)
     .eq("status", "pending")
     .eq("purpose", "purchase")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (pending) {
-    // `createPaymentLink` kini panggilan jaringan yang bisa gagal (Pakasir v2).
-    // `find-or-create` berkunci `order_code`, jadi memanggilnya ulang untuk order
-    // pending yang sama mengembalikan transaksi yang SAMA — percobaan ulang aman
-    // dan sekaligus mengisi `txn_id` yang mungkin gagal tersimpan sebelumnya.
+  if (pendingErr) {
+    // Gagal-tertutup: tanpa jawaban, penahan pembayaran-ganda di atas lenyap
+    // diam-diam — setiap klik menjadi order baru.
+    reportHandledError(pendingErr, "checkout.pending-lookup", {
+      invitationId,
+    });
+    return { status: "error", message: copy.common.error };
+  }
+  const pending = terbaru?.package_id === pkg.id ? terbaru : null;
+  if (pending?.qr_content) {
+    // BinderPay: QR-nya sudah tersimpan dan halaman bayar KITA yang
+    // menampilkannya. Gateway tak dipanggil lagi — BinderPay menolak QR kedua
+    // untuk nomor order yang sama (HTTP 500). QR yang sudah mati tak dipakai
+    // ulang: alurnya jatuh ke pembuatan order baru di bawah, dan order lama
+    // ditutup cron tanpa QR yang masih bisa dibayar.
+    if (Date.parse(pending.created_at) + MASA_BERLAKU_QR_MS > Date.now()) {
+      return { status: "redirect", url: halamanBayar };
+    }
+  } else if (pending?.txn_id) {
+    // Pakasir: `find-or-create` berkunci `order_code`, jadi memanggilnya ulang
+    // mengembalikan transaksi yang SAMA. Order TANPA `txn_id` sengaja tak
+    // dipakai ulang — di BinderPay membuat ulang ditolak, dan pelanggan memang
+    // tak pernah melihat link-nya; cron yang menutupnya (DECISIONS #101).
     const link = await terbitkanLink(admin, {
       orderCode: pending.order_code,
       amountIdr: pending.amount_idr,
-      redirectUrl: `${appUrl}/dashboard/undangan/${invitationId}/bayar`,
+      redirectUrl: halamanBayar,
     });
     if (!link) return { status: "error", message: copy.checkout.linkFailed };
     return { status: "redirect", url: link };
@@ -245,11 +271,12 @@ export async function createCheckoutAction(
   const url = await terbitkanLink(admin, {
     orderCode,
     amountIdr: pkg.price_idr,
-    redirectUrl: `${appUrl}/dashboard/undangan/${invitationId}/bayar`,
+    redirectUrl: halamanBayar,
   });
   // Order sudah ter-insert. Gagal menerbitkan link TIDAK mengunci pelanggan:
-  // percobaan berikutnya menemukan order `pending` yang sama dan memanggil
-  // `find-or-create` lagi, yang mengembalikan transaksi yang sama.
+  // order tanpa `txn_id` tak dipakai ulang, jadi percobaan berikutnya membuat
+  // order baru (Pakasir dengan `txn_id`: `find-or-create` mengembalikan
+  // transaksi yang sama).
   if (!url) return { status: "error", message: copy.checkout.linkFailed };
   return { status: "redirect", url };
 }

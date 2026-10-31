@@ -31,6 +31,14 @@ const { terbitkanLink } = vi.hoisted(() => ({
 }));
 vi.mock("@/server/payment/link", () => ({ terbitkanLink }));
 
+const { reportHandledError } = vi.hoisted(() => ({
+  reportHandledError: vi.fn((_e: unknown, _area: string, _x?: unknown) => {}),
+}));
+vi.mock("@/lib/observability", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/observability")>()),
+  reportHandledError,
+}));
+
 const { refs } = vi.hoisted(() => ({
   refs: { server: null as unknown, admin: null as unknown },
 }));
@@ -96,7 +104,10 @@ function makeClient(
       return chain;
     };
     chain.maybeSingle = () =>
-      Promise.resolve({ data: data[table] ?? null, error: null });
+      Promise.resolve({
+        data: errors[table] ? null : (data[table] ?? null),
+        error: errors[table] ?? null,
+      });
     chain.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) =>
       Promise.resolve({
         data: data[table] ?? null,
@@ -134,7 +145,10 @@ beforeEach(() => {
 function setup(
   inv: unknown,
   pkg: unknown = PKG,
-  adminOpts: { insertErrors?: ({ code: string } | null)[] } = {},
+  adminOpts: {
+    insertErrors?: ({ code: string } | null)[];
+    errors?: Record<string, unknown>;
+  } = {},
   server: {
     events?: unknown;
     errors?: Record<string, unknown>;
@@ -403,7 +417,14 @@ describe("createCheckoutAction — jalur sukses", () => {
       PKG,
       {},
       {
-        pendingOrder: { order_code: "MRV-LAMA01", amount_idr: 299000 },
+        pendingOrder: {
+          order_code: "MRV-LAMA01",
+          amount_idr: 299000,
+          package_id: "pkg-premium",
+          txn_id: "g6ikm4iq",
+          qr_content: null,
+          created_at: new Date().toISOString(),
+        },
       },
     );
 
@@ -422,7 +443,89 @@ describe("createCheckoutAction — jalur sukses", () => {
     );
   });
 
-  it("pencarian order pending disaring undangan, paket, status, DAN purpose", async () => {
+  it("BinderPay: QR tersimpan & masih berlaku → kembali ke halaman bayar, gateway TIDAK dipanggil", async () => {
+    // BinderPay menolak QR kedua untuk nomor order yang sama (HTTP 500), jadi
+    // pemakaian ulang = menampilkan QR yang tersimpan, bukan membuat ulang.
+    setup(
+      { id: INV, status: "pending_payment", slug: "andi-sinta" },
+      PKG,
+      {},
+      {
+        pendingOrder: {
+          order_code: "MRV-QRIS01",
+          amount_idr: 299000,
+          package_id: "pkg-premium",
+          txn_id: "bp-sandbox-1067b837",
+          qr_content: "000201010212…",
+          created_at: new Date(Date.now() - 60 * 60_000).toISOString(),
+        },
+      },
+    );
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res).toEqual({
+      status: "redirect",
+      url: `http://localhost:3000/dashboard/undangan/${INV}/bayar`,
+    });
+    expect(terbitkanLink).not.toHaveBeenCalled();
+    expect(orders()).toHaveLength(0);
+  });
+
+  it("BinderPay: QR yang sudah mati TIDAK dipakai ulang — order baru dibuat", async () => {
+    setup(
+      { id: INV, status: "pending_payment", slug: "andi-sinta" },
+      PKG,
+      {},
+      {
+        pendingOrder: {
+          order_code: "MRV-QRIS01",
+          amount_idr: 299000,
+          package_id: "pkg-premium",
+          txn_id: "bp-sandbox-1067b837",
+          qr_content: "000201010212…",
+          created_at: new Date(Date.now() - 23.5 * 60 * 60_000).toISOString(),
+        },
+      },
+    );
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res.status).toBe("redirect");
+    expect(orders()).toHaveLength(1);
+    expect(terbitkanLink).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.not.objectContaining({ orderCode: "MRV-QRIS01" }),
+    );
+  });
+
+  it("order pending TANPA txn_id tak dipakai ulang — order baru (BinderPay menolak QR kedua)", async () => {
+    setup(
+      { id: INV, status: "pending_payment", slug: "andi-sinta" },
+      PKG,
+      {},
+      {
+        pendingOrder: {
+          order_code: "MRV-YATIM1",
+          amount_idr: 299000,
+          package_id: "pkg-premium",
+          txn_id: null,
+          qr_content: null,
+          created_at: new Date().toISOString(),
+        },
+      },
+    );
+
+    await createCheckoutAction(INV, "premium");
+
+    expect(orders()).toHaveLength(1);
+    expect(terbitkanLink).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ orderCode: "MRV-YATIM1" }),
+    );
+  });
+
+  it("pencarian order pending disaring undangan, status, DAN purpose — paket DIBANDINGKAN, bukan disaring", async () => {
     setup(
       { id: INV, status: "pending_payment", slug: "andi-sinta" },
       PKG,
@@ -437,11 +540,66 @@ describe("createCheckoutAction — jalur sukses", () => {
     const baca = calls.find((c) => c.table === "orders" && c.op === "select");
     expect(baca?.filters).toMatchObject({
       invitation_id: INV,
-      package_id: "pkg-premium",
       status: "pending",
       // Lihat test berikutnya untuk alasan `purpose`.
       purpose: "purchase",
     });
+    // Yang dicari order pending TERBARU, apa pun paketnya — itulah yang
+    // ditampilkan /bayar. Disaring per paket, order lama paket yang sama bisa
+    // terpilih sementara /bayar menampilkan order lain.
+    expect(baca?.filters).not.toHaveProperty("package_id");
+  });
+
+  it("order pending TERBARU berpaket LAIN (Basic → Premium → Basic) → order baru, bukan order lama", async () => {
+    // /bayar selalu menampilkan order TERBARU undangan. Memakai ulang order
+    // Basic yang lebih tua di sini akan membawa pelanggan ke QR Premium.
+    setup(
+      { id: INV, status: "pending_payment", slug: "andi-sinta" },
+      PKG,
+      {},
+      {
+        pendingOrder: {
+          order_code: "MRV-BASIC1",
+          amount_idr: 99000,
+          package_id: "pkg-basic",
+          txn_id: "bp-sandbox-basic",
+          qr_content: "000201010212…",
+          created_at: new Date().toISOString(),
+        },
+      },
+    );
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res.status).toBe("redirect");
+    expect(orders()).toHaveLength(1);
+    expect(terbitkanLink).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ amountIdr: 299000 }),
+    );
+    expect(terbitkanLink).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ orderCode: "MRV-BASIC1" }),
+    );
+  });
+
+  it("galat DB saat mencari order pending → GAGAL-TERTUTUP & dilaporkan, tanpa order baru", async () => {
+    // Tanpa ini, galat bacaan diam-diam menghapus penahan pembayaran-ganda:
+    // setiap klik membuat order + transaksi baru.
+    setup({ id: INV, status: "pending_payment", slug: "andi-sinta" }, PKG, {
+      errors: {
+        orders: { message: "column orders.qr_content does not exist" },
+      },
+    });
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res).toEqual({ status: "error", message: copy.common.error });
+    expect(orders()).toHaveLength(0);
+    expect(terbitkanLink).not.toHaveBeenCalled();
+    expect(reportHandledError.mock.calls.map((c) => c[1])).toContain(
+      "checkout.pending-lookup",
+    );
   });
 
   it("order UPGRADE yang menggantung TIDAK dipakai ulang sebagai aktivasi (B3)", async () => {

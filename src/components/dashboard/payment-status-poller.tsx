@@ -4,6 +4,7 @@ import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { QrisBayar } from "@/components/dashboard/qris-bayar";
 import { SupportContact } from "@/components/support-contact";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import {
   checkPaymentStatusAction,
   type PaymentStatusState,
 } from "@/server/actions/payment-status";
+import type { QrisSiapBayar } from "@/server/payment/qris";
 
 const POLL_INTERVAL_MS = 4000;
 // Berhenti otomatis ~6 menit agar tak mem-poll tanpa henti bila klien lupa
@@ -31,6 +33,7 @@ export function PaymentStatusPoller({
   amountIdr,
   packageName,
   initialStatus,
+  qr = null,
 }: {
   invitationId: string;
   slug: string;
@@ -38,6 +41,11 @@ export function PaymentStatusPoller({
   amountIdr: number;
   packageName: string;
   initialStatus: PaymentStatusState["status"];
+  /**
+   * QRIS untuk dibayar di halaman ini (BinderPay). Tampil selama menunggu DAN
+   * setelah poll berhenti: memindai bisa lebih lama dari batas poll ~6 menit.
+   */
+  qr?: QrisSiapBayar | null;
 }) {
   const [view, setView] = useState<View>(initialStatus);
   const [activeSlug, setActiveSlug] = useState(slug);
@@ -225,6 +233,7 @@ export function PaymentStatusPoller({
         title={c.timeoutTitle}
         body={c.timeoutBody}
       >
+        {qr ? <QrisBayar qr={qr} orderCode={orderCode} /> : null}
         <OrderSummary
           packageName={packageName}
           amountIdr={amountIdr}
@@ -257,6 +266,7 @@ export function PaymentStatusPoller({
       title={c.waitingTitle}
       body={c.waitingBody}
     >
+      {qr ? <QrisBayar qr={qr} orderCode={orderCode} /> : null}
       <OrderSummary
         packageName={packageName}
         amountIdr={amountIdr}

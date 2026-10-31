@@ -489,7 +489,7 @@ export const copy = {
   checkout: {
     title: "Aktifkan Undangan",
     subtitle:
-      "Pilih paket untuk mengaktifkan & menyebarkan undangan. Pembayaran aman via QRIS atau Virtual Account.",
+      "Pilih paket untuk mengaktifkan & menyebarkan undangan. Bayar dengan QRIS dari e-wallet atau m-banking apa pun.",
     back: "Kembali ke dashboard",
     popular: "Terpopuler",
     choose: "Pilih paket ini",
@@ -503,7 +503,7 @@ export const copy = {
     // Ditampilkan tepat di atas tombol bayar — titik tempat uang berpindah.
     termsNoticeBefore: "Dengan melanjutkan pembayaran, Anda menyetujui",
     termsNoticeAnd: "dan",
-    securedBy: "Pembayaran diproses oleh Pakasir (QRIS & Virtual Account).",
+    securedBy: "Pembayaran QRIS diproses oleh BinderPay.",
     perDuration: (months: number) => `Masa aktif ${months} bulan`,
     notPayable: "Undangan ini tidak dapat dibayar saat ini.",
     // Pembeli tak bisa memperbaiki ini sendiri, jadi pesannya tak menyuruh
@@ -516,7 +516,7 @@ export const copy = {
     // fakta yang benar: order-nya SUDAH tersimpan, dan percobaan ulang memakai
     // order yang sama karena `find-or-create` Pakasir berkunci `order_id`.
     linkFailed:
-      "Gagal membuat tautan pembayaran. Coba lagi sebentar lagi — pesanan Anda tersimpan dan tidak terduplikasi.",
+      "Gagal membuat tautan pembayaran. Coba lagi sebentar lagi — Anda belum ditagih apa pun.",
     // Add-on Album Momen (dibeli untuk undangan yang sudah aktif).
     momenNeedsActive:
       "Album Momen hanya bisa diaktifkan untuk undangan yang sudah aktif.",
@@ -622,7 +622,7 @@ export const copy = {
     payment: {
       pendingTitle: "Menunggu konfirmasi pembayaran",
       pendingBody: (orderCode: string) =>
-        `Order ${orderCode} sedang kami tunggu konfirmasinya dari Pakasir. Paket akan naik otomatis begitu pembayaran terverifikasi — halaman ini memperbarui sendiri.`,
+        `Order ${orderCode} sedang kami tunggu konfirmasi pembayarannya. Paket akan naik otomatis begitu pembayaran terverifikasi — halaman ini memperbarui sendiri.`,
       pendingHint:
         "Sudah bayar tetapi belum berubah? Biarkan halaman ini terbuka beberapa saat. Anda juga bisa menutupnya — pembayaran tetap diproses di latar.",
       activeTitle: "Paket Anda sudah naik",
@@ -639,7 +639,7 @@ export const copy = {
         "Kami belum bisa memastikan status pembayaran upgrade ini. Coba lagi sebentar; bila Anda yakin sudah membayar, hubungi kami dengan kode order.",
       timeoutTitle: "Masih menunggu konfirmasi",
       timeoutBody:
-        "Konfirmasi dari Pakasir belum sampai. Pembayaran tetap diproses di latar — cek lagi nanti, atau hubungi kami bila acara Anda sudah dekat.",
+        "Konfirmasi pembayaran belum sampai. Pembayaran tetap diproses di latar — cek lagi nanti, atau hubungi kami bila acara Anda sudah dekat.",
       chooseAgain: "Pilih paket lagi",
       checkNow: "Cek sekarang",
       checking: "Memeriksa…",
@@ -686,6 +686,22 @@ export const copy = {
       "Konfirmasi belum diterima. Bila Anda sudah membayar, undangan akan aktif otomatis begitu terkonfirmasi — Anda bisa cek lagi atau tutup halaman ini.",
     retry: "Coba lagi",
     back: "Kembali ke dashboard",
+    // QRIS yang dirender di halaman KITA (BinderPay tak punya halaman bayar
+    // hosted — DECISIONS #99). Dipakai ketiga poller: undangan, upgrade, Album
+    // Momen.
+    qris: {
+      title: "Pindai QRIS untuk membayar",
+      body: "Buka aplikasi e-wallet atau m-banking apa pun yang mendukung QRIS, lalu pindai kode ini.",
+      // Mayoritas pelanggan membuka dashboard dari HP — QR di layar HP yang
+      // sama tak bisa dipindai olehnya. Tangkapan layar disebut eksplisit:
+      // tombol unduh di iPhone masuk ke Files, bukan Foto, dan di browser
+      // dalam-aplikasi sering tak berfungsi — hanya tangkapan layar yang pasti.
+      mobileHint:
+        "Membayar dari HP ini? Ambil tangkapan layar (atau simpan gambar QR-nya), lalu pilih pindai dari galeri di aplikasi pembayaran Anda.",
+      save: "Simpan gambar QR",
+      alt: "Kode QRIS pembayaran",
+      validUntil: (waktu: string) => `Berlaku sampai ${waktu}`,
+    },
   },
   create: {
     title: "Buat Undangan Baru",
@@ -1264,7 +1280,7 @@ export const copy = {
       freeActivating: "Mengaktifkan…",
       paidCta: "Pilih & bayar",
       redirecting: "Mengalihkan ke pembayaran…",
-      securedBy: "Pembayaran diproses oleh Pakasir (QRIS & Virtual Account).",
+      securedBy: "Pembayaran QRIS diproses oleh BinderPay.",
       error: "Gagal mengaktifkan. Coba lagi.",
       back: "Kembali ke dashboard",
       // Order add-on masih menunggu pembayaran → JANGAN tampilkan panel harga
@@ -1623,12 +1639,12 @@ export const copy = {
           keptPaid: "lunas, tak di-expire",
           expired: "dikedaluwarsakan",
           skipped: "dilewati (transien)",
-          cancelFailed: "gagal batalkan di Pakasir",
+          cancelFailed: "gagal batalkan di gateway",
           tanpaTxn: "tanpa txn_id",
           mudaScanned: "muda: dipindai",
           mudaActivated: "muda: diaktifkan",
           mudaPending: "muda: masih pending",
-          budgetHabis: "anggaran Pakasir habis",
+          budgetHabis: "anggaran panggilan gateway habis",
           // expire-invitations
           notified: "notis terkirim",
           notifyNoOwner: "notis: tanpa pemilik",
@@ -1697,15 +1713,16 @@ export const copy = {
         "Hapus akun ini permanen? Data tamu, RSVP, ucapan, dan foto akan hilang dan tidak bisa dikembalikan.",
       note: "Riwayat pesanan DIPERTAHANKAN ter-anonimisasi untuk pembukuan. Akun dengan undangan yang masih aktif akan ditolak.",
     },
-    // Refund (AUDIT-2026-10-01 A3). Uangnya digerakkan di dashboard Pakasir —
-    // tombol ini mencatat keputusannya dan mencabut layanan yang dibeli.
+    // Refund (AUDIT-2026-10-01 A3). Uangnya digerakkan di dashboard gateway
+    // (BinderPay) — tombol ini mencatat keputusannya dan mencabut layanan yang
+    // dibeli.
     refund: {
       cta: "Tandai refund",
       reasonLabel: "Alasan refund",
       reasonPlaceholder: "mis. pembayaran ganda, order MRV-XXXXXX",
       confirm:
-        "Tandai order ini sebagai refund dan cabut layanannya? Uangnya tetap harus Anda kembalikan sendiri lewat dashboard Pakasir.",
-      note: "Mencatat refund di sini TIDAK mengembalikan uang. Lakukan pengembaliannya di dashboard Pakasir, lalu tandai di sini agar laporan dan layanan ikut menyesuaikan.",
+        "Tandai order ini sebagai refund dan cabut layanannya? Uangnya tetap harus Anda kembalikan sendiri lewat dashboard gateway yang memprosesnya — BinderPay, atau Pakasir untuk order yang dibayar lewat Pakasir.",
+      note: "Mencatat refund di sini TIDAK mengembalikan uang. Lakukan pengembaliannya di dashboard gateway yang memprosesnya (BinderPay, atau Pakasir untuk order yang dibayar lewat Pakasir), lalu tandai di sini agar laporan dan layanan ikut menyesuaikan.",
       okRevoked: "Order ditandai refund. Undangan dicabut (kedaluwarsa).",
       okStillPaid:
         "Order ditandai refund. Undangan TETAP aktif karena masih ada order lunas lain yang menopangnya.",
@@ -1912,7 +1929,7 @@ export const copy = {
       suspend_ok_no_email:
         "Undangan ditangguhkan, tetapi email pemberitahuan TIDAK terkirim. Kabari pemilik secara manual.",
       refund_ok_revoked:
-        "Order ditandai refund. Undangan dicabut (kedaluwarsa). Kembalikan uangnya di dashboard Pakasir bila belum.",
+        "Order ditandai refund. Undangan dicabut (kedaluwarsa). Kembalikan uangnya di dashboard gateway yang memprosesnya (BinderPay, atau Pakasir untuk order yang dibayar lewat Pakasir) bila belum.",
       refund_ok_still_paid:
         "Order ditandai refund. Undangan TETAP aktif karena masih ada order lunas lain yang menopangnya.",
       refund_ok_album:
@@ -1970,7 +1987,7 @@ export const copy = {
       "Dioptimalkan untuk WhatsApp",
       "RSVP + amplop digital",
       "Link personal per tamu",
-      "QRIS & Virtual Account",
+      "Bayar pakai QRIS",
     ],
     how: {
       eyebrow: "Cara kerja",
@@ -2070,7 +2087,7 @@ export const copy = {
         },
         {
           q: "Metode pembayaran apa saja yang didukung?",
-          a: "QRIS dan Virtual Account bank, diproses secara aman lewat Pakasir. Kami tidak menyimpan data kartu atau rekening Anda.",
+          a: "QRIS dari e-wallet atau m-banking apa pun, diproses secara aman lewat BinderPay. Kami tidak menyimpan data kartu atau rekening Anda.",
         },
         {
           q: "Bisakah saya mengedit undangan setelah aktif?",
@@ -2208,7 +2225,7 @@ export const copy = {
             heading: "Pihak ketiga (pemroses data)",
             body: [
               "Supabase — hosting basis data dan autentikasi.",
-              "Pakasir — pemroses pembayaran (QRIS & Virtual Account). Kami tidak menyimpan data kartu atau rekening pembayaran Anda.",
+              "BinderPay — pemroses pembayaran (QRIS). Kami tidak menyimpan data kartu atau rekening pembayaran Anda.",
               "Resend — pengiriman email transaksional (kuitansi & pengingat).",
               "Cloudflare Turnstile — perlindungan anti-bot pada formulir publik.",
               "Sentry — pemantauan galat & kinerja pada versi produksi. Laporan galat disaring lebih dulu: token tamu, cookie, header, dan isi formulir dibuang sebelum dikirim.",

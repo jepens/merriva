@@ -21,6 +21,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isPaymentExempt, requireUser } from "@/server/guards/auth";
 import { findLatestMomenOrder } from "@/server/momen/orders";
+import { qrisUntukOrder } from "@/server/payment/qris";
 import {
   fetchMomenAlbumStats,
   fetchMomenPhotos,
@@ -128,6 +129,17 @@ export default async function MomenManagePage({
     // signature, bisa hilang) dengan backstop cron 24 jam.
     const order = await findLatestMomenOrder(admin, id);
     if (order && order.status === "pending") {
+      // QRIS dibayar di halaman ini (BinderPay). Waktu per-request disengaja.
+      // eslint-disable-next-line react-hooks/purity
+      const sekarang = Date.now();
+      const qr = await qrisUntukOrder(
+        {
+          status: order.status,
+          qr_content: order.qrContent,
+          created_at: order.createdAt,
+        },
+        sekarang,
+      );
       return (
         <div className="mx-auto max-w-2xl space-y-6">
           <h1 className="text-xl font-semibold tracking-tight">{a.title}</h1>
@@ -136,6 +148,7 @@ export default async function MomenManagePage({
             orderCode={order.orderCode}
             amountIdr={order.amountIdr}
             packageName={order.packageName}
+            qr={qr}
           />
           {back}
         </div>

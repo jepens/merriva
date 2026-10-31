@@ -33,9 +33,23 @@ export interface CreatedPaymentLink {
    * mahal bila salah dibaca. Seam abstraksinya tetap antarmuka ini.
    */
   txnId: string;
+  /**
+   * String QRIS untuk dirender di halaman KITA — hanya gateway tanpa halaman
+   * bayar hosted (BinderPay). Wajib disimpan bersama `txnId`: BinderPay menolak
+   * membuat ulang QR untuk nomor order yang sama, jadi QR ini satu-satunya.
+   */
+  qrContent?: string;
 }
 
 export type PaymentStatus = "pending" | "paid" | "failed" | "expired";
+
+/**
+ * Umur order `pending` sebelum cron meng-expire-nya (SPEC §4.8). Satu sumber
+ * untuk cron DAN gateway yang menerbitkan alat bayar bertenggat (QR BinderPay):
+ * alat bayar itu wajib mati LEBIH DULU, kalau tidak pelanggan bisa membayar
+ * order yang sudah ditutup.
+ */
+export const UMUR_MAKS_ORDER_PENDING_MS = 24 * 60 * 60 * 1000;
 
 export interface PaymentVerification {
   orderCode: string;
