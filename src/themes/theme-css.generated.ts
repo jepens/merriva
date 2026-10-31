@@ -10,8 +10,12 @@ export const themeCssHrefs: Record<string, string> = {
   "festa": "/themes/festa.7953d8224e.css",
   "kirana": "/themes/kirana.94213651f6.css",
   "lumina": "/themes/lumina.1c0b29cd45.css",
+  "marawa": "/themes/marawa.efd04857a6.css",
+  "meihua": "/themes/meihua.7ac5264df7.css",
   "meridian": "/themes/meridian.d9edb843a0.css",
   "noir": "/themes/noir.cc92f60520.css",
+  "priangan": "/themes/priangan.574da006f2.css",
   "prisma": "/themes/prisma.c247e18c41.css",
+  "sakinah": "/themes/sakinah.ffa386a8bc.css",
   "verdant": "/themes/verdant.0918ff0513.css",
 };

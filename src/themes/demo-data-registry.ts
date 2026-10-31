@@ -19,6 +19,10 @@ export const demoDataRegistry: Record<
   lumina: () => import("./lumina/demo-data"),
   prisma: () => import("./prisma/demo-data"),
   kirana: () => import("./kirana/demo-data"),
+  priangan: () => import("./priangan/demo-data"),
+  marawa: () => import("./marawa/demo-data"),
+  sakinah: () => import("./sakinah/demo-data"),
+  meihua: () => import("./meihua/demo-data"),
 };
 
 export function getThemeDemoLoader(

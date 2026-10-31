@@ -121,6 +121,36 @@ export const themeCatalogMeta: Record<string, ThemeCatalogMeta> = {
     line: "rgba(59,47,34,0.16)",
     ornament: "✽",
   },
+  priangan: {
+    bg: "#f6f1e3",
+    ink: "#23311f",
+    accent: "#2e5b41",
+    line: "rgba(35,49,31,0.16)",
+    ornament: "✿",
+  },
+  marawa: {
+    bg: "#1a1412",
+    ink: "#f2e7d4",
+    accent: "#d4a848",
+    line: "rgba(212,168,72,0.28)",
+    ornament: "✦",
+    dark: true,
+  },
+  sakinah: {
+    bg: "#f7f3ea",
+    ink: "#2a3328",
+    accent: "#3e5340",
+    line: "rgba(42,51,40,0.14)",
+    ornament: "✸",
+  },
+  meihua: {
+    bg: "#7c1e1a",
+    ink: "#fbefd9",
+    accent: "#e2b13c",
+    line: "rgba(226,177,60,0.35)",
+    ornament: "❀",
+    dark: true,
+  },
 };
 
 export function getThemeCatalogMeta(slug: string): ThemeCatalogMeta {

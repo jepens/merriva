@@ -34,6 +34,10 @@ export const themeRegistry: Record<string, () => Promise<ThemeModule>> = {
   lumina: () => import("./lumina"),
   prisma: () => import("./prisma"),
   kirana: () => import("./kirana"),
+  priangan: () => import("./priangan"),
+  marawa: () => import("./marawa"),
+  sakinah: () => import("./sakinah"),
+  meihua: () => import("./meihua"),
 };
 
 export function getThemeLoader(

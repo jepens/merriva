@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marawa — Tema Adat Minang · Prototipe Merriva (Story)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Albert+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ===== MARAWA — Minang: gonjong, songket, marawa. STORY, dark-luxe. ===== */
+  :root{
+    --bg:#1A1412; --bg-2:#241A17; --maroon:#5E1F28; --maroon-2:#4A1820;
+    --ink:#F2E7D4; --muted:#B5A48C; --gold:#D4A848; --gold-soft:#E7C97E;
+    --sand:#F1E6D2; --line:rgba(212,168,72,.28);
+    --disp:"Cinzel",serif; --body:"Albert Sans",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;
+    line-height:1.66;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body.locked{overflow:hidden}
+  .mrw{max-width:480px;margin:0 auto;background:var(--bg);position:relative;
+    box-shadow:0 0 90px rgba(0,0,0,.55)}
+
+  /* pita marawa: hitam-merah-kuning (identitas alam Minangkabau) */
+  .marawa-ribbon{position:absolute;top:0;bottom:0;left:0;width:7px;display:flex;flex-direction:column;z-index:2}
+  .marawa-ribbon i{flex:1}
+  .marawa-ribbon i:nth-child(1){background:#0E0B0A}
+  .marawa-ribbon i:nth-child(2){background:#7E2430}
+  .marawa-ribbon i:nth-child(3){background:#C99A3F}
+
+  /* tekstur songket: kisi wajik emas halus */
+  .songket{position:relative}
+  .songket::before{content:"";position:absolute;inset:0;opacity:.07;pointer-events:none;
+    background-image:
+      linear-gradient(45deg, var(--gold) 1px, transparent 1.4px),
+      linear-gradient(-45deg, var(--gold) 1px, transparent 1.4px);
+    background-size:22px 22px}
+
+  .sec{padding:78px 30px;position:relative;overflow:hidden}
+  .sec.maroon{background:linear-gradient(180deg,var(--maroon) 0%,var(--maroon-2) 100%)}
+  .sec.sand{background:var(--sand);color:#2B1C14}
+  .sec.sand .sub{color:#7A6A55}
+  .eyebrow{display:flex;align-items:center;justify-content:center;gap:12px;font-size:10.5px;
+    letter-spacing:.4em;text-transform:uppercase;color:var(--gold);font-weight:600}
+  .eyebrow::before,.eyebrow::after{content:"";width:28px;height:1px;background:var(--gold);opacity:.5}
+  h2.title{font-family:var(--disp);font-weight:500;font-size:26px;text-align:center;
+    margin:16px 0 8px;color:var(--gold-soft);letter-spacing:.04em}
+  .sec.sand h2.title{color:#6B3A1E}
+  .sub{font-size:13.5px;color:var(--muted);text-align:center;max-width:37ch;margin:0 auto}
+
+  /* kaluak paku (pakis) ornamen sudut */
+  .paku{position:absolute;width:74px;color:var(--gold);opacity:.4;pointer-events:none}
+  .paku.tl{top:16px;left:14px}
+  .paku.br{bottom:16px;right:14px;transform:rotate(180deg)}
+
+  /* mask-reveal: state dimiliki JS (§0.4) */
+  .line{overflow:hidden;display:block}
+  .line>span{display:inline-block;will-change:transform}
+  .is-js .line>span{visibility:hidden}
+  .rv{opacity:1}
+  .is-js .rv{opacity:0;transform:translateY(24px)}
+
+  /* ================= COVER ================= */
+  #cover{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:30px;overflow:hidden;
+    background:
+      radial-gradient(110% 70% at 50% -16%, #3A2420 0%, transparent 62%),
+      radial-gradient(90% 55% at 50% 115%, #35201C 0%, transparent 58%), var(--bg);
+    transition:opacity .9s ease,visibility .9s}
+  #cover.open{opacity:0;visibility:hidden}
+  #gonjong{width:280px;color:var(--gold)}
+  #gonjong path{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .cover-kicker{font-size:10.5px;letter-spacing:.46em;text-transform:uppercase;color:var(--muted);margin-top:20px}
+  .cover-names{font-family:var(--disp);font-size:36px;line-height:1.22;margin:10px 0 6px;
+    color:var(--ink);letter-spacing:.04em}
+  .cover-names em{font-style:normal;color:var(--gold);display:block;font-size:.5em;letter-spacing:.3em}
+  .cover-date{font-size:12px;letter-spacing:.26em;color:var(--muted)}
+  .cover-to{margin-top:30px;font-size:12.5px;color:var(--muted)}
+  .cover-to b{display:block;font-size:17px;font-weight:600;color:var(--ink);margin-top:3px}
+  #btn-open{margin-top:22px;padding:14px 34px;border:1px solid var(--gold);border-radius:999px;
+    background:linear-gradient(180deg,rgba(212,168,72,.2),rgba(212,168,72,.08));color:var(--gold-soft);
+    font:600 13px var(--body);letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
+    transition:transform .2s,background .2s}
+  #btn-open:hover{transform:translateY(-2px);background:rgba(212,168,72,.28)}
+
+  /* ================= HERO ================= */
+  #hero{padding-top:92px;text-align:center}
+  .hero-names{font-family:var(--disp);font-size:34px;line-height:1.24;letter-spacing:.04em;margin-top:12px}
+  .hero-names .amp{color:var(--gold);font-size:.7em}
+  .hero-date{margin-top:10px;font-size:12.5px;letter-spacing:.3em;color:var(--muted)}
+  .countdown{display:flex;justify-content:center;gap:10px;margin-top:30px}
+  .cd{min-width:64px;padding:12px 6px;background:rgba(242,231,212,.05);
+    border:1px solid var(--line);border-radius:14px}
+  .cd b{display:block;font-size:22px;color:var(--gold-soft);font-variant-numeric:tabular-nums;font-family:var(--disp)}
+  .cd span{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+
+  /* ================= PEPATAH ================= */
+  .pepatah{font-family:var(--disp);font-size:21px;line-height:1.7;text-align:center;
+    color:var(--gold-soft);letter-spacing:.02em}
+  .pepatah-arti{text-align:center;font-size:13.5px;font-style:italic;color:var(--muted);margin-top:16px}
+
+  /* ================= MEMPELAI ================= */
+  .couple{display:flex;flex-direction:column;gap:32px;margin-top:38px}
+  .person{text-align:center}
+  .foto-gonjong{width:216px;height:264px;margin:0 auto 18px;position:relative;padding:9px;
+    border:1px solid var(--gold);background:rgba(242,231,212,.04);
+    clip-path:polygon(0 14%, 24% 14%, 50% 0, 76% 14%, 100% 14%, 100% 100%, 0 100%)}
+  .foto-gonjong .ph{width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;
+    color:#F1E6D2;font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;padding-bottom:14px;
+    clip-path:polygon(0 15%, 24% 15%, 50% 1%, 76% 15%, 100% 15%, 100% 100%, 0 100%)}
+  .ph-a{background:linear-gradient(165deg,#7E2430 0%,#4A1820 60%,#2B0E13 100%)}
+  .ph-b{background:linear-gradient(200deg,#8A6B2E 0%,#5E4A1E 55%,#3A2D12 100%)}
+  .person h3{font-family:var(--disp);font-size:21px;font-weight:500;letter-spacing:.04em}
+  .person .role{font-size:10.5px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:600;margin:5px 0 9px}
+  .person p{font-size:13px;color:var(--muted)}
+  .pamenan{font-family:var(--disp);text-align:center;font-size:26px;color:var(--gold)}
+
+  /* ================= ACARA ================= */
+  .event{border:1px solid var(--line);border-radius:4px;margin-top:26px;text-align:center;
+    background:rgba(242,231,212,.03);position:relative;padding:28px 24px}
+  .event::before,.event::after{content:"";position:absolute;width:30px;height:30px;
+    border:1px solid var(--gold);pointer-events:none}
+  .event::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+  .event::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+  .event h3{font-family:var(--disp);font-weight:500;font-size:22px;color:var(--gold-soft);letter-spacing:.06em}
+  .event .tgl{font-size:16px;font-weight:600;margin-top:12px}
+  .event .jam{font-size:12.5px;color:var(--gold);font-weight:600;letter-spacing:.14em;margin:4px 0 10px}
+  .event .tempat{font-size:13.5px;color:var(--muted)}
+  .btn-map{display:inline-block;margin-top:16px;padding:11px 26px;border:1px solid var(--gold);
+    border-radius:999px;color:var(--gold-soft);font-size:12px;font-weight:600;letter-spacing:.1em;
+    text-decoration:none;text-transform:uppercase}
+
+  /* ================= STORY ================= */
+  .story{margin-top:34px}
+  .beat{border-left:1px solid var(--line);padding:2px 0 26px 22px;position:relative;margin-left:8px}
+  .beat:last-child{padding-bottom:4px}
+  .beat::before{content:"";position:absolute;left:-7px;top:6px;width:13px;height:13px;
+    transform:rotate(45deg);border:1px solid var(--gold);background:var(--bg-2)}
+  .beat h4{font-family:var(--disp);font-size:17px;font-weight:500;color:var(--gold-soft)}
+  .beat .thn{font-size:10.5px;letter-spacing:.3em;color:var(--gold);font-weight:600}
+  .beat p{font-size:13.5px;color:var(--muted);margin-top:4px}
+
+  /* ================= GALERI ================= */
+  .galeri{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:30px}
+  .gal{min-height:150px;position:relative;overflow:hidden;display:flex;align-items:flex-end;
+    padding:10px;color:#F1E6D2;font-size:10px;letter-spacing:.26em;text-transform:uppercase;
+    border:1px solid var(--line)}
+  .gal.wide{grid-column:span 2;min-height:190px;
+    clip-path:polygon(0 18%, 26% 18%, 50% 0, 74% 18%, 100% 18%, 100% 100%, 0 100%)}
+  .g1{background:linear-gradient(160deg,#7E2430,#3A1218 75%)}
+  .g2{background:linear-gradient(200deg,#8A6B2E,#473614)}
+  .g3{background:linear-gradient(150deg,#55191F,#2B0E13)}
+  .g4{background:linear-gradient(190deg,#6E5524,#3A2D12)}
+  .g5{background:linear-gradient(210deg,#642027,#331016)}
+
+  /* ================= HADIAH/RSVP/UCAPAN ================= */
+  .gift{background:#FFFCF4;border:1px solid #E4D7BC;border-radius:16px;padding:18px;
+    text-align:center;margin-top:16px;color:#2B1C14}
+  .gift b{display:block;font-size:14.5px}
+  .gift span{font-size:12.5px;color:#7A6A55}
+  .gift button{margin-top:10px;padding:9px 20px;border:1px solid #6B3A1E;background:none;
+    border-radius:999px;color:#6B3A1E;font:600 12px var(--body);cursor:pointer}
+  form .field{margin-top:14px;text-align:left}
+  form label{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  form input,form select,form textarea{width:100%;margin-top:6px;padding:13px 15px;
+    border:1px solid var(--line);border-radius:12px;background:rgba(242,231,212,.05);
+    font:14px var(--body);color:var(--ink);outline:none}
+  form input:focus,form select:focus,form textarea:focus{border-color:var(--gold)}
+  form ::placeholder{color:#8A7B65}
+  .btn-kirim{width:100%;margin-top:18px;padding:14px;border:0;border-radius:12px;
+    background:var(--gold);color:#241505;font:700 13.5px var(--body);letter-spacing:.08em;
+    text-transform:uppercase;cursor:pointer}
+  .wish{background:rgba(242,231,212,.05);border:1px solid var(--line);border-radius:14px;
+    padding:14px 16px;margin-top:12px}
+  .wish b{font-size:13.5px;color:var(--gold-soft)}
+  .wish p{font-size:13px;color:var(--muted);margin-top:3px}
+
+  .closing-names{font-family:var(--disp);text-align:center;font-size:27px;color:var(--gold-soft);
+    letter-spacing:.06em;margin-top:18px}
+  footer{padding:22px;text-align:center;font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;
+    color:var(--muted);background:#120E0C}
+  footer b{color:var(--gold)}
+
+  #btn-music{position:fixed;right:16px;bottom:16px;z-index:40;width:44px;height:44px;border-radius:50%;
+    border:1px solid var(--gold);background:#241A17;color:var(--gold-soft);cursor:pointer;font-size:16px;
+    box-shadow:0 8px 26px rgba(0,0,0,.5);display:none}
+  #btn-music.show{display:block}
+
+  @media (prefers-reduced-motion:reduce){
+    .is-js .line>span{visibility:visible!important;transform:none!important}
+    .is-js .rv{opacity:1!important;transform:none!important}
+    #gonjong path{stroke-dashoffset:0!important}
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body class="locked">
+<div class="mrw songket" id="root">
+  <div class="marawa-ribbon" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <section id="cover" aria-label="sampul undangan">
+    <svg id="gonjong" viewBox="0 0 280 110" aria-hidden="true">
+      <!-- siluet atap bagonjong: empat puncak runcing melengkung -->
+      <path d="M8 94 C32 88 42 58 48 24 C54 58 62 80 80 86 C96 90 104 68 110 44 C116 68 126 88 140 88 C154 88 164 68 170 44 C176 68 184 90 200 86 C218 80 226 58 232 24 C238 58 248 88 272 94"/>
+      <path d="M36 94 H244" opacity=".6"/>
+    </svg>
+    <div class="cover-kicker rv" data-cv>Baralek Gadang</div>
+    <h1 class="cover-names rv" data-cv>PUTI RAHMA <em>jo</em> MALIN DARMAWAN</h1>
+    <div class="cover-date rv" data-cv>SABTU · 06 FEBRUARI 2027</div>
+    <div class="cover-to rv" data-cv>Kapado Bapak/Ibu/Sanak Saudara<b id="guest-name">Tamu Undangan</b></div>
+    <button class="rv" id="btn-open" data-cv>Buka Undangan</button>
+  </section>
+
+  <section class="sec" id="hero">
+    <span class="paku tl"><svg viewBox="0 0 74 74" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 68 C6 36 28 12 62 10 C40 18 30 32 30 44 C30 56 40 62 48 58 C54 54 54 46 48 44 C44 42 40 46 42 50"/></svg></span>
+    <span class="paku br"><svg viewBox="0 0 74 74" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 68 C6 36 28 12 62 10 C40 18 30 32 30 44 C30 56 40 62 48 58 C54 54 54 46 48 44 C44 42 40 46 42 50"/></svg></span>
+    <div class="eyebrow rv">Assalamu'alaikum</div>
+    <h1 class="hero-names">
+      <span class="line"><span>Puti Rahma Khairani</span></span>
+      <span class="line"><span class="amp">&amp;</span></span>
+      <span class="line"><span>Malin Darmawan</span></span>
+    </h1>
+    <div class="hero-date rv">SABTU, 06 FEBRUARI 2027</div>
+    <div class="countdown rv" id="countdown">
+      <div class="cd"><b id="cd-d">—</b><span>Hari</span></div>
+      <div class="cd"><b id="cd-h">—</b><span>Jam</span></div>
+      <div class="cd"><b id="cd-m">—</b><span>Menit</span></div>
+      <div class="cd"><b id="cd-s">—</b><span>Detik</span></div>
+    </div>
+  </section>
+
+  <section class="sec maroon" id="pepatah">
+    <div class="eyebrow rv">Pepatah Minang</div>
+    <p class="pepatah" style="margin-top:24px">
+      <span class="line"><span>“Adat basandi syarak,</span></span>
+      <span class="line"><span>syarak basandi Kitabullah.”</span></span>
+    </p>
+    <p class="pepatah-arti rv">Adat bersendikan syariat, dan syariat bersendikan Kitabullah — landasan kami membina rumah tangga.</p>
+  </section>
+
+  <section class="sec" id="mempelai">
+    <div class="eyebrow rv">Mempelai</div>
+    <h2 class="title rv">Niat Baik Duo Kaluarga</h2>
+    <p class="sub rv">Dengan memohon rahmat Allah ﷻ serta restu niniak mamak dan keluarga, kami bermaksud melangsungkan pernikahan.</p>
+    <div class="couple">
+      <article class="person">
+        <div class="foto-gonjong rv"><div class="ph ph-a">Foto Mempelai</div></div>
+        <h3 class="rv">Puti Rahma Khairani, S.E.</h3>
+        <div class="role rv">Putri dari</div>
+        <p class="rv">Bapak H. Dt. Rajo Batuah<br>&amp; Ibu Hj. Syamsidar</p>
+      </article>
+      <div class="pamenan rv">✦</div>
+      <article class="person">
+        <div class="foto-gonjong rv"><div class="ph ph-b">Foto Mempelai</div></div>
+        <h3 class="rv">Malin Darmawan, M.M.</h3>
+        <div class="role rv">Putra dari</div>
+        <p class="rv">Bapak Drs. Yusril Anwar<br>&amp; Ibu Rosnidar</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec maroon" id="acara">
+    <div class="eyebrow rv">Rangkaian Acara</div>
+    <h2 class="title rv">Alek Nan Dinanti</h2>
+    <article class="event rv">
+      <h3>Akad Nikah</h3>
+      <div class="tgl">Sabtu, 06 Februari 2027</div>
+      <div class="jam">08.00 – 10.00 WIB</div>
+      <p class="tempat">Masjid Raya Sumatera Barat<br>Jl. Khatib Sulaiman, Padang</p>
+      <a class="btn-map" href="#" onclick="return false">Petunjuk Lokasi</a>
+    </article>
+    <article class="event rv">
+      <h3>Baralek · Resepsi</h3>
+      <div class="tgl">Sabtu, 06 Februari 2027</div>
+      <div class="jam">11.00 – 16.00 WIB</div>
+      <p class="tempat">Istana Bung Hatta Ballroom<br>Jl. Sudirman No. 35, Padang</p>
+      <a class="btn-map" href="#" onclick="return false">Petunjuk Lokasi</a>
+    </article>
+  </section>
+
+  <section class="sec" id="story">
+    <div class="eyebrow rv">Kisah</div>
+    <h2 class="title rv">Dari Rantau ka Pelaminan</h2>
+    <div class="story">
+      <div class="beat rv"><div class="thn">2020</div><h4>Basuo di Rantau</h4><p>Bertemu di perantauan Jakarta, dipertemukan komunitas urang awak.</p></div>
+      <div class="beat rv"><div class="thn">2025</div><h4>Maminang</h4><p>Keluarga datang maminang; kedua kaum sepakat, tando diikat.</p></div>
+      <div class="beat rv"><div class="thn">2027</div><h4>Baralek Gadang</h4><p>Doa dan restu mengiringi langkah kami ke pelaminan.</p></div>
+    </div>
+  </section>
+
+  <section class="sec maroon" id="galeri-sec">
+    <div class="eyebrow rv">Galeri</div>
+    <h2 class="title rv">Potret Baduo</h2>
+    <div class="galeri">
+      <div class="gal wide g1" data-gal>Prewedding 01</div>
+      <div class="gal g2" data-gal>Prewedding 02</div>
+      <div class="gal g3" data-gal>Prewedding 03</div>
+      <div class="gal g4" data-gal>Prewedding 04</div>
+      <div class="gal g5" data-gal>Prewedding 05</div>
+    </div>
+  </section>
+
+  <section class="sec sand" id="hadiah">
+    <div class="eyebrow rv">Tando Kasih</div>
+    <h2 class="title rv">Kirim Hadiah</h2>
+    <p class="sub rv">Kehadiran dan doa adalah yang utama. Bila hendak berbagi tanda kasih:</p>
+    <div class="gift rv"><b>Bank Nagari · 1100 22 33 44</b><span>a.n. Puti Rahma Khairani</span><br><button type="button" data-copy="1100223344">Salin Nomor</button></div>
+    <div class="gift rv"><b>Kirim Kado</b><span>Jl. Khatib Sulaiman No. 9, Padang</span><br><button type="button" data-copy="Jl. Khatib Sulaiman No. 9, Padang">Salin Alamat</button></div>
+  </section>
+
+  <section class="sec" id="rsvp">
+    <div class="eyebrow rv">Konfirmasi</div>
+    <h2 class="title rv">Kehadiran &amp; Ucapan</h2>
+    <form class="rv" onsubmit="return false">
+      <div class="field"><label for="f-nama">Nama</label><input id="f-nama" type="text" placeholder="Nama Anda"></div>
+      <div class="field"><label for="f-hadir">Kehadiran</label>
+        <select id="f-hadir"><option>Hadir</option><option>Berhalangan</option></select></div>
+      <div class="field"><label for="f-ucapan">Ucapan</label>
+        <textarea id="f-ucapan" rows="3" placeholder="Tulis doa &amp; ucapan…"></textarea></div>
+      <button class="btn-kirim" type="submit">Kirim</button>
+    </form>
+    <div style="margin-top:24px">
+      <div class="wish rv"><b>Keluarga Piliang</b><p>Salamaik baralek! Samoga manjadi kaluargo nan sakinah.</p></div>
+      <div class="wish rv"><b>IKM Jakarta</b><p>Doa terbaik dari dunsanak di rantau. Berbahagialah selalu!</p></div>
+    </div>
+  </section>
+
+  <section class="sec maroon" id="closing" style="text-align:center">
+    <div class="eyebrow rv">Tarimo Kasih</div>
+    <p class="sub rv" style="margin-top:16px">Sagalo kehadiran jo doa restu Bapak/Ibu adolah kehormatan bagi kaluargo kami. Wassalamu'alaikum warahmatullahi wabarakatuh.</p>
+    <div class="closing-names">
+      <span class="line"><span>Rahma &amp; Malin</span></span>
+    </div>
+  </section>
+
+  <footer>Undangan digital oleh <b>Merriva</b></footer>
+</div>
+
+<button id="btn-music" aria-label="putar musik">♫</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script>
+"use strict";
+(function(){
+  document.documentElement.classList.add("is-js");
+  var reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var hasGsap = typeof gsap !== "undefined";
+  if (hasGsap) gsap.registerPlugin(ScrollTrigger);
+
+  try{
+    var to = new URLSearchParams(location.search).get("to");
+    if (to) document.getElementById("guest-name").textContent = to.replace(/\+/g," ").slice(0,60);
+  }catch(e){}
+
+  function craftFallback(){
+    document.querySelectorAll(".line>span").forEach(function(s){ s.style.visibility="visible"; });
+    document.querySelectorAll(".rv").forEach(function(el){ el.style.opacity=1; el.style.transform="none"; });
+    document.querySelectorAll("#gonjong path").forEach(function(x){ x.style.strokeDashoffset=0; });
+  }
+
+  var cover = document.getElementById("cover");
+  var opened = false;
+  document.getElementById("btn-open").addEventListener("click", function(){
+    if (opened) return; opened = true;
+    cover.classList.add("open");
+    document.body.classList.remove("locked");
+    document.getElementById("btn-music").classList.add("show");
+    if (hasGsap && !reduced) setTimeout(function(){ ScrollTrigger.refresh(); }, 300);
+  });
+  var music = document.getElementById("btn-music");
+  music.addEventListener("click", function(){ music.classList.toggle("playing"); });
+
+  var target = Date.parse("2027-02-06T08:00:00+07:00");
+  var pad = function(n){ return String(Math.max(0,n)).padStart(2,"0"); };
+  function tick(){
+    var t = Math.max(0, Math.floor((target - Date.now())/1000));
+    document.getElementById("cd-d").textContent = Math.floor(t/86400);
+    document.getElementById("cd-h").textContent = pad(Math.floor(t%86400/3600));
+    document.getElementById("cd-m").textContent = pad(Math.floor(t%3600/60));
+    document.getElementById("cd-s").textContent = pad(t%60);
+  }
+  tick(); setInterval(tick, 1000);
+
+  document.querySelectorAll("[data-copy]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var done = function(){ var old = btn.textContent; btn.textContent="Tersalin ✓";
+        setTimeout(function(){ btn.textContent = old; },1600); };
+      try{ navigator.clipboard && navigator.clipboard.writeText ?
+        navigator.clipboard.writeText(btn.getAttribute("data-copy")).then(done,done) : done();
+      }catch(e){ done(); }
+    });
+  });
+
+  if (!hasGsap || reduced){ craftFallback(); return; }
+
+  /* gonjong: gambar garis atap saat cover tampil */
+  document.querySelectorAll("#gonjong path").forEach(function(el,i){
+    var len = el.getTotalLength();
+    gsap.set(el, { strokeDasharray: len, strokeDashoffset: len });
+    gsap.to(el, { strokeDashoffset: 0, duration: 1.5, delay: .2 + i*.18, ease: "power2.out" });
+  });
+  gsap.utils.toArray("#cover [data-cv]").forEach(function(el,i){
+    gsap.fromTo(el, { opacity:0, y:18 }, { opacity:1, y:0, duration:.9, delay:1.2 + i*.14, ease:"power3.out" });
+  });
+
+  /* mask reveal (§0.4) */
+  gsap.utils.toArray(".line>span").forEach(function(span){
+    gsap.set(span, { visibility:"visible", yPercent:115 });
+    gsap.to(span, { yPercent:0, duration:1, ease:"power4.out",
+      scrollTrigger:{ trigger: span.closest(".line"), start:"top 88%" } });
+  });
+
+  gsap.utils.toArray(".sec .rv").forEach(function(el){
+    gsap.to(el, { opacity:1, y:0, duration:.9, ease:"power3.out",
+      scrollTrigger:{ trigger: el, start:"top 90%" } });
+  });
+
+  /* galeri: wipe dari bawah (kesan kain songket dibentang) */
+  gsap.utils.toArray("[data-gal]").forEach(function(el,i){
+    gsap.fromTo(el, { clipPath:"inset(100% 0% 0% 0%)", opacity:.4 },
+      { clipPath:"inset(0% 0% 0% 0%)", opacity:1, duration:1, ease:"power3.inOut",
+        scrollTrigger:{ trigger: el, start:"top 94%" }, delay:(i%2)*.1 });
+  });
+
+  /* kilau emas halus pada judul (shimmer via backgroundPosition tidak dipakai —
+     cukup pulse opacity ornamen paku) */
+  gsap.utils.toArray(".paku").forEach(function(el,i){
+    gsap.to(el, { opacity:.65, duration:2.4, yoyo:true, repeat:-1, ease:"sine.inOut", delay:i*.7 });
+  });
+})();
+</script>
+</body>
+</html>

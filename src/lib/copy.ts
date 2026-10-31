@@ -1043,6 +1043,10 @@ export const copy = {
       strip: "Deret geser",
       grid: "Kisi",
       polaroid: "Polaroid",
+      // Gaya galeri gelombang 3 (THEME-WAVE3 §2).
+      arch: "Lengkung",
+      songket: "Songket",
+      okta: "Oktagon",
     },
     motion: "Gerak",
     motionFull: "Penuh",
@@ -1073,6 +1077,9 @@ export const copy = {
       story: "Kisah",
       envelope: "Amplop hadiah",
       rsvp: "Ucapan & RSVP",
+      // Section khas tema (`x-`) ikut di sini agar label editor & test kontrak
+      // satu sumber; bukan sinonim id kanonik.
+      "x-doa": "Doa pengantin",
     },
   },
 

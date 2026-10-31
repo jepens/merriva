@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meihua — Tema Tionghoa · Prototipe Merriva (Story)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Work+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ===== MEIHUA — Tionghoa: 囍, mei hua, lentera. STORY. =====
+     Catatan budaya: merah-emas dominan (putih/hitam tidak pernah dominan),
+     kelompok kelopak 3/5/8 — tidak pernah 4. */
+  :root{
+    --red:#9E2B25; --red-deep:#7C1E1A; --red-dark:#5E1613;
+    --ink:#FBEFD9; --ink-dim:#E8CDA6; --muted:#D9AE8F;
+    --gold:#E2B13C; --gold-soft:#F0CE7E; --ivory:#FAF4E8; --ivory-ink:#4A241C;
+    --line:rgba(226,177,60,.35);
+    --disp:"DM Serif Display",serif; --body:"Work Sans",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--red-deep);color:var(--ink);font-family:var(--body);font-size:16px;
+    line-height:1.66;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body.locked{overflow:hidden}
+  .mh{max-width:480px;margin:0 auto;background:linear-gradient(180deg,var(--red) 0%,var(--red-deep) 100%);
+    position:relative;box-shadow:0 0 90px rgba(0,0,0,.5)}
+
+  .sec{padding:78px 30px;position:relative;overflow:hidden}
+  .sec.ivory{background:var(--ivory);color:var(--ivory-ink)}
+  .sec.ivory .sub{color:#8A6A55}
+  .sec.darker{background:var(--red-dark)}
+  .eyebrow{display:flex;align-items:center;justify-content:center;gap:12px;font-size:10.5px;
+    letter-spacing:.4em;text-transform:uppercase;color:var(--gold);font-weight:600}
+  .eyebrow::before,.eyebrow::after{content:"";width:28px;height:1px;background:var(--gold);opacity:.6}
+  h2.title{font-family:var(--disp);font-weight:400;font-size:29px;text-align:center;
+    margin:14px 0 8px;color:var(--gold-soft)}
+  .sec.ivory h2.title{color:var(--red)}
+  .sub{font-size:13.5px;color:var(--muted);text-align:center;max-width:37ch;margin:0 auto}
+
+  /* mask-reveal: state dimiliki JS (§0.4) */
+  .line{overflow:hidden;display:block}
+  .line>span{display:inline-block;will-change:transform}
+  .is-js .line>span{visibility:hidden}
+  .rv{opacity:1}
+  .is-js .rv{opacity:0;transform:translateY(24px)}
+
+  /* lentera gantung */
+  .lantern{position:absolute;top:-6px;width:44px;color:var(--gold);pointer-events:none;
+    transform-origin:50% 0}
+  .lantern.l{left:20px}.lantern.r{right:20px;width:34px}
+
+  /* ================= COVER ================= */
+  #cover{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;text-align:center;padding:30px;overflow:hidden;
+    background:
+      radial-gradient(110% 60% at 50% -14%, #B3362B 0%, transparent 60%),
+      radial-gradient(100% 60% at 50% 115%, #701A16 0%, transparent 58%), var(--red-deep);
+    transition:opacity .9s ease,visibility .9s}
+  #cover.open{opacity:0;visibility:hidden}
+  .xi-medal{position:relative;width:196px;height:196px}
+  .xi-medal>svg{position:absolute;inset:0;width:100%;height:100%}
+  #xi-ring{color:var(--gold)}
+  #xi{color:var(--gold-soft)}
+  #xi path{stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+  .cover-kicker{font-size:10.5px;letter-spacing:.46em;text-transform:uppercase;color:var(--muted);margin-top:22px}
+  .cover-names{font-family:var(--disp);font-size:42px;line-height:1.16;margin:8px 0 6px;color:var(--ink)}
+  .cover-names em{font-style:italic;color:var(--gold);font-size:.58em;display:block}
+  .cover-date{font-size:12px;letter-spacing:.26em;color:var(--muted)}
+  .cover-to{margin-top:28px;font-size:12.5px;color:var(--muted)}
+  .cover-to b{display:block;font-size:17px;font-weight:600;color:var(--ink);margin-top:3px}
+  #btn-open{margin-top:22px;padding:14px 32px;border:0;border-radius:999px;background:var(--gold);
+    color:#4A2408;font:600 13px var(--body);letter-spacing:.12em;text-transform:uppercase;cursor:pointer;
+    box-shadow:0 10px 30px rgba(226,177,60,.3);transition:transform .2s}
+  #btn-open:hover{transform:translateY(-2px)}
+
+  /* ================= HERO + ranting mei hua ================= */
+  #hero{padding-top:96px;text-align:center}
+  #branch{position:absolute;top:8px;left:-14px;width:112%;color:var(--gold);opacity:.9;pointer-events:none}
+  #branch .bough{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round}
+  #branch .bloom{fill:#F6D7CE}
+  #branch .bud{fill:var(--gold-soft)}
+  .hero-names{font-family:var(--disp);font-size:40px;line-height:1.16;margin-top:48px}
+  .hero-date{margin-top:10px;font-size:12.5px;letter-spacing:.3em;color:var(--muted)}
+  .countdown{display:flex;justify-content:center;gap:10px;margin-top:30px}
+  .cd{min-width:64px;padding:12px 6px;background:rgba(250,244,232,.06);
+    border:1px solid var(--line);border-radius:14px}
+  .cd b{display:block;font-size:22px;color:var(--gold-soft);font-variant-numeric:tabular-nums;font-family:var(--disp)}
+  .cd span{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+
+  /* ================= MAKNA ================= */
+  .makna-xi{font-family:var(--disp);font-size:56px;text-align:center;color:var(--red);line-height:1}
+  .makna-q{font-family:var(--disp);font-size:23px;line-height:1.55;text-align:center;color:var(--ivory-ink);margin-top:18px}
+  .makna-arti{text-align:center;font-size:13.5px;font-style:italic;color:#8A6A55;margin-top:14px}
+
+  /* ================= MEMPELAI (bingkai paper-cut oktagon) ================= */
+  .couple{display:flex;flex-direction:column;gap:32px;margin-top:38px}
+  .person{text-align:center}
+  .foto-okta{width:212px;height:256px;margin:0 auto 18px;position:relative;padding:9px;
+    background:rgba(250,244,232,.05);border:1px solid var(--gold);
+    clip-path:polygon(22% 0,78% 0,100% 12%,100% 88%,78% 100%,22% 100%,0 88%,0 12%)}
+  .foto-okta .ph{width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;
+    color:#FBEFD9;font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;padding-bottom:14px;
+    clip-path:polygon(22% 0,78% 0,100% 12%,100% 88%,78% 100%,22% 100%,0 88%,0 12%)}
+  .ph-a{background:linear-gradient(165deg,#C04A3C 0%,#8A2520 60%,#5E1613 100%)}
+  .ph-b{background:linear-gradient(200deg,#D89A4A 0%,#9C5F26 55%,#5E3614 100%)}
+  .person h3{font-family:var(--disp);font-size:23px;font-weight:400}
+  .person .role{font-size:10.5px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:600;margin:5px 0 9px}
+  .person p{font-size:13px;color:var(--muted)}
+  .amp-xi{font-family:var(--disp);text-align:center;font-size:30px;color:var(--gold)}
+
+  /* ================= ACARA ================= */
+  .event{border:1px solid var(--line);border-radius:20px;margin-top:26px;text-align:center;
+    background:rgba(250,244,232,.04);padding:28px 24px;position:relative;overflow:hidden}
+  .event::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:110px;height:3px;background:var(--gold);border-radius:0 0 6px 6px;opacity:.8}
+  .event h3{font-family:var(--disp);font-weight:400;font-size:23px;color:var(--gold-soft)}
+  .event .tgl{font-size:16px;font-weight:600;margin-top:12px}
+  .event .jam{font-size:12.5px;color:var(--gold);font-weight:600;letter-spacing:.14em;margin:4px 0 10px}
+  .event .tempat{font-size:13.5px;color:var(--muted)}
+  .btn-map{display:inline-block;margin-top:16px;padding:11px 26px;border:1px solid var(--gold);
+    border-radius:999px;color:var(--gold-soft);font-size:12px;font-weight:600;letter-spacing:.1em;
+    text-decoration:none;text-transform:uppercase}
+
+  /* ================= STORY ================= */
+  .story{margin-top:34px}
+  .beat{border-left:1px solid var(--line);padding:2px 0 26px 22px;position:relative;margin-left:8px}
+  .beat:last-child{padding-bottom:4px}
+  .beat::before{content:"";position:absolute;left:-8px;top:5px;width:15px;height:15px;border-radius:50%;
+    border:1px solid var(--gold);background:var(--red-dark)}
+  .beat h4{font-family:var(--disp);font-size:18px;font-weight:400;color:var(--gold-soft)}
+  .beat .thn{font-size:10.5px;letter-spacing:.3em;color:var(--gold);font-weight:600}
+  .beat p{font-size:13.5px;color:var(--muted);margin-top:4px}
+
+  /* ================= GALERI ================= */
+  .galeri{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:30px}
+  .gal{min-height:150px;position:relative;overflow:hidden;display:flex;align-items:flex-end;
+    padding:10px;color:#FBEFD9;font-size:10px;letter-spacing:.26em;text-transform:uppercase;
+    border:1px solid #E2CBA6;border-radius:16px}
+  .gal.okta{grid-column:span 2;min-height:200px;border-radius:0;border:1px solid #D9B687;
+    clip-path:polygon(10% 0,90% 0,100% 18%,100% 82%,90% 100%,10% 100%,0 82%,0 18%)}
+  .g1{background:linear-gradient(160deg,#C04A3C,#701A16 75%)}
+  .g2{background:linear-gradient(200deg,#D89A4A,#7C4A1A)}
+  .g3{background:linear-gradient(150deg,#A53A2E,#5E1613)}
+  .g4{background:linear-gradient(190deg,#B3652F,#6E3A14)}
+  .g5{background:linear-gradient(210deg,#8E2A22,#4A110E)}
+
+  /* ================= ANGPAO ================= */
+  .angpao{background:rgba(250,244,232,.05);border:1px solid var(--line);border-radius:18px;
+    padding:20px;text-align:center;margin-top:16px;position:relative;overflow:hidden}
+  .angpao::before{content:"";position:absolute;top:0;left:0;right:0;height:42px;
+    background:linear-gradient(180deg,rgba(226,177,60,.22),transparent);
+    clip-path:polygon(0 0,100% 0,100% 55%,50% 100%,0 55%)}
+  .angpao b{display:block;font-size:14.5px;color:var(--gold-soft);position:relative}
+  .angpao span{font-size:12.5px;color:var(--muted);position:relative}
+  .angpao button{margin-top:12px;padding:9px 20px;border:1px solid var(--gold);background:none;
+    border-radius:999px;color:var(--gold-soft);font:600 12px var(--body);cursor:pointer;position:relative}
+
+  /* ================= RSVP/UCAPAN ================= */
+  form .field{margin-top:14px;text-align:left}
+  form label{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#8A6A55;font-weight:600}
+  form input,form select,form textarea{width:100%;margin-top:6px;padding:13px 15px;
+    border:1.5px solid #E4CDAD;border-radius:13px;background:#fff;font:14px var(--body);
+    color:var(--ivory-ink);outline:none}
+  form input:focus,form select:focus,form textarea:focus{border-color:var(--red)}
+  .btn-kirim{width:100%;margin-top:18px;padding:14px;border:0;border-radius:13px;background:var(--red);
+    color:#FBEFD9;font:600 13.5px var(--body);letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+  .wish{background:#fff;border:1px solid #EADCC2;border-radius:15px;padding:14px 16px;margin-top:12px;text-align:left}
+  .wish b{font-size:13.5px;color:var(--red)}
+  .wish p{font-size:13px;color:#8A6A55;margin-top:3px}
+
+  .closing-names{font-family:var(--disp);text-align:center;font-size:30px;color:var(--gold-soft);margin-top:18px}
+  footer{padding:22px;text-align:center;font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;
+    color:var(--muted);background:#4A110E}
+  footer b{color:var(--gold)}
+
+  #btn-music{position:fixed;right:16px;bottom:16px;z-index:40;width:44px;height:44px;border-radius:50%;
+    border:1px solid var(--gold);background:var(--red-dark);color:var(--gold-soft);cursor:pointer;
+    font-size:16px;box-shadow:0 8px 26px rgba(0,0,0,.45);display:none}
+  #btn-music.show{display:block}
+
+  @media (prefers-reduced-motion:reduce){
+    .is-js .line>span{visibility:visible!important;transform:none!important}
+    .is-js .rv{opacity:1!important;transform:none!important}
+    #xi path{stroke-dashoffset:0!important}
+    #branch .bloom,#branch .bud{transform:none!important;opacity:1!important}
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body class="locked">
+<div class="mh" id="root">
+
+  <section id="cover" aria-label="sampul undangan">
+    <div class="xi-medal">
+      <svg id="xi-ring" viewBox="0 0 196 196" fill="none" stroke="currentColor" aria-hidden="true">
+        <circle cx="98" cy="98" r="94" stroke-width="1.2"/>
+        <circle cx="98" cy="98" r="86" stroke-width="1" stroke-dasharray="3 6" opacity=".7"/>
+      </svg>
+      <!-- 囍 (shuāngxǐ) — garis dekoratif, digambar saat cover -->
+      <svg id="xi" viewBox="0 0 196 196" aria-hidden="true">
+        <g>
+          <path d="M54 50 H90 M72 42 V58"/>
+          <path d="M60 66 H84"/>
+          <path d="M62 74 H82 V86 H62 Z"/>
+          <path d="M52 96 H92"/>
+          <path d="M62 102 L58 108 M82 102 L86 108"/>
+          <path d="M60 114 H84 V138 H60 Z"/>
+        </g>
+        <g>
+          <path d="M106 50 H142 M124 42 V58"/>
+          <path d="M112 66 H136"/>
+          <path d="M114 74 H134 V86 H114 Z"/>
+          <path d="M104 96 H144"/>
+          <path d="M114 102 L110 108 M134 102 L138 108"/>
+          <path d="M112 114 H136 V138 H112 Z"/>
+        </g>
+        <path d="M90 126 H106"/>
+      </svg>
+    </div>
+    <div class="cover-kicker rv" data-cv>The Wedding Celebration</div>
+    <h1 class="cover-names rv" data-cv>Clarissa <em>&amp;</em> Kevin</h1>
+    <div class="cover-date rv" data-cv>MINGGU · 14 MARET 2027</div>
+    <div class="cover-to rv" data-cv>Kepada Yth. Bapak/Ibu/Saudara/i<b id="guest-name">Tamu Undangan</b></div>
+    <button class="rv" id="btn-open" data-cv>Buka Undangan</button>
+  </section>
+
+  <section class="sec" id="hero">
+    <svg id="branch" viewBox="0 0 520 150" aria-hidden="true">
+      <path class="bough" d="M-6 118 C80 96 150 102 210 78 C260 58 300 64 352 44 C400 26 450 30 516 10"/>
+      <path class="bough" d="M210 78 C224 92 246 98 268 94" opacity=".8"/>
+      <path class="bough" d="M352 44 C360 60 376 68 394 66" opacity=".8"/>
+      <!-- kuntum mei hua: kelompok 3 dan 5 (bukan 4) -->
+      <g class="bloom-group" data-bloom>
+        <circle class="bloom" cx="150" cy="100" r="5"/><circle class="bloom" cx="160" cy="92" r="4"/>
+        <circle class="bud" cx="142" cy="92" r="2.6"/>
+      </g>
+      <g class="bloom-group" data-bloom>
+        <circle class="bloom" cx="262" cy="92" r="5.4"/><circle class="bloom" cx="272" cy="86" r="4"/>
+        <circle class="bloom" cx="254" cy="84" r="3.6"/><circle class="bud" cx="266" cy="78" r="2.6"/>
+        <circle class="bud" cx="248" cy="94" r="2.2"/>
+      </g>
+      <g class="bloom-group" data-bloom>
+        <circle class="bloom" cx="390" cy="62" r="5"/><circle class="bloom" cx="400" cy="56" r="4"/>
+        <circle class="bud" cx="384" cy="54" r="2.6"/>
+      </g>
+      <g class="bloom-group" data-bloom>
+        <circle class="bloom" cx="470" cy="26" r="4.6"/><circle class="bloom" cx="480" cy="20" r="3.6"/>
+        <circle class="bloom" cx="462" cy="18" r="3.2"/><circle class="bud" cx="474" cy="12" r="2.4"/>
+        <circle class="bud" cx="456" cy="28" r="2"/>
+      </g>
+    </svg>
+    <h1 class="hero-names">
+      <span class="line"><span>Clarissa Tanuwijaya</span></span>
+      <span class="line"><span>&amp; Kevin Hartono</span></span>
+    </h1>
+    <div class="hero-date rv">MINGGU, 14 MARET 2027</div>
+    <div class="countdown rv" id="countdown">
+      <div class="cd"><b id="cd-d">—</b><span>Hari</span></div>
+      <div class="cd"><b id="cd-h">—</b><span>Jam</span></div>
+      <div class="cd"><b id="cd-m">—</b><span>Menit</span></div>
+      <div class="cd"><b id="cd-s">—</b><span>Detik</span></div>
+    </div>
+  </section>
+
+  <section class="sec ivory" id="makna">
+    <div class="eyebrow rv">Shuāng Xǐ · Kebahagiaan Berganda</div>
+    <div class="makna-xi rv">囍</div>
+    <p class="makna-q">
+      <span class="line"><span>Dua hati, dua keluarga —</span></span>
+      <span class="line"><span>satu kebahagiaan yang berganda.</span></span>
+    </p>
+    <p class="makna-arti rv">Seperti mei hua yang mekar justru di akhir musim dingin, cinta kami tumbuh melewati waktu dan jarak.</p>
+  </section>
+
+  <section class="sec" id="mempelai">
+    <span class="lantern l" data-lantern><svg viewBox="0 0 44 74" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M22 0 V10"/><ellipse cx="22" cy="32" rx="18" ry="22"/><path d="M8 18 H36 M8 46 H36"/><path d="M22 54 V62 M16 62 H28 M18 62 V72 M22 62 V74 M26 62 V71"/></svg></span>
+    <span class="lantern r" data-lantern><svg viewBox="0 0 44 74" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M22 0 V10"/><ellipse cx="22" cy="32" rx="18" ry="22"/><path d="M8 18 H36 M8 46 H36"/><path d="M22 54 V62 M16 62 H28 M18 62 V72 M22 62 V74 M26 62 V71"/></svg></span>
+    <div class="eyebrow rv">Mempelai</div>
+    <h2 class="title rv">Dengan Restu Keluarga</h2>
+    <p class="sub rv">Bersama keluarga besar Tanuwijaya dan Hartono, kami mengundang Anda menjadi saksi kebahagiaan kami.</p>
+    <div class="couple">
+      <article class="person">
+        <div class="foto-okta rv"><div class="ph ph-a">Foto Mempelai</div></div>
+        <h3 class="rv">Clarissa Tanuwijaya 陈美玲</h3>
+        <div class="role rv">Putri Kedua</div>
+        <p class="rv">Bapak Tanuwijaya Budiman<br>&amp; Ibu Lily Kusuma</p>
+      </article>
+      <div class="amp-xi rv">囍</div>
+      <article class="person">
+        <div class="foto-okta rv"><div class="ph ph-b">Foto Mempelai</div></div>
+        <h3 class="rv">Kevin Hartono 林伟强</h3>
+        <div class="role rv">Putra Sulung</div>
+        <p class="rv">Bapak Hartono Wijaya<br>&amp; Ibu Mei Lan</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec darker" id="acara">
+    <div class="eyebrow rv">Rangkaian Acara</div>
+    <h2 class="title rv">Save The Dates</h2>
+    <article class="event rv">
+      <h3>Sangjit · Seserahan</h3>
+      <div class="tgl">Minggu, 28 Februari 2027</div>
+      <div class="jam">10.00 – 12.00 WIB</div>
+      <p class="tempat">Kediaman Keluarga Tanuwijaya<br>Jl. Kelapa Gading Permai III No. 8, Jakarta</p>
+      <a class="btn-map" href="#" onclick="return false">Petunjuk Lokasi</a>
+    </article>
+    <article class="event rv">
+      <h3>Holy Matrimony &amp; Wedding Dinner</h3>
+      <div class="tgl">Minggu, 14 Maret 2027</div>
+      <div class="jam">16.00 – 20.00 WIB</div>
+      <p class="tempat">The Golden Phoenix Grand Ballroom<br>Jl. Gajah Mada No. 188, Jakarta</p>
+      <a class="btn-map" href="#" onclick="return false">Petunjuk Lokasi</a>
+    </article>
+  </section>
+
+  <section class="sec" id="story">
+    <div class="eyebrow rv">Kisah</div>
+    <h2 class="title rv">Perjalanan Kami</h2>
+    <div class="story">
+      <div class="beat rv"><div class="thn">2019</div><h4>Pertemuan</h4><p>Berkenalan saat perayaan Cap Go Meh keluarga besar di Glodok.</p></div>
+      <div class="beat rv"><div class="thn">2026</div><h4>Lamaran</h4><p>Kevin melamar di bawah pohon mei hua yang sedang mekar di Taipei.</p></div>
+      <div class="beat rv"><div class="thn">2027</div><h4>Pernikahan</h4><p>Dua keluarga bersatu; kebahagiaan menjadi berganda.</p></div>
+    </div>
+  </section>
+
+  <section class="sec ivory" id="galeri-sec">
+    <div class="eyebrow rv">Galeri</div>
+    <h2 class="title rv">Momen Berdua</h2>
+    <div class="galeri">
+      <div class="gal okta g1" data-gal>Prewedding 01</div>
+      <div class="gal g2" data-gal>Prewedding 02</div>
+      <div class="gal g3" data-gal>Prewedding 03</div>
+      <div class="gal g4" data-gal>Prewedding 04</div>
+      <div class="gal g5" data-gal>Prewedding 05</div>
+    </div>
+  </section>
+
+  <section class="sec darker" id="angpao-sec">
+    <div class="eyebrow rv">Tanda Kasih</div>
+    <h2 class="title rv">Angpao Digital</h2>
+    <p class="sub rv">Kehadiran Anda adalah berkat bagi kami. Bagi yang ingin mengirim angpao secara digital:</p>
+    <div class="angpao rv"><b>BCA · 528 118 8888</b><span>a.n. Clarissa Tanuwijaya</span><br><button type="button" data-copy="5281188888">Salin Nomor</button></div>
+    <div class="angpao rv"><b>Kirim Hadiah</b><span>Jl. Kelapa Gading Permai III No. 8, Jakarta</span><br><button type="button" data-copy="Jl. Kelapa Gading Permai III No. 8, Jakarta">Salin Alamat</button></div>
+  </section>
+
+  <section class="sec ivory" id="rsvp">
+    <div class="eyebrow rv">Konfirmasi</div>
+    <h2 class="title rv">Kehadiran &amp; Ucapan</h2>
+    <form class="rv" onsubmit="return false">
+      <div class="field"><label for="f-nama">Nama</label><input id="f-nama" type="text" placeholder="Nama Anda"></div>
+      <div class="field"><label for="f-hadir">Kehadiran</label>
+        <select id="f-hadir"><option>Hadir</option><option>Berhalangan</option></select></div>
+      <div class="field"><label for="f-ucapan">Ucapan</label>
+        <textarea id="f-ucapan" rows="3" placeholder="Tulis doa &amp; ucapan…"></textarea></div>
+      <button class="btn-kirim" type="submit">Kirim</button>
+    </form>
+    <div style="margin-top:24px">
+      <div class="wish rv"><b>Keluarga Besar Lim</b><p>恭喜恭喜! Selamat menempuh hidup baru, Clarissa &amp; Kevin!</p></div>
+      <div class="wish rv"><b>Alumni SMA Penabur</b><p>Bahagia selalu — sampai jumpa di wedding dinner!</p></div>
+    </div>
+  </section>
+
+  <section class="sec" id="closing" style="text-align:center">
+    <div class="eyebrow rv">Terima Kasih</div>
+    <p class="sub rv" style="margin-top:16px">Merupakan kehormatan bagi kami dan keluarga apabila Anda berkenan hadir serta memberikan doa restu.</p>
+    <div class="closing-names">
+      <span class="line"><span>Clarissa &amp; Kevin</span></span>
+    </div>
+  </section>
+
+  <footer>Undangan digital oleh <b>Merriva</b></footer>
+</div>
+
+<button id="btn-music" aria-label="putar musik">♫</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script>
+"use strict";
+(function(){
+  document.documentElement.classList.add("is-js");
+  var reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var hasGsap = typeof gsap !== "undefined";
+  if (hasGsap) gsap.registerPlugin(ScrollTrigger);
+
+  try{
+    var to = new URLSearchParams(location.search).get("to");
+    if (to) document.getElementById("guest-name").textContent = to.replace(/\+/g," ").slice(0,60);
+  }catch(e){}
+
+  function craftFallback(){
+    document.querySelectorAll(".line>span").forEach(function(s){ s.style.visibility="visible"; });
+    document.querySelectorAll(".rv").forEach(function(el){ el.style.opacity=1; el.style.transform="none"; });
+    document.querySelectorAll("#xi path").forEach(function(x){ x.style.strokeDashoffset=0; });
+  }
+
+  var cover = document.getElementById("cover");
+  var opened = false;
+  document.getElementById("btn-open").addEventListener("click", function(){
+    if (opened) return; opened = true;
+    cover.classList.add("open");
+    document.body.classList.remove("locked");
+    document.getElementById("btn-music").classList.add("show");
+    if (hasGsap && !reduced) setTimeout(function(){ ScrollTrigger.refresh(); }, 300);
+  });
+  var music = document.getElementById("btn-music");
+  music.addEventListener("click", function(){ music.classList.toggle("playing"); });
+
+  var target = Date.parse("2027-03-14T16:00:00+07:00");
+  var pad = function(n){ return String(Math.max(0,n)).padStart(2,"0"); };
+  function tick(){
+    var t = Math.max(0, Math.floor((target - Date.now())/1000));
+    document.getElementById("cd-d").textContent = Math.floor(t/86400);
+    document.getElementById("cd-h").textContent = pad(Math.floor(t%86400/3600));
+    document.getElementById("cd-m").textContent = pad(Math.floor(t%3600/60));
+    document.getElementById("cd-s").textContent = pad(t%60);
+  }
+  tick(); setInterval(tick, 1000);
+
+  document.querySelectorAll("[data-copy]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var done = function(){ var old = btn.textContent; btn.textContent="Tersalin ✓";
+        setTimeout(function(){ btn.textContent = old; },1600); };
+      try{ navigator.clipboard && navigator.clipboard.writeText ?
+        navigator.clipboard.writeText(btn.getAttribute("data-copy")).then(done,done) : done();
+      }catch(e){ done(); }
+    });
+  });
+
+  if (!hasGsap || reduced){ craftFallback(); return; }
+
+  /* 囍: gambar goresan saat cover tampil */
+  document.querySelectorAll("#xi path").forEach(function(el,i){
+    var len = el.getTotalLength();
+    gsap.set(el, { strokeDasharray: len, strokeDashoffset: len });
+    gsap.to(el, { strokeDashoffset: 0, duration: .9, delay: .25 + i*.12, ease: "power2.out" });
+  });
+  gsap.to("#xi-ring", { rotate: 360, duration: 120, repeat: -1, ease: "none",
+    transformOrigin: "50% 50%" });
+  gsap.utils.toArray("#cover [data-cv]").forEach(function(el,i){
+    gsap.fromTo(el, { opacity:0, y:18 }, { opacity:1, y:0, duration:.9, delay:1.4 + i*.14, ease:"power3.out" });
+  });
+
+  /* ranting mei hua: dahan tergambar + kuntum mekar berurutan saat scroll */
+  document.querySelectorAll("#branch .bough").forEach(function(el){
+    var len = el.getTotalLength();
+    gsap.set(el, { strokeDasharray: len, strokeDashoffset: len });
+    gsap.to(el, { strokeDashoffset: 0, ease: "none",
+      scrollTrigger:{ trigger:"#hero", start:"top 70%", end:"bottom 55%", scrub:.6 } });
+  });
+  gsap.utils.toArray("#branch [data-bloom]").forEach(function(g,i){
+    var petals = g.querySelectorAll("circle");
+    gsap.set(petals, { scale:0, transformOrigin:"50% 50%", opacity:0 });
+    gsap.to(petals, { scale:1, opacity:1, duration:.7, stagger:.08, ease:"back.out(2.2)",
+      scrollTrigger:{ trigger:"#hero", start:"top " + (62 - i*8) + "%" } });
+  });
+
+  /* lentera bergoyang halus */
+  gsap.utils.toArray("[data-lantern]").forEach(function(el,i){
+    gsap.to(el, { rotate: i%2 ? -5 : 5, duration: 2.6+i*.4, yoyo:true, repeat:-1,
+      ease:"sine.inOut", transformOrigin:"50% 0" });
+  });
+
+  /* mask reveal (§0.4) */
+  gsap.utils.toArray(".line>span").forEach(function(span){
+    gsap.set(span, { visibility:"visible", yPercent:115 });
+    gsap.to(span, { yPercent:0, duration:1, ease:"power4.out",
+      scrollTrigger:{ trigger: span.closest(".line"), start:"top 88%" } });
+  });
+
+  gsap.utils.toArray(".sec .rv").forEach(function(el){
+    gsap.to(el, { opacity:1, y:0, duration:.9, ease:"power3.out",
+      scrollTrigger:{ trigger: el, start:"top 90%" } });
+  });
+
+  /* galeri: buka seperti pintu bulan (scale dari tengah) */
+  gsap.utils.toArray("[data-gal]").forEach(function(el,i){
+    gsap.fromTo(el, { clipPath:"inset(50% 50% 50% 50%)", opacity:0 },
+      { clipPath:"inset(0% 0% 0% 0%)", opacity:1, duration:1, ease:"power3.inOut",
+        scrollTrigger:{ trigger: el, start:"top 94%" }, delay:(i%2)*.1 });
+  });
+})();
+</script>
+</body>
+</html>

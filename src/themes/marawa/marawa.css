@@ -1,0 +1,780 @@
+/* ============================================================================
+   MARAWA — wedding adat Minang (tier Story, dark-luxe).
+   Acuan visual: prototypes/marawa-story.html · THEME-WAVE3 §2.2.
+   Kontrak kelas: akar `.mw` · `.mw-stage` konten · `.mw-cover` sampul (wipe via
+   `.is-open`) · `.mw-music` musik. Koreografi oleh fx (gsap): `.mw-line>span`
+   mask (§0.4 — disembunyikan HANYA saat `.is-js.is-motion`), `.mw-reveal`,
+   `.mw-draw`. Pita marawa hitam–merah–kuning: urutan TIDAK diubah (§3.2).
+   ========================================================================== */
+
+.mw {
+  --mw-bg: #1a1412;
+  --mw-bg-2: #241a17;
+  --mw-maroon: #5e1f28;
+  --mw-maroon-2: #4a1820;
+  --mw-ink: #f2e7d4;
+  --mw-muted: #b5a48c;
+  --mw-gold: #d4a848;
+  --mw-gold-soft: #e7c97e;
+  --mw-sand: #f1e6d2;
+  --mw-line: rgba(212, 168, 72, 0.28);
+  --mw-display: var(--mw-disp-a);
+  --mw-body: var(--mw-body-a);
+
+  background: var(--mw-bg);
+  color: var(--mw-ink);
+  font-family: var(--mw-body), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.66;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mw-stage {
+  position: relative;
+  min-height: 100svh;
+  /* tekstur songket: kisi wajik emas sangat halus */
+  background-image:
+    linear-gradient(45deg, rgba(212, 168, 72, 0.05) 1px, transparent 1.4px),
+    linear-gradient(-45deg, rgba(212, 168, 72, 0.05) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+}
+
+/* pita marawa (hitam–merah–kuning) di tepi kiri — identitas, jangan diubah */
+.mw-ribbon {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 7px;
+  display: flex;
+  flex-direction: column;
+  z-index: 4;
+  pointer-events: none;
+}
+.mw-ribbon i {
+  flex: 1;
+}
+.mw-ribbon i:nth-child(1) {
+  background: #0e0b0a;
+}
+.mw-ribbon i:nth-child(2) {
+  background: #7e2430;
+}
+.mw-ribbon i:nth-child(3) {
+  background: #c99a3f;
+}
+
+.mw-grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+}
+
+/* ---------------------------------------------------------- kerangka ----- */
+.mw-section {
+  position: relative;
+  padding: 72px max(28px, calc((100% - 468px) / 2));
+  overflow: hidden;
+}
+.mw-maroon {
+  background: linear-gradient(
+    180deg,
+    var(--mw-maroon) 0%,
+    var(--mw-maroon-2) 100%
+  );
+}
+.mw-sand {
+  background: var(--mw-sand);
+  color: #2b1c14;
+}
+.mw-sand .mw-lead {
+  color: #7a6a55;
+}
+.mw-sand .mw-title {
+  color: #6b3a1e;
+}
+.mw-center {
+  text-align: center;
+}
+.mw-inner {
+  max-width: 468px;
+  margin: 0 auto;
+}
+
+.mw-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 10.5px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--mw-gold);
+  font-weight: 600;
+}
+.mw-eyebrow::before,
+.mw-eyebrow::after {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: var(--mw-gold);
+  opacity: 0.5;
+}
+.mw-title {
+  font-family: var(--mw-display), serif;
+  font-weight: 500;
+  font-size: 25px;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  margin: 16px 0 8px;
+  color: var(--mw-gold-soft);
+}
+.mw-lead {
+  font-size: 13.5px;
+  color: var(--mw-muted);
+  max-width: 38ch;
+  margin: 12px auto 0;
+}
+
+/* mask & reveal — disembunyikan hanya saat JS+motion aktif (§0.4). */
+.mw-line {
+  display: block;
+  overflow: hidden;
+}
+.mw-line > span {
+  display: inline-block;
+}
+.mw.is-js.is-motion .mw-line > span {
+  visibility: hidden;
+}
+.mw.is-js.is-motion .mw-reveal {
+  opacity: 0;
+}
+
+/* kaluak paku */
+.mw-paku {
+  position: absolute;
+  width: 72px;
+  color: var(--mw-gold);
+  opacity: 0.4;
+  pointer-events: none;
+}
+.mw-paku.mw-paku--tl {
+  top: 18px;
+  left: 16px;
+}
+.mw-paku.mw-paku--br {
+  bottom: 18px;
+  right: 16px;
+  transform: rotate(180deg);
+}
+.mw-draw path {
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+/* ------------------------------------------------------------- cover ----- */
+/* Tanpa JS: cover disembunyikan → konten langsung terbaca (degradasi anggun,
+   pola semua tema produksi). Tombol "Buka" hanya hidup lewat React. */
+.mw-cover {
+  display: none;
+}
+.mw.is-js .mw-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px;
+  overflow: hidden;
+  background:
+    radial-gradient(110% 70% at 50% -16%, #3a2420 0%, transparent 62%),
+    radial-gradient(90% 55% at 50% 115%, #35201c 0%, transparent 58%),
+    var(--mw-bg);
+  transition:
+    opacity 0.9s ease,
+    visibility 0.9s;
+}
+.mw.is-js.is-open .mw-cover {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.mw-cover .mw-line > span {
+  visibility: hidden;
+}
+.mw:not(.is-motion) .mw-cover .mw-line > span {
+  visibility: visible;
+}
+
+.mw-gonjong {
+  width: 260px;
+  color: var(--mw-gold);
+  margin: 0 auto;
+  display: block;
+}
+.mw-gonjong path {
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mw-cover__inner {
+  max-width: 420px;
+}
+.mw-cover__eyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.46em;
+  text-transform: uppercase;
+  color: var(--mw-muted);
+  margin: 20px 0 0;
+}
+.mw-cover__names {
+  font-family: var(--mw-display), serif;
+  font-weight: 500;
+  font-size: 32px;
+  line-height: 1.24;
+  letter-spacing: 0.04em;
+  margin: 10px 0 6px;
+  color: var(--mw-ink);
+  display: flex;
+  flex-direction: column;
+  text-transform: uppercase;
+}
+.mw-cover__jo {
+  color: var(--mw-gold);
+  font-size: 15px;
+  letter-spacing: 0.3em;
+  text-transform: lowercase;
+  font-family: var(--mw-body), sans-serif;
+  font-style: italic;
+}
+.mw-cover__date {
+  font-size: 12px;
+  letter-spacing: 0.26em;
+  color: var(--mw-muted);
+  margin: 4px 0 0;
+  text-transform: uppercase;
+}
+.mw-guest {
+  margin-top: 28px;
+  font-size: 12.5px;
+  color: var(--mw-muted);
+}
+.mw-guest strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--mw-ink);
+  margin-top: 3px;
+}
+.mw-open {
+  margin-top: 22px;
+  padding: 14px 34px;
+  border: 1px solid var(--mw-gold);
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(212, 168, 72, 0.2),
+    rgba(212, 168, 72, 0.08)
+  );
+  color: var(--mw-gold-soft);
+  font-family: var(--mw-body), sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+.mw-open:hover {
+  transform: translateY(-2px);
+  background: rgba(212, 168, 72, 0.28);
+}
+.mw-cover__hint {
+  margin: 16px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--mw-muted);
+  opacity: 0.8;
+}
+
+/* -------------------------------------------------------------- hero ----- */
+.mw-hero {
+  padding-top: 88px;
+}
+
+/* ------------------------------------------------------------- quote ----- */
+.mw-quote {
+  font-family: var(--mw-display), serif;
+  font-size: 21px;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  color: var(--mw-gold-soft);
+  margin: 24px 0 0;
+}
+.mw-quote__cite {
+  display: inline-block;
+  margin-top: 16px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--mw-muted);
+}
+
+/* ------------------------------------------------------------ couple ----- */
+.mw-couple {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 36px;
+}
+.mw-person {
+  text-align: center;
+}
+.mw-foto {
+  width: 216px;
+  height: 264px;
+  margin: 0 auto 18px;
+  padding: 9px;
+  border: 1px solid var(--mw-gold);
+  background: rgba(242, 231, 212, 0.04);
+  clip-path: polygon(
+    0 14%,
+    24% 14%,
+    50% 0,
+    76% 14%,
+    100% 14%,
+    100% 100%,
+    0 100%
+  );
+}
+.mw-foto__ph {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(165deg, #7e2430, #2b0e13);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(
+    0 15%,
+    24% 15%,
+    50% 1%,
+    76% 15%,
+    100% 15%,
+    100% 100%,
+    0 100%
+  );
+}
+.mw-foto__ph span {
+  font-family: var(--mw-display), serif;
+  font-size: 44px;
+  color: var(--mw-gold-soft);
+}
+.mw-foto__ph img {
+  object-fit: cover;
+  display: block;
+}
+.mw-person__name {
+  font-family: var(--mw-display), serif;
+  font-weight: 500;
+  font-size: 21px;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+.mw-person__role {
+  font-size: 10.5px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--mw-gold);
+  font-weight: 600;
+  margin: 5px 0 9px;
+}
+.mw-person__meta {
+  font-size: 13px;
+  color: var(--mw-muted);
+  margin: 0;
+}
+.mw-amp {
+  text-align: center;
+  font-size: 24px;
+  color: var(--mw-gold);
+}
+
+/* --------------------------------------------------------- countdown ----- */
+.mw-cd {
+  margin-top: 28px;
+}
+.mw .countdown {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.mw .count-box {
+  min-width: 64px;
+  padding: 12px 6px;
+  background: rgba(242, 231, 212, 0.05);
+  border: 1px solid var(--mw-line);
+  border-radius: 14px;
+}
+.mw .count-num {
+  display: block;
+  font-family: var(--mw-display), serif;
+  font-size: 22px;
+  color: var(--mw-gold-soft);
+  font-variant-numeric: tabular-nums;
+}
+.mw .count-label {
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--mw-muted);
+}
+.mw .countdown-done {
+  font-family: var(--mw-display), serif;
+  font-size: 18px;
+  color: var(--mw-gold-soft);
+}
+
+/* ------------------------------------------------------------ acara ------ */
+.mw-events {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 30px;
+}
+.mw-event {
+  position: relative;
+  border: 1px solid var(--mw-line);
+  border-radius: 4px;
+  background: rgba(242, 231, 212, 0.03);
+  padding: 28px 24px;
+  text-align: center;
+}
+.mw-event::before,
+.mw-event::after {
+  content: "";
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--mw-gold);
+  pointer-events: none;
+}
+.mw-event::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.mw-event::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: 0;
+  border-top: 0;
+}
+.mw-event__title {
+  font-family: var(--mw-display), serif;
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--mw-gold-soft);
+  margin: 0;
+}
+.mw-event__tgl {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 12px;
+}
+.mw-event__jam {
+  font-size: 12.5px;
+  color: var(--mw-gold);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  margin: 4px 0 10px;
+}
+.mw-event__tempat {
+  font-size: 13.5px;
+  color: var(--mw-muted);
+  max-width: 36ch;
+  margin: 0 auto;
+}
+.mw-pills {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.mw-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 24px;
+  border: 1px solid var(--mw-gold);
+  border-radius: 999px;
+  color: var(--mw-gold-soft);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  list-style: none;
+}
+.mw-cal {
+  position: relative;
+}
+.mw-cal summary {
+  list-style: none;
+}
+.mw-cal summary::-webkit-details-marker {
+  display: none;
+}
+.mw-cal__menu {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 8px;
+  background: var(--mw-bg-2);
+  border: 1px solid var(--mw-line);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  z-index: 5;
+  min-width: 180px;
+}
+.mw-cal__opt {
+  display: block;
+  padding: 11px 16px;
+  font-size: 13px;
+  color: var(--mw-ink);
+  text-decoration: none;
+}
+.mw-cal__opt + .mw-cal__opt {
+  border-top: 1px solid var(--mw-line);
+}
+.mw-cal__opt:hover {
+  background: rgba(212, 168, 72, 0.1);
+}
+
+/* ------------------------------------------------------------- story ----- */
+.mw-story {
+  margin-top: 32px;
+}
+.mw-beat {
+  border-left: 1px solid var(--mw-line);
+  padding: 2px 0 26px 22px;
+  position: relative;
+  margin-left: 8px;
+}
+.mw-beat:last-child {
+  padding-bottom: 4px;
+}
+.mw-beat::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 6px;
+  width: 13px;
+  height: 13px;
+  transform: rotate(45deg);
+  border: 1px solid var(--mw-gold);
+  background: var(--mw-bg-2);
+}
+.mw-beat__thn {
+  font-size: 10.5px;
+  letter-spacing: 0.3em;
+  color: var(--mw-gold);
+  font-weight: 600;
+}
+.mw-beat__title {
+  font-family: var(--mw-display), serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--mw-gold-soft);
+  margin: 2px 0 0;
+}
+.mw-beat__text {
+  font-size: 13.5px;
+  color: var(--mw-muted);
+  margin: 4px 0 0;
+}
+
+/* ------------------------------------------------------------ galeri ----- */
+/* Dua kolom block-flow — JANGAN CSS grid utk tile rasio (catatan wave-3). */
+.mw-galeri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 30px;
+}
+.mw-g-item {
+  width: calc(50% - 6px);
+  margin: 0 0 12px;
+  overflow: hidden;
+  border: 1px solid var(--mw-line);
+  position: relative;
+  background: #241a17;
+}
+.mw-g-item--gonjong {
+  width: 100%;
+  clip-path: polygon(
+    0 18%,
+    26% 18%,
+    50% 0,
+    74% 18%,
+    100% 18%,
+    100% 100%,
+    0 100%
+  );
+}
+.mw-g-item :where(img, a, button) {
+  display: block;
+  width: 100%;
+}
+.mw-g-item img {
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  height: auto;
+}
+.mw-g-item--gonjong img {
+  aspect-ratio: 16 / 10;
+}
+.mw-g-item figcaption {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #f1e6d2;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+.mw[data-gallery="grid"] .mw-g-item--gonjong {
+  width: calc(50% - 6px);
+  clip-path: none;
+}
+.mw[data-gallery="grid"] .mw-g-item--gonjong img {
+  aspect-ratio: 3 / 4;
+}
+
+/* ------------------------------------------------------------ amplop ----- */
+.mw-gifts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 26px;
+  text-align: left;
+}
+.mw-acct {
+  background: #fffcf4;
+  border: 1px solid #e4d7bc;
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: #2b1c14;
+}
+.mw-acct b {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+.mw-acct small {
+  color: #7a6a55;
+  font-size: 12.5px;
+}
+.mw-acct p {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+}
+.mw-acct--addr {
+  display: block;
+}
+.mw-copy {
+  flex: 0 0 auto;
+  padding: 9px 18px;
+  border: 1px solid #6b3a1e;
+  background: none;
+  border-radius: 999px;
+  color: #6b3a1e;
+  font-family: var(--mw-body), sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+}
+.mw-gift-confirm {
+  margin-top: 8px;
+}
+
+/* ------------------------------------------------------------ footer ----- */
+.mw-footer {
+  padding: 64px max(28px, calc((100% - 468px) / 2)) 56px;
+  background: linear-gradient(180deg, var(--mw-maroon) 0%, #120e0c 100%);
+}
+.mw-watermark {
+  display: inline-block;
+  margin-top: 24px;
+  font-size: 10.5px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--mw-muted);
+}
+.mw-watermark a {
+  color: var(--mw-gold);
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------- musik ----- */
+.mw-music {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 30;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--mw-gold);
+  background: var(--mw-bg-2);
+  color: var(--mw-gold-soft);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);
+}
+.mw.is-open .mw-music {
+  display: flex;
+}
+
+/* ---------------------------------------------------- reduced motion ----- */
+@media (prefers-reduced-motion: reduce) {
+  .mw.is-js.is-motion .mw-line > span,
+  .mw-cover .mw-line > span {
+    visibility: visible !important;
+    transform: none !important;
+  }
+  .mw.is-js.is-motion .mw-reveal {
+    opacity: 1;
+  }
+  .mw.is-js .mw-cover {
+    transition: none;
+  }
+}

@@ -10,6 +10,10 @@ import { meridianOptions } from "./meridian/options";
 import { noirOptions } from "./noir/options";
 import { prismaOptions } from "./prisma/options";
 import { verdantOptions } from "./verdant/options";
+import { meihuaOptions } from "./meihua/options";
+import { sakinahOptions } from "./sakinah/options";
+import { marawaOptions } from "./marawa/options";
+import { prianganOptions } from "./priangan/options";
 
 /**
  * Registry `options.ts` per tema (CUSTOMIZER-SPEC §3/§10). Satu sumber kebenaran
@@ -29,6 +33,10 @@ export const themeOptionsRegistry: Record<string, ThemeOptions> = {
   prisma: prismaOptions,
   festa: festaOptions,
   lumina: luminaOptions,
+  priangan: prianganOptions,
+  marawa: marawaOptions,
+  sakinah: sakinahOptions,
+  meihua: meihuaOptions,
 };
 
 export function getThemeOptions(slug: string): ThemeOptions | null {

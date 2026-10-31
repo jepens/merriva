@@ -1,0 +1,738 @@
+/* ============================================================================
+   PRIANGAN — wedding adat Sunda (tier Story).
+   Acuan visual: prototypes/priangan-story.html · THEME-WAVE3 §2.1.
+   Kontrak kelas: akar `.pg` · `.pg-stage` konten · `.pg-cover` sampul (wipe via
+   `.is-open`) · `.pg-music` tombol musik. Koreografi oleh fx (gsap):
+   `.pg-line>span` mask (§0.4 — disembunyikan HANYA saat `.is-js.is-motion`),
+   `.pg-reveal` blok, `.pg-draw` menggambar diri. Semua selektor di-scope `.pg`.
+   ========================================================================== */
+
+.pg {
+  --pg-paper: #f6f1e3;
+  --pg-paper-2: #efe8d4;
+  --pg-ink: #23311f;
+  --pg-muted: #6f7462;
+  --pg-acc: #2e5b41;
+  --pg-acc-d: #1f4231;
+  --pg-gold: #c2a14d;
+  --pg-line: #dcd2b4;
+  --pg-card: #fffdf4;
+  --pg-display: var(--pg-disp-a);
+  --pg-body: var(--pg-body-a);
+
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  font-family: var(--pg-body), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.66;
+  -webkit-font-smoothing: antialiased;
+}
+
+.pg-stage {
+  position: relative;
+  min-height: 100svh;
+}
+
+.pg-grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+}
+
+/* ---------------------------------------------------------- kerangka ----- */
+.pg-section {
+  position: relative;
+  padding: 70px max(26px, calc((100% - 468px) / 2));
+  overflow: hidden;
+}
+.pg-tinted {
+  background: var(--pg-paper-2);
+}
+.pg-deep {
+  background: var(--pg-acc-d);
+  color: #efeada;
+}
+.pg-deep .pg-lead {
+  color: #c9c4ae;
+}
+.pg-center {
+  text-align: center;
+}
+.pg-inner {
+  max-width: 468px;
+  margin: 0 auto;
+}
+
+.pg-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--pg-gold);
+  font-weight: 700;
+}
+.pg-eyebrow::before,
+.pg-eyebrow::after {
+  content: "";
+  width: 30px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+}
+.pg-title {
+  font-family: var(--pg-display), serif;
+  font-weight: 400;
+  font-size: 29px;
+  line-height: 1.25;
+  margin: 14px 0 8px;
+  color: var(--pg-acc);
+}
+.pg-deep .pg-title {
+  color: #d8bc7a;
+}
+.pg-lead {
+  font-size: 13.5px;
+  color: var(--pg-muted);
+  max-width: 38ch;
+  margin: 12px auto 0;
+}
+
+/* mask-reveal & blok — disembunyikan HANYA saat JS+motion aktif (fx mengisi
+   state; §0.4). Tanpa JS / reduced-motion konten tetap terbaca. */
+.pg-line {
+  display: block;
+  overflow: hidden;
+}
+.pg-line > span {
+  display: inline-block;
+}
+.pg.is-js.is-motion .pg-line > span {
+  visibility: hidden;
+}
+.pg.is-js.is-motion .pg-reveal {
+  opacity: 0;
+}
+
+/* divider julang ngapak + payung geulis (digambar fx via .pg-draw) */
+.pg-ngapak {
+  display: block;
+  width: 150px;
+  margin: 26px auto 0;
+  color: var(--pg-gold);
+}
+.pg-draw path {
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.pg-payung {
+  width: 140px;
+  margin: 0 auto 8px;
+  display: block;
+  color: var(--pg-gold);
+}
+
+/* awan Priangan */
+.pg-cloud {
+  position: absolute;
+  color: #d9cfae;
+  opacity: 0.5;
+  pointer-events: none;
+  width: 130px;
+}
+.pg-cloud svg {
+  display: block;
+  width: 100%;
+  fill: currentColor;
+}
+.pg-cloud--a {
+  top: 9%;
+  left: -28px;
+}
+.pg-cloud--b {
+  top: 17%;
+  right: -44px;
+  width: 170px;
+  opacity: 0.38;
+}
+
+/* ------------------------------------------------------------- cover ----- */
+/* Tanpa JS: cover disembunyikan → konten langsung terbaca (degradasi anggun,
+   pola semua tema produksi). Tombol "Buka" hanya hidup lewat React. */
+.pg-cover {
+  display: none;
+}
+.pg.is-js .pg-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px;
+  overflow: hidden;
+  background:
+    radial-gradient(100% 60% at 50% -12%, #e7ddbf 0%, transparent 60%),
+    radial-gradient(90% 55% at 50% 112%, #e2d9bc 0%, transparent 55%),
+    var(--pg-paper);
+  transition:
+    opacity 0.9s ease,
+    visibility 0.9s;
+}
+.pg.is-js.is-open .pg-cover {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.pg-cover .pg-line > span {
+  visibility: hidden;
+}
+.pg:not(.is-motion) .pg-cover .pg-line > span {
+  visibility: visible;
+}
+
+.pg-siger {
+  width: 220px;
+  color: var(--pg-gold);
+  margin: 0 auto;
+  display: block;
+}
+.pg-siger path,
+.pg-siger circle {
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.pg-cover__inner {
+  max-width: 420px;
+}
+.pg-cover__eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--pg-muted);
+  margin: 18px 0 0;
+}
+.pg-cover__names {
+  font-family: var(--pg-display), serif;
+  font-weight: 400;
+  font-size: 40px;
+  line-height: 1.16;
+  margin: 8px 0 4px;
+  color: var(--pg-ink);
+  display: flex;
+  flex-direction: column;
+}
+.pg-cover__sareng {
+  font-family: var(--pg-body), sans-serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--pg-acc);
+}
+.pg-cover__date {
+  font-size: 12.5px;
+  letter-spacing: 0.24em;
+  color: var(--pg-muted);
+  margin: 4px 0 0;
+  text-transform: uppercase;
+}
+.pg-guest {
+  margin-top: 28px;
+  font-size: 12.5px;
+  color: var(--pg-muted);
+}
+.pg-guest strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--pg-ink);
+  margin-top: 2px;
+}
+.pg-open {
+  margin-top: 20px;
+  padding: 14px 32px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pg-acc);
+  color: #f2edd9;
+  font-family: var(--pg-body), sans-serif;
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+.pg-open:hover {
+  transform: translateY(-2px);
+  background: var(--pg-acc-d);
+}
+.pg-cover__hint {
+  margin: 16px 0 0;
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pg-muted);
+  opacity: 0.8;
+}
+
+/* -------------------------------------------------------------- hero ----- */
+.pg-hero {
+  padding-top: 86px;
+}
+
+/* ------------------------------------------------------------- quote ----- */
+.pg-quote {
+  font-family: var(--pg-display), serif;
+  font-size: 26px;
+  line-height: 1.5;
+  color: var(--pg-acc);
+  margin: 22px 0 0;
+}
+.pg-quote__cite {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--pg-muted);
+}
+
+/* ------------------------------------------------------------ couple ----- */
+.pg-couple {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin-top: 34px;
+}
+.pg-person {
+  text-align: center;
+}
+.pg-foto {
+  width: 210px;
+  height: 270px;
+  margin: 0 auto 18px;
+  border-radius: 120px 120px 20px 20px;
+  border: 1.5px solid var(--pg-gold);
+  padding: 8px;
+  background: var(--pg-card);
+}
+.pg-foto__ph {
+  width: 100%;
+  height: 100%;
+  border-radius: 112px 112px 14px 14px;
+  overflow: hidden;
+  background: linear-gradient(165deg, #4c7257, #1f4231);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pg-foto__ph span {
+  font-family: var(--pg-display), serif;
+  font-size: 44px;
+  color: #f2edd9;
+}
+.pg-foto__ph img {
+  object-fit: cover;
+  display: block;
+}
+.pg-person__name {
+  font-family: var(--pg-display), serif;
+  font-weight: 400;
+  font-size: 25px;
+  margin: 0;
+}
+.pg-person__role {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--pg-gold);
+  font-weight: 700;
+  margin: 4px 0 8px;
+}
+.pg-person__meta {
+  font-size: 13px;
+  color: var(--pg-muted);
+  margin: 0;
+}
+.pg-amp {
+  text-align: center;
+  font-family: var(--pg-display), serif;
+  font-size: 30px;
+  color: var(--pg-gold);
+}
+
+/* --------------------------------------------------------- countdown ----- */
+.pg-cd {
+  margin-top: 26px;
+}
+.pg .countdown {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.pg .count-box {
+  min-width: 64px;
+  padding: 12px 6px;
+  background: var(--pg-card);
+  border: 1px solid var(--pg-line);
+  border-radius: 16px;
+}
+.pg .count-num {
+  display: block;
+  font-size: 22px;
+  color: var(--pg-acc);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.pg .count-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pg-muted);
+}
+.pg .countdown-done {
+  font-family: var(--pg-display), serif;
+  font-size: 19px;
+  color: var(--pg-acc);
+}
+
+/* ------------------------------------------------------------ acara ------ */
+.pg-events {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 28px;
+}
+.pg-event {
+  background: var(--pg-card);
+  border: 1px solid var(--pg-line);
+  border-radius: 24px;
+  overflow: hidden;
+  text-align: center;
+}
+.pg-event__head {
+  padding: 20px 18px 14px;
+  position: relative;
+}
+.pg-event__head::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 130px;
+  height: 1.5px;
+  background: var(--pg-gold);
+}
+.pg-event__head h3 {
+  font-family: var(--pg-display), serif;
+  font-weight: 400;
+  font-size: 24px;
+  margin: 0;
+  color: var(--pg-acc);
+}
+.pg-event__body {
+  padding: 20px 22px 26px;
+}
+.pg-event__tgl {
+  font-size: 16.5px;
+  font-weight: 700;
+}
+.pg-event__jam {
+  font-size: 13px;
+  color: var(--pg-gold);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin: 4px 0 10px;
+}
+.pg-event__tempat {
+  font-size: 13.5px;
+  color: var(--pg-muted);
+  max-width: 36ch;
+  margin: 0 auto;
+}
+.pg-pills {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.pg-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 22px;
+  border: 1.5px solid var(--pg-acc);
+  border-radius: 999px;
+  color: var(--pg-acc);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  list-style: none;
+}
+.pg-cal {
+  position: relative;
+}
+.pg-cal summary {
+  list-style: none;
+}
+.pg-cal summary::-webkit-details-marker {
+  display: none;
+}
+.pg-cal__menu {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 8px;
+  background: var(--pg-card);
+  border: 1px solid var(--pg-line);
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(35, 49, 31, 0.16);
+  overflow: hidden;
+  z-index: 5;
+  min-width: 170px;
+}
+.pg-cal__opt {
+  display: block;
+  padding: 11px 16px;
+  font-size: 13px;
+  color: var(--pg-ink);
+  text-decoration: none;
+}
+.pg-cal__opt + .pg-cal__opt {
+  border-top: 1px solid var(--pg-line);
+}
+.pg-cal__opt:hover {
+  background: var(--pg-paper-2);
+}
+
+/* ------------------------------------------------------------- story ----- */
+.pg-story {
+  margin-top: 32px;
+  position: relative;
+  padding-left: 26px;
+}
+.pg-story::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 6px;
+  bottom: 6px;
+  width: 1.5px;
+  background: linear-gradient(var(--pg-gold), rgba(194, 161, 77, 0.15));
+}
+.pg-beat {
+  position: relative;
+  margin-bottom: 26px;
+}
+.pg-beat:last-child {
+  margin-bottom: 0;
+}
+.pg-beat::before {
+  content: "";
+  position: absolute;
+  left: -26px;
+  top: 5px;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--pg-gold);
+  border-radius: 50%;
+  background: var(--pg-paper);
+}
+.pg-beat__thn {
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  color: var(--pg-gold);
+  font-weight: 700;
+}
+.pg-beat__title {
+  font-family: var(--pg-display), serif;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--pg-acc);
+  margin: 2px 0 0;
+}
+.pg-beat__text {
+  font-size: 13.5px;
+  color: var(--pg-muted);
+  margin: 4px 0 0;
+}
+
+/* ------------------------------------------------------------ galeri ----- */
+/* Dua kolom block-flow — JANGAN CSS grid utk tile rasio (baris grid terbukti
+   kolaps; catatan prototipe wave-3). */
+.pg-galeri {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 28px;
+}
+.pg-galeri::before,
+.pg-galeri::after {
+  content: none;
+}
+.pg-g-item {
+  margin: 0 0 12px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #e7dfce;
+  position: relative;
+}
+/* kolom via column-count fallback sederhana: flex 2 kolom lewat width */
+.pg-galeri {
+  flex-wrap: wrap;
+}
+.pg-g-item {
+  width: calc(50% - 6px);
+}
+.pg-g-item--arch {
+  border-radius: 110px 110px 18px 18px;
+}
+.pg-g-item :where(img, a, button) {
+  display: block;
+  width: 100%;
+}
+.pg-g-item img {
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  height: auto;
+}
+.pg-g-item figcaption {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #f4efde;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+/* gaya galeri customizer: data-gallery="grid" → semua tile persegi */
+.pg[data-gallery="grid"] .pg-g-item--arch {
+  border-radius: 18px;
+}
+.pg[data-gallery="grid"] .pg-g-item img {
+  aspect-ratio: 1 / 1;
+}
+
+/* ------------------------------------------------------------ amplop ----- */
+.pg-gifts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 26px;
+  text-align: left;
+}
+.pg-acct {
+  background: rgba(255, 253, 244, 0.08);
+  border: 1px solid rgba(216, 188, 122, 0.35);
+  border-radius: 18px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.pg-acct b {
+  display: block;
+  font-size: 15px;
+  color: #f2edda;
+  letter-spacing: 0.04em;
+}
+.pg-acct small {
+  color: #c9c4ae;
+  font-size: 12.5px;
+}
+.pg-acct p {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  color: #efeada;
+}
+.pg-acct--addr {
+  display: block;
+}
+.pg-copy {
+  flex: 0 0 auto;
+  padding: 9px 18px;
+  border: 1px solid #d8bc7a;
+  background: none;
+  border-radius: 999px;
+  color: #d8bc7a;
+  font-family: var(--pg-body), sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pg-gift-confirm {
+  margin-top: 8px;
+}
+
+/* ------------------------------------------------------------ footer ----- */
+.pg-footer {
+  padding: 64px max(26px, calc((100% - 468px) / 2)) 56px;
+  background: var(--pg-paper-2);
+}
+.pg-watermark {
+  display: inline-block;
+  margin-top: 24px;
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--pg-muted);
+}
+.pg-watermark a {
+  color: var(--pg-gold);
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------- musik ----- */
+.pg-music {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 30;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--pg-line);
+  background: var(--pg-card);
+  color: var(--pg-acc);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(35, 49, 31, 0.2);
+}
+.pg.is-open .pg-music {
+  display: flex;
+}
+
+/* ---------------------------------------------------- reduced motion ----- */
+@media (prefers-reduced-motion: reduce) {
+  .pg.is-js.is-motion .pg-line > span,
+  .pg-cover .pg-line > span {
+    visibility: visible !important;
+    transform: none !important;
+  }
+  .pg.is-js.is-motion .pg-reveal {
+    opacity: 1;
+  }
+  .pg.is-js .pg-cover {
+    transition: none;
+  }
+}

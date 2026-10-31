@@ -1,0 +1,794 @@
+/* ============================================================================
+   MEIHUA — wedding Tionghoa (tier Story).
+   Acuan visual: prototypes/meihua-story.html · THEME-WAVE3 §2.4.
+   Kontrak kelas: akar `.mh` · `.mh-stage` konten · `.mh-cover` sampul (wipe via
+   `.is-open`) · `.mh-music` musik. Koreografi oleh fx (gsap): `.mh-line>span`
+   mask (§0.4), `.mh-reveal`, `.mh-bough`/`.mh-bloom-group`, `.mh-xi`.
+   Budaya (§3.4): merah+emas dominan; 囍 selalu SVG utuh.
+   ========================================================================== */
+
+.mh {
+  --mh-red: #7c1e1a;
+  --mh-red-2: #9e2b25;
+  --mh-red-dark: #5e1613;
+  --mh-ink: #fbefd9;
+  --mh-muted: #d9ae8f;
+  --mh-gold: #e2b13c;
+  --mh-gold-soft: #f0ce7e;
+  --mh-ivory: #faf4e8;
+  --mh-ivory-ink: #4a241c;
+  --mh-line: rgba(226, 177, 60, 0.35);
+  --mh-display: var(--mh-disp-a);
+  --mh-body: var(--mh-body-a);
+
+  background: linear-gradient(180deg, var(--mh-red-2) 0%, var(--mh-red) 100%);
+  color: var(--mh-ink);
+  font-family: var(--mh-body), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.66;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mh-stage {
+  position: relative;
+  min-height: 100svh;
+}
+
+.mh-grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+}
+
+/* ---------------------------------------------------------- kerangka ----- */
+.mh-section {
+  position: relative;
+  padding: 72px max(28px, calc((100% - 468px) / 2));
+  overflow: hidden;
+}
+.mh-ivory {
+  background: var(--mh-ivory);
+  color: var(--mh-ivory-ink);
+}
+.mh-ivory .mh-lead {
+  color: #8a6a55;
+}
+.mh-ivory .mh-title {
+  color: var(--mh-red-2);
+}
+.mh-darker {
+  background: var(--mh-red-dark);
+}
+.mh-center {
+  text-align: center;
+}
+.mh-inner {
+  max-width: 468px;
+  margin: 0 auto;
+}
+
+.mh-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 10.5px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--mh-gold);
+  font-weight: 600;
+}
+.mh-eyebrow::before,
+.mh-eyebrow::after {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: var(--mh-gold);
+  opacity: 0.6;
+}
+.mh-title {
+  font-family: var(--mh-display), serif;
+  font-weight: 400;
+  font-size: 29px;
+  line-height: 1.25;
+  margin: 14px 0 8px;
+  color: var(--mh-gold-soft);
+}
+.mh-lead {
+  font-size: 13.5px;
+  color: var(--mh-muted);
+  max-width: 38ch;
+  margin: 12px auto 0;
+}
+
+/* mask & reveal — §0.4 */
+.mh-line {
+  display: block;
+  overflow: hidden;
+}
+.mh-line > span {
+  display: inline-block;
+}
+.mh.is-js.is-motion .mh-line > span {
+  visibility: hidden;
+}
+.mh.is-js.is-motion .mh-reveal {
+  opacity: 0;
+}
+
+/* 囍 line-art */
+.mh-xi {
+  width: 150px;
+  display: block;
+  margin: 0 auto;
+  color: var(--mh-gold-soft);
+}
+.mh-xi path {
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mh-xi--makna {
+  width: 110px;
+  margin-top: 20px;
+  color: var(--mh-red-2);
+}
+.mh-xi--amp {
+  width: 56px;
+  color: var(--mh-gold);
+}
+
+/* ranting mei hua */
+.mh-branch {
+  position: absolute;
+  top: 8px;
+  left: -14px;
+  width: 112%;
+  color: var(--mh-gold);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.mh-bough {
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.mh-bloom {
+  fill: #f6d7ce;
+}
+.mh-bud {
+  fill: var(--mh-gold-soft);
+}
+
+/* ------------------------------------------------------------- cover ----- */
+/* Tanpa JS: cover disembunyikan → konten langsung terbaca (degradasi anggun,
+   pola semua tema produksi). Tombol "Buka" hanya hidup lewat React. */
+.mh-cover {
+  display: none;
+}
+.mh.is-js .mh-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px;
+  overflow: hidden;
+  background:
+    radial-gradient(110% 60% at 50% -14%, #b3362b 0%, transparent 60%),
+    radial-gradient(100% 60% at 50% 115%, #701a16 0%, transparent 58%),
+    var(--mh-red-dark);
+  transition:
+    opacity 0.9s ease,
+    visibility 0.9s;
+}
+.mh.is-js.is-open .mh-cover {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.mh-cover .mh-line > span {
+  visibility: hidden;
+}
+.mh:not(.is-motion) .mh-cover .mh-line > span {
+  visibility: visible;
+}
+
+.mh-medal {
+  position: relative;
+  width: 188px;
+  height: 188px;
+  margin: 0 auto;
+}
+.mh-medal .mh-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--mh-gold);
+}
+.mh-medal .mh-ring circle {
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.1;
+}
+.mh-medal .mh-xi {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.mh-cover__inner {
+  max-width: 420px;
+}
+.mh-cover__eyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.46em;
+  text-transform: uppercase;
+  color: var(--mh-muted);
+  margin: 22px 0 0;
+}
+.mh-cover__names {
+  font-family: var(--mh-display), serif;
+  font-weight: 400;
+  font-size: 40px;
+  line-height: 1.16;
+  margin: 8px 0 6px;
+  color: var(--mh-ink);
+  display: flex;
+  flex-direction: column;
+}
+.mh-cover__amp {
+  font-style: italic;
+  color: var(--mh-gold);
+  font-size: 22px;
+}
+.mh-cover__date {
+  font-size: 12px;
+  letter-spacing: 0.26em;
+  color: var(--mh-muted);
+  margin: 4px 0 0;
+  text-transform: uppercase;
+}
+.mh-guest {
+  margin-top: 26px;
+  font-size: 12.5px;
+  color: var(--mh-muted);
+}
+.mh-guest strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--mh-ink);
+  margin-top: 3px;
+}
+.mh-open {
+  margin-top: 22px;
+  padding: 14px 32px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mh-gold);
+  color: #4a2408;
+  font-family: var(--mh-body), sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(226, 177, 60, 0.3);
+  transition: transform 0.2s;
+}
+.mh-open:hover {
+  transform: translateY(-2px);
+}
+.mh-cover__hint {
+  margin: 16px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--mh-muted);
+  opacity: 0.8;
+}
+
+/* -------------------------------------------------------------- hero ----- */
+.mh-hero {
+  padding-top: 118px;
+}
+
+/* ------------------------------------------------------------- quote ----- */
+.mh-quote {
+  font-family: var(--mh-display), serif;
+  font-size: 23px;
+  line-height: 1.55;
+  color: var(--mh-ivory-ink);
+  margin: 18px 0 0;
+}
+.mh-quote__cite {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 13px;
+  font-style: italic;
+  color: #8a6a55;
+}
+
+/* ------------------------------------------------------------ couple ----- */
+.mh-couple {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 36px;
+}
+.mh-person {
+  text-align: center;
+}
+.mh-foto {
+  width: 212px;
+  height: 256px;
+  margin: 0 auto 18px;
+  padding: 9px;
+  border: 1px solid var(--mh-gold);
+  background: rgba(250, 244, 232, 0.05);
+  clip-path: polygon(
+    22% 0,
+    78% 0,
+    100% 12%,
+    100% 88%,
+    78% 100%,
+    22% 100%,
+    0 88%,
+    0 12%
+  );
+}
+.mh-foto__ph {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(165deg, #c04a3c, #5e1613);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(
+    22% 0,
+    78% 0,
+    100% 12%,
+    100% 88%,
+    78% 100%,
+    22% 100%,
+    0 88%,
+    0 12%
+  );
+}
+.mh-foto__ph span {
+  font-family: var(--mh-display), serif;
+  font-size: 44px;
+  color: var(--mh-gold-soft);
+}
+.mh-foto__ph img {
+  object-fit: cover;
+  display: block;
+}
+.mh-person__name {
+  font-family: var(--mh-display), serif;
+  font-weight: 400;
+  font-size: 23px;
+  margin: 0;
+}
+.mh-person__role {
+  font-size: 10.5px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--mh-gold);
+  font-weight: 600;
+  margin: 5px 0 9px;
+}
+.mh-person__meta {
+  font-size: 13px;
+  color: var(--mh-muted);
+  margin: 0;
+}
+.mh-amp {
+  display: flex;
+  justify-content: center;
+}
+
+/* --------------------------------------------------------- countdown ----- */
+.mh-cd {
+  margin-top: 28px;
+}
+.mh .countdown {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.mh .count-box {
+  min-width: 64px;
+  padding: 12px 6px;
+  background: rgba(250, 244, 232, 0.06);
+  border: 1px solid var(--mh-line);
+  border-radius: 14px;
+}
+.mh .count-num {
+  display: block;
+  font-family: var(--mh-display), serif;
+  font-size: 22px;
+  color: var(--mh-gold-soft);
+  font-variant-numeric: tabular-nums;
+}
+.mh .count-label {
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--mh-muted);
+}
+.mh .countdown-done {
+  font-family: var(--mh-display), serif;
+  font-size: 19px;
+  color: var(--mh-gold-soft);
+}
+
+/* ------------------------------------------------------------ acara ------ */
+.mh-events {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 30px;
+}
+.mh-event {
+  position: relative;
+  border: 1px solid var(--mh-line);
+  border-radius: 20px;
+  background: rgba(250, 244, 232, 0.04);
+  padding: 28px 24px;
+  text-align: center;
+  overflow: hidden;
+}
+.mh-event::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 3px;
+  background: var(--mh-gold);
+  border-radius: 0 0 6px 6px;
+  opacity: 0.8;
+}
+.mh-event__title {
+  font-family: var(--mh-display), serif;
+  font-weight: 400;
+  font-size: 23px;
+  color: var(--mh-gold-soft);
+  margin: 0;
+}
+.mh-event__tgl {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 12px;
+}
+.mh-event__jam {
+  font-size: 12.5px;
+  color: var(--mh-gold);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  margin: 4px 0 10px;
+}
+.mh-event__tempat {
+  font-size: 13.5px;
+  color: var(--mh-muted);
+  max-width: 36ch;
+  margin: 0 auto;
+}
+.mh-pills {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.mh-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 24px;
+  border: 1px solid var(--mh-gold);
+  border-radius: 999px;
+  color: var(--mh-gold-soft);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  list-style: none;
+}
+.mh-cal {
+  position: relative;
+}
+.mh-cal summary {
+  list-style: none;
+}
+.mh-cal summary::-webkit-details-marker {
+  display: none;
+}
+.mh-cal__menu {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 8px;
+  background: var(--mh-red-dark);
+  border: 1px solid var(--mh-line);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  z-index: 5;
+  min-width: 180px;
+}
+.mh-cal__opt {
+  display: block;
+  padding: 11px 16px;
+  font-size: 13px;
+  color: var(--mh-ink);
+  text-decoration: none;
+}
+.mh-cal__opt + .mh-cal__opt {
+  border-top: 1px solid var(--mh-line);
+}
+.mh-cal__opt:hover {
+  background: rgba(226, 177, 60, 0.12);
+}
+
+/* ------------------------------------------------------------- story ----- */
+.mh-story {
+  margin-top: 32px;
+}
+.mh-beat {
+  border-left: 1px solid var(--mh-line);
+  padding: 2px 0 26px 22px;
+  position: relative;
+  margin-left: 8px;
+}
+.mh-beat:last-child {
+  padding-bottom: 4px;
+}
+.mh-beat::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 5px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--mh-gold);
+  background: var(--mh-red-dark);
+}
+.mh-beat__thn {
+  font-size: 10.5px;
+  letter-spacing: 0.3em;
+  color: var(--mh-gold);
+  font-weight: 600;
+}
+.mh-beat__title {
+  font-family: var(--mh-display), serif;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--mh-gold-soft);
+  margin: 2px 0 0;
+}
+.mh-beat__text {
+  font-size: 13.5px;
+  color: var(--mh-muted);
+  margin: 4px 0 0;
+}
+
+/* ------------------------------------------------------------ galeri ----- */
+/* Dua kolom block-flow — JANGAN CSS grid utk tile rasio (catatan wave-3). */
+.mh-galeri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 30px;
+}
+.mh-g-item {
+  width: calc(50% - 6px);
+  margin: 0 0 12px;
+  overflow: hidden;
+  border: 1px solid #e2cba6;
+  border-radius: 16px;
+  position: relative;
+  background: #efe3d0;
+}
+.mh-g-item--okta {
+  width: 100%;
+  border-radius: 0;
+  border-color: #d9b687;
+  clip-path: polygon(
+    10% 0,
+    90% 0,
+    100% 18%,
+    100% 82%,
+    90% 100%,
+    10% 100%,
+    0 82%,
+    0 18%
+  );
+}
+.mh-g-item :where(img, a, button) {
+  display: block;
+  width: 100%;
+}
+.mh-g-item img {
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  height: auto;
+}
+.mh-g-item--okta img {
+  aspect-ratio: 16 / 10;
+}
+.mh-g-item figcaption {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #fbefd9;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+/* Sudut oktagon memotong 10% tiap sisi — keterangan di `left: 10px` terpotong. */
+.mh:not([data-gallery="grid"]) .mh-g-item--okta figcaption {
+  left: 12%;
+}
+.mh[data-gallery="grid"] .mh-g-item--okta {
+  width: calc(50% - 6px);
+  clip-path: none;
+  border-radius: 16px;
+}
+.mh[data-gallery="grid"] .mh-g-item--okta img {
+  aspect-ratio: 3 / 4;
+}
+
+/* ---------------------------------------------------- angpao digital ----- */
+.mh-gifts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 26px;
+  text-align: left;
+}
+.mh-angpao {
+  position: relative;
+  background: rgba(250, 244, 232, 0.05);
+  border: 1px solid var(--mh-line);
+  border-radius: 18px;
+  padding: 20px 18px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  overflow: hidden;
+}
+.mh-angpao::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 38px;
+  background: linear-gradient(180deg, rgba(226, 177, 60, 0.22), transparent);
+  clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
+  pointer-events: none;
+}
+.mh-angpao b {
+  display: block;
+  font-size: 15px;
+  color: var(--mh-gold-soft);
+  letter-spacing: 0.04em;
+  position: relative;
+}
+.mh-angpao small {
+  color: var(--mh-muted);
+  font-size: 12.5px;
+  position: relative;
+}
+.mh-angpao p {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  position: relative;
+}
+.mh-angpao--addr {
+  display: block;
+}
+.mh-copy {
+  flex: 0 0 auto;
+  padding: 9px 18px;
+  border: 1px solid var(--mh-gold);
+  background: none;
+  border-radius: 999px;
+  color: var(--mh-gold-soft);
+  font-family: var(--mh-body), sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  position: relative;
+}
+.mh-gift-confirm {
+  margin-top: 8px;
+}
+
+/* ------------------------------------------------------------ footer ----- */
+.mh-footer {
+  padding: 64px max(28px, calc((100% - 468px) / 2)) 56px;
+  background: linear-gradient(180deg, var(--mh-red) 0%, #4a110e 100%);
+}
+.mh-watermark {
+  display: inline-block;
+  margin-top: 24px;
+  font-size: 10.5px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--mh-muted);
+}
+.mh-watermark a {
+  color: var(--mh-gold);
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------- musik ----- */
+.mh-music {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 30;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--mh-gold);
+  background: var(--mh-red-dark);
+  color: var(--mh-gold-soft);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+}
+.mh.is-open .mh-music {
+  display: flex;
+}
+
+/* varian terang (champagne): stage ivory, teks gelap */
+.mh[data-variant="champagne"] {
+  color: var(--mh-ivory-ink);
+}
+
+/* ---------------------------------------------------- reduced motion ----- */
+@media (prefers-reduced-motion: reduce) {
+  .mh.is-js.is-motion .mh-line > span,
+  .mh-cover .mh-line > span {
+    visibility: visible !important;
+    transform: none !important;
+  }
+  .mh.is-js.is-motion .mh-reveal {
+    opacity: 1;
+  }
+  .mh.is-js .mh-cover {
+    transition: none;
+  }
+  .mh-bloom,
+  .mh-bud {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
