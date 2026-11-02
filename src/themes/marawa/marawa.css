@@ -333,7 +333,8 @@
 }
 .mw-open:hover {
   transform: translateY(-2px);
-  background: rgba(212, 168, 72, 0.28);
+  /* ≤ .24: teks emas varian gadang (#cfa64b) di atas isian ini. */
+  background: rgba(212, 168, 72, 0.22);
 }
 .mw-cover__hint {
   margin: 16px 0 0;

@@ -14,9 +14,10 @@
   --vd-sage-d: #3f4a34;
   --vd-terra: #c2704e;
   /* Versi TEKS/latar-tombol aman-kontras. --vd-terra-ink ≥ 4,5:1 juga di
-     --vd-ivory-2; --vd-sage-ink = accentText varian bawaan (≥ 4,5:1 di
-     --vd-ivory), ditimpa penjaga kontras per varian. */
-  --vd-terra-ink: #9b593e;
+     --vd-ivory-2 SETELAH .vd-grain (datar 4,87 → tampil 4,64; #9b593e lama
+     tepat 4,50 datar, 4,30 tampil); --vd-sage-ink = accentText varian bawaan
+     (≥ 4,5:1 di --vd-ivory), ditimpa penjaga kontras per varian. */
+  --vd-terra-ink: #93553b;
   --vd-sage-ink: #637050;
   --vd-ink: #3a3126;
   --vd-muted: rgba(58, 49, 38, 0.71);

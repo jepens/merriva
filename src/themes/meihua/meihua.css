@@ -457,10 +457,12 @@
   justify-content: center;
   gap: 10px;
 }
+/* Tanpa isian: ivory 6% lama mengangkat latar merah sehingga angka & label
+   turun ke 4,5:1 (4,1:1 bila countdown dipindah ke dekat puncak gradien —
+   section ini bisa diurutkan ulang). */
 .mh .count-box {
   min-width: 64px;
   padding: 12px 6px;
-  background: rgba(250, 244, 232, 0.06);
   border: 1px solid var(--mh-line);
   border-radius: 14px;
 }

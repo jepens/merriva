@@ -292,7 +292,7 @@
   font-size: 9.5px;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: rgba(236, 231, 221, 0.52);
+  color: rgba(236, 231, 221, 0.58);
 }
 
 /* ------------------------------------------------------------- Section ----- */
@@ -639,7 +639,8 @@
   font-size: 8.5px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: rgba(236, 231, 221, 0.6);
+  /* .6 = 4,35:1 di bagian foto yang terang setelah scrim + .nr-grain. */
+  color: rgba(236, 231, 221, 0.7);
 }
 
 /* Story (timeline) --------------------------------------------------------- */

@@ -5364,7 +5364,9 @@ dirender. Keduanya kini diukur juga, di semua tema × varian:
 Yang tersisa hanya dekorasi yang dikecualikan WCAG 1.4.3: bintang marquee &
 angka watermark eternal-rose (`aria-hidden`), inisial di bingkai polaroid
 kosong festa. Pola token membuat perbaikan bertahan untuk elemen baru yang
-memakai token yang sama.
+memakai token yang sama. **Dikoreksi di #105:** klaim "yang tersisa hanya
+dekorasi" tidak benar — grain disembunyikan saat mengukur piksel dan fase
+sampul tak diukur; audit produksi menemukan 9 aturan lagi di bawah AA.
 
 **Ditolak:**
 - Menaikkan ambang penjaga kontras global (mis. 5,0) demi bagian bertint —
@@ -5393,6 +5395,79 @@ memakai token yang sama.
   - sakinah meluber 6px di layar 320px — dari `GuestbookSection` bersama, sudah
     ada sebelumnya;
   - thumbnail per varian belum ada (kartu non-bawaan memakai poster).
+
+---
+
+## #105 — 2026-11-02 · Kontras diukur sebagaimana TAMPIL (grain, sampul, hover); Email Obfuscation Cloudflare
+
+**Keputusan:**
+
+1. **Kontras = rasio sebagaimana TAMPIL** di render bawaan: lapisan grain,
+   vignette & scrim ikut dihitung, per huruf (WCAG G18), termasuk fase sampul
+   dan `:hover`. Ambang kerja ≥ 4,6 agar derau grain tak menjatuhkan nilai ke
+   bawah 4,5. Klaim kontras tema berikutnya diverifikasi terhadap render server
+   (`?variant=`) dan, setelah deploy, di produksi — dev + suntikan saja tidak
+   cukup.
+2. **Perbaikan** (CSS saja; tiap perubahan menaikkan kontras untuk SEMUA
+   pemakainya). Angka = huruf terburuk, tampil, sebelum → sesudah:
+   - eternal-rose sampul (semua varian): eyebrow `--rose-soft` → `#e2bbbe`
+     3,82 → 4,62; "Kepada Yth." α .6 → .7 4,01 → 4,84; hint α .45 → .62
+     3,36 → 4,93;
+   - noir: hint sampul α .52 → .58 4,39 → 5,10; keterangan galeri α .6 → .7
+     4,31 → 5,25;
+   - verdant: `--vd-terra-ink` `#9b593e` → `#93553b` 4,29 → 4,62 (datar 4,87
+     di `--vd-ivory-2`; hover pil `#864d36` tetap lebih gelap);
+   - meihua: `.count-box` tanpa isian ivory 6% 4,48 → 5,00 — tetap ≥ 4,5 bila
+     countdown diurutkan ke dekat puncak gradien (section ini `reorder`);
+     champagne tak berubah (isian ivory di atas ivory);
+   - marawa: isian hover tombol sampul α .28 → .22 — gadang 4,19 → 4,79
+     (hitam 5,66, bawaan 7,47).
+3. **Cloudflare Email Address Obfuscation harus OFF** untuk merriva.id (aksi
+   pemilik: Security → Settings → filter "Client-side abuse" → Email Address
+   Obfuscation → Off; atau Configuration Rule "Email Obfuscation" per path).
+   Cloudflare menulis ulang setiap alamat email di HTML. Bila email berada di
+   dalam teks yang lebih panjang (PIC prisma: `telepon · email`), hidrasi
+   gagal — React #418 di setiap tayangan, seluruh pohon dirender ulang di
+   klien, satu galat Sentry per tayangan. Terverifikasi: pratinjau prisma
+   memicu #418; `/syarat` & `/privasi` ikut ditulis ulang tetapi tidak memicu
+   (emailnya berdiri sendiri). Localhost tak di belakang Cloudflare — tak
+   terlihat di dev.
+
+**Alasan:** audit ulang #104 langsung di merriva.id setelah deploy — 4 dimensi
+(axe + paritas token, node incomplete per piksel, keadaan interaktif,
+keterangan foto) × 48 kasus (14 bawaan + 34 varian lewat `?variant=`),
+penjaga jaringan hanya-GET; setiap temuan diukur ulang verifikator independen
+(dsf 1 & 3). Yang terbukti benar: axe 0 pelanggaran; token varian render
+server = penjaga kontras (34/34); CSS tema dimuat paling akhir, setelah chunk
+Next termasuk `guestbook.css`. Yang terlewat #104 — 33 node×kasus dari 9
+aturan CSS, semuanya juga terjadi di lokal (bukan khusus produksi):
+- grain tema (`.nr-grain`, `.vd-grain`, `.mh-grain`, grain eternal-rose) adalah
+  lapisan fixed yang dilukis DI ATAS teks; audit #104 menyembunyikannya saat
+  mengambil piksel, sehingga nilai tepi tampak lolos (hint noir 4,65 yang
+  tampil 4,39; role verdant tepat 4,50 datar);
+- fase sampul tak pernah diukur per piksel, dan audit hover lokal
+  mengecualikan sampul;
+- baseline piksel #104 hanya mencakup 5 tema.
+
+**Ditolak:**
+- Mengurangi/menghapus grain — bagian art direction (THEME-DESIGN); teksnya
+  yang disesuaikan.
+- Mencerahkan `--mh-gold-ink`/`--mh-muted` global (`#f1d79a`/`#ecd5bf`) — emas
+  seluruh tema memucat demi satu komponen.
+- Isian gelap untuk kotak countdown — mengubah champagne (permukaan ivory).
+- Menangani email di kode (`<!--email_off-->`, `Cache-Control: no-transform`)
+  — React tak memancarkan komentar HTML tanpa `dangerouslySetInnerHTML`, dan
+  Cache-Control halaman ISR dikelola Next; satu sakelar menutup semua halaman.
+
+**Konsekuensi:**
+- Perubahan tampak halus: teks kecil sampul eternal-rose & noir sedikit lebih
+  terang, label peran verdant sedikit lebih gelap, kotak countdown meihua
+  tanpa isian (garis emas tetap), hover tombol sampul marawa sedikit redup.
+- Info, sudah ada sebelumnya, belum diselaraskan: pemilik yang MEMILIH varian
+  bawaan secara eksplisit di editor mendapat token `options.ts` yang berbeda
+  dari CSS bawaan di 8 tema (mis. lumina `--lm-taupe` `#9a7b58` vs `#7a5f40`,
+  meihua `--mh-gold-soft` `#f0ce7e` vs `#e2b13c`) — rupa "varian bawaan"
+  bergantung pada ada-tidaknya `custom`. Kontras keduanya lolos.
 
 ---
 

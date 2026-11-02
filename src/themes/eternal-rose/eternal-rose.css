@@ -196,8 +196,10 @@
   max-width: 420px;
   width: 100%;
 }
+/* Teks kecil sampul diukur di atas cahaya mawar + grain (sisi kiri paling
+   terang): --rose-soft hanya 3,8:1 di sana, alfa .6/.45 lama 4,0 & 3,4. */
 .er-cover__inner .er-eyebrow {
-  color: var(--rose-soft);
+  color: #e2bbbe;
 }
 .er-cover__names {
   margin: 26px 0 10px;
@@ -245,7 +247,7 @@
   font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: rgba(246, 239, 231, 0.6);
+  color: rgba(246, 239, 231, 0.7);
   margin-bottom: 6px;
 }
 .er-guest strong {
@@ -282,7 +284,7 @@
   font-size: 10px;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: rgba(246, 239, 231, 0.45);
+  color: rgba(246, 239, 231, 0.62);
 }
 
 /* ------------------------------------------------------------- Section ----- */
