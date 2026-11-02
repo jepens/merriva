@@ -19,7 +19,7 @@ export const meihuaOptions: ThemeOptions = {
       id: "burgundy",
       name: "Burgundy Malam",
       acc: "#e2b13c",
-      paper: "#5c1a26",
+      paper: "#6e1f2e",
       ink: "#f6e8d8",
     },
     {

@@ -58,6 +58,17 @@ function Ngapak() {
 export function Hero({ greetingOpen }: { greetingOpen?: string }) {
   return (
     <header className="pg-section pg-center pg-hero">
+      {/* Awan konten — target yoyo fx (`.pg-stage .pg-cloud`); awan cover
+          berada di luar stage. Path disalin dari prototipe, BUKAN diimpor dari
+          cover.tsx ("use client"). */}
+      <span className="pg-cloud pg-cloud--c" aria-hidden>
+        <svg viewBox="0 0 120 52" focusable="false">
+          <path
+            d="M12 40c-8 0-12-6-9-12 2-5 8-7 13-5 1-8 9-14 18-12 6 1 11 6 12 11 4-3 10-3 14 0 3-7 11-10 18-7 6 2 10 8 9 14 5 0 9 4 9 8 0 2-1 3-3 3Z"
+            opacity=".8"
+          />
+        </svg>
+      </span>
       <span className="pg-eyebrow pg-reveal">{L.hero.eyebrow}</span>
       <p className="pg-lead pg-reveal" style={PRELINE}>
         {greetingOpen ?? L.hero.lead}

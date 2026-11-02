@@ -5287,6 +5287,113 @@ Tombol hadiah semula `#7d3b3b` di atas latar gelap: 1,36:1 (priangan) dan 1,6:1
     (priangan — tween-nya tanpa target);
   - langkah Galeri di editor tetap tampil untuk sakinah.
 
+Semua butir "belum" di atas ditutup di #104.
+
+---
+
+## #104 — 2026-11-02 · Kontras AA lintas tema, kartu varian katalog, sisa gelombang 3
+
+**Keputusan (disetujui pemilik 2 Nov 2026):**
+
+1. **Kontras teks AA di ke-14 tema dan setiap variannya.** Satu pola, bukan
+   tambalan per elemen:
+   - **Muted** → naikkan alfa/gelapkan token secukupnya terhadap semua latar
+     terang tema (mis. aria .55→.60, kirana .62→.72).
+   - **Emas/koral statis sebagai teks** → token `-ink` baru (`--bk-gold-ink`,
+     `--kr-gold-d` digelapkan, `--er-gold-ink`, `--ft-coral-ink`,
+     `--vd-terra-ink`, `--pr-violet-ink`, `--pg-gold-ink`, `--sk-gold-ink`);
+     token asal tetap untuk garis & ornamen.
+   - **Aksen varian sebagai teks** → token `accentText` (CUSTOMIZER-SPEC §4) —
+     kini dipetakan lumina & verdant; eternal-rose mendapat nilai bawaan CSS
+     (dulu jatuh ke mawar mentah 3,3:1 pada undangan tanpa custom).
+   - **Teks di atas isian aksen** (pil/tombol) → latar memakai tinta-aksen yang
+     sama (luminans ≤ ~0,16 ⇒ putih ≥ ~5:1); festa memakai tinta cokelat tua
+     agar isian cerahnya tetap.
+   - **Kasus khusus:** meridian (bagian terang tema gelap) & bagian `--paper-2`
+     eternal-rose memakai `color-mix` di balik `@supports` — deklarasi ganda
+     ber-`var()` TIDAK berfungsi sebagai fallback (menang saat parse, lalu
+     `unset` di mesin lama). Panel terang marawa/meihua memakai warna judul
+     panel itu; teks meihua di gradien merah memakai token statis
+     `--mh-gold-ink` & muted yang lebih terang.
+   - **Buku tamu & formulir hadiah** (guestbook.css bersama mengandaikan latar
+     terang): noir & marawa mendapat override `.gb-*` (label RSVP sebelumnya
+     1,3–1,6:1 — praktis tak terlihat); RSVP meihua pindah ke bagian ivory
+     seperti prototipe; formulir hadiah priangan/meihua (muncul setelah
+     diklik) diberi panel terang. Placeholder input ditetapkan di
+     guestbook.css — satu-satunya sentuhan ke CSS bersama, karena latar input
+     sama di semua tema.
+   - **Keadaan interaktif:** hover tombol Salin/"Tersalin" & pil (menempel
+     setelah tap di ponsel) di kirana, barakah, lumina, verdant, eternal-rose
+     memakai latar tinta-aksen yang sama.
+   - **Keterangan di atas foto** (7 tema galeri): scrim gradien gelap ±56px di
+     dasar foto. Halo `text-shadow` saja terbukti tak cukup — terukur 1,1–2,6:1
+     di foto terang; lolos-gagal bergantung foto pengguna, bukan tema (marawa
+     "lolos" hanya karena foto demonya gelap).
+2. **Kartu varian katalog (THEME-WAVE3 §4):** `/tema` = satu kartu per (tema ×
+   varian) dari `options.ts`; landing tetap 6 kartu per tema. Pratinjau
+   `?variant=` di-whitelist per tema; varian bawaan → cabang legacy (`custom`
+   null); varian lain → `custom` LENGKAP (`defaultCustomSettings` + variant).
+   Mockup hanya untuk kartu bawaan; poster varian 4:3 berpalet varian, nama
+   berwarna aksen yang dijaga AA. Klaim "50+ pilihan desain" TIDAK dipasang —
+   jumlahnya 48.
+3. **Sisa gelombang 3:** hex varian burgundy `#6e1f2e` mengikuti §2. Dua
+   penyimpangan dipertahankan dan dicatat di THEME-WAVE3 §2: gadang `#152019`
+   (dicoba `#1f4231` — tombol & hint sampul serta countdown jatuh di bawah AA)
+   dan sogan `#7a4f24` (`#8a5a24` menurunkan teks `.pg-deep` di bawah AA).
+   Ornamen: lentera meihua; monogram hero sakinah (CSS saja, Craft); awan hero
+   priangan (target tween gsap fx yang dulu kosong) + awan cover (WAAPI — gsap
+   baru jalan setelah sampul dibuka), keduanya digerbangi motion. Editor:
+   langkah Galeri menyembunyikan pengunggah galeri untuk tema tanpa section
+   galeri (sampul OG & slot bernama tetap).
+4. **Registry tema memakai `Object.hasOwn`:** `/preview/tema/constructor` dulu
+   500 (kunci warisan objek lolos `registry[slug] ?? null`), kini 404.
+5. **Foto mempelai meridian mengisi bingkainya** (`overflow:hidden` + img
+   absolut): foto potret 2:3 dulu meluber ±43px dan menutupi label peran.
+
+**Alasan:** audit axe-core `color-contrast` per tema × varian (pratinjau demo,
+varian diterapkan persis seperti `applyToFrame`, termasuk `data-variant`):
+±315 pelanggaran pada varian bawaan saja (sampul + isi) → 0 di seluruh 14
+tema dan setiap variannya. axe saja TIDAK cukup — review adversarial
+menemukan dua celahnya: node "incomplete" (teks di atas gradien/pola/foto)
+tidak dihitung sebagai pelanggaran, dan keadaan interaktif tak pernah
+dirender. Keduanya kini diukur juga, di semua tema × varian:
+- node incomplete → piksel latar nyata (teks dibuat transparan, halo tetap);
+- hover/fokus tombol, "Tersalin", formulir hadiah setelah diklik, pesan
+  galat & sukses (42/42 kasus formulir lolos);
+- keterangan foto di atas foto (42/42 lolos dengan scrim).
+Yang tersisa hanya dekorasi yang dikecualikan WCAG 1.4.3: bintang marquee &
+angka watermark eternal-rose (`aria-hidden`), inisial di bingkai polaroid
+kosong festa. Pola token membuat perbaikan bertahan untuk elemen baru yang
+memakai token yang sama.
+
+**Ditolak:**
+- Menaikkan ambang penjaga kontras global (mis. 5,0) demi bagian bertint —
+  menggelapkan aksen semua tema demi satu kasus; diselesaikan lokal
+  (eternal-rose `--paper-2`).
+- Menggelapkan isian cerah festa — kehilangan identitas warnanya; teksnya yang
+  digelapkan.
+- Mengubah warna teks di `guestbook.css` bersama — latar tiap tema berbeda;
+  diganti override per tema (pola prisma). Pengecualian: placeholder (latar
+  input seragam).
+- Membawa varian dari kartu ke alur buat-undangan — `settings.custom` dimiliki
+  `updateInvitationAppearance` (SPEC); butuh keputusan terpisah.
+
+**Konsekuensi:**
+- Tampilan undangan yang sudah terbit ikut berubah halus: label emas/abu lebih
+  gelap, dasar foto galeri sedikit menggelap (scrim), RSVP meihua kini berlatar
+  ivory. Disengaja: keterbacaan di layar ponsel.
+- Aksen kustom Premium tetap dijaga penjaga kontras hanya terhadap `--paper`
+  varian — bagian bertint lain yang memakai aksen sebagai teks perlu dicek bila
+  ditambah.
+- **Diketahui, belum dikerjakan:**
+  - tombol "Gunakan Tema" di kartu varian tetap membuat undangan dengan varian
+    bawaan;
+  - toggle "Galeri foto" di langkah Pengaturan masih tampil untuk sakinah (tanpa
+    efek), dan unggah galeri belum dijaga di server untuk tema tanpa galeri;
+  - sakinah meluber 6px di layar 320px — dari `GuestbookSection` bersama, sudah
+    ada sebelumnya;
+  - thumbnail per varian belum ada (kartu non-bawaan memakai poster).
+
 ---
 
 ## Template entri baru

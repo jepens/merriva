@@ -5,9 +5,14 @@ import type { CSSProperties } from "react";
 
 import { ThemeMockup } from "@/components/theme-mockup";
 import { copy } from "@/lib/copy";
+import { contrastRatio, safeTextColor } from "@/lib/customizer/contrast-guard";
 import { themeCtaHref } from "@/lib/theme-cta";
-import type { MarketingTheme } from "@/server/marketing/catalog";
+import {
+  themePreviewHref,
+  type MarketingTheme,
+} from "@/server/marketing/catalog";
 import { hasThemeThumb } from "@/server/theme-thumbs";
+import type { ThemeCatalogMeta } from "@/themes/catalog-meta";
 import type { InvitationCategory } from "@/types";
 
 const CATEGORY_LABEL: Record<InvitationCategory, string> = {
@@ -22,18 +27,41 @@ function categoryText(categories: InvitationCategory[]): string {
   return CATEGORY_LABEL[categories[0]] ?? copy.marketing.themes.universal;
 }
 
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/**
+ * Warna nama di poster kartu VARIAN = aksen varian, karena itulah pembedanya:
+ * sepuluh tema lama berbagi kertas & tinta di semua variannya, jadi tanpa ini
+ * "Aria — Biru Klasik" dan "Aria — Hijau Hutan" tampil identik. Dijaga AA 4,5
+ * di atas kertas: kertas terang menggelapkan aksen (`safeTextColor`), kertas
+ * gelap jatuh ke tinta (menggelapkan tak menolong di sana).
+ */
+export function posterNameColor(meta: ThemeCatalogMeta): string | undefined {
+  if (!HEX.test(meta.accent) || !HEX.test(meta.bg)) return undefined;
+  if (contrastRatio(meta.accent, meta.bg) >= 4.5) return meta.accent;
+  return meta.dark ? undefined : safeTextColor(meta.accent, meta.bg).color;
+}
+
 /**
  * Poster spesimen tema (identitas visual dari `catalog-meta`). Murni presentasional
  * & isomorfik (dipakai di server pages maupun katalog client). TANPA gambar/font
  * per-tema → ringan. Variabel warna disuntik via inline style ter-scope poster.
+ * `landscape` = 4:3 setinggi mockup, agar baris grid kartu katalog tetap rata.
  */
-export function ThemePoster({ theme }: { theme: MarketingTheme }) {
+export function ThemePoster({
+  theme,
+  landscape = false,
+}: {
+  theme: MarketingTheme;
+  landscape?: boolean;
+}) {
   const { meta } = theme;
   const style = {
     "--mrv-poster-bg": meta.bg,
     "--mrv-poster-ink": meta.ink,
     "--mrv-poster-accent": meta.accent,
     "--mrv-poster-line": meta.line,
+    ...(landscape ? { aspectRatio: "4 / 3" } : null),
   } as CSSProperties;
   const tierLabel =
     theme.tier === "premium"
@@ -44,7 +72,12 @@ export function ThemePoster({ theme }: { theme: MarketingTheme }) {
     <div className="mrv-poster" style={style}>
       <div className="mrv-poster__tag">{categoryText(theme.categories)}</div>
       <div className="mrv-poster__center">
-        <div className="mrv-poster__name">{theme.name}</div>
+        <div
+          className="mrv-poster__name"
+          style={theme.variant ? { color: posterNameColor(meta) } : undefined}
+        >
+          {theme.name}
+        </div>
         <div className="mrv-poster__rule" aria-hidden="true">
           <span>{meta.ornament}</span>
         </div>
@@ -63,21 +96,33 @@ export function ThemePoster({ theme }: { theme: MarketingTheme }) {
  * Tema" mengarah ke pendaftaran. Tema tanpa demo/foto memakai poster spesimen +
  * label "segera hadir". Kartu = `<div>` (bukan satu tautan) karena kini memuat
  * dua kontrol interaktif terpisah.
+ *
+ * Kartu VARIAN (`/tema`, THEME-WAVE3 §4) berjudul "{Tema} — {Varian}" dan membuka
+ * pratinjau varian itu. Thumbnail memotret varian BAWAAN, jadi hanya kartu bawaan
+ * yang memakai mockup; varian lain memakai poster berpalet variannya — kartu tak
+ * boleh memamerkan warna yang bukan miliknya.
  */
 export function ThemeCard({ theme }: { theme: MarketingTheme }) {
-  const showMockup = theme.hasDemo && hasThemeThumb(theme.slug);
+  const { variant } = theme;
+  const title = variant
+    ? copy.marketing.themes.variantTitle(theme.name, variant.name)
+    : theme.name;
+  const showMockup =
+    theme.hasDemo &&
+    (!variant || variant.isDefault) &&
+    hasThemeThumb(theme.slug);
   return (
     <div className="mrv-theme-card">
       <div className="mrv-theme-card__media">
         {showMockup ? (
           <ThemeMockup slug={theme.slug} name={theme.name} />
         ) : (
-          <ThemePoster theme={theme} />
+          <ThemePoster theme={theme} landscape />
         )}
       </div>
       <div className="mrv-theme-card__meta">
         <div>
-          <div className="mrv-theme-card__name">{theme.name}</div>
+          <div className="mrv-theme-card__name">{title}</div>
           <div className="mrv-theme-card__cats">
             {categoryText(theme.categories)}
           </div>
@@ -87,10 +132,10 @@ export function ThemeCard({ theme }: { theme: MarketingTheme }) {
         <div className="mrv-theme-card__actions">
           <a
             className="mrv-btn mrv-btn--ghost mrv-btn--sm"
-            href={`/preview/tema/${theme.slug}`}
+            href={themePreviewHref(theme.slug, { variant: variant?.id })}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={copy.marketing.themes.demoOf(theme.name)}
+            aria-label={copy.marketing.themes.demoOf(title)}
           >
             <Eye size={16} aria-hidden="true" />
             {copy.marketing.themes.preview}

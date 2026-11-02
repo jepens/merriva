@@ -33,6 +33,8 @@ export function PrianganCover({
   const { open, opened, recipientName, motionOn } = useCoverGate();
   const innerRef = useRef<HTMLDivElement>(null);
   const sigerRef = useRef<SVGSVGElement>(null);
+  const cloudARef = useRef<HTMLSpanElement>(null);
+  const cloudBRef = useRef<HTMLSpanElement>(null);
 
   // Mask-reveal baris — state tersembunyi dimiliki JS (§0.4).
   useEffect(() => {
@@ -84,12 +86,33 @@ export function PrianganCover({
     return () => anims.forEach((a) => a.cancel());
   }, [motionOn]);
 
+  // Awan melayang (yoyo, transform saja; nilai = prototipe). Bukan tugas fx:
+  // gsap baru jalan SETELAH sampul dibuka dan hanya menyapu `.pg-stage`.
+  useEffect(() => {
+    if (!motionOn) return;
+    const anims = [cloudARef.current, cloudBRef.current].map((el, i) =>
+      el?.animate(
+        [
+          { transform: "translate(0, 0)" },
+          { transform: `translate(${i % 2 ? -26 : 26}px, 8px)` },
+        ],
+        {
+          duration: 7000 + i * 2000,
+          easing: "cubic-bezier(0.37,0,0.63,1)", // ≈ sine.inOut
+          iterations: Infinity,
+          direction: "alternate",
+        },
+      ),
+    );
+    return () => anims.forEach((a) => a?.cancel());
+  }, [motionOn]);
+
   return (
     <>
-      <span className="pg-cloud pg-cloud--a" aria-hidden>
+      <span className="pg-cloud pg-cloud--a" ref={cloudARef} aria-hidden>
         <CloudSvg />
       </span>
-      <span className="pg-cloud pg-cloud--b" aria-hidden>
+      <span className="pg-cloud pg-cloud--b" ref={cloudBRef} aria-hidden>
         <CloudSvg />
       </span>
       <div className="pg-cover__inner" ref={innerRef}>

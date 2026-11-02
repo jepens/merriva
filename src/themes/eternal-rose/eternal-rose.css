@@ -13,6 +13,10 @@
   --rose: #b76e79;
   --rose-soft: #d9a5ad;
   --gold: #c9a227;
+  /* Versi TEKS aman-kontras (≥ 4,5:1 juga di --paper-2). `--er-acc-ink`
+     ditimpa inline oleh penjaga kontras (accentText) bila ada custom. */
+  --er-acc-ink: #8f565e;
+  --er-gold-ink: #7c6418;
   --ink: #241a1e;
   --hairline: rgba(36, 26, 30, 0.14);
   /* Pasangan font bawaan = "a". Kustomisasi (Fase G) menimpa lewat inline style
@@ -79,8 +83,8 @@
   letter-spacing: 0.24em;
   text-transform: uppercase;
   font-weight: 600;
-  /* Aksen sebagai TEKS → versi aman-kontras bila custom (penjaga kontras);
-     tanpa custom `--er-acc-ink` tak diset → jatuh ke `--rose` (identik). */
+  /* Aksen sebagai TEKS → `--er-acc-ink`: bawaan aman-kontras di `.er`
+     (mawar mentah #b76e79 hanya 3,3:1), ditimpa penjaga kontras bila custom. */
   color: var(--er-acc-ink, var(--rose));
 }
 .er-serif {
@@ -467,7 +471,7 @@
   font-size: 10px;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--er-gold-ink);
   margin-bottom: 8px;
 }
 .er-person__meta {
@@ -485,6 +489,18 @@
   background: var(--paper-2);
   border-block: 1px solid var(--hairline);
   text-align: center;
+}
+/* `--er-acc-ink` dijaga ≥ 4,5:1 terhadap --paper VARIAN, tetapi --paper-2
+   statis & lebih gelap: sage turun ke 4,25:1 di sini. Dicampur sedikit tinta.
+   Tanpa color-mix → tinta; JANGAN fallback lewat deklarasi ganda: baris
+   ber-var() selalu menang saat parse lalu jadi `unset` di mesin lama. */
+.er-countdown-sec .er-eyebrow {
+  color: var(--ink);
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .er-countdown-sec .er-eyebrow {
+    color: color-mix(in srgb, var(--er-acc-ink, var(--rose)) 85%, var(--ink));
+  }
 }
 .er .countdown {
   display: grid;
@@ -512,7 +528,7 @@
   font-size: 9px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(36, 26, 30, 0.55);
+  color: rgba(36, 26, 30, 0.64);
   margin-top: 8px;
   display: block;
 }
@@ -594,8 +610,8 @@
   color: var(--paper);
 }
 .er-pill--solid:hover {
-  background: var(--rose);
-  border-color: var(--rose);
+  background: var(--er-acc-ink, var(--rose));
+  border-color: var(--er-acc-ink, var(--rose));
 }
 .er-cal {
   position: relative;
@@ -682,7 +698,7 @@
   font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--er-gold-ink);
 }
 .er-story__title {
   font-family: var(--er-serif-stack);
@@ -707,7 +723,7 @@
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(36, 26, 30, 0.55);
+  color: rgba(36, 26, 30, 0.64);
 }
 .er-account__num {
   font-size: 18px;

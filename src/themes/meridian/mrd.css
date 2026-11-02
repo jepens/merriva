@@ -424,7 +424,14 @@
   inset: 10px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   background: linear-gradient(160deg, #24344f, #0c1420 80%);
+}
+/* Foto mengisi bingkai. Tanpa ini `height:100%` (persentase siklik di grid)
+   mengikuti rasio asli foto: potret 2:3 meluber ±43px menutupi label peran. */
+.mrd-stepped__ph img {
+  position: absolute;
+  inset: 0;
 }
 .mrd-stepped__ph span {
   font-family: var(--mrd-disp);
@@ -459,7 +466,16 @@
   color: #20242e;
 }
 .mrd-countdown .mrd-eyebrow {
-  color: var(--mrd-gold);
+  /* Aksen di atas sampanye: emas/rosegold/perak mentah 1,9–3,3:1. Dicampur
+     navy statis → ≥ 4,5:1 di setiap varian. Tanpa color-mix (< Chrome 111 /
+     iOS 16.2) → emas tua statis via @supports: deklarasi ganda ber-var()
+     tidak berfungsi sebagai fallback (menang saat parse, lalu `unset`). */
+  color: #5f4a26;
+}
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .mrd-countdown .mrd-eyebrow {
+    color: color-mix(in srgb, var(--mrd-gold) 55%, var(--mrd-navy));
+  }
 }
 .mrd .countdown {
   display: grid;
@@ -488,7 +504,7 @@
   font-size: 8.5px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: rgba(32, 36, 46, 0.55);
+  color: rgba(32, 36, 46, 0.64);
   margin-top: 6px;
   display: block;
 }
@@ -629,6 +645,24 @@
   object-fit: cover;
   filter: brightness(0.9) saturate(0.92);
 }
+/* Scrim di dasar foto: keterangan terbaca di foto TERANG mana pun — halo
+   text-shadow saja tak cukup (diukur 1,1–2,6:1 di foto terang). */
+.mrd-gitem::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 56px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.55) 50%,
+    transparent
+  );
+  pointer-events: none;
+}
+.mrd-gitem figcaption {
+  z-index: 1;
+}
 .mrd-gitem figcaption {
   position: absolute;
   left: 50%;
@@ -637,7 +671,9 @@
   font-size: 9px;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: rgba(247, 244, 236, 0.7);
+  color: rgba(247, 244, 236, 0.92);
+  /* Di atas FOTO: halo gelap agar terbaca di foto terang (pola meihua). */
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
   z-index: 1;
 }
 

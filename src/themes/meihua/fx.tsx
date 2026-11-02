@@ -10,8 +10,8 @@ import {
  * Koreografi scroll Meihua (klien, tier Story — TANPA WebGL/partikel).
  * gsap dijalankan SETELAH cover dibuka via `useThemeMotion`. Nuansa Tionghoa:
  * dahan mei hua tergambar (scrub) + kuntum mekar berurutan (back.out),
- * mask-reveal per baris, blok reveal, galeri terbuka dari tengah
- * ("pintu bulan").
+ * lentera bergoyang, mask-reveal per baris, blok reveal, galeri terbuka dari
+ * tengah ("pintu bulan").
  */
 export function MeihuaFx() {
   const { opened, motionOn, rootRef } = useCoverGate();
@@ -80,6 +80,19 @@ export function MeihuaFx() {
           trigger: hero ?? g,
           start: `top ${62 - i * 8}%`,
         },
+      });
+    });
+
+    // Lentera bergoyang halus dari talinya (yoyo tak berujung, transform saja
+    // — murah). Nilai = prototipe; arah berlawanan agar tak seirama.
+    q<HTMLElement>(".mh-stage .mh-lantern").forEach((el, i) => {
+      gsap.to(el, {
+        rotation: i % 2 ? -5 : 5,
+        duration: 2.6 + i * 0.4,
+        yoyo: true,
+        repeat: -1,
+        ease: "sine.inOut",
+        transformOrigin: "50% 0",
       });
     });
 

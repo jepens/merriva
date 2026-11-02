@@ -43,5 +43,8 @@ export const themeRegistry: Record<string, () => Promise<ThemeModule>> = {
 export function getThemeLoader(
   slug: string,
 ): (() => Promise<ThemeModule>) | null {
-  return themeRegistry[slug] ?? null;
+  // `hasOwn`, bukan `?? null`: slug bisa datang dari URL (/preview/tema/[slug])
+  // dan `constructor`/`__proto__`/`toString` adalah kunci WARISAN objek biasa —
+  // tanpa ini hasilnya fungsi bawaan yang truthy → crash 500, bukan 404.
+  return Object.hasOwn(themeRegistry, slug) ? themeRegistry[slug] : null;
 }

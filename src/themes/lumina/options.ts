@@ -52,7 +52,7 @@ export const luminaOptions: ThemeOptions = {
     root: "lm",
     vars: [
       { name: "--lm-taupe", token: "accent" },
-      { name: "--lm-taupe-ink", token: "accent" },
+      { name: "--lm-taupe-ink", token: "accentText" },
     ],
   },
 };

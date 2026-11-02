@@ -14,6 +14,29 @@ import { SettingsStep } from "./steps/settings-step";
 import { TimelineStep } from "./steps/timeline-step";
 import type { EditorValues, PhotoSlots, SongOption } from "./types";
 
+/**
+ * Langkah Galeri. `showGallery` false = tema aktif tak punya section galeri
+ * (sakinah): pengunggahnya disembunyikan dan centangnya tak menuntut foto —
+ * menuntutnya hanya mendorong pemilik menghabiskan kuota paket untuk foto yang
+ * tak pernah tampil.
+ */
+const galleryStep = (showGallery: boolean): EditorStep => ({
+  key: "gallery",
+  label: copy.editor.steps.gallery,
+  render: (c) => (
+    <GalleryStep
+      form={c.form}
+      invitationId={c.invitationId}
+      coverSlot={c.photoSlots.cover}
+      maxPhotos={c.maxPhotos}
+      media={c.media}
+      setMedia={c.setMedia}
+      showGallery={showGallery}
+    />
+  ),
+  complete: (_v, mediaCount) => !showGallery || mediaCount > 0,
+});
+
 const STEPS: EditorStep[] = [
   {
     key: "info",
@@ -49,21 +72,7 @@ const STEPS: EditorStep[] = [
     render: (c) => <ScheduleStep form={c.form} />,
     complete: (v) => isScheduleComplete(v.events),
   },
-  {
-    key: "gallery",
-    label: copy.editor.steps.gallery,
-    render: (c) => (
-      <GalleryStep
-        form={c.form}
-        invitationId={c.invitationId}
-        coverSlot={c.photoSlots.cover}
-        maxPhotos={c.maxPhotos}
-        media={c.media}
-        setMedia={c.setMedia}
-      />
-    ),
-    complete: (_v, mediaCount) => mediaCount > 0,
-  },
+  galleryStep(true),
   {
     key: "story",
     label: copy.editor.steps.story,
@@ -97,8 +106,15 @@ const STEPS: EditorStep[] = [
   },
 ];
 
+const STEPS_NO_GALLERY = STEPS.map((s) =>
+  s.key === "gallery" ? galleryStep(false) : s,
+);
+
 /** Editor undangan pernikahan (SPEC §4.4). Kerangka & autosave dari EditorShell. */
-export function WeddingEditor(props: {
+export function WeddingEditor({
+  showGallery = true,
+  ...props
+}: {
   invitationId: string;
   slug: string;
   defaultValues: EditorValues;
@@ -107,6 +123,10 @@ export function WeddingEditor(props: {
   songs: SongOption[];
   photoSlots: PhotoSlots;
   initialStep?: string;
+  /** `false` = tema aktif tak punya section galeri (dihitung di server). */
+  showGallery?: boolean;
 }) {
-  return <EditorShell {...props} steps={STEPS} />;
+  return (
+    <EditorShell {...props} steps={showGallery ? STEPS : STEPS_NO_GALLERY} />
+  );
 }

@@ -13,8 +13,13 @@
   --vd-sage: #75855f;
   --vd-sage-d: #3f4a34;
   --vd-terra: #c2704e;
+  /* Versi TEKS/latar-tombol aman-kontras. --vd-terra-ink ≥ 4,5:1 juga di
+     --vd-ivory-2; --vd-sage-ink = accentText varian bawaan (≥ 4,5:1 di
+     --vd-ivory), ditimpa penjaga kontras per varian. */
+  --vd-terra-ink: #9b593e;
+  --vd-sage-ink: #637050;
   --vd-ink: #3a3126;
-  --vd-muted: rgba(58, 49, 38, 0.62);
+  --vd-muted: rgba(58, 49, 38, 0.71);
   --vd-hairline: rgba(58, 49, 38, 0.18);
   --vd-serif: var(--vd-disp-a);
   --vd-sans: var(--vd-body-a);
@@ -68,11 +73,11 @@
   letter-spacing: 0.26em;
   text-transform: uppercase;
   font-weight: 600;
-  color: var(--vd-sage);
+  color: var(--vd-sage-ink);
   margin: 0;
 }
 .vd-eyebrow--sage {
-  color: var(--vd-sage);
+  color: var(--vd-sage-ink);
 }
 .vd-lead {
   color: var(--vd-muted);
@@ -195,7 +200,7 @@
   display: block;
   font-family: var(--vd-serif-stack);
   font-style: italic;
-  color: var(--vd-terra);
+  color: var(--vd-terra-ink);
   font-size: 20px;
   margin: 2px 0;
 }
@@ -229,7 +234,7 @@
 .vd-open {
   appearance: none;
   border: 0;
-  background: var(--vd-sage);
+  background: var(--vd-sage-ink);
   color: #fff;
   font-family: var(--vd-sans-stack);
   font-weight: 600;
@@ -409,7 +414,7 @@
   font-size: 10px;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: var(--vd-terra);
+  color: var(--vd-terra-ink);
   font-weight: 600;
 }
 .vd-pressed__name {
@@ -548,13 +553,13 @@
   color: var(--vd-ivory);
 }
 .vd-pill--solid {
-  background: var(--vd-terra);
-  border-color: var(--vd-terra);
+  background: var(--vd-terra-ink);
+  border-color: var(--vd-terra-ink);
   color: #fff;
 }
 .vd-pill--solid:hover {
-  background: #a95c3e;
-  border-color: #a95c3e;
+  background: #864d36;
+  border-color: #864d36;
 }
 .vd-cal {
   position: relative;
@@ -643,7 +648,7 @@
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--vd-sage);
+  color: var(--vd-sage-ink);
   margin: 0 0 0.3rem;
 }
 .vd-story__title {
@@ -707,8 +712,8 @@
   transition: 0.25s;
 }
 .vd-copy:hover {
-  background: var(--vd-sage);
-  border-color: var(--vd-sage);
+  background: var(--vd-sage-ink);
+  border-color: var(--vd-sage-ink);
   color: #fff;
 }
 
@@ -736,7 +741,7 @@
   font-size: 10px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(250, 246, 237, 0.55);
+  color: rgba(250, 246, 237, 0.64);
   border: 1px dashed rgba(250, 246, 237, 0.35);
   padding: 8px 14px;
   border-radius: 999px;

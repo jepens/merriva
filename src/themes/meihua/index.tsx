@@ -212,8 +212,10 @@ export default function Meihua({ data }: ThemeComponentProps) {
     envelope: hasEnvelope ? (
       <Envelope envelope={envelope} slug={data.slug} />
     ) : null,
+    // Ivory seperti prototipe: guestbook.css bersama mengandaikan latar terang —
+    // di gradien merah label formulirnya hanya ±1,3:1.
     rsvp: (
-      <section className="mh-section">
+      <section className="mh-section mh-ivory">
         <div className="mh-inner">
           <GuestbookSection slug={data.slug} />
         </div>

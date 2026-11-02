@@ -15,9 +15,9 @@
   --kr-sogan: #6b4a2b;
   --kr-sogan-d: #452d15;
   --kr-gold: #c09a4a;
-  --kr-gold-d: #9a7a35;
+  --kr-gold-d: #7b612a;
   --kr-ink: #3b2f22;
-  --kr-muted: rgba(59, 47, 34, 0.62);
+  --kr-muted: rgba(59, 47, 34, 0.72);
   --kr-hairline: rgba(107, 74, 43, 0.22);
   /* Pasangan font bawaan = "a". Kustomisasi (Fase G) menimpa lewat inline style
      di elemen `.kr` (inline menang atas rule kelas → var milik-sendiri). */
@@ -353,7 +353,9 @@
   font-size: 10.5px;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: var(--kr-gold);
+  /* Latar --kr-sogan-d = aksen varian bila ada custom (sogan #6b4a2b):
+     emas mentah 3,0:1. Krem keemasan = warna mono/watermark footer. */
+  color: #e5ce9e;
 }
 
 /* Mempelai — kartu keraton ------------------------------------------------ */
@@ -596,13 +598,13 @@
   color: var(--kr-krem);
 }
 .kr-pill--gold {
-  background: var(--kr-gold);
-  border-color: var(--kr-gold);
+  background: var(--kr-gold-d);
+  border-color: var(--kr-gold-d);
   color: #fff;
 }
 .kr-pill--gold:hover {
-  background: var(--kr-gold-d);
-  border-color: var(--kr-gold-d);
+  background: #6b5525;
+  border-color: #6b5525;
 }
 .kr-cal {
   position: relative;
@@ -664,6 +666,24 @@
   height: 100%;
   object-fit: cover;
 }
+/* Scrim di dasar foto: keterangan terbaca di foto TERANG mana pun — halo
+   text-shadow saja tak cukup (diukur 1,1–2,6:1 di foto terang). */
+.kr-g-item::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 56px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.55) 50%,
+    transparent
+  );
+  pointer-events: none;
+}
+.kr-g-item figcaption {
+  z-index: 1;
+}
 .kr-g-item figcaption {
   position: absolute;
   left: 12px;
@@ -672,6 +692,8 @@
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: rgba(245, 237, 220, 0.9);
+  /* Di atas FOTO: halo gelap agar terbaca di foto terang (pola meihua). */
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
 }
 
 /* RSVP (GuestbookSection dibungkus .kr-inner) + Amplop -------------------- */
@@ -735,8 +757,8 @@
   gap: 6px;
 }
 .kr-copy:hover {
-  background: var(--kr-gold);
-  border-color: var(--kr-gold);
+  background: var(--kr-gold-d);
+  border-color: var(--kr-gold-d);
   color: #fff;
 }
 
@@ -763,7 +785,7 @@
   font-size: 9px;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: rgba(245, 237, 220, 0.65);
+  color: rgba(245, 237, 220, 0.74);
 }
 .kr-footer__mono {
   font-family: var(--kr-disp-stack);
@@ -774,7 +796,7 @@
 }
 .kr-footer__msg {
   font-size: 12.5px;
-  color: rgba(245, 237, 220, 0.7);
+  color: rgba(245, 237, 220, 0.78);
   margin-top: 12px;
   line-height: 1.9;
   max-width: 320px;
@@ -786,7 +808,7 @@
   font-size: 10px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(245, 237, 220, 0.6);
+  color: rgba(245, 237, 220, 0.74);
   border: 1px solid rgba(245, 237, 220, 0.28);
   padding: 8px 14px;
   border-radius: 999px;

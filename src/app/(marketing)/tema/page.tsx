@@ -7,7 +7,10 @@ import {
 import { PexelsCreditFooter } from "@/components/marketing/pexels-credit";
 import { ThemeCard } from "@/components/marketing/theme-poster";
 import { copy } from "@/lib/copy";
-import { getActiveThemes } from "@/server/marketing/catalog";
+import {
+  expandThemeVariants,
+  getActiveThemes,
+} from "@/server/marketing/catalog";
 
 export const metadata: Metadata = {
   title: copy.marketing.pages.themes.title,
@@ -18,7 +21,8 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function ThemesPage() {
-  const themes = await getActiveThemes();
+  // Satu kartu per (tema × varian) — THEME-WAVE3 §4. Landing tetap per tema.
+  const themes = expandThemeVariants(await getActiveThemes());
   const p = copy.marketing.pages.themes;
   const tc = copy.marketing.themes;
 
@@ -59,7 +63,7 @@ export default async function ThemesPage() {
             categories={themes.map((t) => t.categories)}
             labels={labels}
             cards={themes.map((t) => (
-              <ThemeCard key={t.slug} theme={t} />
+              <ThemeCard key={`${t.slug}:${t.variant?.id ?? ""}`} theme={t} />
             ))}
           />
           <div style={{ marginTop: "2.5rem" }}>

@@ -13,7 +13,7 @@
   --lm-ink: #2a2723;
   --lm-taupe: #9a7b58;
   --lm-taupe-ink: #7a5f40;
-  --lm-muted: rgba(42, 39, 35, 0.58);
+  --lm-muted: rgba(42, 39, 35, 0.67);
   --lm-line: rgba(42, 39, 35, 0.14);
   --lm-text: rgba(42, 39, 35, 0.85);
   --lm-serif: var(--lm-display), Georgia, serif;
@@ -288,7 +288,7 @@
   font-weight: 600;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--lm-taupe);
+  color: var(--lm-taupe-ink);
   margin: 0 0 1rem;
 }
 .lm-eyebrow--center {
@@ -346,7 +346,7 @@
   font-style: normal;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--lm-taupe);
+  color: var(--lm-taupe-ink);
 }
 
 /* Divider ------------------------------------------------------------------ */
@@ -510,7 +510,7 @@
   font-size: 0.64rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--lm-taupe);
+  color: var(--lm-taupe-ink);
   margin: 0 0 0.5rem;
 }
 .lm-account__num {
@@ -541,7 +541,7 @@
   transition: color 0.25s ease;
 }
 .lm-btn:hover {
-  color: var(--lm-taupe);
+  color: var(--lm-taupe-ink);
 }
 .lm-btn--sm {
   padding: 0.35rem 0.4rem;
@@ -557,7 +557,7 @@
   letter-spacing: 0.2em;
 }
 .lm-btn--solid:hover {
-  background: var(--lm-taupe);
+  background: var(--lm-taupe-ink);
   color: var(--lm-paper);
 }
 
@@ -634,7 +634,7 @@
   font-size: 0.64rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--lm-taupe);
+  color: var(--lm-taupe-ink);
   margin: 0 0 0.35rem;
 }
 .lm-story__title {
@@ -691,7 +691,7 @@
   padding-bottom: 6px;
 }
 .lm-watermark a {
-  color: var(--lm-taupe);
+  color: var(--lm-taupe-ink);
   text-decoration: none;
 }
 

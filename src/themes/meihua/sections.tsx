@@ -90,6 +90,24 @@ export function Branch() {
   );
 }
 
+/**
+ * Lentera gantung (§2.4) — sepasang di padding atas section mempelai, diayun
+ * fx. Letaknya jauh di atas 囍 pemisah sehingga tak pernah menumpuk atau
+ * memotongnya (§3.4).
+ */
+function Lantern({ side }: { side: "l" | "r" }) {
+  return (
+    <span className={`mh-lantern mh-lantern--${side}`} aria-hidden>
+      <svg viewBox="0 0 44 74" focusable="false">
+        <path d="M22 0 V10" />
+        <ellipse cx="22" cy="32" rx="18" ry="22" />
+        <path d="M8 18 H36 M8 46 H36" />
+        <path d="M22 54 V62 M16 62 H28 M18 62 V72 M22 62 V74 M26 62 V71" />
+      </svg>
+    </span>
+  );
+}
+
 /* -------------------------------------------------------------- Hero ------- */
 export function Hero({ greetingOpen }: { greetingOpen?: string }) {
   return (
@@ -177,6 +195,8 @@ export function Couple({
 }) {
   return (
     <section className="mh-section">
+      <Lantern side="l" />
+      <Lantern side="r" />
       <div className="mh-center mh-reveal">
         <span className="mh-eyebrow">{L.couple.eyebrow}</span>
         <h2 className="mh-title">{L.couple.heading}</h2>

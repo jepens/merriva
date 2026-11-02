@@ -10,7 +10,7 @@
   --ar-paper: #fbfaf7;
   --ar-ink: #151310;
   --ar-red: #c0392b;
-  --ar-muted: rgba(21, 19, 16, 0.55);
+  --ar-muted: rgba(21, 19, 16, 0.6);
   --ar-hairline: rgba(21, 19, 16, 0.14);
   --ar-serif-stack: var(--ar-serif), Georgia, serif;
   --ar-sans-stack: var(--ar-sans), system-ui, sans-serif;

@@ -892,6 +892,9 @@ export const copy = {
       invalidFile: "Berkas harus berupa gambar (JPG, PNG, atau WebP).",
       tooLarge: "Foto terlalu besar setelah dikompres. Coba foto lain.",
       error: "Gagal mengunggah foto. Coba lagi.",
+      // Pengganti pengunggah di tema tanpa section galeri (sakinah): tanpa
+      // penjelasan, langkah "Galeri" yang tak berisi galeri terasa rusak.
+      notInTheme: "Tema ini tidak menampilkan galeri foto.",
     },
     // Foto bernama (SPEC §4.4 langkah 2): satu per jenis, di luar batas foto
     // paket — batas itu tentang galeri.
@@ -2026,6 +2029,8 @@ export const copy = {
       preview: "Preview",
       useTheme: "Gunakan Tema",
       demoOf: (name: string) => `Lihat demo tema ${name}`,
+      // Judul kartu varian `/tema` + plakat pratinjaunya (THEME-WAVE3 §4).
+      variantTitle: (theme: string, variant: string) => `${theme} — ${variant}`,
       soon: "Demo segera hadir",
       tierPremium: "Premium",
       tierStandard: "Standar",
@@ -2034,8 +2039,9 @@ export const copy = {
       filterLabel: "Saring per kategori acara",
       empty: "Belum ada tema pada kategori ini.",
       // Satuan (bukan fungsi) agar bisa dilewatkan sebagai prop ke komponen client
-      // tanpa menyeret seluruh objek `copy` ke bundel /tema.
-      countUnit: "tema tersedia",
+      // tanpa menyeret seluruh objek `copy` ke bundel /tema. Kartu /tema = tema ×
+      // varian (THEME-WAVE3 §4), jadi yang dihitung desain, bukan tema.
+      countUnit: "pilihan desain",
     },
     features: {
       eyebrow: "Kenapa Merriva",
@@ -2137,7 +2143,7 @@ export const copy = {
       themes: {
         title: "Katalog Tema",
         subtitle:
-          "Delapan tema lintas tiga kategori acara. Buka demo hidup masing-masing tanpa perlu masuk.",
+          "Tiap tema hadir dalam beberapa varian warna terkurasi, lintas tiga kategori acara. Buka demo hidup masing-masing tanpa perlu masuk.",
       },
       pricing: {
         title: "Harga",

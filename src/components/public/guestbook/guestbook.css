@@ -73,6 +73,12 @@
   resize: vertical;
 }
 
+/* Placeholder: preflight Tailwind memberi currentColor 50% → ±3:1. Latar
+   input SAMA (#fffdfc) di semua tema, jadi aman ditetapkan di sini. */
+.gb-field input::placeholder,
+.gb-field textarea::placeholder {
+  color: #7a625f;
+}
 .gb-attend {
   border: none;
   padding: 0;

@@ -13,7 +13,11 @@
   --ft-coral: #e56a4e;
   --ft-teal: #2e7d6b;
   --ft-choco: #4a3423;
-  --ft-muted: rgba(74, 52, 35, 0.65);
+  /* Koral sebagai TEKS di krem, dan tinta di atas isian cerah (koral/sun &
+     aksen varian mint/sky/pink): keduanya ≥ 4,5:1. */
+  --ft-coral-ink: #ae513b;
+  --ft-choco-d: #352519;
+  --ft-muted: rgba(74, 52, 35, 0.72);
   --ft-hairline: rgba(74, 52, 35, 0.16);
   --ft-disp-stack: var(--ft-disp), system-ui, sans-serif;
   --ft-body-stack: var(--ft-body), system-ui, sans-serif;
@@ -90,7 +94,7 @@
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ft-coral);
+  color: var(--ft-coral-ink);
   margin: 0;
 }
 .ft-center {
@@ -230,7 +234,7 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   background: var(--ft-coral);
-  color: #fff;
+  color: var(--ft-choco-d);
   padding: 10px 18px;
   border-radius: 999px;
   transform: rotate(-4deg);
@@ -265,6 +269,7 @@
 }
 .ft-chip--sun {
   background: var(--ft-sun);
+  color: var(--ft-choco-d);
 }
 .ft-guest {
   margin: 0 auto 24px;
@@ -293,7 +298,7 @@
   appearance: none;
   border: 2px solid var(--ft-choco);
   background: var(--ft-sun);
-  color: var(--ft-choco);
+  color: var(--ft-choco-d);
   font-family: var(--ft-disp-stack);
   font-weight: 800;
   font-size: 14px;
@@ -317,7 +322,7 @@
 .ft-marquee {
   overflow: hidden;
   background: var(--ft-coral);
-  color: var(--ft-cream);
+  color: var(--ft-choco-d);
   padding: 12px 0;
 }
 .ft-marquee__track {
@@ -448,7 +453,7 @@
   font-style: normal;
   font-weight: 600;
   font-size: 12px;
-  color: var(--ft-terra, var(--ft-coral));
+  color: var(--ft-coral-ink);
   margin-top: 8px;
 }
 
@@ -642,7 +647,7 @@
   place-items: center;
   font-family: var(--ft-disp-stack);
   font-weight: 800;
-  color: #fff;
+  color: var(--ft-choco-d);
   background: var(--ft-coral);
 }
 .ft-wish:nth-child(even) .ft-wish__ava {
@@ -732,7 +737,6 @@
 }
 .ft-footer__note {
   font-size: 13px;
-  opacity: 0.85;
   margin-top: 10px;
   line-height: 1.8;
   max-width: 320px;

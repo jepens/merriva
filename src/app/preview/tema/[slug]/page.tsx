@@ -7,7 +7,12 @@ import { PreviewEmbedStyle } from "@/components/preview/preview-frame";
 import { ThemeShowcase } from "@/components/preview/theme-showcase";
 import { GuestPersonalizationProvider } from "@/components/public/guest-personalization";
 import { copy } from "@/lib/copy";
-import { getActiveThemes } from "@/server/marketing/catalog";
+import {
+  getActiveThemes,
+  pickPreviewVariant,
+  themePreviewHref,
+  VARIANT_PARAM,
+} from "@/server/marketing/catalog";
 import { getThemeDemoLoader } from "@/themes/demo-data-registry";
 import { getThemeLoader } from "@/themes/registry";
 import { ThemeStyles } from "@/themes/theme-styles";
@@ -20,14 +25,28 @@ function humanizeSlug(slug: string): string {
     .join(" ");
 }
 
+/** `?variant=` mentah dari URL — hanya untuk `pickPreviewVariant`, jangan dirender. */
+type PreviewSearchParams = Promise<{
+  embed?: string;
+  [VARIANT_PARAM]?: string | string[];
+}>;
+
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: PreviewSearchParams;
 }): Promise<Metadata> {
   // Template root menambahkan "· Merriva" → jangan gandakan brand di sini.
   const { slug } = await params;
-  return { title: `Contoh Tema ${humanizeSlug(slug)}` };
+  const variant = pickPreviewVariant(slug, (await searchParams)[VARIANT_PARAM]);
+  const name = humanizeSlug(slug);
+  return {
+    title: `Contoh Tema ${
+      variant ? copy.marketing.themes.variantTitle(name, variant.name) : name
+    }`,
+  };
 }
 
 /** Label kategori tema: >1 kategori → "Universal", selainnya nama kategori. */
@@ -101,30 +120,41 @@ async function loadShowcaseContext(slug: string): Promise<ShowcaseContext> {
  * Dipakai katalog tema (landing M4.3) & QA visual tema baru. `/preview/tema/{slug}`.
  * Default: chrome marketing (navbar + plakat + spesimen ponsel + footer).
  * `?embed=1` = render tema polos (isi iframe bingkai ponsel).
+ * `?variant={id}` = varian katalog (THEME-WAVE3 §4) — hanya id dari `options.ts`
+ * tema itu yang diterapkan; selain itu varian bawaan.
  */
 export default async function ThemeDemoPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ embed?: string }>;
+  searchParams: PreviewSearchParams;
 }) {
   const { slug } = await params;
-  const { embed } = await searchParams;
+  const sp = await searchParams;
   const loader = getThemeLoader(slug);
   const demoLoader = getThemeDemoLoader(slug);
   if (!loader || !demoLoader) notFound();
+  const variant = pickPreviewVariant(slug, sp[VARIANT_PARAM]);
 
   // Isi iframe: tema polos tanpa chrome marketing → viewport bersarang (100dvh,
   // fixed, reveal berperilaku seperti di ponsel).
-  if (embed) {
+  if (sp.embed) {
     const Theme = (await loader()).default;
     const { demoInvitationData } = await demoLoader();
+    // Varian dipasang pada SALINAN data demo request ini — tak ada undangan
+    // siapa pun yang dibaca atau ditulis, dan modul demo tak termutasi.
+    const data = variant?.custom
+      ? {
+          ...demoInvitationData,
+          settings: { ...demoInvitationData.settings, custom: variant.custom },
+        }
+      : demoInvitationData;
     return (
       <GuestPersonalizationProvider slug={demoInvitationData.slug}>
         <ThemeStyles slug={slug} />
         <PreviewEmbedStyle />
-        <Theme data={demoInvitationData} />
+        <Theme data={data} />
       </GuestPersonalizationProvider>
     );
   }
@@ -134,10 +164,14 @@ export default async function ThemeDemoPage({
     <MarketingShell>
       <ThemeShowcase
         slug={slug}
-        name={ctx.name}
+        name={
+          variant
+            ? copy.marketing.themes.variantTitle(ctx.name, variant.name)
+            : ctx.name
+        }
         category={ctx.category}
         tier={ctx.tier}
-        embedSrc={`/preview/tema/${slug}?embed=1`}
+        embedSrc={themePreviewHref(slug, { embed: true, variant: variant?.id })}
         credit={<PexelsCredit slug={slug} />}
         prev={ctx.prev}
         next={ctx.next}

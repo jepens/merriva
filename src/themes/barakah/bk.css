@@ -14,8 +14,11 @@
   --bk-emerald-d: #092a22;
   --bk-gold: #b78d3f;
   --bk-gold-l: #d3b36e;
+  /* Emas sebagai TEKS di latar terang (≥ 4,5:1 juga di --bk-sand-2);
+     --bk-gold tetap untuk garis & ornamen. */
+  --bk-gold-ink: #7d612b;
   --bk-ink: #22312a;
-  --bk-muted: rgba(34, 49, 42, 0.62);
+  --bk-muted: rgba(34, 49, 42, 0.7);
   --bk-hairline: rgba(14, 59, 48, 0.18);
   /* Pasangan font bawaan = "a". Kustomisasi (Fase G) menimpa lewat inline style
      di elemen `.bk` (inline menang atas rule kelas → var milik-sendiri). */
@@ -71,7 +74,7 @@
   letter-spacing: 0.26em;
   text-transform: uppercase;
   font-weight: 600;
-  color: var(--bk-gold);
+  color: var(--bk-gold-ink);
   margin: 0;
 }
 .bk-eyebrow--gold {
@@ -102,7 +105,7 @@
 }
 .bk-title em {
   font-style: normal;
-  color: var(--bk-gold);
+  color: var(--bk-gold-ink);
 }
 
 /* Baris bermask — disembunyikan hanya bila JS + motion aktif. */
@@ -391,7 +394,7 @@
   font-size: 10px;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: var(--bk-gold);
+  color: var(--bk-gold-ink);
   font-weight: 600;
   margin: 18px 0 6px;
 }
@@ -480,7 +483,7 @@
   font-size: 10px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--bk-gold);
+  color: var(--bk-gold-ink);
   font-weight: 600;
 }
 .bk-event__title {
@@ -527,13 +530,13 @@
   color: var(--bk-sand);
 }
 .bk-pill--gold {
-  background: var(--bk-gold);
-  border-color: var(--bk-gold);
+  background: var(--bk-gold-ink);
+  border-color: var(--bk-gold-ink);
   color: #fff;
 }
 .bk-pill--gold:hover {
-  background: #9a7433;
-  border-color: #9a7433;
+  background: #6a5225;
+  border-color: #6a5225;
 }
 .bk-cal {
   position: relative;
@@ -623,7 +626,7 @@
   font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--bk-gold);
+  color: var(--bk-gold-ink);
   margin: 0 0 0.3rem;
 }
 .bk-story__title {
@@ -654,7 +657,7 @@
   font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--bk-gold);
+  color: var(--bk-gold-ink);
   font-weight: 600;
   margin: 0;
 }
@@ -684,8 +687,8 @@
   transition: 0.25s;
 }
 .bk-copy:hover {
-  background: var(--bk-gold);
-  border-color: var(--bk-gold);
+  background: var(--bk-gold-ink);
+  border-color: var(--bk-gold-ink);
   color: #fff;
 }
 
@@ -725,7 +728,7 @@
   font-size: 10px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(244, 239, 226, 0.6);
+  color: rgba(244, 239, 226, 0.64);
   border: 1px solid rgba(244, 239, 226, 0.25);
   padding: 8px 14px;
   border-radius: 999px;

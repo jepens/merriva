@@ -40,5 +40,8 @@ export const themeOptionsRegistry: Record<string, ThemeOptions> = {
 };
 
 export function getThemeOptions(slug: string): ThemeOptions | null {
-  return themeOptionsRegistry[slug] ?? null;
+  // `hasOwn`: slug dari URL (`?variant=` pratinjau); kunci warisan bukan tema.
+  return Object.hasOwn(themeOptionsRegistry, slug)
+    ? themeOptionsRegistry[slug]
+    : null;
 }

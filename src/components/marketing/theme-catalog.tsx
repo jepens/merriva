@@ -9,7 +9,7 @@ export type ThemeFilter = "all" | InvitationCategory;
 export interface ThemeCatalogLabels {
   tabs: { key: ThemeFilter; label: string }[];
   filterLabel: string;
-  /** Satuan hitung, mis. "tema tersedia" → dirakit sebagai `${n} ${countUnit}`. */
+  /** Satuan hitung, mis. "pilihan desain" → dirakit sebagai `${n} ${countUnit}`. */
   countUnit: string;
   empty: string;
 }

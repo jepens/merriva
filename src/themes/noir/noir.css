@@ -177,7 +177,7 @@
   font-size: 9px;
   letter-spacing: 0.42em;
   text-transform: uppercase;
-  color: rgba(236, 231, 221, 0.4);
+  color: rgba(236, 231, 221, 0.52);
 }
 .nr.is-js.is-open .nr-cover__bar {
   height: 50vh;
@@ -292,7 +292,7 @@
   font-size: 9.5px;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: rgba(236, 231, 221, 0.4);
+  color: rgba(236, 231, 221, 0.52);
 }
 
 /* ------------------------------------------------------------- Section ----- */
@@ -614,6 +614,24 @@
   object-fit: cover;
   filter: brightness(0.88) saturate(0.9);
 }
+/* Scrim di dasar foto: keterangan terbaca di foto TERANG mana pun — halo
+   text-shadow saja tak cukup (diukur 1,1–2,6:1 di foto terang). */
+.nr-gallery__item::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 56px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.55) 50%,
+    transparent
+  );
+  pointer-events: none;
+}
+.nr-gallery__item figcaption {
+  z-index: 1;
+}
 .nr-gallery__item figcaption {
   position: absolute;
   left: 12px;
@@ -743,13 +761,47 @@
 .nr-footer .nr-lead {
   color: rgba(236, 231, 221, 0.7);
 }
+/* Buku tamu (guestbook.css bersama) dirancang untuk latar TERANG: label
+   formulir #4a2d32 di atas #0d0d12 ≈ 1,6:1 — praktis tak terlihat. noir
+   merendernya langsung di latar gelap, jadi warnanya ditimpa di sini (pola
+   prisma untuk tiketnya). */
+.nr .gb-eyebrow,
+.nr .gb-note__name {
+  color: var(--nr-champ);
+}
+.nr .gb-field > span,
+.nr .gb-attend legend,
+.nr .gb-radio,
+.nr .gb-done,
+.nr .gb-note__msg {
+  color: var(--nr-bone);
+}
+.nr .gb-sub,
+.nr .gb-wall__empty,
+.nr .gb-gift-intro,
+.nr .gb-gift-cancel {
+  color: rgba(236, 231, 221, 0.72);
+}
+.nr .gb-note,
+.nr .gb-gift-form {
+  background: rgba(236, 231, 221, 0.05);
+  border-color: var(--nr-hairline);
+}
+.nr .gb-more,
+.nr .gb-gift-trigger {
+  color: var(--nr-champ);
+  border-color: var(--nr-champ);
+}
+.nr .gb-error {
+  color: #ff8f86;
+}
 .nr-watermark {
   display: inline-block;
   margin-top: 34px;
   font-size: 9px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: rgba(236, 231, 221, 0.4);
+  color: rgba(236, 231, 221, 0.52);
   border: 1px solid var(--nr-hairline);
   padding: 8px 14px;
   border-radius: 2px;

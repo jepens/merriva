@@ -69,6 +69,7 @@ export const verdantOptions: ThemeOptions = {
       { name: "--vd-ivory", token: "paper" },
       { name: "--vd-ink", token: "ink" },
       { name: "--vd-sage", token: "accent" },
+      { name: "--vd-sage-ink", token: "accentText" },
       { name: "--vd-serif", token: "disp" },
       { name: "--vd-sans", token: "body" },
     ],

@@ -108,8 +108,13 @@ export default async function EditInvitationPage({
     .select("slug")
     .eq("id", inv.theme_id)
     .maybeSingle();
-  const slotTema = (tema?.slug ? getThemeOptions(tema.slug) : null)?.media
-    ?.slots;
+  const opsiTema = tema?.slug ? getThemeOptions(tema.slug) : null;
+  const slotTema = opsiTema?.media?.slots;
+  // Prinsip yang sama untuk galeri: tema tanpa section `gallery` (sakinah) tak
+  // ditawari unggah galeri — fotonya memakan kuota paket tanpa pernah tampil.
+  // Tema tanpa `options` → perilaku lama (galeri ditawarkan).
+  const showGallery =
+    !opsiTema || opsiTema.sections.some((s) => s.id === "gallery");
 
   // Varian DISPLAY: bingkai penyesuaian bisa diperbesar sampai 4x, dan thumb
   // 400px akan terlihat pecah persis saat pemilik sedang menilai framing.
@@ -188,6 +193,7 @@ export default async function EditInvitationPage({
           songs={songs}
           photoSlots={photoSlots}
           initialStep={initialStep}
+          showGallery={showGallery}
         />
       ) : content.category === "corporate" ? (
         <CorporateEditor

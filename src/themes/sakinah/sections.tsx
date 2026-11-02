@@ -21,7 +21,8 @@ import { L } from "./labels";
  * Section tema `sakinah` (syar'i TANPA FOTO, tier Craft) — acuan visual
  * `prototypes/sakinah-craft.html`. TANPA gsap/canvas: hanya `Reveal` bersama
  * (IO) + CSS. Nol foto & nol siluet wajah di seluruh tema (THEME-WAVE3 §3.3):
- * kartu mempelai memakai MEDALI INISIAL, galeri tak ada (diganti section Doa).
+ * hero memakai MONOGRAM, kartu mempelai memakai MEDALI INISIAL, galeri tak ada
+ * (diganti section Doa).
  */
 
 const PRELINE = { whiteSpace: "pre-line" as const };
@@ -47,13 +48,44 @@ function Eyebrow({ children }: { children: ReactNode }) {
 }
 
 /* -------------------------------------------------------------- Hero ------- */
-export function Hero({ greetingOpen }: { greetingOpen?: string }) {
+export function Hero({
+  greetingOpen,
+  brideName,
+  groomName,
+}: {
+  greetingOpen?: string;
+  brideName: string;
+  groomName: string;
+}) {
   return (
     <header className="sk-section sk-center sk-hero">
       <Reveal>
-        <Eyebrow>{L.hero.eyebrow}</Eyebrow>
+        {/* Monogram pengganti foto (§2.3): inisial LATIN — prototipe memakai
+            huruf Arab. `aria-hidden`: nama lengkap terbaca di section
+            mempelai; dua huruf lepas tak bermakna bagi pembaca layar. */}
+        <div className="sk-medallion" aria-hidden>
+          <svg viewBox="0 0 100 100" focusable="false">
+            <rect x="18" y="18" width="64" height="64" />
+            <rect
+              x="18"
+              y="18"
+              width="64"
+              height="64"
+              transform="rotate(45 50 50)"
+            />
+            <circle cx="50" cy="50" r="47" strokeDasharray="2 5" />
+          </svg>
+          <span className="sk-medallion__mono">
+            {initialOf(brideName)}
+            <em>&amp;</em>
+            {initialOf(groomName)}
+          </span>
+        </div>
       </Reveal>
       <Reveal delay={90}>
+        <Eyebrow>{L.hero.eyebrow}</Eyebrow>
+      </Reveal>
+      <Reveal delay={180}>
         <p className="sk-lead" style={PRELINE}>
           {greetingOpen ?? L.hero.lead}
         </p>

@@ -31,14 +31,20 @@ export function GalleryStep({
   maxPhotos,
   media,
   setMedia,
+  showGallery = true,
 }: {
   form: UseFormReturn<EditorValues>;
   invitationId: string;
-  /** `undefined` = tema aktif tak merender foto sampul. */
+  /** Slot foto pratinjau tautan (dirender `/api/og`, bukan tema); `undefined` = bidangnya tak ditampilkan. */
   coverSlot: PhotoSlotView | undefined;
   maxPhotos: number;
   media: InvitationMediaView[];
   setMedia: Dispatch<SetStateAction<InvitationMediaView[]>>;
+  /**
+   * `false` = tema aktif tak punya section galeri: pengunggah & daftar galeri
+   * tak ditawarkan, karena fotonya memakan kuota paket tanpa pernah tampil.
+   */
+  showGallery?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const cover = form.watch("content.coverPhoto") as Photo | undefined;
@@ -120,29 +126,41 @@ export function GalleryStep({
     });
   }
 
+  // Foto sampul: satu foto bernama, DI LUAR batas foto paket (batas itu
+  // tentang galeri). Ia dirender `/api/og` sebagai pratinjau tautan WhatsApp,
+  // bukan oleh tema — jadi tetap ada walau tema tak punya galeri.
+  const sampul = coverSlot ? (
+    <>
+      <PhotoField
+        invitationId={invitationId}
+        label={copy.editor.photo.coverLabel}
+        hint={copy.editor.photo.coverHint}
+        aspect={coverSlot.aspect}
+        value={cover}
+        initialUrl={coverSlot.url}
+        withOg
+        onChange={(next) =>
+          form.setValue("content.coverPhoto", next, { shouldDirty: true })
+        }
+      />
+      <hr className="border-border" />
+    </>
+  ) : null;
+
+  if (!showGallery) {
+    return (
+      <div className="space-y-4">
+        {sampul}
+        <p className="text-muted-foreground text-sm">
+          {copy.editor.gallery.notInTheme}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {/* Foto sampul: satu foto bernama, DI LUAR batas foto paket (batas itu
-          tentang galeri). Muncul HANYA bila tema aktif memang merendernya —
-          hari ini belum ada satu pun, jadi bidang ini tak tampil di mana pun
-          (THEME-CONTRACT §2). */}
-      {coverSlot ? (
-        <>
-          <PhotoField
-            invitationId={invitationId}
-            label={copy.editor.photo.coverLabel}
-            hint={copy.editor.photo.coverHint}
-            aspect={coverSlot.aspect}
-            value={cover}
-            initialUrl={coverSlot.url}
-            withOg
-            onChange={(next) =>
-              form.setValue("content.coverPhoto", next, { shouldDirty: true })
-            }
-          />
-          <hr className="border-border" />
-        </>
-      ) : null}
+      {sampul}
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-xs">

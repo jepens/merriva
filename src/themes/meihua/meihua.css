@@ -3,7 +3,8 @@
    Acuan visual: prototypes/meihua-story.html · THEME-WAVE3 §2.4.
    Kontrak kelas: akar `.mh` · `.mh-stage` konten · `.mh-cover` sampul (wipe via
    `.is-open`) · `.mh-music` musik. Koreografi oleh fx (gsap): `.mh-line>span`
-   mask (§0.4), `.mh-reveal`, `.mh-bough`/`.mh-bloom-group`, `.mh-xi`.
+   mask (§0.4), `.mh-reveal`, `.mh-bough`/`.mh-bloom-group`, `.mh-xi`,
+   `.mh-lantern`.
    Budaya (§3.4): merah+emas dominan; 囍 selalu SVG utuh.
    ========================================================================== */
 
@@ -12,9 +13,12 @@
   --mh-red-2: #9e2b25;
   --mh-red-dark: #5e1613;
   --mh-ink: #fbefd9;
-  --mh-muted: #d9ae8f;
+  --mh-muted: #e5c7b1;
   --mh-gold: #e2b13c;
   --mh-gold-soft: #f0ce7e;
+  /* Emas sebagai TEKS kecil di permukaan merah (gradien .mh, kotak
+     countdown): statis, tak dipetakan varian — ≥ 4,5:1. */
+  --mh-gold-ink: #ebc977;
   --mh-ivory: #faf4e8;
   --mh-ivory-ink: #4a241c;
   --mh-line: rgba(226, 177, 60, 0.35);
@@ -54,9 +58,13 @@
   color: var(--mh-ivory-ink);
 }
 .mh-ivory .mh-lead {
-  color: #8a6a55;
+  color: #886854;
 }
 .mh-ivory .mh-title {
+  color: var(--mh-red-2);
+}
+/* Emas di atas ivory hanya 1,8:1 — eyebrow memakai merah judul ivory. */
+.mh-ivory .mh-eyebrow {
   color: var(--mh-red-2);
 }
 .mh-darker {
@@ -67,6 +75,15 @@
 .mh-darker .gb-gift-trigger {
   color: var(--mh-gold-soft);
   border-color: var(--mh-line);
+}
+/* Formulir hadiah (muncul setelah diklik): panel putih 60% di atas merah tua
+   jadi bernada tengah — teks terang & gelap sama-sama gagal. Panel ivory. */
+.mh-darker .gb-gift-form {
+  background: var(--mh-ivory);
+  color: var(--mh-ivory-ink);
+}
+.mh-darker .gb-done {
+  color: var(--mh-ink);
 }
 .mh-center {
   text-align: center;
@@ -84,7 +101,7 @@
   font-size: 10.5px;
   letter-spacing: 0.4em;
   text-transform: uppercase;
-  color: var(--mh-gold);
+  color: var(--mh-gold-ink);
   font-weight: 600;
 }
 .mh-eyebrow::before,
@@ -170,6 +187,31 @@
 }
 .mh-bud {
   fill: var(--mh-gold-soft);
+}
+
+/* lentera gantung (section mempelai) — fx mengayunnya dari talinya, jadi
+   poros transform di tepi atas. Tanpa JS / reduced-motion: diam. */
+.mh-lantern {
+  position: absolute;
+  top: -6px;
+  width: 44px;
+  color: var(--mh-gold);
+  pointer-events: none;
+  transform-origin: 50% 0;
+}
+.mh-lantern--l {
+  left: 20px;
+}
+.mh-lantern--r {
+  right: 20px;
+  width: 34px;
+}
+.mh-lantern svg {
+  display: block;
+  width: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
 }
 
 /* ------------------------------------------------------------- cover ----- */
@@ -323,7 +365,7 @@
   margin-top: 14px;
   font-size: 13px;
   font-style: italic;
-  color: #8a6a55;
+  color: #886854;
 }
 
 /* ------------------------------------------------------------ couple ----- */
@@ -392,7 +434,7 @@
   font-size: 10.5px;
   letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: var(--mh-gold);
+  color: var(--mh-gold-ink);
   font-weight: 600;
   margin: 5px 0 9px;
 }
@@ -426,7 +468,7 @@
   display: block;
   font-family: var(--mh-display), serif;
   font-size: 22px;
-  color: var(--mh-gold-soft);
+  color: var(--mh-gold-ink);
   font-variant-numeric: tabular-nums;
 }
 .mh .count-label {
@@ -438,7 +480,7 @@
 .mh .countdown-done {
   font-family: var(--mh-display), serif;
   font-size: 19px;
-  color: var(--mh-gold-soft);
+  color: var(--mh-gold-ink);
 }
 
 /* ------------------------------------------------------------ acara ------ */
@@ -581,14 +623,14 @@
 .mh-beat__thn {
   font-size: 10.5px;
   letter-spacing: 0.3em;
-  color: var(--mh-gold);
+  color: var(--mh-gold-ink);
   font-weight: 600;
 }
 .mh-beat__title {
   font-family: var(--mh-display), serif;
   font-size: 18px;
   font-weight: 400;
-  color: var(--mh-gold-soft);
+  color: var(--mh-gold-ink);
   margin: 2px 0 0;
 }
 .mh-beat__text {
@@ -641,6 +683,24 @@
 }
 .mh-g-item--okta img {
   aspect-ratio: 16 / 10;
+}
+/* Scrim di dasar foto: keterangan terbaca di foto TERANG mana pun — halo
+   text-shadow saja tak cukup (diukur 1,1–2,6:1 di foto terang). */
+.mh-g-item::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 56px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.55) 50%,
+    transparent
+  );
+  pointer-events: none;
+}
+.mh-g-item figcaption {
+  z-index: 1;
 }
 .mh-g-item figcaption {
   position: absolute;
@@ -782,14 +842,16 @@
    yang diwarisi adalah hasil hitung `.mh`, bukan `var()` yang hidup. */
 .mh[data-variant="champagne"] {
   background: var(--mh-ivory);
-  --mh-muted: #8a6a55;
+  --mh-muted: #886854;
+  --mh-gold-ink: var(--mh-gold);
 }
 .mh[data-variant="champagne"]
   :is(.mh-cover, .mh-darker, .mh-footer, .mh-music, .mh-foto__ph) {
   --mh-ink: #fbefd9;
-  --mh-muted: #d9ae8f;
+  --mh-muted: #e5c7b1;
   --mh-gold: #e2b13c;
   --mh-gold-soft: #f0ce7e;
+  --mh-gold-ink: #ebc977;
   --mh-red: #7c1e1a;
 }
 .mh[data-variant="champagne"] :is(.mh-cover, .mh-darker, .mh-footer) {

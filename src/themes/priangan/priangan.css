@@ -11,10 +11,13 @@
   --pg-paper: #f6f1e3;
   --pg-paper-2: #efe8d4;
   --pg-ink: #23311f;
-  --pg-muted: #6f7462;
+  --pg-muted: #656a5a;
   --pg-acc: #2e5b41;
   --pg-acc-d: #1f4231;
   --pg-gold: #c2a14d;
+  /* Emas sebagai TEKS di latar terang (≥ 4,5:1 juga di --pg-paper-2 &
+     kartu); --pg-gold tetap untuk ornamen garis (ngapak, payung, siger). */
+  --pg-gold-ink: #7b6631;
   --pg-line: #dcd2b4;
   --pg-card: #fffdf4;
   --pg-display: var(--pg-disp-a);
@@ -56,13 +59,27 @@
   color: #efeada;
 }
 .pg-deep .pg-lead {
-  color: #c9c4ae;
+  color: #e5e3d9;
+}
+/* Latar .pg-deep = aksen VARIAN (pinus/senja/sogan lebih terang dari bawaan
+   #1f4231): teks terang di sini dihitung ≥ 4,5:1 untuk keempatnya. */
+.pg-deep .pg-eyebrow {
+  color: #dfcea2;
 }
 /* Tombol konfirmasi hadiah (guestbook.css) mengandaikan latar terang:
    #7d3b3b di atas latar dalam ≈ 1,4:1. Pola override = prisma. */
 .pg-deep .gb-gift-trigger {
   color: #efeada;
   border-color: rgba(239, 234, 218, 0.45);
+}
+/* Formulir hadiah (muncul setelah diklik): panel putih 60% di atas aksen
+   gelap jadi bernada tengah — teks terang & gelap sama-sama gagal. */
+.pg-deep .gb-gift-form {
+  background: var(--pg-card);
+  color: var(--pg-ink);
+}
+.pg-deep .gb-done {
+  color: #efeada;
 }
 .pg-center {
   text-align: center;
@@ -80,7 +97,7 @@
   font-size: 11px;
   letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: var(--pg-gold);
+  color: var(--pg-gold-ink);
   font-weight: 700;
 }
 .pg-eyebrow::before,
@@ -88,7 +105,7 @@
   content: "";
   width: 30px;
   height: 1px;
-  background: currentColor;
+  background: var(--pg-gold);
   opacity: 0.5;
 }
 .pg-title {
@@ -127,6 +144,9 @@
 
 /* divider julang ngapak + payung geulis (digambar fx via .pg-draw) */
 .pg-ngapak {
+  /* Di atas awan hero (.pg-cloud--c, absolut) seperti prototipe — tanpa
+     z-index: urutan DOM sesama elemen berposisi sudah cukup. */
+  position: relative;
   display: block;
   width: 150px;
   margin: 26px auto 0;
@@ -167,6 +187,12 @@
   right: -44px;
   width: 170px;
   opacity: 0.38;
+}
+/* awan hero (konten) — dihanyutkan fx setelah sampul dibuka */
+.pg-cloud--c {
+  width: 110px;
+  bottom: 12%;
+  left: 8%;
 }
 
 /* ------------------------------------------------------------- cover ----- */
@@ -290,7 +316,6 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--pg-muted);
-  opacity: 0.8;
 }
 
 /* -------------------------------------------------------------- hero ----- */
@@ -362,7 +387,7 @@
   font-size: 11px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--pg-gold);
+  color: var(--pg-gold-ink);
   font-weight: 700;
   margin: 4px 0 8px;
 }
@@ -375,7 +400,7 @@
   text-align: center;
   font-family: var(--pg-display), serif;
   font-size: 30px;
-  color: var(--pg-gold);
+  color: var(--pg-gold-ink);
 }
 
 /* --------------------------------------------------------- countdown ----- */
@@ -457,7 +482,7 @@
 }
 .pg-event__jam {
   font-size: 13px;
-  color: var(--pg-gold);
+  color: var(--pg-gold-ink);
   font-weight: 700;
   letter-spacing: 0.1em;
   margin: 4px 0 10px;
@@ -562,7 +587,7 @@
 .pg-beat__thn {
   font-size: 11px;
   letter-spacing: 0.26em;
-  color: var(--pg-gold);
+  color: var(--pg-gold-ink);
   font-weight: 700;
 }
 .pg-beat__title {
@@ -617,6 +642,24 @@
   object-fit: cover;
   height: auto;
 }
+/* Scrim di dasar foto: keterangan terbaca di foto TERANG mana pun — halo
+   text-shadow saja tak cukup (diukur 1,1–2,6:1 di foto terang). */
+.pg-g-item::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 56px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.55) 50%,
+    transparent
+  );
+  pointer-events: none;
+}
+.pg-g-item figcaption {
+  z-index: 1;
+}
 .pg-g-item figcaption {
   position: absolute;
   left: 10px;
@@ -661,7 +704,7 @@
   letter-spacing: 0.04em;
 }
 .pg-acct small {
-  color: #c9c4ae;
+  color: #e5e3d9;
   font-size: 12.5px;
 }
 .pg-acct p {
@@ -678,7 +721,7 @@
   border: 1px solid #d8bc7a;
   background: none;
   border-radius: 999px;
-  color: #d8bc7a;
+  color: #eee2c5;
   font-family: var(--pg-body), sans-serif;
   font-weight: 700;
   font-size: 12px;
@@ -702,7 +745,7 @@
   color: var(--pg-muted);
 }
 .pg-watermark a {
-  color: var(--pg-gold);
+  color: var(--pg-gold-ink);
   text-decoration: none;
 }
 

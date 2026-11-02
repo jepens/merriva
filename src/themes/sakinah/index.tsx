@@ -193,7 +193,13 @@ export default function Sakinah({ data }: ThemeComponentProps) {
   const resolved = custom ? resolveAppearance(sakinahOptions, custom) : null;
 
   const sectionNodes: Record<string, ReactNode> = {
-    hero: <Hero greetingOpen={content.greetingOpen} />,
+    hero: (
+      <Hero
+        greetingOpen={content.greetingOpen}
+        brideName={brideName}
+        groomName={groomName}
+      />
+    ),
     quote: <AyatBlock quote={content.quote} />,
     couple: <Couple groom={content.groom} bride={content.bride} />,
     countdown: countdownTarget ? (

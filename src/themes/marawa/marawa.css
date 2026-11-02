@@ -91,7 +91,40 @@
   color: #2b1c14;
 }
 .mw-sand .mw-lead {
-  color: #7a6a55;
+  color: #756551;
+}
+/* Emas aksen di atas pasir hanya 1,8:1 — eyebrow memakai warna judul pasir. */
+.mw-sand .mw-eyebrow {
+  color: #6b3a1e;
+}
+/* Buku tamu (guestbook.css bersama) mengandaikan latar TERANG; marawa
+   merendernya di latar gelap (label formulir #4a2d32 ≈ 1,5:1). Dibatasi ke
+   .gb — formulir hadiah ada di panel .mw-sand yang terang. Pola noir. */
+.mw .gb .gb-eyebrow,
+.mw .gb .gb-note__name {
+  color: var(--mw-gold);
+}
+.mw .gb .gb-field > span,
+.mw .gb .gb-attend legend,
+.mw .gb .gb-radio,
+.mw .gb .gb-done,
+.mw .gb .gb-note__msg {
+  color: var(--mw-ink);
+}
+.mw .gb .gb-sub,
+.mw .gb .gb-wall__empty {
+  color: var(--mw-muted);
+}
+.mw .gb .gb-note {
+  background: transparent;
+  border-color: var(--mw-line);
+}
+.mw .gb .gb-more {
+  color: var(--mw-gold);
+  border-color: var(--mw-line);
+}
+.mw .gb .gb-error {
+  color: #ff8f86;
 }
 .mw-sand .mw-title {
   color: #6b3a1e;
@@ -653,6 +686,24 @@
 }
 .mw-g-item--gonjong img {
   aspect-ratio: 16 / 10;
+}
+/* Scrim di dasar foto: keterangan terbaca di foto TERANG mana pun — halo
+   text-shadow saja tak cukup (diukur 1,1–2,6:1 di foto terang). */
+.mw-g-item::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 56px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.55) 50%,
+    transparent
+  );
+  pointer-events: none;
+}
+.mw-g-item figcaption {
+  z-index: 1;
 }
 .mw-g-item figcaption {
   position: absolute;

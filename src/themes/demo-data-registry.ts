@@ -28,5 +28,6 @@ export const demoDataRegistry: Record<
 export function getThemeDemoLoader(
   slug: string,
 ): (() => Promise<{ demoInvitationData: InvitationData }>) | null {
-  return demoDataRegistry[slug] ?? null;
+  // `hasOwn`: slug dari URL; kunci warisan (`constructor` dst.) bukan tema.
+  return Object.hasOwn(demoDataRegistry, slug) ? demoDataRegistry[slug] : null;
 }
