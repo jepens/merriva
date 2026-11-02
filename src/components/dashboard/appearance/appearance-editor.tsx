@@ -97,6 +97,9 @@ export function AppearanceEditor({
     }
     if (r.styles.gallery) root.setAttribute("data-gallery", r.styles.gallery);
     root.setAttribute("data-motion", r.motion);
+    // Sama dgn render server (meihua mengirim `data-variant`): tanpa ini pratinjau
+    // varian yang butuh override CSS (champagne) berbeda dari hasil simpan.
+    root.setAttribute("data-variant", r.variantId);
     if (grainSel) {
       const grain = root.querySelector<HTMLElement>(`.${grainSel}`);
       if (grain) grain.style.display = r.grain ? "" : "none";

@@ -5217,6 +5217,78 @@ yang gagal sudah dilaporkan per order (`payment.cancel`) saat risikonya muncul.
 
 ---
 
+## #103 — 2026-11-02 · Tema gelombang 3 aktif; champagne meihua lewat override `data-variant`
+
+**Keputusan:**
+
+1. priangan, marawa, dan sakinah (THEME-WAVE3 bagian A) diaktifkan 2 Nov 2026,
+   dengan `sort_order` 100/110/120 sesuai urutan tabel §1. meihua (130)
+   diaktifkan setelah perbaikan champagne di bawah ter-deploy. Aktivasi
+   dilakukan lewat SQL (MCP), bukan panel admin, sehingga `revalidatePath`
+   katalog tidak terpicu: `/` dan `/tema` mengikuti build berikutnya atau ISR
+   (≤ 1 jam).
+2. **Varian champagne meihua dipertahankan (§2.4) dan diperbaiki lewat
+   override token.**
+   - meihua mengirim `variant` di `appearance.data` → `data-variant` di akar.
+   - Editor (`applyToFrame`) memasang atribut yang sama.
+   - Di CSS champagne, akar berlatar ivory dengan muted gelap.
+   - Permukaan merah tua (cover, jadwal/angpao, footer, musik, placeholder
+     foto) kembali memakai token lacquer, dengan `color` dideklarasikan ulang.
+3. **`.gb-gift-trigger` di-override per tema pada bagian gelap** (priangan
+   `.pg-deep`, meihua `.mh-darker`), mengikuti pola prisma. `guestbook.css`
+   bersama tidak diubah.
+
+**Alasan:** champagne memetakan paper ke `--mh-red` dan ink gelap tanpa
+menyentuh permukaan merah tua, sehingga nama mempelai di cover hanya 1,03:1.
+Diukur dengan axe-core sesudah perbaikan:
+- cover: 0 pelanggaran;
+- badan: hanya `#8a6a55` di atas ivory (4,48:1), warna yang sama dengan
+  `cite`/lead di bagian ivory varian bawaan.
+
+Override token mempertahankan spesifikasi dengan perubahan yang lokal.
+`data-variant` di editor diperlukan agar pratinjau sama dengan hasil simpan.
+Tombol hadiah semula `#7d3b3b` di atas latar gelap: 1,36:1 (priangan) dan 1,6:1
+(meihua).
+
+**Ditolak:**
+- Menghapus champagne — mengubah scope §2.4 (spec-first).
+- Memperbaiki `guestbook.css` bersama — mengubah tampilan semua tema
+  sekaligus. noir di produksi juga terdampak (2,36:1) dan dicatat sebagai utang
+  di bawah.
+- `clearProps: "clipPath"` pada tile galeri bermodifier — bentuk "melompat"
+  dari persegi ke gonjong/oktagon di akhir tween. Yang dipilih: tile
+  bermodifier hanya di-fade.
+
+**Konsekuensi (utang terbuka):**
+
+- **Kontras label kecil emas/cokelat di atas krem adalah pola seluruh pustaka.**
+  Pelanggaran axe pada isi undangan setelah cover dibuka:
+
+  | Tema | Pelanggaran |
+  |---|---|
+  | kirana | 37 |
+  | barakah | 38 |
+  | eternal-rose | 19 |
+  | noir | 11 |
+  | priangan (gelombang 3) | 25 |
+  | sakinah (gelombang 3) | 20 |
+  | meihua (gelombang 3) | 3 |
+  | marawa (gelombang 3) | 2 |
+
+  Butuh satu perbaikan lintas tema, bukan per port.
+- **Formatter memecah kelas bersyarat.** `prettier-plugin-tailwindcss` memangkas
+  spasi awal string di dalam ternary className, sehingga kelas menempel. Bug
+  galeri gelombang 3 berasal dari sini. Tulis spasi di luar ternary.
+- **Belum dikerjakan:**
+  - bagian B §4 (varian = kartu katalog);
+  - hex varian gadang, burgundy, dan sogan ≠ §2 (sogan kemungkinan disengaja
+    demi kontras `.pg-deep`);
+  - ornamen lentera (meihua), monogram hero (sakinah), dan awan melayang
+    (priangan — tween-nya tanpa target);
+  - langkah Galeri di editor tetap tampil untuk sakinah.
+
+---
+
 ## Template entri baru
 
 ```

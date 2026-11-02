@@ -58,6 +58,12 @@
 .pg-deep .pg-lead {
   color: #c9c4ae;
 }
+/* Tombol konfirmasi hadiah (guestbook.css) mengandaikan latar terang:
+   #7d3b3b di atas latar dalam ≈ 1,4:1. Pola override = prisma. */
+.pg-deep .gb-gift-trigger {
+  color: #efeada;
+  border-color: rgba(239, 234, 218, 0.45);
+}
 .pg-center {
   text-align: center;
 }

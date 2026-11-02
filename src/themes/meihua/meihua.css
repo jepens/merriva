@@ -62,6 +62,12 @@
 .mh-darker {
   background: var(--mh-red-dark);
 }
+/* Tombol konfirmasi hadiah (guestbook.css) mengandaikan latar terang:
+   #7d3b3b di atas #5e1613 ≈ 1,6:1. Pola override = prisma. */
+.mh-darker .gb-gift-trigger {
+  color: var(--mh-gold-soft);
+  border-color: var(--mh-line);
+}
 .mh-center {
   text-align: center;
 }
@@ -768,9 +774,26 @@
   display: flex;
 }
 
-/* varian terang (champagne): stage ivory, teks gelap */
+/* Varian terang (champagne): stage ivory, teks gelap, aksen merah. Peta
+   `preview.vars` saja tak cukup — paper→`--mh-red` & ink gelap ikut ke
+   permukaan merah tua (cover, jadwal/angpao, footer, musik) yang TIDAK
+   divariasikan: teks gelap di atas #5e1613 ≈ 1,03:1. Permukaan itu kembali
+   memakai token lacquer. `color` wajib dideklarasikan ulang di sana: nilai
+   yang diwarisi adalah hasil hitung `.mh`, bukan `var()` yang hidup. */
 .mh[data-variant="champagne"] {
-  color: var(--mh-ivory-ink);
+  background: var(--mh-ivory);
+  --mh-muted: #8a6a55;
+}
+.mh[data-variant="champagne"]
+  :is(.mh-cover, .mh-darker, .mh-footer, .mh-music, .mh-foto__ph) {
+  --mh-ink: #fbefd9;
+  --mh-muted: #d9ae8f;
+  --mh-gold: #e2b13c;
+  --mh-gold-soft: #f0ce7e;
+  --mh-red: #7c1e1a;
+}
+.mh[data-variant="champagne"] :is(.mh-cover, .mh-darker, .mh-footer) {
+  color: var(--mh-ink);
 }
 
 /* ---------------------------------------------------- reduced motion ----- */

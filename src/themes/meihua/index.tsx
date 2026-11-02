@@ -229,7 +229,9 @@ export default function Meihua({ data }: ThemeComponentProps) {
   const appearance = resolved
     ? {
         style: appearanceStyle(meihuaOptions.preview.vars, resolved),
-        data: { gallery: resolved.styles.gallery },
+        // `variant` → `data-variant` di akar: champagne butuh override token
+        // di permukaan merah tua (meihua.css), bukan hanya peta `preview.vars`.
+        data: { gallery: resolved.styles.gallery, variant: resolved.variantId },
         motion: resolved.motion,
       }
     : undefined;
