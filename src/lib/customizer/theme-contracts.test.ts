@@ -54,6 +54,16 @@ describe.each(themes)("kontrak tema '%s'", (_slug, opt) => {
     expect(opt.preview.vars.some((v) => v.token === "accent")).toBe(true);
   });
 
+  it("lebih dari satu pasangan font → preview.vars memetakan disp DAN body", () => {
+    // Tanpa keduanya, pasangan pilihan pemilik tersimpan tetapi CSS tema tetap
+    // membaca pasangan bawaan. `meridian` menawarkan "Bodoni Moda + Jost"
+    // sejak 2 Agustus 2026 tanpa efek apa pun (DECISIONS #107).
+    if (opt.fontPairs.length < 2) return;
+    const tokens = opt.preview.vars.map((v) => v.token);
+    expect(tokens).toContain("disp");
+    expect(tokens).toContain("body");
+  });
+
   it("appearanceStyle menghasilkan TEPAT var yang dideklarasikan (non-kosong)", () => {
     const style = appearanceStyle(
       opt.preview.vars,

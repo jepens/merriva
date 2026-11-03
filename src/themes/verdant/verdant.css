@@ -100,9 +100,15 @@
 }
 
 /* Baris bermask ------------------------------------------------------------ */
+/* Ruang .2em di bawah untuk ekor huruf: ekor g/j/y italic EB Garamond turun
+   lebih dalam dari kotak baris, dan masker memotongnya rata. Margin negatif
+   menetralkan tingginya, jadi tata letak tak bergeser. Nilai ini aman bersama
+   state tersembunyi 115% (fx.tsx/cover.tsx): kepala huruf tak mengintip. */
 .vd-line {
   display: block;
   overflow: hidden;
+  padding-bottom: 0.2em;
+  margin-bottom: -0.2em;
 }
 .vd-line > span {
   display: block;

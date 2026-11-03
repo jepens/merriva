@@ -40,7 +40,7 @@ import {
 // `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
-const disp = localFont({
+const prDisp = localFont({
   src: [
     {
       path: "../../fonts/themes/space-grotesk-400.woff2",
@@ -63,7 +63,7 @@ const disp = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const mono = localFont({
+const prMono = localFont({
   src: [
     {
       path: "../../fonts/themes/space-mono-400.woff2",
@@ -103,7 +103,7 @@ function brandInitials(name: string): string {
  * `GuestbookSection` yang sudah ada (bukan form baru).
  */
 export default function Prisma({ data }: ThemeComponentProps) {
-  const rootClass = `pr ${disp.variable} ${mono.variable}`;
+  const rootClass = `pr ${prDisp.variable} ${prMono.variable}`;
   const { settings } = data;
 
   if (data.content.category !== "corporate") {

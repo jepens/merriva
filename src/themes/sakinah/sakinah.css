@@ -449,8 +449,12 @@
   color: var(--sk-muted);
   margin: 0;
 }
+/* "wa" berhuruf Latin → font display miring seperti prototipe. Bukan `.sk-ar`:
+   subset Arab Amiri tak punya huruf Latin, jadi "wa" jatuh ke Arial. */
 .sk-amp {
   text-align: center;
+  font-family: var(--sk-display), serif;
+  font-style: italic;
   font-size: 32px;
   color: var(--sk-gold-ink);
 }

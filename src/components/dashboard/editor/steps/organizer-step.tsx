@@ -35,9 +35,8 @@ export function OrganizerStep({
           aspect={logoSlot.aspect}
           value={logo}
           initialUrl={logoSlot.url}
-          onChange={(next) =>
-            setValue("content.logo", next, { shouldDirty: true })
-          }
+          // Tanpa `shouldDirty` — lihat couple-step.tsx (TypeError RHF 7.90).
+          onChange={(next) => setValue("content.logo", next)}
         />
       ) : null}
 

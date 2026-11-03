@@ -41,7 +41,7 @@ import {
 // browser hanya mengunduh slice yang benar-benar dipakai. Cormorant Garamond (serif Garalde sinematik) + Jost
 // (geometric sans). Pasangan b: Playfair Display (serif high-contrast) +
 // Montserrat (grotesk geometris) — kontras tinggi & monokrom, cocok DNA noir.
-const dispA = localFont({
+const nrDispA = localFont({
   src: [
     {
       path: "../../fonts/themes/cormorant-garamond-300.woff2",
@@ -79,7 +79,7 @@ const dispA = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = localFont({
+const nrBodyA = localFont({
   src: [
     {
       path: "../../fonts/themes/jost-300.woff2",
@@ -102,7 +102,7 @@ const bodyA = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const dispB = localFont({
+const nrDispB = localFont({
   src: [
     {
       path: "../../fonts/themes/playfair-display-400.woff2",
@@ -150,7 +150,7 @@ const dispB = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = localFont({
+const nrBodyB = localFont({
   src: [
     {
       path: "../../fonts/themes/montserrat-400.woff2",
@@ -175,10 +175,10 @@ const bodyB = localFont({
 });
 
 const FONT_VARS = [
-  dispA.variable,
-  bodyA.variable,
-  dispB.variable,
-  bodyB.variable,
+  nrDispA.variable,
+  nrBodyA.variable,
+  nrDispB.variable,
+  nrBodyB.variable,
 ].join(" ");
 
 /**

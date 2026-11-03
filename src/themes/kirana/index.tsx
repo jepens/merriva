@@ -40,7 +40,7 @@ import {
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
 // a: Cormorant Upright (display serif tegak) + Figtree (humanist sans).
-const dispA = localFont({
+const krDispA = localFont({
   src: [
     {
       path: "../../fonts/themes/cormorant-upright-400.woff2",
@@ -63,7 +63,7 @@ const dispA = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = localFont({
+const krBodyA = localFont({
   src: [
     {
       path: "../../fonts/themes/figtree-400.woff2",
@@ -82,7 +82,7 @@ const bodyA = localFont({
   preload: false,
 });
 // b: Playfair Display (serif editorial elegan, italic) + Karla (grotesque bersih).
-const dispB = localFont({
+const krDispB = localFont({
   src: [
     {
       path: "../../fonts/themes/playfair-display-400.woff2",
@@ -130,7 +130,7 @@ const dispB = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = localFont({
+const krBodyB = localFont({
   src: [
     {
       path: "../../fonts/themes/karla-400.woff2",
@@ -160,10 +160,10 @@ const bodyB = localFont({
 });
 
 const FONT_VARS = [
-  dispA.variable,
-  bodyA.variable,
-  dispB.variable,
-  bodyB.variable,
+  krDispA.variable,
+  krBodyA.variable,
+  krDispB.variable,
+  krBodyB.variable,
 ].join(" ");
 
 /**

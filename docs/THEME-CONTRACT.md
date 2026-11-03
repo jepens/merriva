@@ -216,9 +216,14 @@ Satu berkas test mengiterasi `themeRegistry` dan menolak tema yang:
 6. token `preview.vars` di luar `accent|accentText|onAccent|paper|ink|disp|body`;
 7. tak punya entri di `themeCatalogMeta`, atau kontras `ink` di atas `bg` < 4.5;
 8. tak punya demo-data;
-9. slug-nya tak pernah muncul di migrasi seed `themes` mana pun.
+9. slug-nya tak pernah muncul di migrasi seed `themes` mana pun;
+10. punya lebih dari satu `fontPairs` tetapi `preview.vars` tak memetakan token
+    `disp` DAN `body` (pasangan pilihan pemilik tak pernah dirender), atau
+    memberi binding `localFont` nama yang sudah dipakai di tempat lain di `src/`
+    (`tests/unit/font-binding-unik.test.ts`) — nama binding = `font-family`.
 
-Kesembilannya kini terpasang (#85 untuk 1–8, #87 untuk yang ke-9).
+Kesepuluhnya kini terpasang (#85 untuk 1–8, #87 untuk yang ke-9, #107 untuk
+yang ke-10).
 
 Tema ke-30 jadi sama amannya dengan tema ke-11.
 

@@ -99,13 +99,26 @@
 }
 
 /* Baris bermask — state tersembunyi DIMILIKI JS (WAAPI/gsap). CSS hanya
-   menyembunyikan bila JS + motion aktif → tanpa JS/motion konten terbaca. */
+   menyembunyikan bila JS + motion aktif → tanpa JS/motion konten terbaca.
+   Ruang .15em di bawah untuk ekor huruf (g/j/y Fraunces italic) yang turun
+   lebih dalam dari kotak baris; margin negatif menetralkan tingginya. Nilai ini
+   batas aman bersama state tersembunyi 115% pada line-height .98 nama sampul. */
 .er-line {
   display: block;
   overflow: hidden;
+  padding-bottom: 0.15em;
+  margin-bottom: -0.15em;
 }
 .er-line > span {
   display: block;
+}
+/* Ruang tinta italic di kedua tepi masker NAMA (kait "f", titik "i" miring):
+   tanpa ini nama yang muat pas terpotong rata di tepinya. fit-names.ts mengukur
+   terhadap lebar konten, jadi ruang ini tak ikut memperkecil nama. */
+.er-cover__name .er-line,
+.er-hero__names .er-line {
+  padding-inline: 0.2em;
+  margin-inline: -0.2em;
 }
 .er.is-js.is-motion .er-line > span {
   visibility: hidden;
@@ -189,12 +202,15 @@
     rgba(20, 10, 15, 0.55) 100%
   );
 }
+/* min-width:0 — tanpa itu item grid melebar mengikuti nama terpanjang, sehingga
+   seluruh isi sampul bergeser keluar layar alih-alih namanya yang dikecilkan. */
 .er-cover__inner {
   position: relative;
   text-align: center;
   padding: 24px;
   max-width: 420px;
   width: 100%;
+  min-width: 0;
 }
 /* Teks kecil sampul diukur di atas cahaya mawar + grain (sisi kiri paling
    terang): --rose-soft hanya 3,8:1 di sana, alfa .6/.45 lama 4,0 & 3,4. */
@@ -554,7 +570,8 @@
 .er-event__num {
   position: absolute;
   top: 8px;
-  right: 0;
+  /* Ekor angka italic melewati kotak glyph-nya; di tepi 0 ia terpotong kartu. */
+  right: 0.06em;
   font-family: var(--er-serif-stack);
   font-style: italic;
   font-weight: 300;

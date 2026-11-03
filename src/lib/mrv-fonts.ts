@@ -26,7 +26,7 @@ import localFont from "next/font/local";
  */
 
 // Bricolage Grotesque — display berkarakter.
-const display = localFont({
+const mrvDisplay = localFont({
   src: "../fonts/bricolage-grotesque-latin.woff2",
   weight: "600 700",
   style: "normal",
@@ -35,7 +35,7 @@ const display = localFont({
 });
 
 // Hanken Grotesk — teks humanis.
-const body = localFont({
+const mrvBody = localFont({
   src: "../fonts/hanken-grotesk-latin.woff2",
   weight: "400 600",
   style: "normal",
@@ -48,4 +48,4 @@ const body = localFont({
  * elemen pembungkus berkelas `.mrv` agar token font tersedia. Dideklarasikan
  * sekali di sini lalu dipakai ulang (MarketingShell, layout auth) → satu instans.
  */
-export const mrvFontVars = `${display.variable} ${body.variable}`;
+export const mrvFontVars = `${mrvDisplay.variable} ${mrvBody.variable}`;

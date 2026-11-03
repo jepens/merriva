@@ -139,9 +139,8 @@ export function GalleryStep({
         value={cover}
         initialUrl={coverSlot.url}
         withOg
-        onChange={(next) =>
-          form.setValue("content.coverPhoto", next, { shouldDirty: true })
-        }
+        // Tanpa `shouldDirty` — lihat couple-step.tsx (TypeError RHF 7.90).
+        onChange={(next) => form.setValue("content.coverPhoto", next)}
       />
       <hr className="border-border" />
     </>

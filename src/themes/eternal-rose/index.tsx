@@ -41,7 +41,7 @@ import {
 // `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
-const dispA = localFont({
+const erDispA = localFont({
   src: [
     {
       path: "../../fonts/themes/fraunces-300.woff2",
@@ -79,7 +79,7 @@ const dispA = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = localFont({
+const erBodyA = localFont({
   src: [
     {
       path: "../../fonts/themes/instrument-sans-400.woff2",
@@ -102,7 +102,7 @@ const bodyA = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const dispB = localFont({
+const erDispB = localFont({
   src: [
     {
       path: "../../fonts/themes/cormorant-garamond-400.woff2",
@@ -140,7 +140,7 @@ const dispB = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = localFont({
+const erBodyB = localFont({
   src: [
     {
       path: "../../fonts/themes/jost-400.woff2",
@@ -163,7 +163,7 @@ const bodyB = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const dispC = localFont({
+const erDispC = localFont({
   src: [
     {
       path: "../../fonts/themes/marcellus-400.woff2",
@@ -176,7 +176,7 @@ const dispC = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyC = localFont({
+const erBodyC = localFont({
   src: [
     {
       path: "../../fonts/themes/figtree-400.woff2",
@@ -201,12 +201,12 @@ const bodyC = localFont({
 });
 
 const FONT_VARS = [
-  dispA.variable,
-  bodyA.variable,
-  dispB.variable,
-  bodyB.variable,
-  dispC.variable,
-  bodyC.variable,
+  erDispA.variable,
+  erBodyA.variable,
+  erDispB.variable,
+  erBodyB.variable,
+  erDispC.variable,
+  erBodyC.variable,
 ].join(" ");
 
 const firstInitial = (s: string) => (s.trim()[0] ?? "•").toUpperCase();

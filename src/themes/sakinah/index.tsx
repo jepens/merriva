@@ -31,7 +31,7 @@ import {
 // Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). SEMUA
 // `preload:false` (AUDIT-2026-09-04 PER-1 — lihat catatan di tema lain).
 // a: Amiri (serif Naskh — Latin) + Plus Jakarta Sans (humanist sans Indonesia).
-const dispA = localFont({
+const skDispA = localFont({
   src: [
     {
       path: "../../fonts/themes/amiri-400.woff2",
@@ -49,7 +49,7 @@ const dispA = localFont({
   // WAJIB tetap false — lihat catatan PER-1.
   preload: false,
 });
-const bodyA = localFont({
+const skBodyA = localFont({
   src: [
     {
       path: "../../fonts/themes/plus-jakarta-sans-400.woff2",
@@ -68,7 +68,7 @@ const bodyA = localFont({
   preload: false,
 });
 // b: EB Garamond + Karla (berkas sudah ada di repo — tanpa byte font baru).
-const dispB = localFont({
+const skDispB = localFont({
   src: [
     {
       path: "../../fonts/themes/eb-garamond-400.woff2",
@@ -86,7 +86,7 @@ const dispB = localFont({
   // WAJIB tetap false — lihat catatan PER-1.
   preload: false,
 });
-const bodyB = localFont({
+const skBodyB = localFont({
   src: [
     {
       path: "../../fonts/themes/karla-400.woff2",
@@ -108,7 +108,7 @@ const bodyB = localFont({
 // localFont tak mendukung unicode-range per berkas, jadi keluarga tersendiri
 // (CSS `.sk-ar` memakai var ini lebih dulu). `preload:false` → hanya terunduh
 // saat dipakai.
-const arab = localFont({
+const skArab = localFont({
   src: [
     {
       path: "../../fonts/themes/amiri-arabic-400.woff2",
@@ -128,11 +128,11 @@ const arab = localFont({
 });
 
 const FONT_VARS = [
-  dispA.variable,
-  bodyA.variable,
-  dispB.variable,
-  bodyB.variable,
-  arab.variable,
+  skDispA.variable,
+  skBodyA.variable,
+  skDispB.variable,
+  skBodyB.variable,
+  skArab.variable,
 ].join(" ");
 
 /**

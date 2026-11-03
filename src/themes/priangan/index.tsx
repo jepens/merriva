@@ -34,7 +34,7 @@ import {
 // Self-hosted (next/font); SEMUA `preload:false` (AUDIT-2026-09-04 PER-1 —
 // lihat catatan di tema lain).
 // a: Prata (serif display anggun) + Mulish (humanist sans).
-const dispA = localFont({
+const pgDispA = localFont({
   src: [
     {
       path: "../../fonts/themes/prata-400.woff2",
@@ -47,7 +47,7 @@ const dispA = localFont({
   // WAJIB tetap false — lihat catatan PER-1.
   preload: false,
 });
-const bodyA = localFont({
+const pgBodyA = localFont({
   src: [
     {
       path: "../../fonts/themes/mulish-400.woff2",
@@ -66,7 +66,7 @@ const bodyA = localFont({
   preload: false,
 });
 // b: Cormorant Garamond + Karla (berkas sudah ada di repo).
-const dispB = localFont({
+const pgDispB = localFont({
   src: [
     {
       path: "../../fonts/themes/cormorant-garamond-500.woff2",
@@ -84,7 +84,7 @@ const dispB = localFont({
   // WAJIB tetap false — lihat catatan PER-1.
   preload: false,
 });
-const bodyB = localFont({
+const pgBodyB = localFont({
   src: [
     {
       path: "../../fonts/themes/karla-400.woff2",
@@ -104,10 +104,10 @@ const bodyB = localFont({
 });
 
 const FONT_VARS = [
-  dispA.variable,
-  bodyA.variable,
-  dispB.variable,
-  bodyB.variable,
+  pgDispA.variable,
+  pgBodyA.variable,
+  pgDispB.variable,
+  pgBodyB.variable,
 ].join(" ");
 
 /**

@@ -39,7 +39,7 @@ import {
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
 // a: Italiana (display seni-deco renggang) + Jost (geometric sans).
-const dispA = localFont({
+const mrdDispA = localFont({
   src: [
     {
       path: "../../fonts/themes/italiana-400.woff2",
@@ -52,7 +52,7 @@ const dispA = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = localFont({
+const mrdBodyA = localFont({
   src: [
     {
       path: "../../fonts/themes/jost-300.woff2",
@@ -77,7 +77,7 @@ const bodyA = localFont({
 });
 // b: Bodoni Moda (display serif Didone kontras-tinggi, set italic lengkap) +
 // Jost (sans geometris) — pasangan editorial/high-fashion, DNA premium Meridian.
-const dispB = localFont({
+const mrdDispB = localFont({
   src: [
     {
       path: "../../fonts/themes/bodoni-moda-400.woff2",
@@ -125,7 +125,7 @@ const dispB = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = localFont({
+const mrdBodyB = localFont({
   src: [
     {
       path: "../../fonts/themes/jost-400.woff2",
@@ -150,10 +150,10 @@ const bodyB = localFont({
 });
 
 const FONT_VARS = [
-  dispA.variable,
-  bodyA.variable,
-  dispB.variable,
-  bodyB.variable,
+  mrdDispA.variable,
+  mrdBodyA.variable,
+  mrdDispB.variable,
+  mrdBodyB.variable,
 ].join(" ");
 
 /**

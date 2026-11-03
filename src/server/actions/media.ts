@@ -109,7 +109,10 @@ export async function uploadGalleryPhotoAction(
   if (!own) return { status: "error", reason: "auth" };
 
   const mediaId = crypto.randomUUID();
-  const prefix = mediaPrefix(invitationId, mediaId);
+  // `own.id` = bentuk kanonik dari DB (huruf kecil). CHECK
+  // `media_storage_path_format` (20261103045611) menuntut path PERSIS
+  // `inv/<invitation_id>/<id>`, sedangkan `isUuid` menerima huruf besar.
+  const prefix = mediaPrefix(own.id, mediaId);
   const storage = getStorage();
   const cleanup = () =>
     Promise.allSettled(mediaObjectPaths(prefix).map((p) => storage.delete(p)));
@@ -140,12 +143,15 @@ export async function uploadGalleryPhotoAction(
   // NULL = limit penuh / bukan pemilik.
   const { data: row, error } = await supabase.rpc("insert_gallery_media", {
     media_id: mediaId,
-    inv_id: invitationId,
+    inv_id: own.id,
     path: prefix,
     w: width,
     h: height,
   });
   if (error) {
+    // Penolakan DB di sini (mis. CHECK path) = bug di kode ini, bukan salah
+    // pemilik; tanpa laporan saksinya hanya toast "Terjadi kesalahan".
+    reportHandledError(error, "media.insert", { invitationId });
     await cleanup();
     return { status: "error", message: copy.common.error };
   }

@@ -2024,7 +2024,11 @@ preload font.
 
 Diverifikasi di peramban pada undangan nyata: `--er-disp-a`/`--er-body-a` terpasang,
 Fraunces (300/400/500 + italic) dan Instrument Sans (400/500/600) berstatus `loaded`,
-tampilan tak berubah.
+tampilan tak berubah. **Dikoreksi di #107:** "tampilan tak berubah" salah. Migrasi ini
+membuat nama binding (`dispA`, `bodyA`, …) menjadi `font-family`. Nama itu sama di 8 dari
+10 tema saat itu: aria dan prisma kebetulan unik. Sejak gelombang 3, jumlahnya 12 dari 14.
+Sejak itu tema-tema tersebut tampil dengan huruf tema lain. `loaded` tidak membuktikan
+font mana yang merender.
 
 ### Gerbang deploy: pemicu yang dipindah, bukan `needs:` yang ditambahkan
 
@@ -5468,6 +5472,262 @@ aturan CSS, semuanya juga terjadi di lokal (bukan khusus produksi):
   dari CSS bawaan di 8 tema (mis. lumina `--lm-taupe` `#9a7b58` vs `#7a5f40`,
   meihua `--mh-gold-soft` `#f0ce7e` vs `#e2b13c`) — rupa "varian bawaan"
   bergantung pada ada-tidaknya `custom`. Kontras keduanya lolos.
+
+**Ralat 3 Nov (verifikasi #106/#107):**
+- **Cakupan.** Di luar keterangan foto, pengukuran per piksel #105 hanya
+  mencakup node yang ditandai axe `incomplete`. Node yang LULUS axe tak diukur
+  per piksel, padahal grain dilukis di atas teks dan axe tak melihat lapisan
+  `pointer-events:none`.
+- **Temuan ulang.** Pengukuran dengan grain di atas teks DAN latar menemukan 46
+  kelompok di 11 tema (±259 node) di bawah 4,5 pada huruf terburuk; 41 di
+  antaranya juga di bawah 4,5 pada median. Rasio datarnya 4,51–4,74, dan grain
+  menurunkannya 0,11–0,26 pada median dan sampai 0,31 pada huruf terburuk.
+  Contoh: label countdown meridian 4,32, "Admit One" prisma 4,32, "Putra kedua"
+  eternal-rose 4,35.
+- **Metrik piksel #105** juga tak menerapkan grain ke teks (kirana "Katur
+  dhumateng" 4,45).
+- **Champagne meihua**, yang ditulis "tak berubah", ternyata tak pernah diukur:
+  hasilnya 4,498.
+- **Bukan regresi #107:** produksi dengan font lama memberi angka yang sama
+  (±0,06).
+
+**Belum diperbaiki.** Arah yang diusulkan: token teks kecil di permukaan
+ber-grain dengan rasio datar ≥ ~4,85, atau gerbang per huruf terburuk; gerbang
+uji juga ikut mengukur per piksel node lulus-axe di bawah 5.
+
+---
+
+## #106 — 2026-11-03 · `media.storage_path` terikat ke barisnya sendiri (celah hapus foto lintas pelanggan)
+
+**Keputusan:** CHECK `media_storage_path_format` diganti dari pola bentuk
+`^inv/<uuid>/<uuid>$` menjadi kesamaan persis
+`storage_path = 'inv/' || invitation_id || '/' || id` (migrasi 20261103045611).
+Nama constraint dipertahankan. Test pgTAP `media_storage_path_terikat` memakai
+penyerang berupa pengguna LOGIN, bukan anon, dan mencocokkan penolakan sampai
+PESAN constraint: trigger batas foto juga melempar 23514. Aksi unggah galeri
+membangun path dari `id` kanonik dari DB, bukan argumen pemanggil (`isUuid`
+menerima huruf besar, `invitation_id::text` selalu kecil), dan galat RPC-nya
+kini dilaporkan ke Sentry sehingga penolakan CHECK tak senyap.
+
+**Alasan:** audit 3 Nov, diverifikasi ulang di katalog produksi dan kode.
+- `authenticated` punya INSERT/UPDATE atas semua kolom `media` lewat Data API,
+  dan policy-nya hanya `owns_invitation(invitation_id)`. CHECK lama hanya
+  mengunci BENTUK; kedua UUID-nya tak diikat ke baris yang memuatnya.
+- Lima jalur hapus memercayai kolom itu dan menghapus objek dengan driver
+  storage server: hapus foto galeri (`media.ts`), hapus draft
+  (`invitation.ts`), purge pemilik, cron purge-expired, dan hapus akun. Tiga
+  yang terakhir lewat `purge_invitation_data`, yang mengambil `storage_path`
+  apa adanya karena "dijamin constraint".
+- UUID korban terbaca di HTML undangan publik (`/media/inv/<undangan>/<foto>/…`),
+  dan volume media belum punya backup. Cukup akun gratis dengan satu draft.
+- Terbukti di DB lokal: sebelum migrasi, baris penyerang berhasil dibelokkan ke
+  foto korban (pgTAP gagal 5/6); sesudahnya 6/6 lulus. Percobaan lewat Data API
+  lokal dengan JWT asli juga ditolak semua: PATCH, POST, upsert, rpc, varian
+  huruf besar, `..`, dan newline.
+- Jejak eksploitasi per 3 Nov: **tak ada**. Baris yang menyimpang bukan
+  penandanya, karena jalur eksploit justru menghapus baris PENYERANG. Yang dicari
+  adalah baris korban yang objeknya hilang. Ke-9 baris produksi terikat
+  (0 menyimpang), dan ke-18 objeknya (1600/400) ada di origin. Ini diperiksa
+  dengan HEAD berquery pemecah cache: Cloudflare MISS → 200, sedangkan objek
+  fiktif kendali → 404. Undangan yang sudah dihapus tak meninggalkan jejak,
+  tetapi juga tak menyisakan kerugian.
+- Foto bernama sudah aman (`isNamedPhotoPath` di aksi hapus, regex terikat
+  undangan di purge), begitu pula Momen (`authenticated` tanpa hak tulis
+  `momen_photos`).
+
+**Ditolak:**
+- Penjaga prefix di kelima jalur aplikasi — lima tempat untuk satu invarian,
+  dan jalur keenam kelak mudah lupa. Constraint menjaga semua role, termasuk
+  kode service_role.
+- Hanya `revoke update` — INSERT langsung dengan path korban tetap lolos.
+- `revoke update` sebagai lapis tambahan — tak perlu: dengan path terikat,
+  memindah baris ke undangan lain hanya menghasilkan foto rusak milik sendiri.
+
+**Konsekuensi:**
+- Setiap sisipan `media` WAJIB memakai `id` yang sama dengan segmen terakhir
+  path (`insert_gallery_media` sudah begitu); fixture test ikut menulis `id`.
+- Migrasinya WAJIB dipasang manual, karena CI tak pernah menerapkan migrasi.
+  Celah tetap terbuka sampai terpasang (LAUNCH-CHECKLIST Fase 8). Urutannya
+  bebas: kode produksi sebelum maupun sesudah commit ini sudah menulis path yang
+  patuh. **Terpasang di produksi 3 Nov 2026**, sebelum push. Versinya sudah
+  dibetulkan, dan constraint serta 0 baris menyimpang sudah diverifikasi.
+- Serumpun, belum ditutup:
+  - batas tamu paket bisa dilewati dengan memindah baris `guests` antar-undangan
+    sendiri lewat UPDATE `invitation_id`, karena trigger batasnya hanya
+    `BEFORE INSERT` (rendah; baru berarti setelah pembayaran nyata);
+  - driver R2 dan Supabase tak menyaring segmen path (`..`) seperti driver
+    local — tutup sebelum cutover R2;
+  - CHECK path `momen_photos` hanya mengunci bentuk — aman selama `authenticated`
+    tak punya hak tulis di sana, jadi ikat dulu sebelum memberinya;
+  - path foto bernama di `invitations.content` tak terikat saat ditulis — kedua
+    konsumen penghapusnya menyaring (`isNamedPhotoPath`, regex purge); konsumen
+    baru wajib sama;
+  - hapus DRAFT tak menghapus objek foto bernama (sampul, wajah mempelai, logo)
+    — lubang retensi, bukan lintas pelanggan;
+  - `anon` di produksi masih punya INSERT/UPDATE/DELETE di banyak tabel
+    `public` (lokal tidak) — diredam RLS tanpa policy anon, tetapi policy
+    `to public` kelak akan membukanya HANYA di produksi.
+- DB lokal: `orders_rls` gagal karena dua drift lokal (grant SELECT anon hilang,
+  dan 5 baris `orders` lokal yang terhitung `count(*)` test 9), bukan karena
+  migrasi ini; CI (stack segar) hijau.
+
+## #107 — 2026-11-03 · Nama binding `localFont` wajib unik global (ralat #64)
+
+**Keputusan:** ke-53 binding `localFont` di 14 tema dan `mrv-fonts.ts` diganti
+nama berprefiks tema (`erDispA`, `mhBodyB`, `skArab`, `mrvDisplay`, …). Gerbang
+`tests/unit/font-binding-unik.test.ts` menolak nama ganda di seluruh `src/`,
+tanpa peduli huruf besar-kecil.
+
+**Alasan:**
+- `next/font/local` memakai NAMA BINDING sebagai `font-family` (loader Next
+  16.4.2: `['font-family', variableName]`), dan build Turbopack tak memberinya
+  hash. Sepuluh tema sama-sama memakai `dispA`/`bodyA`/`dispB`/`bodyB`;
+  festa, lumina, dan font marketing sama-sama memakai `display`/`body`.
+- `/[slug]` dan `/preview` menautkan @font-face ke-14 tema. Untuk deskriptor
+  yang sama peramban memakai face TERAKHIR. Terukur di produksi 3 Nov, per
+  elemen dengan CDP `CSS.getPlatformFontsForNode`:
+  - `dispA` = 29 berkas dari 10 font berbeda; 45 dari 59 kombinasi
+    keluarga×bobot×gaya yang diukur (5 tema) salah.
+  - Delapan tema hampir seluruh teksnya tampil dengan huruf tema lain:
+    eternal-rose (satu-satunya undangan aktif), verdant, marawa, barakah,
+    kirana, priangan, sakinah, lumina.
+  - Sebagian salah: meridian ±40% elemen (seluruh display), noir ±14%, dan
+    festa hanya di teks body (jatuh ke Hanken milik marketing).
+  - meihua hanya 4 dari 189 elemen (judul berbobot 500), karena face-nya
+    kebetulan terakhir.
+  - aria dan prisma benar, karena namanya kebetulan unik.
+
+  Berlaku sejak
+  commit 57532e1 (4 Okt, #64) — 8 dari 10 tema saat itu.
+- Lolos karena verifikasi #64 hanya memeriksa `document.fonts` berstatus
+  `loaded` — font tema lain juga `loaded` — dan `bundle-report` hanya
+  menghitung font yang di-preload.
+- Sesudah perbaikan, CSS hasil `next build`: 212 @font-face, 106 keluarga,
+  0 tabrakan; tiap keluarga menunjuk tepat satu font sesuai deklarasi temanya.
+  Gerbang yang sama, dijalankan atas isi `src/` di HEAD sebelum perbaikan,
+  menemukan 6 nama ganda. Render lokal: 903 sampel CDP dari 25 render
+  (14 tema × pasangan A, 11 pasangan B/C persis keluaran `appearanceStyle`) —
+  nol font salah selain dua cacat lama di bawah.
+
+**Ditolak:**
+- Memindahkan @font-face ke CSS statis per tema (`build-theme-css`) — sekaligus
+  memangkas 14 stylesheet render-blocking, tetapi jauh lebih besar; ganti nama
+  sudah menutup bugnya dan peramban kini hanya mengunduh font tema itu sendiri.
+- `declarations: [{ prop: 'font-family', … }]` per instance — 53 tambahan, dan
+  nama ganda tetap mungkin.
+- Gerbang pemindai CSS hasil build — untuk sekarang. CI memang sudah membangun
+  aplikasi, tetapi mengelompokkan berkas menjadi "font" bergantung pada
+  konvensi nama berkas. Gerbang sumber menutup akar masalahnya secara
+  deterministik, dan impor beralias dari `next/font/local` ikut dilarang di
+  sana. Pemindai layak ditambahkan ke `bundle-report --check` bila kelak ada
+  pola sumber lain.
+
+**Yang ikut terbuka setelah font benar — diperbaiki di commit yang sama:**
+- `meridian` pasangan B ("Bodoni Moda + Jost") tak pernah dirender sejak
+  2 Agustus. `preview.vars` tak memetakan token `disp`/`body`, jadi
+  `--mrd-display` tak pernah ditimpa. Kini dipetakan, dan kontrak baru di
+  `theme-contracts.test.ts` mewajibkan `disp` DAN `body` bagi tema dengan
+  lebih dari satu pasangan font.
+- "wa" di medali Sakinah tampil Arial. Kelas `sk-ar` menaruh subset Arab Amiri,
+  yang tak punya huruf Latin, di depan rantai font, dan fallback next/font-nya
+  Arial. Kini memakai font display miring seperti prototipe. `adjustFontFallback`
+  sengaja tak disentuh karena memengaruhi semua teks Arab.
+- eternal-rose: Fraunces ±21% lebih lebar dari font yang salah.
+  - **Masalahnya.** Nama satu kata yang lebar meluap di sampul pada 320–412 px,
+    dan isi sampul bergeser keluar layar karena item grid melebar mengikuti
+    nama. Ini bukan hanya nama ≥10 huruf: "Muhammad" pun meluap 20–25 px. Hero
+    "of X & Y" ikut memotong nama 14–15 huruf, 18–65 px di 320 px (produksi
+    0–8 px).
+  - **Kenapa diukur.** Lebar huruf antar-nama berbeda jauh (0,43–0,64 em per
+    huruf), jadi rumus CSS dari jumlah huruf pasti mengecilkan nama yang
+    sebenarnya muat.
+  - **Perbaikannya** (`fit-names.ts`, dipakai sampul dan hero): nama DIUKUR
+    terhadap lebar KONTEN maskernya, dan hanya yang melampauinya yang
+    dikecilkan. Tinta italic yang menjorok di kedua tepi diberi ruang lewat
+    `padding-inline` .2em plus margin negatif pada masker nama. Cadangan
+    persentase saja tak cukup: tonjolan tinta relatif terhadap ukuran huruf
+    (kait "f" ±0,13 em; italic sintetis pasangan C ±0,19 em), sehingga nama
+    selebar 95–100% wadah dulu terpotong ("Abdurrauf", "Puspitasari").
+  - **Pemicunya.** Di sampul, ResizeObserver pada wadahnya: ia jalan sesudah
+    tata letak dan sebelum lukisan pada frame ketika sampul tampil (rAF
+    terbukti telat satu frame). Di hero, saat mount (masih di balik sampul),
+    saat resize, dan saat var akar berubah (editor tampilan mengganti pasangan
+    font tanpa memuat ulang). Keduanya diulang begitu face italic termuat.
+  - **Bukti.**
+    - Pindaian 49 nama × 6 lebar (320–430) × pasangan A/B/C di Chromium, plus
+      WebKit (A di 6 lebar, C di 3): 0 terpotong.
+    - Hero, 5 nama × 4 lebar × 2 mesin: 0 terpotong, termasuk saat pasangan
+      diganti langsung (A→C→B→A), sedangkan kendali tanpa pengepas terpotong.
+    - Halaman tak bergulir ke samping.
+    - Frame yang benar-benar dilukis (screencast CDP; font normal & lambat;
+      motion & reduce): tak satu pun meluap, dan kendali dengan nama yang
+      dipaksa meluap tertangkap.
+- Masker baris `.er-line`/`.vd-line` memotong ekor g/j/y. Di verdant, kait "j"
+  pada "Anjani" demo hilang. Diperbaiki dengan `padding-bottom` + margin negatif
+  (.15em / .2em), sehingga tata letak tak bergeser dan state tersembunyi 115%
+  tetap tak mengintip (diukur per piksel). Ditolak: `overflow-clip-margin`,
+  karena WebKit tak mendukungnya dan WhatsApp iOS memakai WebKit.
+- Angka hias "02" eternal-rose terpotong tepi kartu → digeser `.06em`.
+
+**Konsekuensi:**
+- Rupa tema berubah kembali ke desainnya: total di delapan tema, sebagian di
+  festa/meridian/noir, nyaris tidak di meihua. Ini termasuk gelombang 3 yang
+  dibangun dan di-QA dengan font yang salah. Bobot/gaya yang
+  diminta CSS tetapi tak dideklarasikan kini disintesis peramban (mis. nama
+  tamu sampul barakah tebal sintetis; italic teks body).
+- Unduhan font per kunjungan (sampul → buka → gulir habis, 412 px) total 14 tema:
+  183 → 89 berkas, 4245 → 2669 KB. Turun di 10 tema (barakah 460 → 146 KB),
+  tetap di aria & prisma, NAIK di festa (130 → 175 KB) dan lumina
+  (130 → 179 KB) — dulu keduanya keliru memakai satu berkas variabel Hanken
+  milik marketing.
+- Belum ditangani, dicatat untuk QA visual pemilik:
+  - Nama satu kata panjang masih terpotong di tema tanpa pengepas:
+    - marawa/priangan (14 huruf, 320 px);
+    - sampul verdant (wadah ≤220 px: 14 huruf 42–75 px di 320, "Wahyuningsih"
+      9 px di 412 — membaik dari produksi);
+    - sampul kirana (13–32 px di 320);
+    - aria/noir/meridian (masalah lama);
+    - festa (diuji dengan nama tiga kata).
+
+    Pengepas `fit-names.ts` siap dipakai ulang.
+  - Jumlah baris beberapa judul berubah.
+  - Tombol "Konfirmasi Kirim Amplop" dua baris pada pasangan B di 320 px.
+  - Huruf Latin-ext di label (ū, ā, ǐ) jatuh ke font sistem.
+  - Di luar font, sudah ada sebelumnya: tombol "Buka Undangan" eternal-rose tak
+    terjangkau di ponsel lanskap, karena tinggi isi sampul melebihi layar dan
+    gulir dikunci.
+- Aturan ini tercatat di THEME-PORTING §0.2 & DoD §5 dan THEME-CONTRACT §5.
+
+---
+
+## #108 — 2026-11-03 · Foto bernama: `setValue` tanpa `shouldDirty` (bug react-hook-form 7.90)
+
+**Keputusan:** ketiga pemanggil `PhotoField` (foto sampul, foto mempelai, logo)
+memanggil `setValue(field, next)` tanpa `{ shouldDirty: true }`. Test
+`editor-hapus-foto-bernama` merender langkah editornya dengan `useForm` ASLI.
+
+**Alasan:**
+- Tombol "Hapus" pada foto bernama yang sudah tersimpan melempar
+  `TypeError: Cannot read properties of undefined (reading 'path')`.
+  Akibatnya tak ada aksi server, objek foto tak terhapus, dan autosave tak
+  terpicu; bagi pemilik tombolnya hanya diam.
+- Penyebabnya react-hook-form 7.90 (naik lewat Dependabot #8, 16 Okt).
+  `updateTouchAndDirty` memanggil `getDirtyFields(nilaiBawaan, undefined)`, dan
+  fungsi itu membaca `formValues[key]` tanpa penjaga ketika nilai bawaannya
+  objek.
+- Status dirty tak dibaca di mana pun. Autosave menyimak `form.watch`, dan
+  `_setValue` RHF memancarkan `values` ke pelanggan `watch` setiap kali nilainya
+  berubah, tanpa bergantung pada `shouldDirty` (diperiksa di sumbernya). Opsi
+  itu hanya mengaktifkan `updateTouchAndDirty`, sumber TypeError-nya.
+- Test lama memakai induk `useState`, sehingga hijau. Test baru merah pada kode
+  lama dengan TypeError yang sama persis, di ketiga langkah.
+
+**Ditolak:** menyematkan RHF 7.82 — itu menahan semua perbaikan upstream demi
+satu opsi yang tak dipakai.
+
+**Konsekuensi:** jangan memakai `shouldDirty` pada field bernilai objek yang bisa
+menjadi `undefined`, setidaknya sampai RHF memperbaikinya. Produksi terdampak
+sejak deploy pertama sesudah 16 Okt.
 
 ---
 

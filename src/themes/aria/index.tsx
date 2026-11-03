@@ -39,7 +39,7 @@ import {
 // `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
-const serif = localFont({
+const arSerif = localFont({
   src: [
     {
       path: "../../fonts/themes/instrument-serif-400.woff2",
@@ -57,7 +57,7 @@ const serif = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const sans = localFont({
+const arSans = localFont({
   src: [
     {
       path: "../../fonts/themes/inter-400.woff2",
@@ -84,7 +84,7 @@ const sans = localFont({
  * (`coverMode:'theme'`). TIDAK mengambil data sendiri (SPEC §7.1).
  */
 export default function Aria({ data }: ThemeComponentProps) {
-  const rootClass = `ar ${serif.variable} ${sans.variable}`;
+  const rootClass = `ar ${arSerif.variable} ${arSans.variable}`;
   const { settings } = data;
 
   if (data.content.category !== "wedding") {

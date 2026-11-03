@@ -44,7 +44,7 @@ import {
 // `@font-face` CSS RENDER-BLOCKING di setiap undangan, padahal konten Merriva
 // seluruhnya Latin. Spectral menyampaikan karakter serif-buku yang sama dengan
 // 4 berkas. `preload:false` — lihat catatan PER-1 di tema lain.
-const display = localFont({
+const lmDisplay = localFont({
   src: [
     {
       path: "../../fonts/themes/spectral-400.woff2",
@@ -62,7 +62,7 @@ const display = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const body = localFont({
+const lmBody = localFont({
   src: [
     {
       path: "../../fonts/themes/karla-400.woff2",
@@ -90,7 +90,7 @@ const body = localFont({
  * — reveal via `Reveal` (IO). TIDAK mengambil data sendiri (SPEC §7.1).
  */
 export default function Lumina({ data }: ThemeComponentProps) {
-  const rootClass = `lm ${display.variable} ${body.variable}`;
+  const rootClass = `lm ${lmDisplay.variable} ${lmBody.variable}`;
   const { settings, content } = data;
 
   const firstEvent = data.events[0];

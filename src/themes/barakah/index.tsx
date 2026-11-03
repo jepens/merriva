@@ -43,7 +43,7 @@ import {
 // a: Marcellus = serif display bertakik lembut (nama & judul); Figtree = sans
 // humanis bersih (teks). b: Cormorant Garamond = serif kontras-tinggi bergaya
 // Garamond (nama & ayat); Jost = sans geometris bersih (keterbacaan body).
-const dispA = localFont({
+const bkDispA = localFont({
   src: [
     {
       path: "../../fonts/themes/marcellus-400.woff2",
@@ -56,7 +56,7 @@ const dispA = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = localFont({
+const bkBodyA = localFont({
   src: [
     {
       path: "../../fonts/themes/figtree-400.woff2",
@@ -74,7 +74,7 @@ const bodyA = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const dispB = localFont({
+const bkDispB = localFont({
   src: [
     {
       path: "../../fonts/themes/cormorant-garamond-400.woff2",
@@ -122,7 +122,7 @@ const dispB = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = localFont({
+const bkBodyB = localFont({
   src: [
     {
       path: "../../fonts/themes/jost-400.woff2",
@@ -147,10 +147,10 @@ const bodyB = localFont({
 });
 
 const FONT_VARS = [
-  dispA.variable,
-  bodyA.variable,
-  dispB.variable,
-  bodyB.variable,
+  bkDispA.variable,
+  bkBodyA.variable,
+  bkDispB.variable,
+  bkBodyB.variable,
 ].join(" ");
 
 /**

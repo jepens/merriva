@@ -6,6 +6,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { copy } from "@/lib/copy";
 import { useCoverGate } from "@/themes/_shared/cover-gate";
 
+import { fitToLine, muatFont } from "./fit-names";
 import { L } from "./labels";
 
 // Silk shader dimuat LAZY & hanya dirender saat `richOn` (perangkat mampu).
@@ -75,6 +76,37 @@ export function EternalRoseCover({
     });
     return () => anims.forEach((a) => a.cancel());
   }, [motionOn]);
+
+  // Nama yang lebih lebar dari sampul pada ukuran desain terpotong masker
+  // `.er-line` — kecilkan HANYA nama itu (lihat fit-names.ts). Pemicunya
+  // ResizeObserver pada wadah sampul: ia jalan sesudah tata letak dan SEBELUM
+  // lukisan pada frame ketika sampul baru tampil (0×0 → selayar, saat induk
+  // memasang `is-js`) dan saat layar berubah ukuran — rAF terbukti telat satu
+  // frame. Ukurannya tetap selayar, jadi mengecilkan nama tak memicu ulang
+  // dirinya. Diulang lagi begitu font tema termuat.
+  useEffect(() => {
+    const root = innerRef.current;
+    const cover = root?.closest<HTMLElement>(".er-cover");
+    if (!root || !cover) return;
+    const names = Array.from(
+      root.querySelectorAll<HTMLElement>(".er-cover__name"),
+    );
+    let live = true;
+    const fit = () => {
+      if (!live) return;
+      for (const el of names) {
+        const line = el.querySelector<HTMLElement>(".er-line");
+        if (line) fitToLine(el, line);
+      }
+    };
+    const ro = new ResizeObserver(() => fit());
+    ro.observe(cover);
+    if (names[0]) muatFont(names[0], groomName + brideName).then(fit, () => {});
+    return () => {
+      live = false;
+      ro.disconnect();
+    };
+  }, [groomName, brideName]);
 
   const c = copy.public.cover;
 

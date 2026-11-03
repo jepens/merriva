@@ -71,9 +71,10 @@ function PersonFields({
           aspect={slot.aspect}
           value={photo}
           initialUrl={slot.url}
-          onChange={(next) =>
-            setValue(`content.${side}.photo`, next, { shouldDirty: true })
-          }
+          // Tanpa `shouldDirty`: react-hook-form 7.90 melempar TypeError saat
+          // foto dibuang (`undefined` vs bawaan objek), dan tak ada yang membaca
+          // status dirty — autosave menyimak `form.watch`.
+          onChange={(next) => setValue(`content.${side}.photo`, next)}
         />
       ) : null}
     </div>

@@ -158,7 +158,7 @@ export function Couple({ groom, bride }: { groom: Person; bride: Person }) {
       <div className="sk-couple">
         <Medali person={bride} role={L.couple.bride} />
         <Reveal>
-          <div className="sk-amp sk-ar" aria-hidden>
+          <div className="sk-amp" aria-hidden>
             {L.couple.and}
           </div>
         </Reveal>

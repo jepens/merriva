@@ -6,7 +6,7 @@
 export const themeCssHrefs: Record<string, string> = {
   "aria": "/themes/aria.850aa114aa.css",
   "barakah": "/themes/barakah.785563b928.css",
-  "eternal-rose": "/themes/eternal-rose.2b8327fd4c.css",
+  "eternal-rose": "/themes/eternal-rose.7c51a76b30.css",
   "festa": "/themes/festa.6deeaf4da8.css",
   "kirana": "/themes/kirana.d777f465b9.css",
   "lumina": "/themes/lumina.d15eb5e788.css",
@@ -16,6 +16,6 @@ export const themeCssHrefs: Record<string, string> = {
   "noir": "/themes/noir.8e5b4f9026.css",
   "priangan": "/themes/priangan.2746d5d171.css",
   "prisma": "/themes/prisma.a0bb804dcb.css",
-  "sakinah": "/themes/sakinah.ede8457d07.css",
-  "verdant": "/themes/verdant.0bc1e4c90a.css",
+  "sakinah": "/themes/sakinah.7dd7533ebc.css",
+  "verdant": "/themes/verdant.0793803cde.css",
 };

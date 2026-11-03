@@ -78,10 +78,11 @@ values
      "logo":42}'::jsonb);
 
 -- `media.storage_path` dibatasi check constraint `media_storage_path_format`
--- ke bentuk `inv/<uuid>/<uuid>` PERSIS. Prefix foto bernama sengaja berbeda
+-- ke `inv/<invitation_id>/<id>` barisnya sendiri PERSIS (20261103045611), jadi
+-- `id` wajib ditulis. Prefix foto bernama sengaja berbeda
 -- (`inv/<uuid>/foto/<uuid>`) dan memang tak pernah masuk tabel ini.
-insert into public.media (invitation_id, storage_path, width, height) values
-  ('0d810000-0000-4000-8000-0000000000a1', 'inv/0d810000-0000-4000-8000-0000000000a1/0d810000-0000-4000-8000-0000000000f1', 1600, 1200);
+insert into public.media (id, invitation_id, storage_path, width, height) values
+  ('0d810000-0000-4000-8000-0000000000f1', '0d810000-0000-4000-8000-0000000000a1', 'inv/0d810000-0000-4000-8000-0000000000a1/0d810000-0000-4000-8000-0000000000f1', 1600, 1200);
 
 create temporary table hasil_a on commit drop as
   select * from public.purge_invitation_data('0d810000-0000-4000-8000-0000000000a1');

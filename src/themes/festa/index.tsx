@@ -41,7 +41,7 @@ import {
 // `/[slug]`, bukan hanya tema yang dipakai — 116 berkas / 2,03 MB per pembukaan
 // undangan. Tanpa preload, `@font-face` + `unicode-range` tetap terbit dan
 // browser hanya mengunduh slice yang benar-benar dipakai.
-const display = localFont({
+const ftDisp = localFont({
   src: [
     {
       path: "../../fonts/themes/bricolage-grotesque-500.woff2",
@@ -64,7 +64,7 @@ const display = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const body = localFont({
+const ftBody = localFont({
   src: [
     {
       path: "../../fonts/themes/figtree-400.woff2",
@@ -91,7 +91,7 @@ const body = localFont({
  * (ParticlesCanvas — TANPA gsap). TIDAK mengambil data sendiri (SPEC §7.1).
  */
 export default function Festa({ data }: ThemeComponentProps) {
-  const rootClass = `ft ${display.variable} ${body.variable}`;
+  const rootClass = `ft ${ftDisp.variable} ${ftBody.variable}`;
   const { settings } = data;
 
   if (data.content.category !== "family") {

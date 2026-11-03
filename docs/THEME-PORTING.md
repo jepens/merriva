@@ -9,14 +9,14 @@
 ## 0. Prinsip pemasangan (baca dulu)
 
 1. **Kontrak tema TIDAK berubah.** `ThemeComponentProps { data: InvitationData }` tetap; tema tetap dilarang fetch; visibilitas section tetap via `isSectionVisible(settings, …)`; `data.watermark`, `data.music`, `data.media` dipakai sebagaimana adanya. Prototipe hanya mengubah *rupa dan koreografi*, bukan data flow.
-2. **Pola yang sudah ada dipertahankan dan ditumpangi**, bukan diganti: `ThemeRoot` (penanda `is-js`), `Reveal` IO, `Countdown` bersama, CSS ter-scope prefix per tema (`er-`, dst.), font via `next/font/google`, `WeddingLayout` untuk tema yang cukup CSS-only.
+2. **Pola yang sudah ada dipertahankan dan ditumpangi**, bukan diganti: `ThemeRoot` (penanda `is-js`), `Reveal` IO, `Countdown` bersama, CSS ter-scope prefix per tema (`er-`, dst.), font via `next/font/local` (berkas di repo, `preload: false` — DECISIONS #64) dengan **nama binding berprefiks tema** (`erDispA`, bukan `dispA`): nama binding itulah `font-family`-nya, dan nama yang sama di dua tema bertabrakan di setiap halaman undangan (DECISIONS #107; dijaga `tests/unit/font-binding-unik.test.ts`), `WeddingLayout` untuk tema yang cukup CSS-only.
 3. **Craft tanpa library** — tema tier Craft tidak boleh menyentuh gsap/lenis. **Story/Signature memuat gsap/lenis via `next/dynamic`/`import()` di dalam temanya saja** — bundle halaman tema Craft dan app shell tidak boleh membengkak (verifikasi dengan build output).
 4. **Pelajaran terverifikasi dari prototipe (wajib diikuti):** state tersembunyi untuk mask-reveal **dimiliki JS** (`gsap.set(..., {visibility:'visible', yPercent:115})` lalu animate ke 0), **bukan** transform di CSS — mencegah elemen tersembunyi lagi setelah tween selesai. CSS hanya menyembunyikan via `visibility` di bawah kelas `is-js`+tier.
 5. Satu tema per pass: port → `pnpm lint && pnpm typecheck && pnpm build` → cek `/preview/tema/{slug}` → commit → tema berikutnya. Jangan mem-port dua tema dalam satu commit.
 
 ## 1. Pemetaan prototipe → tema (rekomendasi default — konfirmasi ke pemilik bila ragu)
 
-| Prototipe | Target | Aksi | Tier | Font (next/font/google) |
+| Prototipe | Target | Aksi | Tier | Font (self-host `next/font/local`, #64) |
 |---|---|---|---|---|
 | `eternal-rose-signature.html` | `eternal-rose` (upgrade in-place) | Ganti art direction: **buang `Great_Vibes` (script)** → `Fraunces` + `Instrument_Sans`; cover gate; shader silk; kelopak | Signature | Fraunces, Instrument Sans |
 | `midnight-frame-story.html` | `noir` (upgrade — meta dark-luxe `#14110f`/gold ✦ sudah searah) | Letterbox sinematik, scene cards, pan foto, credits | Story | Cormorant Garamond, Jost |
@@ -72,7 +72,7 @@ Titik render yang sudah terpasang: `src/app/[slug]/page.tsx`, `src/app/preview/[
 
 ## 5. Definition of Done per tema (dari THEME-DESIGN §5 + kenyataan repo)
 
-`pnpm lint && pnpm typecheck && pnpm test && pnpm build` hijau · `/preview/tema/{slug}` menyerupai prototipe (bandingkan berdampingan) · demo-data tiap tema diperbarui agar menampilkan kekuatan temanya · reduced-motion: konten lengkap tanpa animasi · tanpa JS: konten tetap terbaca (SSR utuh, pola `is-js`) · nol error konsol · `?rich=1` berfungsi (Signature) · Lighthouse mobile ≥ 90 di preview · uji nyata WebView WA Android + iOS minimal untuk eternal-rose & satu tema Craft · bundle route dalam anggaran §4.
+`pnpm lint && pnpm typecheck && pnpm test && pnpm build` hijau · `/preview/tema/{slug}` menyerupai prototipe (bandingkan berdampingan) · demo-data tiap tema diperbarui agar menampilkan kekuatan temanya · reduced-motion: konten lengkap tanpa animasi · tanpa JS: konten tetap terbaca (SSR utuh, pola `is-js`) · nol error konsol · `?rich=1` berfungsi (Signature) · Lighthouse mobile ≥ 90 di preview · uji nyata WebView WA Android + iOS minimal untuk eternal-rose & satu tema Craft · bundle route dalam anggaran §4 · **font yang MERENDER = deklarasi tema, per pasangan font** (DevTools "Rendered Fonts" / CDP `CSS.getPlatformFontsForNode`; status `loaded` di `document.fonts` bukan bukti — DECISIONS #107) · nama panggilan panjang/berhuruf lebar ("Muhammad", "Abdurrauf", 14 huruf) tak terpotong di sampul & hero pada 320–412 px, termasuk tinta italic di tepi masker — pengepas `src/themes/eternal-rose/fit-names.ts` bisa dipakai ulang; tema lama yang belum memenuhi tercatat di DECISIONS #107 — dan ekor g/j/y tak terpotong masker baris.
 
 ## 6. Urutan eksekusi (fase — satu commit per tema)
 

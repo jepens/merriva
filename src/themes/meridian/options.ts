@@ -2,7 +2,8 @@
  * Options kustomisasi tema `meridian` (wedding Art Deco gala, tier Story).
  * Fase G. Tema GELAP (navy) → varian memvariasikan AKSEN METALIK (emas/perak)
  * sambil mempertahankan basis navy agar nuansa gala koheren. `customAccent:false`.
- * Font tunggal. Motion: gsap + shimmer CSS (calm mematikan shimmer via CSS).
+ * Dua pasangan font (Italiana / Bodoni Moda + Jost). Motion: gsap + shimmer CSS
+ * (calm mematikan shimmer via CSS).
  */
 import type { ThemeOptions } from "@/lib/customizer/theme-options";
 
@@ -63,6 +64,12 @@ export const meridianOptions: ThemeOptions = {
   },
   preview: {
     root: "mrd",
-    vars: [{ name: "--mrd-gold", token: "accent" }],
+    // `--mrd-display`/`--mrd-body` = var yang dibaca mrd.css; tanpa keduanya
+    // pasangan "Bodoni Moda + Jost" terpilih tetapi tak pernah dirender.
+    vars: [
+      { name: "--mrd-gold", token: "accent" },
+      { name: "--mrd-display", token: "disp" },
+      { name: "--mrd-body", token: "body" },
+    ],
   },
 };

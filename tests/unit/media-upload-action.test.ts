@@ -88,7 +88,10 @@ function makeClient(opts: ClientOpts = {}) {
     rpcError = null,
   } = opts;
 
-  const rpc = vi.fn(() => Promise.resolve({ data: rpcData, error: rpcError }));
+  // Parameter dideklarasikan agar `rpc.mock.calls[0][1]` lolos typecheck.
+  const rpc = vi.fn((_fn: string, _args: Record<string, unknown>) =>
+    Promise.resolve({ data: rpcData, error: rpcError }),
+  );
   const from = () => {
     const c: Record<string, unknown> = {};
     c.select = () => c;
@@ -216,6 +219,9 @@ describe("uploadGalleryPhotoAction — kuota paket & kebersihan storage", () => 
     expect(res.status).toBe("error");
     if (res.status === "error") expect(res.reason).toBeUndefined();
     expect(storage.delete).toHaveBeenCalledTimes(3);
+    // Penolakan DB (mis. CHECK path) adalah bug kita — wajib berbunyi.
+    expect(reportHandledError).toHaveBeenCalledTimes(1);
+    expect(reportHandledError.mock.calls[0][1]).toBe("media.insert");
   });
 
   it("unggah storage gagal → dibersihkan, tak menyentuh RPC", async () => {
@@ -253,5 +259,26 @@ describe("uploadGalleryPhotoAction — kuota paket & kebersihan storage", () => 
       "insert_gallery_media",
       expect.objectContaining({ inv_id: INV, w: 1600, h: 1200 }),
     );
+    // Invarian yang dipaksa CHECK `media_storage_path_format`: path = PERSIS
+    // `inv/<inv_id>/<media_id>` baris itu sendiri. Refaktor yang
+    // menyimpangkannya gagal 23514 di produksi, jadi dijaga di sini juga.
+    const args = client.rpc.mock.calls[0][1];
+    expect(args.path).toBe(`inv/${args.inv_id}/${args.media_id}`);
+  });
+
+  it("UUID undangan berhuruf besar → path tetap memakai id kanonik dari DB", async () => {
+    // `isUuid` menerima huruf besar, sedangkan CHECK membandingkan dengan
+    // `invitation_id::text` (selalu huruf kecil). UUID-nya WAJIB berhuruf:
+    // `INV` hanya angka, jadi `toUpperCase()`-nya tak mengubah apa pun.
+    const inv = "abcdef12-3456-4789-8abc-def012345678";
+    const client = makeClient({ invitation: { id: inv, slug: "andi-sinta" } });
+    serverRef.current = client as never;
+
+    const res = await uploadGalleryPhotoAction(inv.toUpperCase(), form());
+
+    expect(res.status).toBe("success");
+    const args = client.rpc.mock.calls[0][1];
+    expect(args.inv_id).toBe(inv);
+    expect(args.path).toBe(`inv/${inv}/${args.media_id}`);
   });
 });

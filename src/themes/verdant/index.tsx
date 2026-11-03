@@ -43,7 +43,7 @@ import {
 // = grotesque humanis (teks/label). Nuansa buku sketsa botani.
 // b) Cormorant Garamond = serif display high-contrast anggun; Nunito Sans = sans
 // humanis hangat, mudah dibaca di WebView WhatsApp.
-const dispA = localFont({
+const vdDispA = localFont({
   src: [
     {
       path: "../../fonts/themes/eb-garamond-400.woff2",
@@ -71,7 +71,7 @@ const dispA = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyA = localFont({
+const vdBodyA = localFont({
   src: [
     {
       path: "../../fonts/themes/karla-400.woff2",
@@ -89,7 +89,7 @@ const bodyA = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const dispB = localFont({
+const vdDispB = localFont({
   src: [
     {
       path: "../../fonts/themes/cormorant-garamond-400.woff2",
@@ -137,7 +137,7 @@ const dispB = localFont({
   // WAJIB tetap false — lihat catatan PER-1 di atas.
   preload: false,
 });
-const bodyB = localFont({
+const vdBodyB = localFont({
   src: [
     {
       path: "../../fonts/themes/nunito-sans-400.woff2",
@@ -169,7 +169,7 @@ const bodyB = localFont({
  * tampil sesuai `settings.sections`.
  */
 export default function Verdant({ data }: ThemeComponentProps) {
-  const rootClass = `vd ${dispA.variable} ${bodyA.variable} ${dispB.variable} ${bodyB.variable}`;
+  const rootClass = `vd ${vdDispA.variable} ${vdBodyA.variable} ${vdDispB.variable} ${vdBodyB.variable}`;
   const { settings } = data;
 
   if (data.content.category !== "wedding") {

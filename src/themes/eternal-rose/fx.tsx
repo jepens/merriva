@@ -1,11 +1,15 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { useCoverGate } from "@/themes/_shared/cover-gate";
 import {
   type ThemeMotionCtx,
   useThemeMotion,
 } from "@/themes/_shared/gsap-motion";
 import { ParticlesCanvas } from "@/themes/_shared/particles-canvas";
+
+import { fitToLine, muatFont } from "./fit-names";
 
 /**
  * Overlay & koreografi eternal-rose (klien). Membaca `useCoverGate()`:
@@ -15,6 +19,41 @@ import { ParticlesCanvas } from "@/themes/_shared/particles-canvas";
  */
 export function EternalRoseFx() {
   const { opened, motionOn, richOn, rootRef } = useCoverGate();
+
+  // Baris nama hero ("of X & Y") meluap seperti nama sampul bila namanya satu
+  // kata yang lebar — pengepas yang sama, terlepas dari motion. Jalan saat
+  // mount (hero sudah tertata di balik sampul, jadi tak ada lompatan yang
+  // terlihat), saat face italic nama termuat, saat layar berubah ukuran, dan
+  // saat var akar berganti: editor tampilan mengganti pasangan font langsung
+  // di iframe tanpa memuat ulang.
+  useEffect(() => {
+    const root = rootRef.current;
+    const h1 = root?.querySelector<HTMLElement>(".er-hero__names");
+    const line = h1?.querySelector<HTMLElement>(".er-line:last-child");
+    if (!root || !h1 || !line) return;
+    let live = true;
+    const fit = () => {
+      if (live) fitToLine(h1, line);
+    };
+    // Face pasangan yang baru dipilih di editor belum tentu termuat: muat face
+    // yang KINI dipakai nama, lalu ukur lagi begitu tiba.
+    const ukur = () => {
+      fit();
+      muatFont(line.querySelector("em") ?? h1, line.textContent ?? "").then(
+        fit,
+        () => {},
+      );
+    };
+    ukur();
+    window.addEventListener("resize", fit);
+    const mo = new MutationObserver(ukur);
+    mo.observe(root, { attributes: true, attributeFilter: ["style"] });
+    return () => {
+      live = false;
+      window.removeEventListener("resize", fit);
+      mo.disconnect();
+    };
+  }, [rootRef]);
 
   useThemeMotion(rootRef, opened && motionOn, (ctx: ThemeMotionCtx) => {
     const { gsap, scope } = ctx;

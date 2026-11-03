@@ -34,7 +34,7 @@ import {
 
 // Self-hosted (next/font); SEMUA `preload:false` (AUDIT-2026-09-04 PER-1).
 // a: DM Serif Display + Work Sans.
-const dispA = localFont({
+const mhDispA = localFont({
   src: [
     {
       path: "../../fonts/themes/dm-serif-display-400.woff2",
@@ -52,7 +52,7 @@ const dispA = localFont({
   // WAJIB tetap false — lihat catatan PER-1.
   preload: false,
 });
-const bodyA = localFont({
+const mhBodyA = localFont({
   src: [
     {
       path: "../../fonts/themes/work-sans-400.woff2",
@@ -71,7 +71,7 @@ const bodyA = localFont({
   preload: false,
 });
 // b: Playfair Display + Figtree (berkas sudah ada di repo).
-const dispB = localFont({
+const mhDispB = localFont({
   src: [
     {
       path: "../../fonts/themes/playfair-display-400.woff2",
@@ -89,7 +89,7 @@ const dispB = localFont({
   // WAJIB tetap false — lihat catatan PER-1.
   preload: false,
 });
-const bodyB = localFont({
+const mhBodyB = localFont({
   src: [
     {
       path: "../../fonts/themes/figtree-400.woff2",
@@ -109,10 +109,10 @@ const bodyB = localFont({
 });
 
 const FONT_VARS = [
-  dispA.variable,
-  bodyA.variable,
-  dispB.variable,
-  bodyB.variable,
+  mhDispA.variable,
+  mhBodyA.variable,
+  mhDispB.variable,
+  mhBodyB.variable,
 ].join(" ");
 
 /**
