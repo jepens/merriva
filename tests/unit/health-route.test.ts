@@ -33,9 +33,11 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-async function panggil() {
+async function panggil(query = "") {
   const { GET } = await import("@/app/api/health/route");
-  const res = await GET();
+  const res = await GET(
+    new Request(`http://127.0.0.1:3000/api/health${query}`),
+  );
   return { res, body: (await res.json()) as Record<string, unknown> };
 }
 
@@ -105,5 +107,38 @@ describe("/api/health — probe Supabase", () => {
     await panggil();
 
     expect(fetchMock.mock.calls[0][0]).toBe(`${URL_SUPABASE}/rest/v1/`);
+  });
+});
+
+/**
+ * `?probe=live` dipakai HEALTHCHECK Docker (DECISIONS #110). Gagalnya membuat
+ * Swarm MEMBUNUH kontainer, jadi probe ini tak boleh ikut gagal hanya karena
+ * Supabase lambat atau mati sesaat — halaman undangan ISR tetap bisa dilayani.
+ */
+describe("/api/health?probe=live — liveness HEALTHCHECK", () => {
+  it("tak menembak Supabase sama sekali", async () => {
+    const { res, body } = await panggil("?probe=live");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ status: "ok", db: "skipped" });
+  });
+
+  it("tetap 200 walau Supabase sedang menolak — kontainer tak boleh dibunuh karenanya", async () => {
+    fetchMock.mockResolvedValue({ ok: false });
+
+    const { res } = await panggil("?probe=live");
+
+    expect(res.status).toBe(200);
+  });
+
+  it("probe lengkap (tanpa parameter) tetap memeriksa DB untuk UptimeRobot/ops:verify", async () => {
+    fetchMock.mockResolvedValue({ ok: false });
+
+    const { res, body } = await panggil();
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(res.status).toBe(503);
+    expect(body.db).toBe("down");
   });
 });

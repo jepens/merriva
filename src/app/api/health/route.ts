@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 
 const DB_TIMEOUT_MS = 2500;
 
-type DbStatus = "up" | "down" | "not_configured";
+type DbStatus = "up" | "down" | "not_configured" | "skipped";
 
 /**
  * Probe reachability Supabase (PostgREST) tanpa ketergantungan skema.
@@ -138,8 +138,20 @@ function adaCronSecret(): boolean {
   return (process.env.CRON_SECRET ?? "").trim().length > 0;
 }
 
-export async function GET() {
-  const db = await checkDatabase();
+/**
+ * `?probe=live` = probe LIVENESS untuk `HEALTHCHECK` Docker: "proses ini
+ * menjawab dan konfigurasinya waras", TANPA menembak Supabase. Tanpa parameter =
+ * probe lengkap untuk UptimeRobot dan `pnpm ops:verify`.
+ *
+ * Kenapa dipisah (DECISIONS #110): HEALTHCHECK yang gagal membuat Swarm
+ * MEMBUNUH kontainer, sehingga semua halaman mati — termasuk undangan ISR yang
+ * tak butuh DB sama sekali. Supabase yang lambat sesaat tak boleh berakibat
+ * begitu. Pemeriksaan pasangan media tetap ikut: ia murah tanpa I/O, dan justru
+ * menolak image yang salah konfigurasi SEBELUM menerima trafik.
+ */
+export async function GET(request: Request) {
+  const live = new URL(request.url).searchParams.get("probe") === "live";
+  const db: DbStatus = live ? "skipped" : await checkDatabase();
   const media = periksaMedia();
   const healthy = db !== "down" && media === null;
 

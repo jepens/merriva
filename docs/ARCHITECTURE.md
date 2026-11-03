@@ -104,7 +104,7 @@ Tiga hal yang berlaku untuk seluruh baris di atas: (1) **best-effort** — tak a
 
 ## 8. Deployment (VPS + Easypanel)
 
-`Dockerfile` multi-stage: `node:22-alpine` → install (pnpm, frozen lockfile) → build (`output: 'standalone'`) → runtime hanya `.next/standalone` + `public` + `.next/static`, user non-root, `EXPOSE 3000`, healthcheck `GET /api/health` (cek DB reachable). Easypanel: app dari repo Git (push → auto build+deploy), domain `merriva.id` di-attach (SSL Let's Encrypt otomatis via Traefik), env vars di panel. DNS di Cloudflare (proxy oranye ON untuk cache statis + perlindungan).
+`Dockerfile` multi-stage: `node:22-alpine` → install (pnpm, frozen lockfile) → build (`output: 'standalone'`) → runtime hanya `.next/standalone` + `public` + `.next/static`, user non-root, `EXPOSE 3000`, healthcheck LIVENESS `GET /api/health?probe=live` (tanpa probe DB, 10 dtk × 5; probe lengkap `/api/health` dengan cek DB untuk UptimeRobot/ops:verify — DECISIONS #110). Easypanel: app dari repo Git (push → auto build+deploy), domain `merriva.id` di-attach (SSL Let's Encrypt otomatis via Traefik), env vars di panel. DNS di Cloudflare (proxy oranye ON untuk cache statis + perlindungan).
 
 **Dua project Supabase:** `merriva-staging` (development, gratis) dan `merriva-prod`. Alur migrasi: kembangkan & uji di staging → merge ke `main` → deploy → `supabase db push` ke prod secara sadar/manual. Jangan pernah mengarahkan dev ke DB prod.
 

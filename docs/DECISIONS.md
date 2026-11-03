@@ -5776,6 +5776,58 @@ baru, bukan sekadar mencoba menulis.
 
 ---
 
+## #110 — 2026-11-03 · HEALTHCHECK = liveness tanpa DB, toleran 10 dtk × 5
+
+**Keputusan:** `HEALTHCHECK` Dockerfile memanggil `/api/health?probe=live`. Probe
+ini hanya memeriksa bahwa proses menjawab dan pasangan env media waras, TANPA
+probe Supabase, dengan `--timeout=10s --retries=5` (dulu 5 dtk × 3).
+`/api/health` tanpa parameter tetap probe lengkap (dengan DB) untuk UptimeRobot
+dan `ops:verify`.
+
+**Alasan:**
+- **Insiden 3 Nov, 05:35–05:40 UTC.** Swarm membunuh kontainer dua kali
+  (`non-zero exit (143): dockerexec: unhealthy container`), dan pengunjung
+  mendapat 502 ±3 menit.
+- **Sebabnya probe DB, bukan proses yang jenuh.** Probe health berhenti tiba di
+  Supabase sejak ±05:35:30 (log edge kosong), padahal halaman pratinjau tetap
+  menjawab 200 sampai 05:36:38. Artinya prosesnya sehat; yang gagal probe DB,
+  sehingga kontainer yang sehat dibunuh, dan penggantinya ikut gagal karena
+  probe yang sama.
+- **Uji beban mendukungnya.** Image yang sama di Docker lokal, dibatasi 1 CPU:
+  - WA-blast 200 VU ke undangan ISR: 16.994 permintaan, 0% galat, p95 18 ms;
+  - pratinjau dinamis 5 VU: p95 51 ms;
+  - pratinjau dinamis 40 VU (91 render/dtk): p95 356 ms, 0 galat.
+
+  Probe live tetap p95 ≤105 ms dan probe lengkap ≤470 ms; container sehat
+  sepanjang uji. Dugaan awal "event loop jenuh oleh verifikasi paralel" tak
+  didukung.
+- **ISR tak butuh DB.** Halaman undangan ISR tak perlu DB untuk dilayani, jadi
+  Supabase yang sesaat tak terjangkau tak boleh mematikannya lewat health
+  check.
+
+**Ditolak:**
+- Hanya melonggarkan toleransi dengan probe DB tetap: gangguan Supabase yang
+  lebih lama dari ±2,5 menit tetap akan membunuh kontainer yang sehat.
+- Route liveness terpisah (`/api/health/live`): pemeriksaan media harus pindah
+  ke modul lain, sedangkan parameter pada route yang sama lebih kecil.
+
+**Konsekuensi:**
+- Supabase yang tak terjangkau tak lagi terlihat di status kontainer. Ia
+  terlihat di UptimeRobot (probe lengkap → 503) dan `ops:verify`, jadi
+  UptimeRobot wajib memantau `/api/health` tanpa parameter.
+- Proses yang benar-benar macet kini dibunuh lebih lambat: ±2,5 menit, dulu
+  ±1,5 menit.
+- Belum diketahui:
+  - penyebab putusnya koneksi VPS→Supabase pada jendela itu;
+  - waktu server murni di kontainer produksi (izin `docker exec` ke kontainer
+    produksi ditolak).
+
+  TTFB produksi tanpa beban: undangan ISR 0,5–1,3 dtk, aset ter-cache
+  Cloudflare 0,1 dtk, dan saat itu VPS menganggur (load 0,16). Itu menunjuk ke
+  koneksi Cloudflare→origin, dan layak diperiksa terpisah.
+
+---
+
 ## Template entri baru
 
 ```

@@ -63,8 +63,12 @@ RUN mkdir -p /app/data/media && chown -R node:node /app/data
 USER node
 EXPOSE 3000
 
-# Healthcheck internal container → /api/health (busybox wget; gagal bila status non-2xx).
-HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
+# Healthcheck internal container → LIVENESS /api/health?probe=live (busybox wget;
+# gagal bila status non-2xx). Tanpa probe Supabase, dan toleran terhadap beban
+# sesaat: kegagalan berarti Swarm MEMBUNUH kontainer — semua halaman mati, dan
+# beban yang memicunya langsung menimpa kontainer pengganti (3 Nov 2026: dua
+# kali berturut-turut). Probe lengkap tetap untuk UptimeRobot (DECISIONS #110).
+HEALTHCHECK --interval=30s --timeout=10s --start-period=25s --retries=5 \
+  CMD wget -qO- "http://127.0.0.1:3000/api/health?probe=live" || exit 1
 
 CMD ["node", "server.js"]
