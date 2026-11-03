@@ -5566,7 +5566,7 @@ kini dilaporkan ke Sentry sehingga penolakan CHECK tak senyap.
     — lubang retensi, bukan lintas pelanggan;
   - `anon` di produksi masih punya INSERT/UPDATE/DELETE di banyak tabel
     `public` (lokal tidak) — diredam RLS tanpa policy anon, tetapi policy
-    `to public` kelak akan membukanya HANYA di produksi.
+    `to public` kelak akan membukanya HANYA di produksi. Ditutup di #109.
 - DB lokal: `orders_rls` gagal karena dua drift lokal (grant SELECT anon hilang,
   dan 5 baris `orders` lokal yang terhitung `count(*)` test 9), bukan karena
   migrasi ini; CI (stack segar) hijau.
@@ -5728,6 +5728,51 @@ satu opsi yang tak dipakai.
 **Konsekuensi:** jangan memakai `shouldDirty` pada field bernilai objek yang bisa
 menjadi `undefined`, setidaknya sampai RHF memperbaikinya. Produksi terdampak
 sejak deploy pertama sesudah 16 Okt.
+
+---
+
+## #109 — 2026-11-03 · `anon` tanpa hak tulis, siapa pun tanpa TRUNCATE di public
+
+**Keputusan:** migrasi 20261103112021 mencabut INSERT/UPDATE/DELETE/TRUNCATE dari
+`anon` dan TRUNCATE dari `authenticated` di semua tabel public, termasuk
+default privileges untuk tabel baru. Hak SELECT anon tak disentuh. Test pgTAP
+`hak_tulis_anon` memeriksa GRANT di seluruh tabel public plus satu tabel probe
+baru, bukan sekadar mencoba menulis.
+
+**Alasan:**
+- **Drift produksi.** Di produksi `anon` memegang hak tulis di 13–14 dari 15
+  tabel public, dan TRUNCATE di semuanya. Itu sisa grant bawaan Supabase saat
+  tabel dibuat. `20260808130000` hanya mengubah DEFAULT untuk tabel baru, jadi
+  produksi menyimpang dari lokal (di lokal anon tanpa hak tulis), dan test
+  lokal tak mewakilinya.
+- **Tak ada yang memakainya.** Satu-satunya policy yang berlaku untuk anon
+  adalah SELECT katalog (themes/packages/songs). Semua tulis tamu (RSVP,
+  ucapan, Album Momen) berjalan lewat admin client (service_role) di server.
+- **Celahnya tetap nyata.** Satu policy `to public` yang keliru kelak langsung
+  membuka tulis anon, dan hanya di produksi. TRUNCATE tak tunduk pada RLS
+  sama sekali, termasuk bagi pengguna login. Tidak ada grant per kolom anon di
+  luar grant tingkat tabel, jadi pencabutan tingkat tabel sudah tuntas.
+- **Uji lokal.** Test baru gagal 4/5 sebelum migrasi (TRUNCATE di 14 tabel, dan
+  tabel baru mewarisinya), lalu lulus sesudahnya. Suite pgTAP 11/12; satu yang
+  gagal adalah drift SELECT lokal `orders_rls` yang sudah ada sebelumnya.
+
+**Ditolak:**
+- Mencabut juga SELECT anon di tabel tanpa policy anon. Itu lingkup lain:
+  `orders_rls` menguji perilaku RLS SELECT anon dan perlu ikut diubah. Layak
+  sebagai langkah berikutnya.
+- Mencabut DML `authenticated`. Alur pemilik dan admin memakainya di bawah RLS.
+
+**Konsekuensi:**
+- Tabel baru tak lagi mewarisi hak tulis anon. Bila kelak memang perlu tulis
+  anon, beri grant eksplisit plus policy.
+- Batasnya: default ini hanya untuk tabel yang dibuat `postgres` (semua migrasi
+  repo dan SQL editor). Tabel yang dibuat `supabase_admin` tetap mewarisi `ALL`
+  untuk anon/authenticated, karena itu bawaan platform yang tak bisa diubah
+  `postgres`. Contohnya mungkin tabel dari Table Editor dasbor. Jadi buat tabel
+  HANYA lewat migrasi; `hak_tulis_anon` menangkap tabel repo yang terlewat.
+- **Terpasang di produksi 3 Nov 2026** (MCP, versi dibetulkan). Diverifikasi:
+  daftar tabel dengan hak tulis anon dan TRUNCATE authenticated kosong; SELECT
+  anon tetap di 12 tabel.
 
 ---
 
