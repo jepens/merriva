@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import { copy } from "@/lib/copy";
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasSampul } from "@/themes/_shared/fit-names";
 
 import { L } from "./labels";
 
@@ -61,7 +62,7 @@ export function VerdantCover({
       el.style.visibility = "visible";
       anims.push(
         el.animate(
-          [{ transform: "translateY(115%)" }, { transform: "translateY(0)" }],
+          [{ transform: "translateY(150%)" }, { transform: "translateY(0)" }],
           {
             duration: 1100,
             easing: "cubic-bezier(0.22,1,0.36,1)",
@@ -74,6 +75,24 @@ export function VerdantCover({
 
     return () => anims.forEach((a) => a.cancel());
   }, [motionOn]);
+
+  // Tengah karangan bunga hanya min(56vw, 220px): nama yang lebih lebar pada
+  // ukuran desain terpotong masker `.vd-line` — kecilkan HANYA nama itu
+  // (_shared/fit-names.ts).
+  useEffect(() => {
+    const inner = innerRef.current;
+    if (!inner) return;
+    return pasangPengepasSampul(
+      inner,
+      () =>
+        Array.from(inner.querySelectorAll<HTMLElement>(".vd-cover__name"))
+          .map((el) => [el, el.querySelector<HTMLElement>(".vd-line")] as const)
+          .filter(
+            (p): p is readonly [HTMLElement, HTMLElement] => p[1] !== null,
+          ),
+      groomName + brideName,
+    );
+  }, [groomName, brideName]);
 
   const c = copy.public.cover;
 

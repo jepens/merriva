@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import { copy } from "@/lib/copy";
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasSampul } from "@/themes/_shared/fit-names";
 
 import { L } from "./labels";
 
@@ -21,7 +22,7 @@ function Line({ children }: { children: ReactNode }) {
  * diri, bingkai bertingkat bersudut, nama shimmer. Membaca `useCoverGate()` untuk
  * nama tamu & aksi buka. Dua entrance DIMILIKI JS (tak menunggu gsap → LCP aman,
  * digerbangi `motionOn`):
- *  - mask-reveal baris (`.mrd-line > span`, WAAPI translateY 115%→0)
+ *  - mask-reveal baris (`.mrd-line > span`, WAAPI translateY 150%→0)
  *  - sunburst rays menggambar (`stroke-dashoffset` L→0 per garis)
  * Penutupan (wipe clip-path) disetir CSS `.is-open` di cover-gate.
  */
@@ -69,7 +70,7 @@ export function MeridianCover({
         el.style.visibility = "visible";
         anims.push(
           el.animate(
-            [{ transform: "translateY(115%)" }, { transform: "translateY(0)" }],
+            [{ transform: "translateY(150%)" }, { transform: "translateY(0)" }],
             {
               duration: 1100,
               easing: "cubic-bezier(0.22,1,0.36,1)",
@@ -83,6 +84,25 @@ export function MeridianCover({
 
     return () => anims.forEach((a) => a.cancel());
   }, [motionOn]);
+
+  // Nama yang lebih lebar dari sampul pada ukuran desain terpotong masker
+  // `.mrd-line` — kecilkan HANYA nama itu (_shared/fit-names.ts).
+  useEffect(() => {
+    const stage = rootRef.current;
+    if (!stage) return;
+    return pasangPengepasSampul(
+      stage,
+      () =>
+        Array.from(stage.querySelectorAll<HTMLElement>(".mrd-cover__name"))
+          .map(
+            (el) => [el, el.querySelector<HTMLElement>(".mrd-line")] as const,
+          )
+          .filter(
+            (p): p is readonly [HTMLElement, HTMLElement] => p[1] !== null,
+          ),
+      brideName + groomName,
+    );
+  }, [brideName, groomName]);
 
   const c = copy.public.cover;
 

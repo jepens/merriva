@@ -248,10 +248,13 @@
   visibility: visible;
 }
 
+/* Margin dihitung, bukan auto: di layar < 320 px wadahnya lebih sempit dari
+   gonjong 260 px, dan margin auto menaruh seluruh luapan di kanan. Nilai ini
+   memusatkannya ke dua sisi; di wadah yang lebih lebar sama dengan auto. */
 .mw-gonjong {
   width: 260px;
   color: var(--mw-gold);
-  margin: 0 auto;
+  margin: 0 calc((100% - 260px) / 2);
   display: block;
 }
 .mw-gonjong path {
@@ -261,7 +264,11 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/* Lebarnya ditentukan sampul, bukan nama: sebagai item flex `align-items:center`
+   ia fit-content — melebar mengikuti kata nama terpanjang sampai keluar layar,
+   dan pengepas (fit-names.ts) tak melihat luapannya. */
 .mw-cover__inner {
+  width: 100%;
   max-width: 420px;
 }
 .mw-cover__eyebrow {
@@ -282,6 +289,22 @@
   display: flex;
   flex-direction: column;
   text-transform: uppercase;
+}
+/* Masker NAMA (baris pertama & terakhir; tengahnya "jo"): ruang tinta di kedua
+   tepi — serif kapital "W"/"A"/"J" menjorok ±.03em, tanpa ini nama yang muat
+   pas terpotong rata di tepinya — .25em di atas untuk aksen kapital (nama
+   ditulis kapital semua: JOSÉ; breve Ğ pasangan A menjulang ±.21em), dan .07em
+   di bawah untuk sedila Ş (glyph Arial cadangan pasangan B). State tersembunyi
+   150% (cover.tsx) menaruh puncak breve tetap di bawah masker — pada 115% ia
+   mengintip dari masker yang kosong. fit-names.ts mengukur lebar konten, jadi
+   ruang ini tak ikut memperkecil nama; margin negatif menetralkan ukurannya.
+   letter-spacing diulang di sini: warisan dari h1 berupa 1,28 px mutlak yang
+   tak ikut mengecil bersama baris yang dikepas — nama 19 huruf meluap 6,5 px. */
+.mw-cover__names > .mw-line:first-child,
+.mw-cover__names > .mw-line:last-child {
+  padding: 0.25em 0.2em 0.07em;
+  margin: -0.25em -0.2em -0.07em;
+  letter-spacing: 0.04em;
 }
 .mw-cover__jo {
   color: var(--mw-gold);

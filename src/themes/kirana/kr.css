@@ -223,19 +223,40 @@
   stroke: var(--kr-sogan);
   stroke-width: 1.1;
 }
+/* Kolom grid selebar tengah gunungan, bukan seketat nama terlebar: di kolom
+   seketat teks lebar konten masker = lebar teksnya, jadi luapan keluar gunungan
+   tak pernah terukur dan selisih sub-piksel membuat pengepas
+   (_shared/fit-names.ts) mengecilkan nama yang sebenarnya muat. Teks tetap
+   terpusat oleh text-align. */
 .kr-gn-center {
   position: absolute;
   inset: 30% 8% 16%;
   display: grid;
-  place-content: center;
+  /* Baris "&" seukuran isinya: maskernya (overflow:hidden) boleh menyusut ke 0
+     di trek auto, jadi saat nama membungkus seluruh kekurangan tinggi bidang
+     tengah diserap "&" dan ia hilang. */
+  grid-template-rows: auto max-content auto;
+  align-content: center;
   text-align: center;
 }
+/* min-width:0 — tanpa itu item grid melebar mengikuti nama terpanjang alih-alih
+   namanya yang dikecilkan. */
 .kr-gn-name {
   font-family: var(--kr-disp-stack);
   font-weight: 500;
   font-size: clamp(30px, 8.5vw, 40px);
   line-height: 1.14;
   color: var(--kr-sogan-d);
+  min-width: 0;
+}
+/* Ruang tinta masker nama: tepi glyph yang menjorok (kait "f") di kedua sisi,
+   aksen kapital (É/Á) di atas, dan ekor j/y/g yang turun di bawah kotak baris
+   1,14. Margin negatif menetralkan, jadi tata letak tak bergeser. State
+   tersembunyi 150% (cover.tsx) mengikuti aturan bersama masker berruang bawah
+   (THEME-PORTING §0.4). */
+.kr-gn-name .kr-line {
+  padding: 0.2em 0.2em 0.15em;
+  margin: -0.2em -0.2em -0.15em;
 }
 .kr-gn-amp {
   font-family: var(--kr-disp-stack);
@@ -442,6 +463,14 @@
   font-size: 29px;
   color: var(--kr-sogan-d);
   margin-top: 6px;
+}
+/* Ruang tinta di kedua tepi masker nama (kait "f" menjorok melewati kotak
+   glyph): nama yang dikepas pengepas (fx.tsx) mengisi 98% kartu. Margin
+   negatif menetralkan; padding kartu 20px > .2em. Aksen kapital (É/Á) sudah
+   muat di kotak baris 1,5. */
+.kr-keraton__name .kr-line {
+  padding-inline: 0.2em;
+  margin-inline: -0.2em;
 }
 .kr-keraton__meta {
   font-size: 12.5px;

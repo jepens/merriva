@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasSampul } from "@/themes/_shared/fit-names";
 
 import { L } from "./labels";
 
@@ -53,7 +54,7 @@ export function KiranaCover({
       el.style.visibility = "visible";
       anims.push(
         el.animate(
-          [{ transform: "translateY(115%)" }, { transform: "translateY(0)" }],
+          [{ transform: "translateY(150%)" }, { transform: "translateY(0)" }],
           {
             duration: 1050,
             easing: "cubic-bezier(0.22,1,0.36,1)",
@@ -89,6 +90,25 @@ export function KiranaCover({
     return () => anims.forEach((a) => a.cancel());
   }, [motionOn]);
 
+  // Nama yang lebih lebar dari tengah gunungan pada ukuran desain terpotong
+  // masker `.kr-line` — kecilkan HANYA nama itu; nama yang membungkus sampai
+  // lebih tinggi dari tengah gunungan dikecilkan bersama (_shared/fit-names.ts).
+  useEffect(() => {
+    const inner = innerRef.current;
+    if (!inner) return;
+    return pasangPengepasSampul(
+      inner,
+      () =>
+        Array.from(inner.querySelectorAll<HTMLElement>(".kr-gn-name"))
+          .map((el) => [el, el.querySelector<HTMLElement>(".kr-line")] as const)
+          .filter(
+            (p): p is readonly [HTMLElement, HTMLElement] => p[1] !== null,
+          ),
+      brideName + groomName,
+      inner.querySelector<HTMLElement>(".kr-gn-center"),
+    );
+  }, [brideName, groomName]);
+
   return (
     <>
       <div className="kr-truntum" aria-hidden />
@@ -109,14 +129,14 @@ export function KiranaCover({
             <path className="kr-gn-sg" d={GUNUNGAN_STEM} />
           </svg>
           <div className="kr-gn-center">
-            <span className="kr-line">
-              <span className="kr-gn-name">{brideName}</span>
+            <span className="kr-gn-name">
+              <Line>{brideName}</Line>
             </span>
             <span className="kr-line">
               <span className="kr-gn-amp">&amp;</span>
             </span>
-            <span className="kr-line">
-              <span className="kr-gn-name">{groomName}</span>
+            <span className="kr-gn-name">
+              <Line>{groomName}</Line>
             </span>
           </div>
         </div>

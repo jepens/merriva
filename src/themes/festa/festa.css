@@ -189,12 +189,16 @@
     animation: none;
   }
 }
+/* min-width:0 — tanpa itu item grid melebar mengikuti kata terpanjang nama,
+   sehingga seluruh isi sampul bergeser keluar layar alih-alih namanya yang
+   dikecilkan. */
 .ft-cover__inner {
   position: relative;
   text-align: center;
   padding: 24px;
   max-width: 430px;
   width: 100%;
+  min-width: 0;
 }
 .ft.is-js .ft-cover__inner > * {
   animation: ft-rise 0.7s both cubic-bezier(0.22, 1, 0.36, 1);

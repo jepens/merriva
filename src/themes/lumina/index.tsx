@@ -19,6 +19,7 @@ import type { ThemeComponentProps } from "@/themes/registry";
 // `<ThemeStyles slug="lumina" />` supaya undangan tak mengunduh stylesheet
 // kesepuluh tema (AUDIT PER-2 / DECISIONS #31). Sumbernya tetap ./lm.css
 import { LuminaCover } from "./cover";
+import { LuminaFx } from "./fx";
 import { L } from "./labels";
 import { luminaOptions } from "./options";
 import {
@@ -240,6 +241,7 @@ export default function Lumina({ data }: ThemeComponentProps) {
           dateLabel={dateLabel}
         />
       }
+      fx={<LuminaFx />}
     >
       {grainOn ? <div className="lm-grain" aria-hidden /> : null}
 

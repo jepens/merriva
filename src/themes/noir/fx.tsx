@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasIsi } from "@/themes/_shared/fit-names";
 import {
   type ThemeMotionCtx,
   useThemeMotion,
@@ -15,6 +18,27 @@ import {
 export function NoirFx() {
   const { opened, motionOn, rootRef } = useCoverGate();
 
+  // Nama di judul hero meluap seperti nama sampul bila satu kata yang lebar —
+  // pengepas yang sama, terlepas dari motion (_shared/fit-names.ts). Dikepas
+  // PER BARIS nama: kedua nama berbagi satu h1, dan hanya yang meluap yang
+  // dikecilkan.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const baris = () =>
+      Array.from(
+        root.querySelectorAll<HTMLElement>(".nr-hero__title .nr-line"),
+      ).filter((l) => l.querySelector("em"));
+    if (!baris().length) return;
+    return pasangPengepasIsi(
+      root,
+      () => baris().map((l) => [l, l] as const),
+      baris()
+        .map((l) => l.textContent ?? "")
+        .join(""),
+    );
+  }, [rootRef]);
+
   useThemeMotion(rootRef, opened && motionOn, (ctx: ThemeMotionCtx) => {
     const { gsap, scope } = ctx;
     const q = <T extends Element>(sel: string) =>
@@ -22,7 +46,7 @@ export function NoirFx() {
 
     // Mask reveal per baris (state dimiliki JS §0.4) — konten saja (.nr-stage).
     q<HTMLElement>(".nr-stage .nr-line > span").forEach((el) => {
-      gsap.set(el, { visibility: "visible", yPercent: 115 });
+      gsap.set(el, { visibility: "visible", yPercent: 150 });
       gsap.to(el, {
         yPercent: 0,
         duration: 1.1,

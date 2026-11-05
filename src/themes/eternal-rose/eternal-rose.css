@@ -101,8 +101,9 @@
 /* Baris bermask — state tersembunyi DIMILIKI JS (WAAPI/gsap). CSS hanya
    menyembunyikan bila JS + motion aktif → tanpa JS/motion konten terbaca.
    Ruang .15em di bawah untuk ekor huruf (g/j/y Fraunces italic) yang turun
-   lebih dalam dari kotak baris; margin negatif menetralkan tingginya. Nilai ini
-   batas aman bersama state tersembunyi 115% pada line-height .98 nama sampul. */
+   lebih dalam dari kotak baris; margin negatif menetralkan tingginya. State
+   tersembunyi 150% (cover.tsx/fx.tsx) menaruh puncak aksen kapital (É/Á) tetap
+   di bawah ruang ini — pada 115% aksennya mengintip dari masker yang kosong. */
 .er-line {
   display: block;
   overflow: hidden;
@@ -114,11 +115,24 @@
 }
 /* Ruang tinta italic di kedua tepi masker NAMA (kait "f", titik "i" miring):
    tanpa ini nama yang muat pas terpotong rata di tepinya. fit-names.ts mengukur
-   terhadap lebar konten, jadi ruang ini tak ikut memperkecil nama. */
+   terhadap lebar konten, jadi ruang ini tak ikut memperkecil nama. Atas .2em:
+   aksen kapital (É/Á) menjulang di atas kotak baris yang rapat. */
 .er-cover__name .er-line,
-.er-hero__names .er-line {
+.er-hero__names .er-line,
+.er-person h3 .er-line {
   padding-inline: 0.2em;
   margin-inline: -0.2em;
+  padding-top: 0.2em;
+  margin-top: -0.2em;
+}
+/* Flex kolom pada tumpukan masker: margin item flex tak ber-collapse, jadi
+   ruang tinta antar-masker (bawah −.15em + atas −.2em) benar-benar dijumlah.
+   Di blok, hanya yang paling negatif yang dipakai dan baris berikutnya — juga
+   isi di bawahnya — turun .15em (DECISIONS #111). */
+.er-cover__names,
+.er-hero__names {
+  display: flex;
+  flex-direction: column;
 }
 .er.is-js.is-motion .er-line > span {
   visibility: hidden;

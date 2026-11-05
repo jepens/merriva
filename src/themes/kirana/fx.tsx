@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasIsi } from "@/themes/_shared/fit-names";
 import {
   type ThemeMotionCtx,
   useThemeMotion,
@@ -15,6 +18,22 @@ import {
  */
 export function KiranaFx() {
   const { opened, motionOn, rootRef } = useCoverGate();
+
+  // Nama lengkap di kartu keraton bisa memuat kata yang lebih lebar dari
+  // kartunya ("Kusumawardhani" Playfair di 320 px) — pengepas yang sama dengan
+  // sampul, terlepas dari motion (_shared/fit-names.ts).
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const ambil = () =>
+      Array.from(root.querySelectorAll<HTMLElement>(".kr-keraton__name"))
+        .map((el) => [el, el.querySelector<HTMLElement>(".kr-line")] as const)
+        .filter((p): p is readonly [HTMLElement, HTMLElement] => p[1] !== null);
+    const teks = ambil()
+      .map(([el]) => el.textContent ?? "")
+      .join("");
+    return pasangPengepasIsi(root, ambil, teks);
+  }, [rootRef]);
 
   useThemeMotion(rootRef, opened && motionOn, (ctx: ThemeMotionCtx) => {
     const { gsap, scope } = ctx;

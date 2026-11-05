@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasSampul } from "@/themes/_shared/fit-names";
 
 import { L } from "./labels";
 
@@ -47,7 +48,7 @@ export function PrianganCover({
       el.style.visibility = "visible";
       anims.push(
         el.animate(
-          [{ transform: "translateY(115%)" }, { transform: "translateY(0)" }],
+          [{ transform: "translateY(150%)" }, { transform: "translateY(0)" }],
           {
             duration: 1000,
             easing: "cubic-bezier(0.22,1,0.36,1)",
@@ -59,6 +60,23 @@ export function PrianganCover({
     });
     return () => anims.forEach((a) => a.cancel());
   }, [motionOn]);
+
+  // Nama yang lebih lebar dari sampul pada ukuran desain terpotong masker
+  // `.pg-line` — kecilkan HANYA baris nama itu (_shared/fit-names.ts). Baris
+  // pertama & terakhir h1 = nama; baris tengahnya "sareng".
+  useEffect(() => {
+    const inner = innerRef.current;
+    const h1 = inner?.querySelector<HTMLElement>(".pg-cover__names");
+    if (!inner || !h1) return;
+    return pasangPengepasSampul(
+      inner,
+      () =>
+        [h1.firstElementChild, h1.lastElementChild]
+          .filter((l): l is HTMLElement => l instanceof HTMLElement)
+          .map((l) => [l, l] as const),
+      brideName + groomName,
+    );
+  }, [brideName, groomName]);
 
   // Siger menggambar diri (strokeDashoffset L → 0).
   useEffect(() => {

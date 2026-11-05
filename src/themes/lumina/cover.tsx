@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { copy } from "@/lib/copy";
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasSampul } from "@/themes/_shared/fit-names";
 
 import { L } from "./labels";
 
@@ -22,13 +25,33 @@ export function LuminaCover({
   dateLabel: string | null;
 }) {
   const { open, opened, recipientName } = useCoverGate();
+  const innerRef = useRef<HTMLDivElement>(null);
   const c = copy.public.cover;
   const twoLine = titleLines.length > 1;
+  const teks = titleLines.join(" ");
+
+  // Kata nama yang lebih lebar dari sampul pada ukuran desain meluap keluar
+  // layar — kecilkan HANYA nama itu (_shared/fit-names.ts). Tanpa masker:
+  // elemen nama sendiri yang menjadi wadahnya (judul satu baris: div-nya).
+  useEffect(() => {
+    const inner = innerRef.current;
+    if (!inner) return;
+    return pasangPengepasSampul(
+      inner,
+      () =>
+        Array.from(
+          inner.querySelectorAll<HTMLElement>(
+            ".lm-cover__name, .lm-cover__names:not(.lm-cover__names--pair)",
+          ),
+        ).map((el) => [el, el] as const),
+      teks,
+    );
+  }, [teks]);
 
   return (
     <>
       <div className="lm-cover__frame" aria-hidden />
-      <div className="lm-cover__inner">
+      <div className="lm-cover__inner" ref={innerRef}>
         {dateLabel ? <div className="lm-cover__date">{dateLabel}</div> : null}
         <svg
           className="lm-sprig"

@@ -102,8 +102,9 @@
 /* Baris bermask ------------------------------------------------------------ */
 /* Ruang .2em di bawah untuk ekor huruf: ekor g/j/y italic EB Garamond turun
    lebih dalam dari kotak baris, dan masker memotongnya rata. Margin negatif
-   menetralkan tingginya, jadi tata letak tak bergeser. Nilai ini aman bersama
-   state tersembunyi 115% (fx.tsx/cover.tsx): kepala huruf tak mengintip. */
+   menetralkan tingginya, jadi tata letak tak bergeser. State tersembunyi 150%
+   (fx.tsx/cover.tsx) menaruh puncak aksen kapital (É/Á) tetap di bawah ruang
+   ini — pada 115% aksennya mengintip dari masker yang kosong. */
 .vd-line {
   display: block;
   overflow: hidden;
@@ -112,6 +113,24 @@
 }
 .vd-line > span {
   display: block;
+}
+/* Ruang tinta italic di kedua tepi masker NAMA (kait "f", titik "i" miring):
+   tanpa ini nama yang muat pas terpotong rata di tepinya. Pengepas nama sampul
+   (_shared/fit-names.ts) mengukur lebar konten, jadi ruang ini tak ikut
+   memperkecil nama. Atas .2em: aksen kapital (É/Á) menjulang di atas kotak
+   baris yang rapat. */
+.vd-cover__name .vd-line,
+.vd-hero__title .vd-line {
+  padding-inline: 0.2em;
+  margin-inline: -0.2em;
+  padding-top: 0.2em;
+  margin-top: -0.2em;
+}
+/* Nama kartu mempelai (italic, rata tengah): hanya tepinya yang disentuh tinta
+   — kotak barisnya lapang, aksen tak terpotong. */
+.vd-pressed__name .vd-line {
+  padding-inline: 0.2em;
+  margin-inline: -0.2em;
 }
 .vd.is-js.is-motion .vd-line > span {
   visibility: hidden;
@@ -203,8 +222,12 @@
   color: var(--vd-ink);
   display: block;
 }
+/* flow-root: margin negatif masker "&" (ruang ekor −.2em) tertahan di dalam
+   kotaknya. Tanpa itu ia ber-collapse dengan margin-top −.2em masker nama
+   kedua — margin negatif yang bersebelahan tak dijumlah, hanya yang paling
+   negatif yang dipakai — dan nama kedua turun 4 px (DECISIONS #111). */
 .vd-cover__amp {
-  display: block;
+  display: flow-root;
   font-family: var(--vd-serif-stack);
   font-style: italic;
   color: var(--vd-terra-ink);

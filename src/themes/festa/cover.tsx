@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { copy } from "@/lib/copy";
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasSampul } from "@/themes/_shared/fit-names";
 
 import { L } from "./labels";
 
@@ -21,14 +24,25 @@ export function FestaCover({
   chips: string[];
 }) {
   const { open, opened, recipientName } = useCoverGate();
+  const innerRef = useRef<HTMLDivElement>(null);
   const c = copy.public.cover;
+
+  // Kata nama yang lebih lebar dari sampul pada ukuran desain meluap keluar
+  // layar — kecilkan HANYA nama itu (_shared/fit-names.ts). Tanpa masker:
+  // wadah yang diukur = elemen nama itu sendiri.
+  useEffect(() => {
+    const inner = innerRef.current;
+    const name = inner?.querySelector<HTMLElement>(".ft-cover__name");
+    if (!inner || !name) return;
+    return pasangPengepasSampul(inner, () => [[name, name]], bigName);
+  }, [bigName]);
 
   return (
     <>
       <div className="ft-blob ft-blob--1" aria-hidden />
       <div className="ft-blob ft-blob--2" aria-hidden />
       <div className="ft-blob ft-blob--3" aria-hidden />
-      <div className="ft-cover__inner">
+      <div className="ft-cover__inner" ref={innerRef}>
         <span className="ft-badge">{eventName}</span>
         <div className="ft-cover__name">{bigName}</div>
         {chips.length > 0 ? (

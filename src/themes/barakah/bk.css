@@ -206,20 +206,36 @@
   stroke: var(--bk-emerald);
   stroke-width: 1.1;
 }
+/* Lajur grid selebar wadah (`stretch`) dan nama ber-min-width:0: masker nama
+   selalu selebar wadah (inset 12%, seperti prototipe), bukan selebar teks — nama
+   yang lebih lebar tak lagi meluap keluar lengkung, dan fit-names.ts mengukur
+   terhadap wadah itu. */
 .bk-arch__center {
   position: absolute;
   inset: 14% 12% 10%;
   display: grid;
-  place-content: center;
+  place-content: center stretch;
   text-align: center;
 }
 .bk-cover__name {
   display: block;
+  min-width: 0;
   font-family: var(--bk-disp-stack);
   font-weight: 400;
   font-size: clamp(34px, 9.4vw, 44px);
   line-height: 1.12;
   color: var(--bk-emerald);
+}
+/* Ruang tinta masker NAMA: kaki "A", ujung serif "Y", kait "f" (Cormorant
+   ±0,14em) menjorok di tepi, aksen kapital (É/Á) menjulang di atas dan ekor
+   g/j/y/p turun ±0,05em di bawah kotak baris. Margin negatif menetralkan
+   ukurannya; fit-names.ts mengukur lebar konten, jadi ruang ini tak ikut
+   memperkecil nama. State tersembunyi 150% (cover.tsx/fx.tsx) menaruh puncak
+   aksen tetap di bawah ruang .15em — pada 115% aksennya mengintip. */
+.bk-cover__name .bk-line,
+.bk-person__name .bk-line {
+  padding: 0.2em 0.2em 0.15em;
+  margin: -0.2em -0.2em -0.15em;
 }
 .bk-cover__amp {
   display: block;

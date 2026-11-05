@@ -123,12 +123,16 @@
   border: 1px solid rgba(42, 39, 35, 0.08);
 }
 
+/* min-width:0 — tanpa itu item grid melebar mengikuti kata nama terpanjang,
+   sehingga seluruh isi sampul bergeser keluar layar alih-alih namanya yang
+   dikecilkan (cover.tsx, _shared/fit-names.ts). */
 .lm-cover__inner {
   position: relative;
   text-align: center;
   padding: 28px;
   max-width: 400px;
   width: 100%;
+  min-width: 0;
 }
 /* Entrance ringan (Craft, CSS) — hanya di bawah is-js, dinetralkan reduced-motion. */
 .lm.is-js .lm-cover__inner > * {
@@ -190,10 +194,13 @@
   line-height: 1.5;
   color: var(--lm-ink);
 }
+/* stretch, bukan center: nama selebar wadahnya (teks tetap terpusat oleh
+   text-align), jadi pengepas melihat kata yang meluap — span seketat teksnya
+   selalu tampak "muat". */
 .lm-cover__names--pair {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
 }
 .lm-cover__name {
   display: block;
@@ -359,9 +366,12 @@
 }
 
 /* Principals --------------------------------------------------------------- */
+/* minmax(0, 1fr) — dengan `1fr` (= minmax(auto, 1fr)) kolom melebar mengikuti
+   kata nama terpanjang dan kolom kedua terdorong keluar layar; kini nama yang
+   lebih lebar dari kolomnya dikecilkan fx.tsx (_shared/fit-names.ts). */
 .lm-principals {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
   gap: 1.1rem;
   margin-top: 2rem;

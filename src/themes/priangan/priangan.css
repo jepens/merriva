@@ -245,7 +245,11 @@
   stroke-width: 1.6;
   stroke-linecap: round;
 }
+/* Lebarnya ditentukan sampul, bukan nama: sebagai item flex `align-items:center`
+   ia fit-content — melebar mengikuti kata nama terpanjang sampai keluar layar,
+   dan pengepas (fit-names.ts) tak melihat luapannya. */
 .pg-cover__inner {
+  width: 100%;
   max-width: 420px;
 }
 .pg-cover__eyebrow {
@@ -264,6 +268,20 @@
   color: var(--pg-ink);
   display: flex;
   flex-direction: column;
+}
+/* Masker NAMA (baris pertama & terakhir; tengahnya "sareng"). Ruang tinta,
+   diukur per piksel (Chromium & WebKit) pada line-height 1.16:
+   - kedua tepi .2em: kait "f" Cormorant menjorok ±.135em, "J"/"A" ±.06em;
+   - atas .15em: aksen kapital Prata (Á/É/Ö) butuh ±.09em;
+   - bawah .07em: ekor g/j/p/y ("Anjani" contoh pun) — utuh mulai ±.045em.
+     State tersembunyi 150% (cover.tsx) menaruh puncak aksen tetap di bawah
+     ruang ini (pada 115% ia mengintip di atas ±.095em).
+   fit-names.ts mengukur lebar konten; margin negatif menetralkan ukurannya,
+   jadi tata letak tak bergeser. */
+.pg-cover__names > .pg-line:first-child,
+.pg-cover__names > .pg-line:last-child {
+  padding: 0.15em 0.2em 0.07em;
+  margin: -0.15em -0.2em -0.07em;
 }
 .pg-cover__sareng {
   font-family: var(--pg-body), sans-serif;

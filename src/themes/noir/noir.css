@@ -126,6 +126,19 @@
 .nr-line > span {
   display: block;
 }
+/* Ruang tinta masker NAMA (line-height rapat 1,02–1,08): kait "f" & ekor
+   miring menjorok ±0,17 em di tepi, ekor g/j/y turun ±0,1 em di bawah kotak
+   baris (diukur, Cormorant & Playfair italic), aksen kapital (É/Á) menjulang di
+   atasnya. Margin negatif menetralkannya → tata letak tak bergeser;
+   fit-names.ts mengukur lebar konten, jadi ruang ini tak memperkecil nama.
+   State tersembunyi 150% (cover.tsx/fx.tsx) menaruh puncak aksen tetap di
+   bawah ruang .15em — pada 115% aksennya mengintip dari masker yang kosong. */
+.nr-cover__name .nr-line,
+.nr-hero__title .nr-line,
+.nr-actor__name .nr-line {
+  padding: 0.2em 0.2em 0.15em;
+  margin: -0.2em -0.2em -0.15em;
+}
 .nr.is-js.is-motion .nr-line > span {
   visibility: hidden;
 }
@@ -193,6 +206,8 @@
     ),
     linear-gradient(180deg, #101017 0%, #0d0d12 60%, #131019 100%);
 }
+/* min-width:0 — tanpa itu item grid melebar mengikuti nama terpanjang, sehingga
+   nama terdorong keluar layar alih-alih dikecilkan pengepas. */
 .nr-cover__inner {
   position: relative;
   z-index: 4;
@@ -200,6 +215,7 @@
   padding: 24px;
   max-width: 430px;
   width: 100%;
+  min-width: 0;
   transition: opacity 0.45s ease;
 }
 .nr.is-js.is-open .nr-cover__inner {
@@ -313,7 +329,13 @@
   padding-top: 76px;
   overflow: hidden;
 }
+/* Flex kolom: margin item flex tak ber-collapse, jadi ruang tinta antar-masker
+   yang bertumpuk (bawah −.15em + atas −.2em) benar-benar dijumlah. Di blok,
+   hanya yang paling negatif yang dipakai: tiap baris berikutnya — dan seluruh
+   isi di bawahnya — turun .15em (DECISIONS #111). */
 .nr-hero__title {
+  display: flex;
+  flex-direction: column;
   font-family: var(--nr-serif-stack);
   font-weight: 300;
   font-size: clamp(46px, 15vw, 76px);

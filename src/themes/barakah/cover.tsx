@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import { copy } from "@/lib/copy";
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasSampul } from "@/themes/_shared/fit-names";
 
 import { L } from "./labels";
 
@@ -64,7 +65,7 @@ export function BarakahCover({
       el.style.visibility = "visible";
       anims.push(
         el.animate(
-          [{ transform: "translateY(115%)" }, { transform: "translateY(0)" }],
+          [{ transform: "translateY(150%)" }, { transform: "translateY(0)" }],
           {
             duration: 1050,
             easing: "cubic-bezier(0.22,1,0.36,1)",
@@ -77,6 +78,25 @@ export function BarakahCover({
 
     return () => anims.forEach((a) => a.cancel());
   }, [motionOn]);
+
+  // Nama yang lebih lebar dari lengkung mihrab pada ukuran desain terpotong
+  // masker `.bk-line` — kecilkan HANYA nama itu; nama yang membungkus sampai
+  // lebih tinggi dari lengkung dikecilkan bersama (_shared/fit-names.ts).
+  useEffect(() => {
+    const inner = innerRef.current;
+    if (!inner) return;
+    return pasangPengepasSampul(
+      inner,
+      () =>
+        Array.from(inner.querySelectorAll<HTMLElement>(".bk-cover__name"))
+          .map((el) => [el, el.querySelector<HTMLElement>(".bk-line")] as const)
+          .filter(
+            (p): p is readonly [HTMLElement, HTMLElement] => p[1] !== null,
+          ),
+      groomName + brideName,
+      inner.querySelector<HTMLElement>(".bk-arch__center"),
+    );
+  }, [groomName, brideName]);
 
   const c = copy.public.cover;
 

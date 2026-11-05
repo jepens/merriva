@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { copy } from "@/lib/copy";
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasSampul } from "@/themes/_shared/fit-names";
 
 import { L } from "./labels";
 
@@ -21,10 +24,28 @@ export function AriaCover({
   dateLabel: string | null;
 }) {
   const { open, opened, recipientName } = useCoverGate();
+  const innerRef = useRef<HTMLDivElement>(null);
+
+  // Nama yang lebih lebar dari sampul pada ukuran desain meluap keluar layar —
+  // kecilkan HANYA nama itu (_shared/fit-names.ts). Tanpa masker: elemen nama
+  // sendiri yang menjadi wadahnya.
+  useEffect(() => {
+    const inner = innerRef.current;
+    if (!inner) return;
+    return pasangPengepasSampul(
+      inner,
+      () =>
+        Array.from(inner.querySelectorAll<HTMLElement>(".ar-cover__name")).map(
+          (el) => [el, el] as const,
+        ),
+      groomName + brideName,
+    );
+  }, [groomName, brideName]);
+
   const c = copy.public.cover;
 
   return (
-    <div className="ar-cover__inner">
+    <div className="ar-cover__inner" ref={innerRef}>
       <span className="ar-cover__no">{L.cover.eyebrow}</span>
       <div className="ar-cover__names">
         <div className="ar-cover__name">{groomName}</div>

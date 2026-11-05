@@ -23,7 +23,7 @@ export function BarakahFx() {
 
     // Mask reveal per baris (state dimiliki JS §0.4) — konten saja (.bk-stage).
     q<HTMLElement>(".bk-stage .bk-line > span").forEach((el) => {
-      gsap.set(el, { visibility: "visible", yPercent: 115 });
+      gsap.set(el, { visibility: "visible", yPercent: 150 });
       gsap.to(el, {
         yPercent: 0,
         duration: 1.05,

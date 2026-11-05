@@ -275,7 +275,11 @@
   width: 100%;
   height: 100%;
 }
+/* Lebarnya ditentukan sampul, bukan nama: sebagai item flex `align-items:center`
+   ia fit-content — melebar mengikuti kata nama terpanjang sampai keluar layar,
+   dan pengepas (fit-names.ts) tak melihat luapannya. */
 .mh-cover__inner {
+  width: 100%;
   max-width: 420px;
 }
 .mh-cover__eyebrow {
@@ -294,6 +298,18 @@
   color: var(--mh-ink);
   display: flex;
   flex-direction: column;
+}
+/* Masker NAMA (baris pertama & terakhir; tengahnya "&"). Ruang tinta: kedua
+   tepi .2em (kait "f" menjorok ±.1em, "J" ±.03em), atas .2em untuk aksen
+   kapital (Á/É/Ö), dan bawah .1em untuk ekor g/j/p/y yang dipotong line-height
+   1.16 (diukur per piksel, Chromium & WebKit: ekor utuh mulai ±.02em). State
+   tersembunyi 150% (cover.tsx) menaruh puncak aksen tetap di bawah ruang bawah.
+   fit-names.ts mengukur lebar konten; margin negatif menetralkan ukurannya,
+   jadi tata letak tak bergeser. */
+.mh-cover__names > .mh-line:first-child,
+.mh-cover__names > .mh-line:last-child {
+  padding: 0.2em 0.2em 0.1em;
+  margin: -0.2em -0.2em -0.1em;
 }
 .mh-cover__amp {
   font-style: italic;

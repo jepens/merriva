@@ -93,11 +93,14 @@
     transition: none;
   }
 }
+/* min-width:0 — tanpa itu item grid melebar mengikuti nama terpanjang, sehingga
+   seluruh isi sampul bergeser dan nama keluar layar alih-alih dikecilkan. */
 .ar-cover__inner {
   text-align: center;
   padding: 24px;
   max-width: 430px;
   width: 100%;
+  min-width: 0;
 }
 .ar.is-js .ar-cover__inner > * {
   animation: ar-rise 0.9s both cubic-bezier(0.22, 1, 0.36, 1);

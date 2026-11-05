@@ -5641,7 +5641,8 @@ tanpa peduli huruf besar-kecil.
   - **Kenapa diukur.** Lebar huruf antar-nama berbeda jauh (0,43–0,64 em per
     huruf), jadi rumus CSS dari jumlah huruf pasti mengecilkan nama yang
     sebenarnya muat.
-  - **Perbaikannya** (`fit-names.ts`, dipakai sampul dan hero): nama DIUKUR
+  - **Perbaikannya** (`fit-names.ts`, sejak #111 di `src/themes/_shared/`,
+    dipakai sampul dan hero): nama DIUKUR
     terhadap lebar KONTEN maskernya, dan hanya yang melampauinya yang
     dikecilkan. Tinta italic yang menjorok di kedua tepi diberi ruang lewat
     `padding-inline` .2em plus margin negatif pada masker nama. Cadangan
@@ -5665,7 +5666,8 @@ tanpa peduli huruf besar-kecil.
 - Masker baris `.er-line`/`.vd-line` memotong ekor g/j/y. Di verdant, kait "j"
   pada "Anjani" demo hilang. Diperbaiki dengan `padding-bottom` + margin negatif
   (.15em / .2em), sehingga tata letak tak bergeser dan state tersembunyi 115%
-  tetap tak mengintip (diukur per piksel). Ditolak: `overflow-clip-margin`,
+  tetap tak mengintip (diukur per piksel — ralat #111: hanya untuk nama tanpa
+  aksen; puncak aksen kapital mengintip, kini 150%). Ditolak: `overflow-clip-margin`,
   karena WebKit tak mendukungnya dan WhatsApp iOS memakai WebKit.
 - Angka hias "02" eternal-rose terpotong tepi kartu → digeser `.06em`.
 
@@ -5689,13 +5691,13 @@ tanpa peduli huruf besar-kecil.
     - aria/noir/meridian (masalah lama);
     - festa (diuji dengan nama tiga kata).
 
-    Pengepas `fit-names.ts` siap dipakai ulang.
+    Pengepas `fit-names.ts` siap dipakai ulang. → Ditangani di #111.
   - Jumlah baris beberapa judul berubah.
   - Tombol "Konfirmasi Kirim Amplop" dua baris pada pasangan B di 320 px.
   - Huruf Latin-ext di label (ū, ā, ǐ) jatuh ke font sistem.
   - Di luar font, sudah ada sebelumnya: tombol "Buka Undangan" eternal-rose tak
     terjangkau di ponsel lanskap, karena tinggi isi sampul melebihi layar dan
-    gulir dikunci.
+    gulir dikunci (juga noir, aria, sakinah — #111).
 - Aturan ini tercatat di THEME-PORTING §0.2 & DoD §5 dan THEME-CONTRACT §5.
 
 ---
@@ -5825,6 +5827,322 @@ dan `ops:verify`.
   TTFB produksi tanpa beban: undangan ISR 0,5–1,3 dtk, aset ter-cache
   Cloudflare 0,1 dtk, dan saat itu VPS menganggur (load 0,16). Itu menunjuk ke
   koneksi Cloudflare→origin, dan layak diperiksa terpisah.
+
+---
+
+## #111 — 2026-11-04 · Pengepas nama bersama di 12 sampul (lebar presisi, tinggi bidang ornamen); masker nama berruang tinta, state tersembunyi 150%
+
+**Keputusan:**
+- `fit-names.ts` pindah dari eternal-rose ke `src/themes/_shared/` dan dipakai
+  sampul 12 tema: eternal-rose, verdant, kirana, marawa, priangan, meihua, aria,
+  noir, meridian, festa, barakah, lumina. Di isi undangan: hero eternal-rose dan
+  noir, kartu keraton kirana, kolom mempelai lumina (`fx.tsx` baru). sakinah tak
+  diubah — tak ada nama uji (≤14 huruf) yang terpotong di 320–412 px (kata ≥18
+  huruf: lihat Sisa).
+- Lebar wadah nama ditentukan kontainernya, bukan seketat teks:
+  - `min-width:0` pada item grid sampul (aria, festa, noir, meridian, lumina);
+  - `width:100%` + `max-width:420px` pada item flex `align-items:center`
+    (marawa, meihua, priangan) — di sana `min-width:0` tak menolong;
+  - lajur `stretch` (barakah, nama pasangan lumina), kolom gunungan kirana
+    direntang, kolom mempelai lumina `minmax(0,1fr)`.
+
+  Alasannya: wadah fit-content melebar mengikuti kata terpanjangnya sendiri,
+  jadi luapannya tak pernah terukur, dan di wadah seketat teks nama yang muat
+  pun ikut dikecilkan (kirana sebelumnya: "Larasati" 95,344 vs `clientWidth` 95).
+- `fitToLine` mengukur lebar konten dari gaya terhitung
+  (`getComputedStyle().width` dikurangi padding & border), bukan `clientWidth`:
+  masker berpadding em lebarnya pecahan, dan pembulatan ±0,5 px mengecilkan
+  nama yang muat — noir "Wahyuningsih" di 344 px (58,48 → 57 px) dan
+  "Wicaksonoputra" di 368 px (55,2 → 54 px), Chromium & WebKit — sekaligus
+  meloloskan luapan ≤0,5 px yang dipangkas masker. Presisinya
+  sekitar 1/32 px, bukan pasti: padding terhitung belum dibulatkan ke satuan
+  tata letak 1/64 px, dan Chromium menyerialkan width & padding 6 angka penting
+  (lihat Sisa).
+- letter-spacing ber-em dideklarasikan pada elemen yang dikepas atau di
+  bawahnya. Yang diwarisi dari leluhur adalah panjang mutlak: masker nama sampul
+  marawa mewarisi .04em h1 sebagai 1,28 px yang tak ikut mengecil, sehingga
+  nama 19 huruf yang dikepas meluap hingga +6,5 px dan tintanya hilang di
+  283–289 px (2–28 px-perangkat). Kini diulang pada maskernya. Probe 12 tema
+  bersampul-pengepas: hanya marawa yang mewarisi.
+- Bidang ornamen bertinggi tetap — tengah gunungan kirana, lengkung mihrab
+  barakah — dikepas TINGGI-nya (`kepasTinggi`, argumen `bidang`
+  `pasangPengepasSampul`). Nama panggilan opsional, dan bila kosong sampul
+  memakai nama lengkap: nama bergelar/Bali ("dr. Siti Nurhaliza, Sp.A.", "Ni Luh
+  Putu Ayu Kusumawati") membungkus 3–4 baris dan meluap hingga 96 px per sisi
+  (kirana) dan 46 px (barakah), menimpa tanggal. Sesudah kepas lebar, dalam
+  pass yang sama, kedua nama dikecilkan dengan satu skala yang dicari biner
+  sampai tumpukan anak bidang muat; tumpukan yang muat tak disentuh. Toleransi
+  0,5 px untuk sisa sub-piksel diterima di sini, tidak untuk lebar: bidang tak
+  memangkas, jadi luapan tumpukan ≤0,5 px tak memotong tinta, sedangkan luapan
+  lebar dipangkas masker. Anak bidang display:contents, display:none, atau
+  inline (di bidang blok) tanpa height eksplisit tak bertinggi terhitung —
+  tumpukannya tak terukur dan kepas tinggi dilewati, bukan menurunkan nama ke
+  batas skala 30%; dengan height eksplisit, nilai itu malah ikut terhitung.
+- Masker NAMA diberi ruang tinta lewat padding + margin negatif di setiap sisi
+  yang disentuh tinta, tanpa menggeser tata letak: atas .15–.25em (aksen
+  kapital; marawa .25em untuk breve Ğ), samping .1–.2em (kait italic; sampul
+  meridian tanpa ruang samping), bawah .07–.2em per font (ekor g/j/y; marawa
+  .07em untuk sedila Ş). Di isi: hero & aktor noir, nama mempelai eternal-rose
+  & barakah, dan hero verdant di semua sisi (ruang bawah eternal-rose & verdant
+  dari aturan masker dasarnya); kartu verdant di samping & bawah; kartu keraton
+  kirana dan `.mrd-fig__name` meridian (.1em) di samping saja.
+- Masker yang bertumpuk tak boleh membiarkan margin negatifnya ber-collapse:
+  judul hero noir serta hero & nama sampul eternal-rose menjadi flex kolom, dan
+  pembungkus "&" sampul verdant `display: flow-root`.
+- kirana: baris "&" gunungan `max-content` (`grid-template-rows: auto
+  max-content auto`). marawa: margin gonjong dihitung `(100% − 260px) / 2`
+  agar luapannya di layar < 320 px terpusat.
+- State tersembunyi mask-reveal 115% → 150% di semua tema yang maskernya
+  punya ruang bawah: sampul eternal-rose, verdant, kirana, noir, meridian,
+  barakah, meihua, priangan, marawa; isi eternal-rose, verdant, noir, barakah.
+  Syaratnya `(k−1) × line-height ≥ ruang bawah + tinggi aksen di atas kotak
+  baris`; dengan ruang bawah ≤.2em dan aksen ≤.22em, 150% lolos pada
+  line-height terkecil (.98em). Masker isi tanpa ruang bawah tetap 115%. prisma
+  (bukan nama) belum memenuhi syarat itu: judul acara sampul ber-line-height .92
+  → `(k−1) × lh` = .138em < .22em, breve Ğ mengintip 160–249 px-perangkat pada
+  115% (0 pada 150%). Diantrekan bersama perbaikan reveal berikutnya, termasuk
+  judul isi `.pr-head` (line-height 1) yang belum diukur.
+
+**Alasan:**
+- Sebelum ini nama uji 10–14 huruf terpotong atau meluap di 10 sampul dan di
+  kolom mempelai lumina. Kasus bermasalah per mesin:
+  - verdant 15–19/44; kirana 35–44/44 (ekor "j" nama contoh Panji ikut);
+  - marawa 17/88; priangan 49/88 (ekor nama contoh Anjani); meihua 40/88;
+  - noir 10–115/132; meridian 80/88 (isi sampul keluar layar hingga 110 px);
+    barakah 67–68/88;
+  - aria 1/88; festa 27/44 (nama contoh "Muhammad Rafa Alfarizi" di 320);
+  - lumina: kolom mempelai 3/44. Sampulnya aman untuk nama uji, tetapi kata
+    ≥16 huruf (≥14 di 300 px) mendorong isinya keluar layar.
+- Sesudahnya 0 di semua lokasi yang diuji: Chromium & WebKit, semua pasangan
+  font, 320/360/375/412. Nama contoh yang muat tetap berukuran desain (festa:
+  "Muhammad Rafa Alfarizi" memang meluap pada ukuran desainnya, jadi dikepas di
+  ≤375 dan ≥480 px).
+- Aksen — sapuan masker nama sampul 9 tema bermasker × semua pasangan ×
+  320/375/412 × 10 nama (André, José, Émilie, Ádám, Zoë, Ömer, Çağla, Qonita,
+  Juwita, Kusumawardhani):
+  - 150%: intip 0/390 baris sah per mesin (Chromium & WebKit; 180 baris
+    marawa/priangan/meihua tak sah, lihat Ralat).
+  - Kendali 115%: 52/380 mengintip (eternal-rose 4–312 px-perangkat, meridian
+    38–277, noir B 27–38, verdant 6–16, barakah A 2–3; kirana 0). Jadi
+    eternal-rose & verdant di produksi memperlihatkan puncak aksen selama jeda
+    reveal sejak #107 — klaim "115% tak mengintip" di sana berlaku untuk nama
+    tanpa aksen saja.
+  - **Ralat:** detektor sapuan ini memasang transform inline tanpa
+    `!important`, sedangkan `@media (prefers-reduced-motion: reduce)` marawa,
+    priangan, dan meihua memaksa `transform: none !important`. Span di ketiga
+    tema itu tak pernah bergeser, jadi angka 0-nya tak membuktikan apa pun
+    (pada 60% pun detektor ini melapor 0/18). Angka sah ketiganya dari detektor
+    verifikator (`setProperty(…, "important")`, ditambah jalur WAAPI nyata
+    dijeda di state tersembunyi): pada 150% priangan 0/696 (Chromium &
+    WebKit) dan meihua 0/696 (Chromium) · 0/464 (WebKit); pada 115% marawa
+    12/696 (Chromium) · 24/696 (WebKit) — breve Ğ "ÇAĞLA" dari glyph Arial
+    cadangan — sehingga marawa ikut 150%.
+  - Kendali ruang atas dicabut: aksen kembali terpangkas (meridian André
+    41–148 px-perangkat).
+
+**Ditolak:**
+- Menyetel ruang bawah per font agar muat di bawah 115% (cara awal implementer
+  priangan .07em / meihua .1em): jendelanya sempit — priangan: ekor utuh
+  ≥.045em, aksen mengintip >.095em — dan bergeser per pasangan font. Nilainya
+  dipertahankan karena cukup untuk ekornya, tetapi state tersembunyinya ikut
+  150% agar satu aturan berlaku.
+- Toleransi pembulatan di `fitToLine` (`need > avail + 0.5`): kelonggaran itu
+  juga meloloskan luapan sungguhan ≤0,5 px, yang dipangkas masker. Lebar
+  terhitung mempersempit sebabnya dari ±0,5 px menjadi sekitar 1/32 px (galat
+  dua arah 6.745 → 562 dari 235.740 kasus sapuan: nama muat yang dikecilkan
+  2.698 → 562, 347 di antaranya baru; luapan ≤0,48 px yang tak dikecilkan
+  4.047 → 0); premis awal ("semua wadah kini ditentukan kontainer, jadi
+  pembulatan tak berdampak") terbantah, karena masker berpadding em lebarnya
+  tetap pecahan.
+- Menutup sisa itu — padding dibulatkan ke 1/64 px dan `need > avail + 0.001`;
+  diuji suntik: 0 salah —: satuan tata letak mesin masuk helper bersama, dan
+  cakupannya tetap terbatas (toleransi 0,001 hanya menutup serialisasi Chromium
+  untuk wadah < 1000 px; kuantisasi 1/64 baru terbukti di emulasi DPR, belum di
+  perangkat ber-DSF pecahan). Yang tersisa hanya nama yang pas TEPAT, dikecilkan
+  ≥2% (lihat Sisa).
+- Pengawas rAF untuk frame basi saat face tiba (memanggil ulang pengepas pada
+  frame pertama face terpakai; diuji suntik di Chromium 0/4 vs 3/5): kedipnya ≤1
+  frame dan jatuh tepat pada pergantian face yang memang sudah mengubah rupa
+  nama.
+- Bidang barakah `padding-block: 12%` agar tumpukan tak menyentuh khatam:
+  persentase padding dihitung dari lebar, sehingga nama yang muat ikut
+  dikecilkan (fallback "Mempelai …" 34 → 27 px di 320). Kirana tak punya
+  padanan simetris: bidang yang menghindari atap batang lebih pendek dari
+  tumpukan nama contoh.
+- `pasangPengepasSampul` menyimak style akar seperti `pasangPengepasIsi`:
+  editor tampilan membuka sampul saat iframe termuat, jadi ganti pasangan
+  langsung hanya terlihat di sampul selama wipe ±0,9 dtk (priangan B→A:
+  "Kusumawardhani" terpotong selama itu). Tamu tak pernah mengganti pasangan.
+- `fitToLine` mengukur ulang dan turun 1 px selama masih meluap. Sisa luapan
+  yang dulu terukur (dicatat di sini sebagai ketaklinearan lebar teks,
+  ±0,8–1,8 px, 0 px hilang) ternyata letter-spacing warisan marawa, hingga
+  +6,5 px dan tinta hilang di 283–289 px — sebabnya diperbaiki di CSS (lihat
+  Keputusan). Tanpa warisan itu lebar teks sebanding font-size, jadi satu kali
+  ukur cukup.
+- Kepas tinggi untuk sampul verdant: tengah karangannya tak bertinggi pasti
+  (absolute, setinggi isinya), sehingga tak ada bidang untuk diukur. Memberinya
+  batas tinggi adalah keputusan tata letak tersendiri (lihat Sisa).
+- Pengepas isi untuk hero & kartu mempelai verdant: nama uji ≤14 huruf lolos
+  di 320–412 px (DoD §5). Yang terpotong hanya kata ≥17 huruf di 320 px dan
+  ≥14 di 300 px, sama seperti nama mempelai tema lain (lihat Sisa).
+  Memasangnya di semua nama isi adalah keputusan tersendiri, sebab kartu dan
+  hero verdant memakai face berbeda (italic 500 vs 400) sehingga helper harus
+  memuat face tiap pasangan.
+
+**Konsekuensi:**
+- JS +0,75 KB gzip per halaman undangan, tanpa library (lumina tier Craft
+  termasuk): chunk cover-gate bersama +713 B (helper kini di sana), chunk klien
+  tema bersama +59 B (blok pengepas 12 tema dan `fx.tsx` lumina, dikurangi
+  pengepas lama eternal-rose). Diukur pada `/preview/tema/eternal-rose`
+  terhadap chunk produksi HEAD, dicocokkan per penanda isi; `/[slug]` memuat
+  chunk cover-gate yang sama. `bundle-report --check` lulus.
+- CSS tema (render-blocking, disalin mentah tanpa minify — #31) +0,1–0,7 KB
+  gzip per tema: marawa +722 B, kirana +689, noir +591, priangan +499, verdant
+  +468, meihua +442, barakah +438, meridian +404, lumina +311, eternal-rose
+  +245, festa +105, aria +95; prisma & sakinah 0. ±80% pertambahan mentahnya
+  komentar. Memangkasnya (minify atau buang komentar saat build) keputusan
+  tersendiri.
+- Reveal 150%: 21–30% awal lintasan berada di luar masker (4,8–7,1% durasi, per
+  tema; marawa terbesar — nama mulai tampak pada 71 ms vs 18,5 ms di 115%), jadi
+  gerak yang tampak sedikit lebih cepat di awalnya.
+- Kepas tinggi memaksa ±6–7 tata letak per pass, hanya untuk nama yang dikepas
+  tinggi (frame sampul pertama, face tiba, resize/rotasi): ±5 ms di CPU 1×
+  (kirana); di CPU 4× median 33–139 ms (mesin uji dipakai bersama, jadi angkanya
+  menggelembung). Nama yang muat: median 2,1–2,6 ms di CPU 4× (0,3 ms di CPU
+  1×).
+- marawa di bawah 320 px: teks sampul yang membungkus (nama tamu panjang)
+  dipenggal pada 220/240 px, bukan 260 px seperti sebelumnya — `width:100%`
+  menahannya di dalam padding 30 px, sedangkan dulu inner fit-content melebar
+  mengikuti gonjong. Di ≥320 px tata letaknya identik.
+- Sisa yang diketahui, bukan pemblokir (kebanyakan sudah ada sebelumnya):
+  - Sebelum hidrasi, isi undangan tampil tanpa sampul (pola cover-gate tanpa
+    JS) dan nama panjang di hero masih terpotong: di server dev 13–107 frame
+    (noir); kata 14 huruf di kolom mempelai lumina 4 px melewati tepi layar
+    320. Belum diukur di build produksi.
+  - Bila face nama tiba SESUDAH sampul tampil, Chromium (jadi juga WebView
+    Android) bisa melukis ≤1 frame dengan face baru pada ukuran lama, sebelum
+    janji `muatFont` selesai: lebar hingga 10 px (festa 412; umumnya ≤1,6 px),
+    tumpukan kirana lanskap +40,7 px. WebKit 0. Cacat lama sejak #107 yang kini
+    juga mengenai kepas tinggi; frame sampul pertama selalu sudah dikepas.
+  - Nama yang pas TEPAT di wadahnya (selisih sekitar 1/32 px) masih dikecilkan
+    ≥2% — median ±3%, hingga 6% pada ukuran kecil (kolom lumina 19,2 → 18 px);
+    0,7–2,4 px: 562/235.740 kasus sapuan, set resmi 0 di 320/360/375/412 (mis.
+    eternal-rose B "Ayuningtyas" di 328 px 64 → 62 px). Sebab yang sama membuat
+    187 nama yang memang meluap jadi 1 px lebih kecil dari rumus.
+  - Tombol "Buka Undangan" tak terjangkau di ponsel lanskap (noir, aria,
+    sakinah, eternal-rose, marawa, priangan, meihua — meihua di kelima ukuran
+    lanskap yang diuji) dan di 320×568 dengan nama banyak kata/bergelar —
+    gulir sampul dikunci. Di lanskap setinggi ≤360 px nama banyak kata pun
+    terpotong tepi atas/bawah layar (marawa 568×320; priangan 568×320 sampai
+    740×360; meihua 568×320). Di 320×568 nama bergelar sangat panjang (2 × 40+
+    huruf) keluar dari tepi bawah layar: eternal-rose 130–183 px, noir 98–130
+    px (menimpa tagline letterbox), meridian 49 px — bidangnya layar sampul
+    itu sendiri, yang anaknya termasuk bilah absolute, jadi `kepasTinggi` tak
+    berlaku; ini keputusan tata letak tersendiri.
+  - verdant: nama sampul 3–4 baris (nama panggilan kosong) meluap keluar
+    karangan dan menimpa eyebrow/tanggal di 300–412 px, sama dengan sebelumnya
+    (lihat Ditolak); di 320 nama 40+ huruf juga menimpa kotak tamu dan naik
+    melewati tepi atas layar 9,7–28,6 px.
+  - Tanpa pengepas di isi: kata ≥17 huruf di 320 px (≥14 di 300 px) di hero &
+    kartu verdant ("Wulandariningsih" 16 huruf kini lolos berkat ruang samping
+    kartu); kata ≥17 huruf di 320 px di nama mempelai eternal-rose (pasangan
+    A & C), noir, meridian — meridian pasangan B: kata 18–19 huruf keluar layar
+    sampai 412 px (mis. [−16,7; 336,7] di 320); marawa 19 huruf di 300 px.
+    Sampul sakinah: kata ≥14 huruf di 300 px, ≥18 huruf di 320–360 px (hingga
+    23 px per sisi di 320).
+  - marawa: breve Ğ kapital di nama mempelai isi (pasangan A, Chromium)
+    terpangkas satu baris piksel puncaknya; ğ tak pernah mengawali kata Turki,
+    jadi hanya nama yang diketik kapital semua.
+  - meridian (Chromium, jadi juga WebView Android): "&" shimmer sampul sudah
+    tampil di posisi diamnya selama state tersembunyi, sebelum nama naik —
+    `background-clip:text` pada leluhur masker dilukis di luar klipnya. Bukan
+    nama; memindahkan kelasnya ke span dalam masker belum diperiksa rupanya.
+  - barakah: nama yang mengisi wadah (inset 12%, sama dengan prototipe)
+    menimpa garis lengkung dalam ±10–12 px per sisi; "Prameswari" yang tak
+    dikepas sudah 14 px sebelumnya. Tumpukan yang dikepas tinggi mengisi bidang
+    sampai khatam barakah dan atap batang gunungan kirana, jadi tintanya
+    menyentuh ornamen (barakah 138/148 kasus, maks ±108 px²; kirana 249/252,
+    maks ±53 px²) — lebih sedikit dari HEAD, yang sekaligus menimpa tanggal.
+  - Ukuran terkecil: kolom mempelai lumina — kata 14 huruf turun ke 14 px di
+    320 (desain 19,2 px), 19 huruf ke 11–12 px; nama bergelar terpanjang ("Dr.
+    dr. Raden Ayu Kusumawardhani, Sp.OG(K)") di sampul kirana 12–15 px dan
+    barakah 16–19 px di 300–320.
+- Aturan ini tercatat di THEME-PORTING §0.4 & DoD §5.
+
+**Verifikasi** (adversarial, independen; setiap detektor divalidasi kendali yang
+memaksa keadaan buruk):
+- Putaran 2 (3 verifikator, Chromium + WebKit, semua pasangan, 300–1280 px +
+  lanskap, 28–38 nama) menemukan regresi dari ruang tinta atas: margin negatif
+  masker yang bertumpuk ber-collapse — isi hero noir turun 14–18 px, hero
+  eternal-rose 6,6–7,4 px, sampul eternal-rose 1–3 px, nama kedua sampul
+  verdant 4 px. Juga: breve Ğ marawa pada 115%, "&" kirana tergencet saat nama
+  membungkus, gonjong marawa miring < 320 px, nama yang muat dikecilkan 1 px di
+  marawa/priangan/meihua, kait J/f & aksen nama mempelai eternal-rose (pasangan
+  B/C) dan meridian.
+- Putaran 3 (3 verifikator + kritikus kelengkapan; alat diperbaiki: inline
+  dipertahankan saat CSS ditukar, `link.sheet.disabled`, penahan resize,
+  pencocokan teks per kunci):
+  - K3 terhadap CSS HEAD sungguhan di ke-14 tema — termasuk aria, festa,
+    barakah, lumina yang sebelumnya hanya dibandingkan dengan aturan
+    dinetralkan: 0 teks bergeser di ≥320 px. Netralitas ruang tinta, 352 elemen
+    di 88 run: 0. Kendali (regresi lama dipasang ulang) tertangkap: noir 118
+    teks, eternal-rose 112, verdant 3.
+  - K1/K2/K4/K5 set resmi lolos di ketiga kelompok; jalur nyata (font ditunda
+    2,5 dtk sejak navigasi, motion & reduce): 0 luapan, 0 galat. **Ralat:**
+    hidrasi server dev butuh 5–141 dtk, jadi face sudah tiba sebelum frame
+    sampul pertama — kepas ulang saat face tiba tak teruji (lihat putaran 4).
+  - Menemukan letter-spacing warisan marawa, pembulatan `clientWidth` (noir
+    344/368 px), nama 3–4 baris kirana (28/140 kelompok menimpa tanggal;
+    sebelum #111 121/140 nama itu terpotong masker) dan barakah (4/48 di
+    320 px) — diperbaiki di atas —, angka dan klaim dokumen yang tak tepat, dan
+    dua bagian diff yang berlebih (`max-width:min(420px,100%)`, ruang atas
+    kartu keraton kirana) — dibuang.
+- Putaran 4 (3 verifikator + kritikus; font ditahan relatif terhadap `is-js`,
+  bukan sejak navigasi):
+  - Kepas tinggi kirana/barakah: 2.240 kasus geometri (2 mesin × 2 tema × 8
+    ukuran termasuk lanskap × pasangan a/b × 35 nama) — 0 tumpukan > bidang +
+    0,5 px (34 kasus ≤ +0,45 px), skala selalu maksimal dan sama dalam pasangan,
+    0 nama yang kembali meluap lebar.
+    Piksel DPR 2/3, 700 kasus: 0 tinta terpotong, 0 menimpa teks lain (HEAD,
+    nama yang sama: 5/26 kirana, 9/21 barakah).
+  - Lebar: 235.740 kasus (Chromium 280–430 per 1 px, WebKit per 2–5 px, semua
+    pasangan): 0 luapan lolos; galat dua arah terhadap emulasi `clientWidth`
+    6.745 → 562 (nama muat yang dikecilkan 2.698 → 562, sisa sekitar 1/32 px —
+    lihat Sisa; luapan ≤0,48 px yang lolos 4.047 → 0). letter-spacing mutlak 0
+    di 180 node; rasio marawa tetap 0,04.
+  - Regresi 14 tema: K3 2.552 snapshot terhadap CSS HEAD (802 terhadap putaran
+    3) — 0 teks lain bergeser selain sisa marawa < 320 px (nama yang dikepas
+    memang berubah ukuran); netralitas ruang tinta 954 kelompok per mesin: 0.
+  - K5 dengan face ditahan sampai sesudah sampul tampil: frame pertama selalu
+    sudah dikepas (89/89, 125/125); Chromium ≤1 frame basi saat face tiba
+    (lihat Sisa).
+  - Ditemukan dan diperbaiki: tumpukan tak terukur (anak bidang tanpa tinggi
+    terhitung) menurunkan nama ke batas skala 30% — kini dilewati (laten, tak
+    terpicu markup sekarang); urutan kepas lebar → kepas tinggi dan dasarnya
+    belum dikunci uji unit — kini 3 uji, menangkap mutasi urutan terbalik,
+    bidang diabaikan, dasar = ukuran desain, dan penjaga dicabut. Klaim
+    dokumen diralat: lebar presisi, K5 putaran 3, bundle, festa, sakinah,
+    prisma, ruang tinta verdant.
+  - Di luar #111: blok reveal terakhir (watermark Basic) tak pernah tampil di
+    6 tema, bukan hanya meridian — barakah, kirana, marawa, meihua, priangan,
+    meridian di 412×915 (marawa, meihua, priangan, meridian juga di 375×812):
+    trigger `top 86%`/`top 88%` tak tercapai di dasar halaman. Diantrekan
+    bersama perbaikan meridian; `clamp()` ScrollTrigger diuji suntik di kedua
+    mesin.
+- Putaran 5 (pemeriksa kode & uji, lalu pemeriksa klaim dokumen):
+  - Penjaga baru setara dengan sebelumnya untuk setiap tumpukan bernilai angka
+    (4.032 kasus, termasuk ±Infinity, 0, dan tumpukan tepat sama dengan muat);
+    uji asap kirana & barakah 36/36 identik dengan putaran 4.
+  - Dari 51 mutasi, 32 lolos uji unit. Kini tertangkap (17/17 mutasi sasaran):
+    ukur ulang saat face tiba, skala ke `el` (bukan wadah), Range atas teks,
+    bidang 0 px, anak tak terukur dengan nama meluap, toleransi tinggi 0,5 px,
+    toleransi lebar yang ditolak, dan nama pas tepat. Masih terbuka, berdampak
+    bila regresi: batas & jumlah langkah pencarian biner, ResizeObserver pada
+    dialog dan pelepasannya, font-style di `muatFont`, serta
+    `pasangPengepasIsi` yang belum punya uji unit.
+  - Klaim dokumen diralat: galat `clientWidth` dua arah, besar pengecilan nama
+    pas tepat, bundle CSS tema, biaya waktu, syarat anak bidang (termasuk tanpa
+    gap).
 
 ---
 

@@ -3,13 +3,12 @@
 import { useEffect } from "react";
 
 import { useCoverGate } from "@/themes/_shared/cover-gate";
+import { pasangPengepasIsi } from "@/themes/_shared/fit-names";
 import {
   type ThemeMotionCtx,
   useThemeMotion,
 } from "@/themes/_shared/gsap-motion";
 import { ParticlesCanvas } from "@/themes/_shared/particles-canvas";
-
-import { fitToLine, muatFont } from "./fit-names";
 
 /**
  * Overlay & koreografi eternal-rose (klien). Membaca `useCoverGate()`:
@@ -21,38 +20,14 @@ export function EternalRoseFx() {
   const { opened, motionOn, richOn, rootRef } = useCoverGate();
 
   // Baris nama hero ("of X & Y") meluap seperti nama sampul bila namanya satu
-  // kata yang lebar — pengepas yang sama, terlepas dari motion. Jalan saat
-  // mount (hero sudah tertata di balik sampul, jadi tak ada lompatan yang
-  // terlihat), saat face italic nama termuat, saat layar berubah ukuran, dan
-  // saat var akar berganti: editor tampilan mengganti pasangan font langsung
-  // di iframe tanpa memuat ulang.
+  // kata yang lebar — pengepas yang sama, terlepas dari motion
+  // (_shared/fit-names.ts).
   useEffect(() => {
     const root = rootRef.current;
     const h1 = root?.querySelector<HTMLElement>(".er-hero__names");
     const line = h1?.querySelector<HTMLElement>(".er-line:last-child");
     if (!root || !h1 || !line) return;
-    let live = true;
-    const fit = () => {
-      if (live) fitToLine(h1, line);
-    };
-    // Face pasangan yang baru dipilih di editor belum tentu termuat: muat face
-    // yang KINI dipakai nama, lalu ukur lagi begitu tiba.
-    const ukur = () => {
-      fit();
-      muatFont(line.querySelector("em") ?? h1, line.textContent ?? "").then(
-        fit,
-        () => {},
-      );
-    };
-    ukur();
-    window.addEventListener("resize", fit);
-    const mo = new MutationObserver(ukur);
-    mo.observe(root, { attributes: true, attributeFilter: ["style"] });
-    return () => {
-      live = false;
-      window.removeEventListener("resize", fit);
-      mo.disconnect();
-    };
+    return pasangPengepasIsi(root, () => [[h1, line]], line.textContent ?? "");
   }, [rootRef]);
 
   useThemeMotion(rootRef, opened && motionOn, (ctx: ThemeMotionCtx) => {
@@ -62,7 +37,7 @@ export function EternalRoseFx() {
 
     // Mask reveal per baris (state dimiliki JS §0.4) — konten saja (.er-stage).
     q<HTMLElement>(".er-stage .er-line > span").forEach((el) => {
-      gsap.set(el, { visibility: "visible", yPercent: 115 });
+      gsap.set(el, { visibility: "visible", yPercent: 150 });
       gsap.to(el, {
         yPercent: 0,
         duration: 1.1,
