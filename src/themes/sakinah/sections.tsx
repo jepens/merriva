@@ -433,7 +433,10 @@ export function Footer({
         </p>
       </Reveal>
       {watermark ? (
-        <Reveal delay={150}>
+        // Tanpa Reveal: watermark adalah batas paket Basic. Reveal sependek ini
+        // di dasar halaman tak pernah terpicu bila layar ≳940 px tinggi
+        // (rootMargin −8%, threshold .12 — DECISIONS #112).
+        <div>
           <span className="sk-watermark">
             {L.footer.by}{" "}
             <a
@@ -444,7 +447,7 @@ export function Footer({
               {L.footer.brand}
             </a>
           </span>
-        </Reveal>
+        </div>
       ) : null}
     </footer>
   );

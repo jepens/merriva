@@ -5990,12 +5990,15 @@ dan `ops:verify`.
   memuat face tiap pasangan.
 
 **Konsekuensi:**
-- JS +0,75 KB gzip per halaman undangan, tanpa library (lumina tier Craft
-  termasuk): chunk cover-gate bersama +713 B (helper kini di sana), chunk klien
-  tema bersama +59 B (blok pengepas 12 tema dan `fx.tsx` lumina, dikurangi
-  pengepas lama eternal-rose). Diukur pada `/preview/tema/eternal-rose`
-  terhadap chunk produksi HEAD, dicocokkan per penanda isi; `/[slug]` memuat
-  chunk cover-gate yang sama. `bundle-report --check` lulus.
+- JS +0,84 KB gzip per halaman undangan, tanpa library (lumina tier Craft
+  termasuk): chunk cover-gate bersama +787 B (helper kini di sana), chunk klien
+  tema bersama +71 B (blok pengepas 12 tema dan `fx.tsx` lumina, dikurangi
+  pengepas lama eternal-rose). Diukur produksi → produksi sesudah deploy (5
+  Nov) pada `/preview/tema/eternal-rose`, chunk dicocokkan per penanda isi;
+  `/[slug]` memuat chunk cover-gate yang sama. `bundle-report --check` lulus.
+  **Ralat:** angka pra-deploy +0,75 KB (+713/+59 B) membandingkan build lokal
+  dengan produksi, yang berbeda ±74 B (cover-gate) dan ±12 B (tema) gzip karena
+  lingkungan build.
 - CSS tema (render-blocking, disalin mentah tanpa minify — #31) +0,1–0,7 KB
   gzip per tema: marawa +722 B, kirana +689, noir +591, priangan +499, verdant
   +468, meihua +442, barakah +438, meridian +404, lumina +311, eternal-rose
@@ -6143,6 +6146,193 @@ memaksa keadaan buruk):
   - Klaim dokumen diralat: galat `clientWidth` dua arah, besar pengecilan nama
     pas tepat, bundle CSS tema, biaya waktu, syarat anak bidang (termasuk tanpa
     gap).
+
+---
+
+## #112 — 2026-11-05 · Blok di dasar halaman terpicu (watermark Basic, juga sesudah RSVP), isi terbaca bila impor gsap ditolak, mask-reveal prisma 150%
+
+**Keputusan:**
+- `useThemeMotion` (bersama, 10 tema gsap) mendengarkan `refresh` ScrollTrigger:
+  trigger yang start-nya ≥ gulir maksimum dipindah ke maks − 1
+  (`jepitTriggerBawah`, lewat `setPositions` — mekanisme yang dipakai `clamp()`
+  gsap di sisi bawah). Tema tetap menulis `start: "top 86%"` biasa.
+- ResizeObserver pada akar tema memanggil `ScrollTrigger.refresh(true)` saat
+  tinggi isi berubah tanpa resize jendela (RSVP terkirim, galeri), sehingga
+  posisi trigger dan jepit dasar ikut. Mode aman: refresh ditunda sampai
+  ScrollTrigger menganggap gulir berhenti (>200 ms tanpa event gulir), dan
+  `force` melewati penyaring `ignoreMobileResize`.
+- Bila impor chunk gsap/lenis DITOLAK (galat jaringan/HTTP), `useThemeMotion`
+  melepas `is-motion` dari akar tema — CSS tema menyembunyikan isi hanya di
+  bawah kelas itu — dan melaporkan galat aslinya lewat `reportError`, yang
+  sampai ke `window.onerror` (jalur Sentry); di mesin tanpa `reportError`
+  (Chrome < 95, iOS < 15.4) galatnya senyap.
+- sakinah (tier Craft, `Reveal` IntersectionObserver): watermark Basic
+  dirender tanpa `Reveal`.
+- prisma: state tersembunyi mask-reveal 115% → 150% di sampul (WAAPI) dan isi
+  (gsap), memenuhi syarat #111/THEME-PORTING §0.4.
+
+**Alasan:**
+- Blok `.X-reveal` terakhir — termasuk watermark paket Basic, salah satu batas
+  paket — tak pernah tampil: 412×915 di barakah, kirana, marawa, meihua,
+  priangan, meridian; 375×812 di marawa, meihua, priangan, meridian; 768×1024
+  di 7 tema; juga desktop dan WebKit; juga prisma bila watermark aktif (data
+  demo-nya `watermark:false`, jadi luput dari pratinjau). `top 86%`/`top 88%`
+  di dasar halaman berada di luar gulir maksimum.
+- Formulir RSVP yang terkirim diganti satu baris status: halaman memendek
+  418–469 px tanpa refresh, jadi start kembali melewati gulir maksimum. Watermark
+  tersembunyi lagi di 9/9 tema yang memilikinya, dan blok pertama di bawah RSVP
+  terlambat tampil (4/4).
+- Chunk gsap dimuat dinamis sesudah sampul dibuka. Bila impornya ditolak,
+  janjinya tak ditangani, dan isi tetap `opacity:0`/`visibility:hidden`
+  selamanya.
+- sakinah: Reveal watermark berdiri sendiri (tinggi 46 px, puncaknya 81 px
+  dari dasar dokumen) dengan rootMargin −8% dan threshold .12 hanya terpicu
+  bila tinggi layar ≲940 px. Di tablet potret dan desktop 1080p ia tak pernah
+  tampil (Chromium & WebKit).
+- prisma pada 115%: Ğ judul acara mengintip 161–623 px-perangkat (Chromium) dan
+  149–399 (WebKit) — glyph cadangan Arial/Roboto, karena U+011E di luar subset
+  Space Grotesk —, Å 8–66, di Chromium juga Ñ 18–21 dan "2026" 31–46; judul bab
+  `.pr-head` (line-height 1) 8–178 px di 17–18/64 masker. Pada 150%: 0/76 dan
+  0/64; bebas intip mulai ≤125%.
+
+**Ditolak:**
+- `clamp()` pada start (gsap 3.12+): menjepit dua arah. Start negatif — isi di
+  atas lipatan sesudah sampul dibuka, di gulir 0 — menjadi 0, padahal trigger
+  baru aktif bila progress > 0 (`isActive = !!clipped && clipped < 1`,
+  ScrollTrigger 3.15). Terukur: di gulir 0, 140 lawan 18 elemen tersembunyi di
+  layar (nama mempelai, salam, kutipan), kembali ke 18 sesudah gulir 1 px. Uji
+  suntik `clamp()` di #111 hanya memeriksa dasar halaman sesudah digulir, jadi
+  tak menangkap ini.
+- `start` berupa fungsi per trigger (API terdokumentasi): 45 tempat di 10
+  `fx.tsx`, sedangkan `jepitTriggerBawah` satu tempat. `setPositions` belum
+  diketik `.d.ts` dan tak tercantum di dokumentasi gsap; uji unit gagal bila
+  metode itu hilang saat gsap di-upgrade.
+- Ruang gulir tambahan di dasar halaman: mengubah tata letak setiap undangan.
+- `ScrollTrigger.refresh()` paksa (dengan debounce) dari ResizeObserver:
+  melewati penundaan `scrollEnd`, jadi pada skenario uji jalan ±1,1 dtk
+  sebelum gulir berhenti, lalu menulis posisi gulir ke 0 dan memulihkannya. Di
+  iOS penulisan scrollTop saat gulir momentum bisa menghentikan gulir (risiko,
+  belum terukur). Mode aman juga menulis gulir, tetapi sesudah `scrollEnd`.
+- Batas waktu untuk chunk yang macet (`Promise.race` ≥10 dtk, setup tak
+  dijalankan bila chunk tiba belakangan): kasusnya jarang dan sudah ada sebelum
+  #112.
+- `Reveal` generik yang menampilkan dirinya di dasar halaman: lebih besar dari
+  masalahnya — hanya watermark yang batas paket. Untuk sakinah, menggabungkan
+  watermark ke Reveal salam masih gagal di tinggi ≳1356 px, dan satu Reveal
+  untuk seluruh footer di ≳2065 px; tanpa Reveal benar di tinggi berapa pun.
+- Mengosongkan cache `loadGsap` saat impor ditolak: hanya menolong mount ulang
+  di halaman yang sama (editor); tamu mount sekali, dan isinya sudah terbaca
+  karena `is-motion` dilepas.
+
+**Konsekuensi:**
+- Blok yang start-nya di luar jangkauan terpicu tepat di dasar halaman (gulir
+  maks − 1), yaitu saat pengguna sampai di dasar. Sesudah tinggi isi berubah,
+  posisi trigger disegarkan ±200 ms kemudian bila tak sedang menggulir, atau
+  ±0,2–0,55 dtk sesudah gulir berhenti (WebKit/CPU lambat di ujung atas); lalu
+  animasi reveal ±1 dtk. "Berhenti" menurut heuristik ScrollTrigger: jank
+  ≥200 ms saat fling bisa membuat refresh jatuh di tengah momentum (WebKit
+  headless 1–2/14 run). Di WebKit, callback awal ResizeObserver kadang
+  menambah satu refresh ±0,3 dtk sesudah sampul dibuka (13/79 run), tanpa efek
+  terlihat.
+- Animasi scrub yang start-nya di luar jangkauan (garis chevron meridian dsb.):
+  start dipindah, end tidak — progresnya di dasar halaman tetap ±0, sama dengan
+  sebelumnya (dekoratif).
+- Bila impor gsap ditolak, isi tampil statis seperti pada reduced-motion,
+  262–891 ms sesudah sampul dibuka pada kegagalan seketika (dev, abort/404);
+  kegagalan jaringan yang lambat bisa jauh lebih lama. Tetap menahan isi
+  seperti sebelum #112: chunk yang macet atau dijawab 200 bukan-JS (runtime
+  Turbopack hanya menolak lewat `script.onerror`), dan setup tema atau
+  `new Lenis` yang melempar.
+- Bundle JS ±+0,2 KB gzip per halaman undangan, termasuk tier Craft (chunk
+  klien tema bersama): +196 B menurut perkiraan modul final terisolasi; akan
+  diukur produksi → produksi sesudah deploy.
+- Uji: `tests/unit/gsap-motion.test.ts`, `gsap-motion-gagal.test.tsx`,
+  `gsap-motion-lenis-gagal.test.tsx`, `gsap-motion-kabel.test.tsx`,
+  `sakinah-watermark.test.tsx` — mutasi sasaran tertangkap: logika jepit (start
+  = maks, maks − 1, start negatif ikut dijepit, maxScroll horizontal, maks
+  di-cache), kabel (pendengar tak dipasang/"refreshInit"/sekali saat setup/
+  melepas diri/tak dilepas, akar tak diamati, refresh paksa, RO sekali saja/tak
+  diputus, cek batal dibuang, is-motion dilepas saat berhasil), jalur gagal
+  (is-motion tak dilepas, kegagalan tak ditangkap, lenis di luar penangkap,
+  galat tak/keliru dilaporkan), dan watermark sakinah dibungkus Reveal lagi.
+  Masih terbuka: pendengar/RO dipasang sebelum `gsap.context`, dan
+  `ctx.revert` dibuang (sudah ada sebelum #112).
+- Sisa yang diketahui, di luar #112 dan sudah ada sebelumnya:
+  - Lanskap 568×320: baris nama mempelai di hero eternal-rose & noir tersembunyi
+    di gulir 0. Hero-nya `<header>`, jadi `closest("section")` null dan trigger
+    jatuh ke span yang tergeser yPercent. Calon perbaikan:
+    `closest("section, header")` (hero `<header>` di 8 tema).
+  - verdant: reveal gsap (`fromTo` y) menimpa `translateY(10px)` rancangan pada
+    kartu herbarium genap, jadi zigzag-nya hilang. Calon perbaikan: offset lewat
+    `position:relative; top`. `gsap.from` justru membuat 6 kartu tak pernah
+    tampil.
+  - Perangkat sentuh: viewport yang membesar kurang dari 25% tanpa refresh
+    (WebView in-app yang di-resize) — dalam emulasi 8/10 tema menyisakan blok
+    dasar tersembunyi. Chrome & Safari nyata kemungkinan aman, karena 100vh =
+    viewport besar. Perlu dicek di WebView WhatsApp nyata. Calon perbaikan
+    (tervalidasi lewat suntikan): maks = `Math.min(ScrollTrigger.maxScroll(window),
+    scrollHeight − innerHeight)`, dan jepit juga dipanggil pada `resize`.
+  - sakinah: Reveal salam di footer gagal di tinggi ≳1430 px (kosmetik). Reveal
+    footer aria/festa/lumina (watermark di dalamnya) aman sampai ±2,6 rb px
+    tinggi layar (festa; aria ±3,0 rb, lumina ±3,3 rb).
+- Aturannya di THEME-PORTING §2b.
+
+**Verifikasi** (adversarial, independen; setiap detektor divalidasi kendali yang
+memaksa keadaan buruk):
+- Putaran 1 (3 verifikator + kritikus; maks 1 browser per agen; diukur pada kode
+  sebelum perbaikan di bawah):
+  - Dasar halaman: 100/100 run (10 tema × Chromium & WebKit × 375×812, 412×915,
+    320×568, 768×1024, 568×320) tanpa elemen tersembunyi; watermark & blok
+    penutup tampil. Kendali netral (pendengar dibuang) mereproduksi temuan asal.
+    Detektor (paksa 60%) tertangkap 2351/2351.
+  - Di atas lipatan (gulir 0, 3 dtk): identik dengan kendali netral, 50/50
+    Chromium dan 20/20 WebKit. Kendali `clamp()` membuktikan alasan
+    penolakannya (lihat Ditolak).
+  - Posisi trigger: dari 882 trigger di 20 pasang, hanya 10 yang start-nya ≥
+    maks berpindah ke maks − 1 dengan end tetap; 0 beda di tengah halaman.
+    Resize/rotasi: refresh 1→2 (beruntun 1→3) lalu stabil, 0 galat.
+  - Impor gsap ditolak (abort/HTTP 404): 61/61 run, is-motion dilepas dalam
+    262–891 ms, isi terbaca. Macet/bukan-JS tidak (lihat Konsekuensi).
+  - prisma 150%: 0 intip (lihat Alasan).
+  - Ditemukan dan diperbaiki:
+    - RSVP memendekkan halaman (10/10 tema) → ResizeObserver + `refresh(true)`.
+      Divalidasi kritikus lewat suntikan di barakah, marawa, meridian, verdant
+      (Chromium) dan barakah, meridian (WebKit).
+    - Watermark sakinah tak tampil di tinggi ≳940 px → tanpa Reveal.
+    - Pendengar bocor bila setup tema melempar → dipasang sesudah
+      `gsap.context`.
+    - Galat muat tak lagi sampai ke Sentry → `reportError`.
+    - Kabel jepit tak dikunci uji (W1–W4, W8 lolos) → uji kabel.
+  - Selama putaran ini sesi lain mengubah 12 berkas kirana/marawa/priangan
+    (14.36.55). Semua run yang menyentuh ketiga tema itu selesai sebelumnya, dan
+    berkas tersebut tak termasuk #112.
+- Putaran 2 (kode final, tanpa suntikan; pemeriksa browser + pemeriksa klaim &
+  kode):
+  - RSVP memendek (susut, di tengah, saat menggulir): 84/84 run (7 tema tanpa
+    WIP × 2 mesin × 412×915/375×812) tanpa blok tersembunyi di dasar, watermark
+    72/72; tepat 1 refresh per susut, tanpa putaran refresh. Kendali (RO
+    dibuang) kembali tersembunyi 28/28.
+  - Di atas lipatan identik: tanpa-RO 30/30 Chromium & 10/10 WebKit, HEAD
+    10/10. Dasar halaman 0 tersembunyi 60/60. RO pasif: 0 perubahan ukuran
+    akar di 110 run tanpa perubahan isi.
+  - sakinah: watermark tampil 14/14 (7 ukuran sampai 1024×1366 × 2 mesin),
+    reduced-motion 6/6, tanpa JS 6/6; tata letak footer identik dengan HEAD.
+    Kendali (dibungkus Reveal lagi): tak tampil di ≥768×1024 10/10.
+  - Impor ditolak: galat sampai ke `window.onerror` tepat sekali per run,
+    Chromium 7/7 & WebKit 7/7; kendali atribusi (`reportError` dibuang) 0
+    event.
+  - prisma dengan watermark (fixture): HEAD tersembunyi, final tampil 16/16.
+  - Ditemukan dan diperbaiki: aturan watermark Craft di THEME-PORTING terlalu
+    luas; angka ±2065 px salah subjek; kualifikasi klaim; 11 mutasi bermakna
+    masih lolos uji (3 mematikan perbaikan RSVP) → uji kabel temporal, uji
+    gagal-lenis, uji render watermark sakinah.
+  - Working tree berisi WIP sesi lain (fitur video, FASE J/#113) yang juga
+    menyunting `DECISIONS.md` dan `sakinah/sections.tsx`. Commit #112 hanya
+    memuat hunk-nya sendiri dan diverifikasi pada ekspor bersih pohon itu.
+- Belum diuji: rute `/[slug]` nyata (section yang dimatikan pelanggan,
+  watermark dari paket nyata), perangkat nyata (momentum iOS, fling sesudah RSVP
+  di WhatsApp, WebView WhatsApp), desktop ber-DPR pecahan (analisis: galat
+  < 1 px).
 
 ---
 

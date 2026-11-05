@@ -27,8 +27,10 @@ export function PrismaFx() {
       Array.from(scope.querySelectorAll<T>(sel));
 
     // Mask reveal per baris (state dimiliki JS §0.4) — konten saja (.pr-stage).
+    // 150%: judul bab ber-line-height 1 — pada 115% breve Ğ (glyph cadangan, di
+    // luar subset Space Grotesk) dan cincin Å mengintip; bebas intip mulai 125%.
     q<HTMLElement>(".pr-stage .pr-line > span").forEach((el) => {
-      gsap.set(el, { visibility: "visible", yPercent: 115 });
+      gsap.set(el, { visibility: "visible", yPercent: 150 });
       gsap.to(el, {
         yPercent: 0,
         duration: 1,

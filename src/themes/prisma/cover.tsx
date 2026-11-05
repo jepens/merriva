@@ -62,7 +62,9 @@ export function PrismaCover({
   const { open, opened, recipientName, motionOn, richOn } = useCoverGate();
   const innerRef = useRef<HTMLDivElement>(null);
 
-  // Mask-reveal entrance (WAAPI) — visibility + translateY dimiliki JS.
+  // Mask-reveal entrance (WAAPI) — visibility + translateY dimiliki JS. 150%:
+  // judul acara ber-line-height .92, pada 115% breve Ğ kapital (juga Å/Ñ)
+  // mengintip dari dasar masker (THEME-PORTING §0.4).
   useEffect(() => {
     if (!motionOn) return;
     const root = innerRef.current;
@@ -73,7 +75,7 @@ export function PrismaCover({
       el.style.visibility = "visible";
       anims.push(
         el.animate(
-          [{ transform: "translateY(115%)" }, { transform: "translateY(0)" }],
+          [{ transform: "translateY(150%)" }, { transform: "translateY(0)" }],
           {
             duration: 1050,
             easing: "cubic-bezier(0.22,1,0.36,1)",

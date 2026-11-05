@@ -26,7 +26,7 @@ let cached: Promise<{ gsap: Gsap; ScrollTrigger: ScrollTriggerT }> | null =
 
 /**
  * Muat gsap + ScrollTrigger sekali (cache modul) & daftarkan plugin. Dipakai
- * cover-gate (timeline entrance/buka) & `useThemeMotion` (koreografi scroll).
+ * `useThemeMotion` (koreografi scroll).
  */
 export function loadGsap() {
   if (!cached) {
@@ -39,6 +39,28 @@ export function loadGsap() {
     );
   }
   return cached;
+}
+
+/**
+ * Trigger yang start-nya di luar gulir maksimum — blok di dasar halaman
+ * (penutup, watermark Basic) dengan "top 86%" — tak pernah tercapai, jadi isinya
+ * tak pernah tampil. Start seperti itu dipindah ke gulir maks − 1, persis yang
+ * dilakukan `clamp()` ScrollTrigger di sisi bawah, lewat `setPositions` yang
+ * sama (metode instans yang belum diketik `.d.ts` gsap). Bukan `clamp()` itu
+ * sendiri: ia juga menjepit start negatif ke 0, padahal trigger baru aktif bila
+ * progress > 0 — isi di atas lipatan (hero sesudah sampul dibuka, gulir 0) lalu
+ * tertahan sampai halaman digulir. Dipanggil sesudah setiap refresh — termasuk
+ * refresh saat tinggi isi berubah (RSVP terkirim memendekkan halaman), yang
+ * dipicu `useThemeMotion`.
+ */
+export function jepitTriggerBawah(ScrollTrigger: ScrollTriggerT): void {
+  const max = ScrollTrigger.maxScroll(window);
+  for (const t of ScrollTrigger.getAll()) {
+    if (t.start >= max)
+      (
+        t as typeof t & { setPositions(start: number, end: number): void }
+      ).setPositions(max - 1, t.end);
+  }
 }
 
 /**
@@ -71,7 +93,11 @@ export function maskLines(
  * Jalankan koreografi scroll tema di dalam `gsap.context(scope)` + inisialisasi
  * Lenis (smooth scroll), keduanya dibersihkan saat unmount / `active` berubah.
  * `active` menggerbangi START (mis. dinyalakan SETELAH cover dibuka) sehingga
- * Lenis tak mengaktifkan scroll di balik cover.
+ * Lenis tak mengaktifkan scroll di balik cover. Bila impor chunk gsap/lenis
+ * DITOLAK (galat jaringan/HTTP), kelas `is-motion` dilepas dari `scope`: CSS
+ * tema menyembunyikan isi hanya di bawah kelas itu, jadi isi tetap terbaca tanpa
+ * animasi; galatnya tetap dilaporkan (`reportError` → penangan galat global).
+ * Chunk yang macet tak pernah ditolak, jadi tetap menahan isi sampai tiba.
  */
 export function useThemeMotion(
   scopeRef: RefObject<HTMLElement | null>,
@@ -93,9 +119,18 @@ export function useThemeMotion(
     let dispose: (() => void) | null = null;
 
     void (async () => {
-      const { gsap, ScrollTrigger } = await loadGsap();
-      const { default: Lenis } = await import("lenis");
+      const muat = await Promise.all([loadGsap(), import("lenis")]).catch(
+        (galat: unknown) => {
+          globalThis.reportError?.(galat);
+          return null;
+        },
+      );
       if (cancelled || !scopeRef.current) return;
+      if (!muat) {
+        scope.classList.remove("is-motion");
+        return;
+      }
+      const [{ gsap, ScrollTrigger }, { default: Lenis }] = muat;
 
       const lenis = new Lenis({ lerp: 0.11 });
       lenis.on("scroll", () => ScrollTrigger.update());
@@ -107,11 +142,21 @@ export function useThemeMotion(
         () => setupRef.current({ gsap, ScrollTrigger, scope }),
         scope,
       );
+      const jepit = () => jepitTriggerBawah(ScrollTrigger);
+      ScrollTrigger.addEventListener("refresh", jepit);
+      // Tinggi isi berubah tanpa resize jendela (RSVP terkirim, galeri) →
+      // refresh agar posisi trigger & jepit dasar mengikuti. `true` = aman:
+      // ditunda sampai ScrollTrigger menganggap gulir berhenti (>200 ms tanpa
+      // event gulir), dan tak tersaring ignoreMobileResize.
+      const ro = new ResizeObserver(() => ScrollTrigger.refresh(true));
+      ro.observe(scope);
       // Recalc posisi trigger setelah layout stabil (font swap, dsb.).
       const refreshId = window.setTimeout(() => ScrollTrigger.refresh(), 60);
 
       dispose = () => {
         window.clearTimeout(refreshId);
+        ro.disconnect();
+        ScrollTrigger.removeEventListener("refresh", jepit);
         ctx.revert();
         gsap.ticker.remove(tick);
         lenis.destroy();
