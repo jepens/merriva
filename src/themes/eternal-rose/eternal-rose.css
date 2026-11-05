@@ -979,3 +979,11 @@
   outline: 2px solid var(--er-acc-ink);
   outline-offset: -5px;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `er-pill er-pill--solid` yang sama dengan "Lihat Lokasi". */
+.er-live {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}

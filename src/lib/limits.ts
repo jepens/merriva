@@ -86,3 +86,17 @@ export function photoQuotaAvailable(
 ): boolean {
   return currentCount < limits.maxPhotos;
 }
+
+/**
+ * Apakah paket ini boleh dipakai undangan bertema `tier`? Tema bertier
+ * `premium` wajib paket ber-`allThemes` (Premium) saat DIBAYAR — draft boleh
+ * mencoba tema apa pun (DECISIONS #116, SPEC §4.8 langkah 0). Satu sumber untuk
+ * pemilih paket (tampilan) dan aksi checkout (penegakan); trigger DB
+ * `enforce_theme_tier` menolak penggantian tema yang melanggarnya.
+ */
+export function packageAllowsTheme(
+  limits: PackageLimits,
+  tier: string | null | undefined,
+): boolean {
+  return tier !== "premium" || limits.allThemes;
+}

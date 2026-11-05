@@ -1,3 +1,5 @@
+import { Radio } from "lucide-react";
+
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
 import { GiftConfirm } from "@/components/public/guestbook/gift-confirm";
 import { googleCalendarUrl } from "@/lib/calendar";
@@ -142,12 +144,15 @@ export function EventBlock({
   tz,
   slug,
   countdownTarget,
+  livestreamUrl,
 }: {
   no: string;
   events: InvitationEventView[];
   tz: TimezoneId;
   slug: string;
   countdownTarget: string | null;
+  /** Sudah digerbang server: Premium + https (DECISIONS #116). */
+  livestreamUrl?: string;
 }) {
   const icsServable = !isReservedSlug(slug) && !isDraftSlug(slug);
   return (
@@ -232,6 +237,21 @@ export function EventBlock({
           </Reveal>
         );
       })}
+      {livestreamUrl ? (
+        <Reveal>
+          <div className="ar-live">
+            <a
+              className="ar-lnk"
+              href={livestreamUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Radio size={14} />
+              {L.event.livestream}
+            </a>
+          </div>
+        </Reveal>
+      ) : null}
       {countdownTarget ? (
         <Reveal>
           <Countdown targetIso={countdownTarget} labels={L.countdown} />

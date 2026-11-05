@@ -166,6 +166,7 @@ export default function Festa({ data }: ThemeComponentProps) {
           events={data.events}
           tz={settings.timezone}
           slug={data.slug}
+          livestreamUrl={c.livestreamUrl}
         />
       ) : null,
     gallery:

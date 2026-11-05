@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { copy } from "@/lib/copy";
 import { parseAppearanceInput } from "@/lib/customizer/parse-appearance";
+import { pertahankanPilihanPremium } from "@/lib/customizer/resolve";
 import { isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
 import { reportHandledError } from "@/lib/observability";
@@ -83,7 +84,12 @@ export async function updateInvitationAppearanceAction(
 
   const existing =
     settingsSchema.safeParse(inv.settings).data ?? DEFAULT_SETTINGS;
-  const nextSettings = { ...existing, custom: parsed.custom };
+  // Tanpa Premium, font/gaya/aksen yang diterima hanyalah nilai bawaan — nilai
+  // TERSIMPAN dipertahankan agar naik paket mengembalikannya (DECISIONS #116).
+  const nextSettings = {
+    ...existing,
+    custom: pertahankanPilihanPremium(parsed.custom, existing.custom, premium),
+  };
 
   const { error } = await supabase
     .from("invitations")

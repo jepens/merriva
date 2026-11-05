@@ -170,6 +170,15 @@ export function GalleryStep({
         </span>
       </div>
 
+      {media.length > maxPhotos ? (
+        <p
+          role="status"
+          className="text-xs font-medium text-amber-700 dark:text-amber-400"
+        >
+          {copy.editor.gallery.overLimit(maxPhotos)}
+        </p>
+      ) : null}
+
       {media.length === 0 && pending === 0 ? (
         <p className="text-muted-foreground text-sm">
           {copy.editor.gallery.empty}

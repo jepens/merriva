@@ -5,7 +5,10 @@ import { notFound } from "next/navigation";
 import { AppearanceEditor } from "@/components/dashboard/appearance/appearance-editor";
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
-import { lengkapiUrutanSection } from "@/lib/customizer/resolve";
+import {
+  lengkapiUrutanSection,
+  sesuaikanKePaket,
+} from "@/lib/customizer/resolve";
 import { defaultCustomSettings } from "@/lib/customizer/theme-options";
 import { isUuid } from "@/lib/id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -74,8 +77,17 @@ export default async function AppearancePage({
   // Section yang ditambahkan ke tema sesudah pemilik menyimpan (mis. `video`)
   // dilengkapi di sini juga — tanpa itu editor mengirim daftar tak lengkap dan
   // server menolak setiap simpanan (lihat `lengkapiUrutanSection`).
+  //
+  // Lalu disesuaikan ke paket yang berlaku SEKARANG (DECISIONS #116), sama
+  // dengan yang tampil di undangan: pemilik yang turun paket (refund upgrade,
+  // perpanjangan Basic, alih kepemilikan) dulu memuat pilihan Premium lamanya
+  // dan setiap simpanan — bahkan sekadar mengubah urutan — ditolak server.
   const initialCustom = saved
-    ? { ...saved, sections: lengkapiUrutanSection(options, saved.sections) }
+    ? sesuaikanKePaket(
+        options,
+        { ...saved, sections: lengkapiUrutanSection(options, saved.sections) },
+        premium,
+      )
     : defaultCustomSettings(options);
 
   return (

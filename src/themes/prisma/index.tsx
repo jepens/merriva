@@ -247,6 +247,7 @@ export default function Prisma({ data }: ThemeComponentProps) {
             events={data.events}
             tz={settings.timezone}
             slug={data.slug}
+            livestreamUrl={content.livestreamUrl}
           />
         ),
       },
@@ -377,6 +378,7 @@ export default function Prisma({ data }: ThemeComponentProps) {
           events={data.events}
           tz={settings.timezone}
           slug={data.slug}
+          livestreamUrl={content.livestreamUrl}
         />
       ) : null}
 

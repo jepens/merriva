@@ -170,10 +170,13 @@ export function Programme({
   events,
   tz,
   slug,
+  livestreamUrl,
 }: {
   events: InvitationEventView[];
   tz: TimezoneId;
   slug: string;
+  /** Sudah digerbang server: Premium + https (DECISIONS #116). */
+  livestreamUrl?: string;
 }) {
   const icsServable = !isReservedSlug(slug) && !isDraftSlug(slug);
   return (
@@ -261,6 +264,18 @@ export function Programme({
           );
         })}
       </div>
+      {livestreamUrl ? (
+        <div className="mrd-live mrd-reveal">
+          <a
+            className="mrd-pill mrd-pill--gold"
+            href={livestreamUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {L.programme.livestream}
+          </a>
+        </div>
+      ) : null}
     </section>
   );
 }

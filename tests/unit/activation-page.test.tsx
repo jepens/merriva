@@ -38,7 +38,24 @@ const { refs } = vi.hoisted(() => ({
     exempt: false,
     /** Katalog paket, urut harga naik seperti query halaman. */
     packages: [] as unknown[],
+    /** Tier tema undangan — dibaca lewat service_role (DECISIONS #116). */
+    themeTier: "standard" as string | null,
   },
+}));
+vi.mock("@/lib/supabase/admin", () => ({
+  createSupabaseAdminClient: () => ({
+    from: () => {
+      const chain: Record<string, unknown> = {};
+      chain.select = () => chain;
+      chain.eq = () => chain;
+      chain.maybeSingle = () =>
+        Promise.resolve({
+          data: refs.themeTier ? { tier: refs.themeTier } : null,
+          error: null,
+        });
+      return chain;
+    },
+  }),
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
@@ -99,6 +116,30 @@ beforeEach(() => {
   refs.eventsError = null;
   refs.exempt = false;
   refs.packages = [BASIC];
+  refs.themeTier = "standard";
+});
+
+describe("halaman aktivasi — tema premium (DECISIONS #116)", () => {
+  it("tema premium (tier dibaca lewat service_role) → Basic terkunci, Premium bisa dipilih", async () => {
+    refs.themeTier = "premium";
+    refs.packages = [BASIC, { ...PREMIUM, limits: { all_themes: true } }];
+    await buka();
+
+    expect(
+      screen.getByText(copy.checkout.premiumThemeNote),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: copy.checkout.premiumThemeOnly }),
+    ).toBeDisabled();
+    expect(tombolPaket()).toBeEnabled();
+  });
+
+  it("tema standar → tanpa catatan tema premium", async () => {
+    await buka();
+
+    expect(screen.queryByText(copy.checkout.premiumThemeNote)).toBeNull();
+    expect(tombolPaket()).toBeEnabled();
+  });
 });
 
 describe("halaman aktivasi — akun Admin/Pro (DECISIONS #100)", () => {

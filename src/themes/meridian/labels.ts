@@ -39,6 +39,7 @@ export const L = {
     calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
+    livestream: "Tonton Siaran Langsung",
     /** Angka romawi untuk indeks acara (I., II., III. …). */
     roman: (n: number) =>
       ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"][n] ??

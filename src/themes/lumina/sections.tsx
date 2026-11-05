@@ -5,6 +5,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  Radio,
 } from "lucide-react";
 
 import { GiftConfirm } from "@/components/public/guestbook/gift-confirm";
@@ -296,10 +297,13 @@ export function Schedule({
   events,
   tz,
   slug,
+  livestreamUrl,
 }: {
   events: InvitationEventView[];
   tz: TimezoneId;
   slug: string;
+  /** Sudah digerbang server: Premium + https (DECISIONS #116). */
+  livestreamUrl?: string;
 }) {
   const icsServable = !isReservedSlug(slug) && !isDraftSlug(slug);
   return (
@@ -392,6 +396,21 @@ export function Schedule({
             );
           })}
         </div>
+        {livestreamUrl ? (
+          <Reveal>
+            <div className="lm-live">
+              <a
+                className="lm-btn"
+                href={livestreamUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Radio size={15} />
+                {L.schedule.livestream}
+              </a>
+            </div>
+          </Reveal>
+        ) : null}
       </div>
     </section>
   );

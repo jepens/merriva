@@ -6497,6 +6497,89 @@ galeri 8 foto, video, dan watermark pratinjau terkunci, dengan lencana
 
 ---
 
+## #116 — 2026-11-06 · Yang tampil = yang dibayar: penegakan paket saat render, tema premium saat bayar, live streaming
+
+**Keputusan (pemilik, 6 Nov 2026 — ketiga rekomendasi dipilih):**
+1. **Render menegakkan paket.** `buildInvitationData` (satu titik untuk `/[slug]`
+   dan pratinjau) kini juga menyaring kustomisasi (`sesuaikanKePaket`: bukan
+   Premium → pasangan font & gaya bawaan, tanpa aksen kustom; aksen gugur pula
+   bila tema tak mendukungnya) dan galeri (N foto pertama sesuai
+   `limits.maxPhotos`), melengkapi video & watermark yang sudah ikut paket.
+   Editor Tampilan memuat versi yang sama, sehingga pemilik yang turun paket
+   bisa menyimpan lagi; langkah Galeri memberi tahu bila foto melebihi batas.
+   Data tak pernah dihapus — naik paket mengembalikan semuanya. Termasuk saat
+   MENYIMPAN: tanpa Premium, aksi Tampilan mempertahankan font/gaya/aksen yang
+   tersimpan (`pertahankanPilihanPremium`) — gerbang simpan hanya menerima
+   nilai bawaan untuk ketiganya, jadi tak ada pilihan pemilik yang tertimpa.
+   Aksen kustom melekat pada variannya (editor Premium pun mengosongkannya saat
+   varian diganti), jadi ganti varian tanpa Premium ikut melepasnya.
+2. **Tema bertier premium wajib Premium saat DIBAYAR** (`packageAllowsTheme`):
+   pemilih paket menonaktifkan paket tanpa `all_themes` dengan penjelasan,
+   `createCheckoutAction` menolaknya (tier dibaca lewat service_role karena
+   `themes_select_public` menyembunyikan tema NONAKTIF dari pelanggan — tema
+   premium yang dinonaktifkan sesudah dipakai draft dulu terbaca "tak ada" lalu
+   lolos dengan Basic; galat atau baris kosong → gagal-tertutup), dan
+   trigger `enforce_theme_change` menolak penggantian tema lewat API ke tema
+   premium / nonaktif / berkategori lain — termasuk bila undangan masih punya
+   order undangan `pending` berpaket non-`all_themes` (gerbang checkout membaca
+   tema saat order DIBUAT; tanpa itu, Premium kedaluwarsa bisa membuat order
+   perpanjangan Basic lalu berganti ke tema premium sebelum membayar). Draft
+   tetap boleh dibuat dengan tema apa pun; aktivasi manual admin tak diperiksa.
+3. **Live streaming tampil** sebagai tombol di section acara ke-14 tema, hanya
+   Premium dan hanya URL https (digerbang di `buildInvitationData`).
+4. **Baris tak bisa dipindah antar-undangan** (`forbid_invitation_move` pada
+   `guests` & `media`).
+
+**Alasan:**
+- Pemetaan penegakan (6 Nov): font, gaya, aksen, dan jumlah foto hanya dijaga
+  saat simpan/INSERT. Selain celah PATCH `settings.custom` lewat PostgREST,
+  isi Premium tetap tampil lewat jalur SAH: perpanjangan Premium kedaluwarsa
+  dengan Basic, refund upgrade, alih kepemilikan EO (#115), peran Pro dicabut.
+  Editor Tampilan sesudahnya menolak setiap simpanan.
+- `all_themes` tak ditegakkan di mana pun: klien bisa memilih tema premium di
+  formulir biasa lalu membayar Basic — kebocoran pendapatan lewat UI, bukan
+  lewat celah teknis.
+- Live streaming dijanjikan Premium (SPEC §2, halaman harga) tetapi tak pernah
+  dirender.
+- Pemindahan tamu dibuktikan EMPIRIS di DB lokal sebagai pengguna login:
+  undangan berisi 500 tamu menjadi 501 lewat `UPDATE guests SET invitation_id`
+  — trigger kuota hanya BEFORE INSERT. Tak ada jalur aplikasi yang memindah
+  baris.
+
+**Ditolak:**
+- *Penjaga di ganti-kepemilikan untuk jalur EO* — penegakan saat render
+  menutupnya bersama semua jalur lain; penjaga hanya menutup satu.
+- *Trigger DB penolak tulis langsung `settings`* — render sudah tak
+  menampilkannya, dan aksi Tampilan harus pindah ke service_role.
+- *Flag paket baru `livestream`* — mengikuti konvensi gerbang Premium
+  `!watermark` (#13); flag terpisah baru berguna bila ada paket di tengah.
+
+**Konsekuensi:**
+- Migrasi `20261106100000` wajib di cloud SEBELUM kode di-push (aksi checkout
+  baru tak bergantung padanya, tetapi trigger yang menutup API-nya ada di sana).
+- Simpanan Tampilan tanpa Premium tak menimpa font/gaya/aksen tersimpan;
+  "Kembalikan ke bawaan" tetap membuang semuanya (tindakan eksplisit pemilik).
+- Paket yang DINONAKTIFKAN di katalog: sisi pemilik (pratinjau, editor, kuota
+  DB lewat `invitation_effective_limits` yang INVOKER) membaca paket lewat RLS
+  `packages_select_public` → lantai Basic, sementara halaman publik
+  (service_role) tetap memakai paketnya. Sudah begitu sebelum #116 (watermark
+  pratinjau, kuota); kini pratinjau juga menyembunyikan font/foto/live. Tak ada
+  data hilang. Bila kelak paket dipensiunkan, buka paket yang DIRUJUK undangan
+  pemanggil di policy itu.
+- Live streaming ikut section acara: bila section acara disembunyikan atau tak
+  ada sesi berjam, tombolnya tak tampil.
+- Aktivasi manual admin dengan paket Basic pada undangan bertema premium tetap
+  menampilkan tema premium (keputusan admin, tak diperiksa).
+- Perpanjangan & bayar ulang juga pembayaran: undangan bertema premium yang
+  dulu aktif dengan Basic (lewat UI sebelum #116, aktivasi manual admin, atau
+  tema yang kelak DIKLASIFIKASI ULANG admin menjadi premium) hanya bisa
+  diperpanjang pelanggan dengan Premium — tak ada aksi aplikasi untuk berganti
+  tema. Produksi 6 Nov 2026: nol undangan seperti itu dan nol order pending
+  Basic bertema premium. Mengubah tier tema di katalog berdampak pada
+  pelanggan lama tema itu.
+
+---
+
 ## Template entri baru
 
 ```

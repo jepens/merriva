@@ -18,6 +18,7 @@ import { getEffectiveLimits } from "@/server/limits";
 import { requireUser } from "@/server/guards/auth";
 import { settingsSchema } from "@/lib/validation/content";
 import { getThemeLoader } from "@/themes/registry";
+import { getThemeOptions } from "@/themes/theme-options-registry";
 import { ThemeStyles } from "@/themes/theme-styles";
 
 export const metadata: Metadata = { title: copy.preview.badge };
@@ -131,6 +132,10 @@ export default async function PreviewPage({
     mediaRows: mediaRows ?? [],
     watermark: limits.watermark,
     videoAllowed: limits.youtube,
+    maxPhotos: limits.maxPhotos,
+    // Gerbang Premium kustomisasi saat render (DECISIONS #116) butuh options
+    // tema: pasangan font & gaya bawaan adalah index 0 milik tema ini.
+    themeOptions: theme?.slug ? getThemeOptions(theme.slug) : null,
     music,
   });
 

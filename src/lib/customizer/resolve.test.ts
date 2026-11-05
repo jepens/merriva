@@ -171,3 +171,56 @@ describe("resolveAppearance — styles & motion/grain", () => {
     expect(r.grain).toBe(false);
   });
 });
+
+describe("sesuaikanKePaket — yang tampil = yang dibayar (DECISIONS #116)", () => {
+  const premiumCustom = (): CustomSettings => {
+    const c = base();
+    c.fontPair = opts.fontPairs[1]!.id;
+    c.accent = "#aa3355";
+    c.styles = { gallery: opts.styles.gallery!.at(-1)! };
+    c.variant = opts.variants.at(-1)!.id;
+    c.motion = "calm";
+    c.grain = false;
+    c.sections[1]!.visible = false;
+    return c;
+  };
+
+  it("paket Premium: pilihan pemilik utuh (objek yang sama)", async () => {
+    const { sesuaikanKePaket } = await import("./resolve");
+    const c = premiumCustom();
+    expect(sesuaikanKePaket(opts, c, true)).toBe(c);
+  });
+
+  it("bukan Premium: font/gaya/aksen kembali ke bawaan; varian, urutan, motion, grain tetap", async () => {
+    const { sesuaikanKePaket } = await import("./resolve");
+    const c = premiumCustom();
+    const r = sesuaikanKePaket(opts, c, false);
+    expect(r.fontPair).toBe(opts.fontPairs[0]!.id);
+    expect(r.accent).toBeNull();
+    expect(r.styles.gallery).toBe(opts.styles.gallery![0]);
+    expect(r.variant).toBe(c.variant);
+    expect(r.sections).toEqual(c.sections);
+    expect(r.motion).toBe("calm");
+    expect(r.grain).toBe(false);
+    // Non-destruktif: data masukan tak berubah.
+    expect(c.fontPair).toBe(opts.fontPairs[1]!.id);
+  });
+
+  it("hasilnya lolos gerbang simpan Basic — cermin buildCustomSettingsSchema", async () => {
+    const { sesuaikanKePaket } = await import("./resolve");
+    const { buildCustomSettingsSchema } =
+      await import("./settings-custom-schema");
+    const r = sesuaikanKePaket(opts, premiumCustom(), false);
+    expect(
+      buildCustomSettingsSchema(opts, { premium: false }).safeParse(r).success,
+    ).toBe(true);
+  });
+
+  it("aksen kustom gugur bila tema tak mendukungnya, walau Premium", async () => {
+    const { sesuaikanKePaket } = await import("./resolve");
+    const { barakahOptions } = await import("@/themes/barakah/options");
+    const c = clone(defaultCustomSettings(barakahOptions));
+    c.accent = "#123456";
+    expect(sesuaikanKePaket(barakahOptions, c, true).accent).toBeNull();
+  });
+});

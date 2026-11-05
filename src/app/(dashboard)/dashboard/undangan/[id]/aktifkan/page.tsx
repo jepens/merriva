@@ -18,6 +18,7 @@ import {
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import { resolveLimits } from "@/lib/limits";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isPaymentExempt, requireUser } from "@/server/guards/auth";
 
@@ -40,7 +41,7 @@ export default async function ActivateInvitationPage({
   const supabase = await createSupabaseServerClient();
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status, slug, purged_at, user_id")
+    .select("id, status, slug, purged_at, user_id, theme_id")
     .eq("id", id)
     .maybeSingle();
   if (!inv) notFound();
@@ -127,6 +128,17 @@ export default async function ActivateInvitationPage({
     );
   }
 
+  // Tier tema → paket yang tak mencakupnya dinonaktifkan di pemilih (#116).
+  // Lewat service_role (setelah undangan terbukti terlihat oleh pemanggil):
+  // RLS menyembunyikan tema NONAKTIF dari pelanggan, padahal tema premium yang
+  // dinonaktifkan tetap premium. Galat baca dibiarkan `null` (tampil semua):
+  // aksi checkout tetap menolak dengan gagal-tertutup, jadi tak ada yang lolos.
+  const { data: tema } = await createSupabaseAdminClient()
+    .from("themes")
+    .select("tier")
+    .eq("id", inv.theme_id)
+    .maybeSingle();
+
   // Admin & Pro tak pernah ditagih (DECISIONS #100) — hanya undangan MILIK
   // sendiri (admin melihat semua undangan lewat RLS). Langsung paket teratas:
   // urutan harga naik, jadi yang terakhir.
@@ -150,6 +162,7 @@ export default async function ActivateInvitationPage({
         invitationId={id}
         packages={free ? packages.slice(-1) : packages}
         free={free}
+        themeTier={tema?.tier ?? null}
       />
 
       <Link

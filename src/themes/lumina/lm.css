@@ -797,3 +797,11 @@
   outline: 2px solid var(--lm-taupe-ink);
   outline-offset: -5px;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `lm-btn` yang sama dengan "Petunjuk Arah". */
+.lm-live {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}

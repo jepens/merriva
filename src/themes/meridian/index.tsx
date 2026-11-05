@@ -233,6 +233,7 @@ export default function Meridian({ data }: ThemeComponentProps) {
           events={data.events}
           tz={settings.timezone}
           slug={data.slug}
+          livestreamUrl={content.livestreamUrl}
         />
       ) : null,
     gallery:

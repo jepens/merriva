@@ -156,6 +156,11 @@ function setup(
     pendingOrder?: unknown;
     /** `profiles.role` pemanggil (bawaan: tak ada baris → klien). */
     role?: string;
+    /**
+     * Tier tema undangan, dibaca lewat service_role (bawaan: `standard`).
+     * `null` = baris tak ada → aksi gagal-tertutup.
+     */
+    themeTier?: string | null;
   } = {},
 ) {
   refs.server = makeClient(
@@ -168,8 +173,12 @@ function setup(
     calls,
     { errors: server.errors },
   );
+  const tier = "themeTier" in server ? server.themeTier : "standard";
   refs.admin = makeClient(
-    { orders: "pendingOrder" in server ? server.pendingOrder : null },
+    {
+      orders: "pendingOrder" in server ? server.pendingOrder : null,
+      themes: tier ? { tier } : null,
+    },
     calls,
     adminOpts,
   );
@@ -835,5 +844,106 @@ describe("createCheckoutAction — akun Admin/Pro tak pernah ditagih (DECISIONS 
     expect(res).toEqual({ status: "error", message: copy.common.error });
     expect(terbitkanLink).not.toHaveBeenCalled();
     expect(orders()).toHaveLength(0);
+  });
+});
+
+describe("createCheckoutAction — tema premium wajib paket Premium (DECISIONS #116)", () => {
+  const DRAFT = {
+    id: INV,
+    status: "draft",
+    slug: "andi-sinta",
+    theme_id: "t-1",
+  };
+  const PREMIUM = { ...PKG, limits: { all_themes: true, watermark: false } };
+  const BASIC = {
+    id: "pkg-basic",
+    price_idr: 99000,
+    limits: { all_themes: false },
+  };
+
+  it("tema premium + paket Basic → ditolak SEBELUM order dibuat", async () => {
+    setup(DRAFT, BASIC, {}, { themeTier: "premium" });
+
+    const res = await createCheckoutAction(INV, "basic");
+
+    expect(res).toMatchObject({
+      status: "error",
+      message: copy.checkout.premiumThemeRequired,
+    });
+    expect(orders()).toHaveLength(0);
+    expect(terbitkanLink).not.toHaveBeenCalled();
+  });
+
+  it("tema premium + paket Premium → lanjut ke pembayaran", async () => {
+    setup(DRAFT, PREMIUM, {}, { themeTier: "premium" });
+
+    expect((await createCheckoutAction(INV, "premium")).status).toBe(
+      "redirect",
+    );
+  });
+
+  it("tema standar + paket Basic → lanjut (tak berubah)", async () => {
+    setup(DRAFT, BASIC, {}, { themeTier: "standard" });
+
+    expect((await createCheckoutAction(INV, "basic")).status).toBe("redirect");
+  });
+
+  it("tier tema tak terbaca → gagal-tertutup, tanpa order", async () => {
+    setup(DRAFT, BASIC, { errors: { themes: { message: "putus" } } });
+
+    const res = await createCheckoutAction(INV, "basic");
+
+    expect(res.status).toBe("error");
+    expect(orders()).toHaveLength(0);
+  });
+
+  it("baris tema tak ada → gagal-tertutup (BUKAN dianggap tema standar)", async () => {
+    setup(DRAFT, BASIC, {}, { themeTier: null });
+
+    const res = await createCheckoutAction(INV, "basic");
+
+    expect(res).toEqual({ status: "error", message: copy.common.error });
+    expect(orders()).toHaveLength(0);
+    expect(terbitkanLink).not.toHaveBeenCalled();
+  });
+
+  it("tier dibaca lewat service_role — tema premium NONAKTIF tersembunyi RLS dari pelanggan", async () => {
+    setup(DRAFT, BASIC, {}, { themeTier: "premium" });
+
+    await createCheckoutAction(INV, "basic");
+
+    const dariSesi = (
+      refs.server as { from: { mock: { calls: unknown[][] } } }
+    ).from.mock.calls.some(([t]) => t === "themes");
+    const dariAdmin = (
+      refs.admin as { from: { mock: { calls: unknown[][] } } }
+    ).from.mock.calls.some(([t]) => t === "themes");
+    expect(dariSesi).toBe(false);
+    expect(dariAdmin).toBe(true);
+    // Tema milik undangan INI, bukan id undangan.
+    const baca = calls.filter((c) => c.table === "themes");
+    expect(baca).toHaveLength(1);
+    expect(baca[0].filters.id).toBe("t-1");
+  });
+
+  it("order Basic PENDING yang sudah ada tak dipakai ulang untuk tema premium", async () => {
+    setup(
+      DRAFT,
+      BASIC,
+      {},
+      {
+        themeTier: "premium",
+        pendingOrder: { id: "ord-lama", package_id: "pkg-basic", txn_id: "x" },
+      },
+    );
+
+    const res = await createCheckoutAction(INV, "basic");
+
+    expect(res).toMatchObject({
+      status: "error",
+      message: copy.checkout.premiumThemeRequired,
+    });
+    expect(terbitkanLink).not.toHaveBeenCalled();
+    expect(calls.some((c) => c.table === "orders")).toBe(false);
   });
 });

@@ -33,6 +33,7 @@ export const L = {
     calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
+    livestream: "Tonton Siaran Langsung",
   },
   gallery: { eyebrow: "Herbarium Kami", heading: "Potongan Kenangan" },
   video: { eyebrow: "Video", heading: "Kenangan yang Tumbuh" },

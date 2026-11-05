@@ -887,3 +887,11 @@
   outline: 2px solid var(--vd-terra-ink);
   outline-offset: -5px;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `vd-pill vd-pill--solid` yang sama dengan "Petunjuk Arah". */
+.vd-live {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}

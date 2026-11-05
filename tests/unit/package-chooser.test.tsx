@@ -122,3 +122,41 @@ describe("PackageChooser — akun Admin/Pro (DECISIONS #100)", () => {
     expect(checkout).toHaveBeenCalledWith("inv-1", "premium");
   });
 });
+
+describe("PackageChooser — tema premium (DECISIONS #116)", () => {
+  const BERTEMA = [
+    PAKET[0]!,
+    { ...PAKET[1]!, limits: resolveLimits({ all_themes: true }) },
+  ];
+
+  it("tema premium: Basic nonaktif berlabel, penjelasan tampil, Premium tetap bisa dipilih", () => {
+    render(
+      <PackageChooser
+        invitationId="inv-1"
+        packages={BERTEMA}
+        themeTier="premium"
+      />,
+    );
+    expect(screen.getByText(copy.checkout.premiumThemeNote)).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: copy.checkout.premiumThemeOnly }),
+    ).toHaveProperty("disabled", true);
+    expect(
+      screen.getByRole("button", { name: copy.checkout.choose }),
+    ).toHaveProperty("disabled", false);
+  });
+
+  it("tema standar: tak ada yang dikunci", () => {
+    render(
+      <PackageChooser
+        invitationId="inv-1"
+        packages={BERTEMA}
+        themeTier="standard"
+      />,
+    );
+    expect(screen.queryByText(copy.checkout.premiumThemeNote)).toBeNull();
+    expect(
+      screen.getAllByRole("button", { name: copy.checkout.choose }),
+    ).toHaveLength(2);
+  });
+});

@@ -972,3 +972,11 @@
   outline: 2px solid var(--mrd-gold-l);
   outline-offset: -5px;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `mrd-pill mrd-pill--gold` yang sama dengan "Petunjuk Arah". */
+.mrd-live {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}

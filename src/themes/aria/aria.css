@@ -688,3 +688,17 @@
   outline: 2px solid var(--ar-red);
   outline-offset: -5px;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `ar-lnk` yang sama dengan "Petunjuk Arah"; rata kiri mengikuti
+   susunan acara, inline-flex hanya agar ikon sebaris dengan label. */
+.ar-live {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 44px;
+}
+.ar-live .ar-lnk {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

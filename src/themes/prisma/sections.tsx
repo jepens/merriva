@@ -1,3 +1,4 @@
+import { Radio } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { GuestbookSection } from "@/components/public/guestbook/guestbook-section";
@@ -239,6 +240,7 @@ export function EventBlock({
   events,
   tz,
   slug,
+  livestreamUrl,
 }: {
   no: string;
   showCountdown: boolean;
@@ -247,6 +249,8 @@ export function EventBlock({
   events: InvitationEventView[];
   tz: TimezoneId;
   slug: string;
+  /** Sudah digerbang server: Premium + https (DECISIONS #116). */
+  livestreamUrl?: string;
 }) {
   return (
     <section className="pr-section pr-section--tight">
@@ -261,6 +265,19 @@ export function EventBlock({
             <LocCard key={e.id} event={e} tz={tz} slug={slug} />
           ))
         : null}
+      {showSchedule && livestreamUrl ? (
+        <div className="pr-live pr-reveal">
+          <a
+            className="pr-pill pr-pill--lime"
+            href={livestreamUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Radio size={14} />
+            {L.location.livestream}
+          </a>
+        </div>
+      ) : null}
     </section>
   );
 }

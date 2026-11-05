@@ -998,3 +998,11 @@
   pointer-events: none;
   z-index: 1;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `kr-pill kr-pill--gold` yang sama dengan "Petunjuk Arah". */
+.kr-live {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}

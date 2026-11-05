@@ -10,7 +10,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { formatIdr } from "@/lib/format";
-import type { PackageLimits } from "@/lib/limits";
+import { packageAllowsTheme, type PackageLimits } from "@/lib/limits";
 import { packageFeatures } from "@/lib/package-features";
 import { cn } from "@/lib/utils";
 import { createCheckoutAction } from "@/server/actions/checkout";
@@ -31,15 +31,21 @@ export interface CheckoutPackage {
  * `free` = akun Admin/Pro (DECISIONS #100): aksi yang sama langsung
  * mengaktifkan lalu mengarahkan ke dashboard, jadi tak ada harga maupun notis
  * pembayaran yang ditampilkan.
+ *
+ * `themeTier` = tier tema undangan: paket yang tak mencakup tema premium
+ * tampil nonaktif dengan penjelasan (DECISIONS #116). Ini tampilan saja —
+ * `createCheckoutAction` menolaknya sendiri.
  */
 export function PackageChooser({
   invitationId,
   packages,
   free = false,
+  themeTier = null,
 }: {
   invitationId: string;
   packages: CheckoutPackage[];
   free?: boolean;
+  themeTier?: string | null;
 }) {
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,12 +75,22 @@ export function PackageChooser({
     }
   }
 
+  const anyLocked = packages.some(
+    (p) => !packageAllowsTheme(p.limits, themeTier),
+  );
+
   return (
     <div className="space-y-4">
+      {anyLocked ? (
+        <p className="text-sm text-amber-700 dark:text-amber-400">
+          {copy.checkout.premiumThemeNote}
+        </p>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         {packages.map((pkg, i) => {
           const isBusy = pending === pkg.code;
           const anyBusy = pending !== null;
+          const locked = !packageAllowsTheme(pkg.limits, themeTier);
           const highlight = i === packages.length - 1; // paket teratas (Premium)
           return (
             <Card
@@ -105,7 +121,7 @@ export function PackageChooser({
                 </ul>
                 <button
                   type="button"
-                  disabled={anyBusy}
+                  disabled={anyBusy || locked}
                   onClick={() => onChoose(pkg.code)}
                   className={cn(
                     buttonVariants({
@@ -121,6 +137,8 @@ export function PackageChooser({
                         ? copy.checkout.freeActivating
                         : copy.checkout.redirecting}
                     </>
+                  ) : locked ? (
+                    copy.checkout.premiumThemeOnly
                   ) : free ? (
                     copy.checkout.freeCta
                   ) : (

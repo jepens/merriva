@@ -247,6 +247,7 @@ export default function Kirana({ data }: ThemeComponentProps) {
           events={data.events}
           tz={settings.timezone}
           slug={data.slug}
+          livestreamUrl={content.livestreamUrl}
         />
       ) : null,
     gallery:

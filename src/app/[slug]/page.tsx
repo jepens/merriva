@@ -14,6 +14,7 @@ import { settingsSchema } from "@/lib/validation/content";
 import { buildInvitationData, resolveMusic } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
 import { getThemeLoader } from "@/themes/registry";
+import { getThemeOptions } from "@/themes/theme-options-registry";
 import { ThemeStyles } from "@/themes/theme-styles";
 import type { InvitationContent } from "@/lib/validation/content";
 
@@ -204,6 +205,10 @@ export default async function PublicInvitationPage({
     mediaRows: mediaRows ?? [],
     watermark: limits.watermark,
     videoAllowed: limits.youtube,
+    maxPhotos: limits.maxPhotos,
+    // Gerbang Premium kustomisasi saat render (DECISIONS #116) butuh options
+    // tema: pasangan font & gaya bawaan adalah index 0 milik tema ini.
+    themeOptions: theme?.slug ? getThemeOptions(theme.slug) : null,
     music,
   });
 

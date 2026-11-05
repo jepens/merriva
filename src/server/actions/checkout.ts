@@ -10,6 +10,7 @@ import { copy } from "@/lib/copy";
 import { PAYABLE_STATUSES } from "@/lib/invitation-status";
 import { appUrl } from "@/lib/env";
 import { isUuid } from "@/lib/id";
+import { packageAllowsTheme, resolveLimits } from "@/lib/limits";
 import { merchantIdentityReady } from "@/lib/merchant";
 import { reportHandledError } from "@/lib/observability";
 import { generateOrderCode } from "@/lib/order";
@@ -88,7 +89,7 @@ export async function createCheckoutAction(
   // admin, yang melihat semua undangan; lihat cabang bebas-bayar di bawah).
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, status, slug, purged_at, user_id")
+    .select("id, status, slug, purged_at, user_id, theme_id")
     .eq("id", invitationId)
     .maybeSingle();
   if (!inv) return { status: "error" };
@@ -136,7 +137,7 @@ export async function createCheckoutAction(
   // Harga otoritatif dari DB (jangan percaya nominal klien).
   const { data: pkg } = await supabase
     .from("packages")
-    .select("id, price_idr")
+    .select("id, price_idr, limits")
     .eq("code", code)
     .eq("is_active", true)
     .eq("kind", "invitation") // checkout undangan tak boleh pakai kode add-on
@@ -146,6 +147,25 @@ export async function createCheckoutAction(
 
   // Order + payment link hanya lewat service_role.
   const admin = createSupabaseAdminClient();
+
+  // Tema bertier premium wajib paket ber-`all_themes` (DECISIONS #116, SPEC
+  // §4.8 langkah 0). Pemilih paket sudah menonaktifkannya; ini penegaknya bila
+  // halaman itu dilewati. Dibaca lewat service_role: `themes_select_public`
+  // menyembunyikan tema NONAKTIF dari pelanggan, dan tema premium yang
+  // dinonaktifkan sesudah dipakai draft akan terbaca "tak ada" → lolos dengan
+  // Basic. FK menjamin barisnya ada, jadi galat ATAU baris kosong →
+  // gagal-tertutup.
+  const { data: tema, error: temaError } = await admin
+    .from("themes")
+    .select("tier")
+    .eq("id", inv.theme_id)
+    .maybeSingle();
+  if (temaError || !tema) {
+    return { status: "error", message: copy.common.error };
+  }
+  if (!packageAllowsTheme(resolveLimits(pkg.limits), tema.tier)) {
+    return { status: "error", message: copy.checkout.premiumThemeRequired };
+  }
 
   // Admin & Pro tak pernah ditagih (DECISIONS #100): yang dilewati HANYA
   // pembayarannya — semua syarat di atas (status, purge, alamat, jadwal, paket)

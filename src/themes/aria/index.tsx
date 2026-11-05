@@ -196,6 +196,7 @@ export default function Aria({ data }: ThemeComponentProps) {
             tz={settings.timezone}
             slug={data.slug}
             countdownTarget={countdownTarget}
+            livestreamUrl={content.livestreamUrl}
           />
         ),
       },
@@ -311,6 +312,7 @@ export default function Aria({ data }: ThemeComponentProps) {
           tz={settings.timezone}
           slug={data.slug}
           countdownTarget={showCountdown ? countdownTarget : null}
+          livestreamUrl={content.livestreamUrl}
         />
       ) : showCountdown && countdownTarget ? (
         <CountdownSection no={no()} targetIso={countdownTarget} />

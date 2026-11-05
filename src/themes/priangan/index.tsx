@@ -188,6 +188,7 @@ export default function Priangan({ data }: ThemeComponentProps) {
           events={data.events}
           tz={settings.timezone}
           slug={data.slug}
+          livestreamUrl={content.livestreamUrl}
         />
       ) : null,
     story: content.story.length > 0 ? <Story story={content.story} /> : null,

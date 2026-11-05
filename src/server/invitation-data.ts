@@ -3,6 +3,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { copy } from "@/lib/copy";
+import { sesuaikanKePaket } from "@/lib/customizer/resolve";
+import type { ThemeOptions } from "@/lib/customizer/theme-options";
 import { parseContentForRender } from "@/lib/invitation-content";
 import { displayPath, toMediaView } from "@/lib/media";
 import { scheduledEvents } from "@/lib/schedule";
@@ -71,6 +73,15 @@ export async function resolveMusic(
   };
 }
 
+function isHttpsUrl(url: string | undefined): url is string {
+  if (!url) return false;
+  try {
+    return new URL(url).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function buildInvitationData(args: {
   slug: string;
   category: InvitationCategory;
@@ -82,12 +93,34 @@ export function buildInvitationData(args: {
   watermark: boolean;
   /** `limits.youtube` paket — flag fitur video untuk KEDUA sumber (FASE J). */
   videoAllowed: boolean;
+  /** `limits.maxPhotos` paket — jumlah foto galeri yang BOLEH tampil (#116). */
+  maxPhotos: number;
+  /** Options tema undangan ini; `null` = tema tanpa kustomisasi. */
+  themeOptions: ThemeOptions | null;
   music: InvitationData["music"];
 }): InvitationData {
+  // Premium = tanpa watermark — konvensi gerbang Premium yang sama dengan aksi
+  // Tampilan (DECISIONS #13).
+  const premium = !args.watermark;
+
   const settingsParsed = settingsSchema.safeParse(args.settings);
-  const settings = settingsParsed.success
+  const parsedSettings = settingsParsed.success
     ? settingsParsed.data
     : DEFAULT_SETTINGS;
+  // "Yang tampil = yang dibayar" (DECISIONS #116): kustomisasi di luar paket
+  // yang berlaku SEKARANG kembali ke bawaan tema — satu titik untuk halaman
+  // publik & pratinjau, data tersimpan tak disentuh.
+  const settings =
+    parsedSettings.custom && args.themeOptions
+      ? {
+          ...parsedSettings,
+          custom: sesuaikanKePaket(
+            args.themeOptions,
+            parsedSettings.custom,
+            premium,
+          ),
+        }
+      : parsedSettings;
   const parsed = parseContentForRender(args.content, args.category);
   // Gerbang paket untuk video, SATU titik untuk halaman publik & pratinjau:
   // paket tanpa fitur video tak menerima video unggahan maupun tautan YouTube,
@@ -95,9 +128,16 @@ export function buildInvitationData(args: {
   // ditulis langsung lewat autosave). Tautan dibuang dari `content` juga —
   // bukan hanya `video` di-null-kan — karena tema membaca `youtubeUrl` dari
   // sana; tanpa ini lubang penegakan `limits.youtube` tetap terbuka.
-  const content = args.videoAllowed
+  const gated = args.videoAllowed
     ? parsed
     : { ...parsed, youtubeUrl: undefined, video: undefined };
+  // Live streaming: fitur Premium (SPEC §2) dan hanya URL https — skema draft
+  // sengaja longgar saat mengetik (hanya menolak skema berbahaya), jadi bentuk
+  // tautannya dipastikan di sini sebelum menjadi `href` di tema.
+  const content =
+    premium && isHttpsUrl(gated.livestreamUrl)
+      ? gated
+      : { ...gated, livestreamUrl: undefined };
 
   // Hanya sesi BERJAM yang sampai ke tema (DECISIONS #42): sesi draft tanpa jam
   // tersimpan agar isian pemilik tak hilang, tetapi tak pernah tampil ke tamu.
@@ -117,9 +157,11 @@ export function buildInvitationData(args: {
   );
 
   const storage = getStorage();
-  const media: InvitationMediaView[] = args.mediaRows.map((r) =>
-    toMediaView(r, (p) => storage.getPublicUrl(p)),
-  );
+  // Hanya N foto pertama sesuai paket (urutan galeri pemilik) — foto di atas
+  // batas tetap tersimpan dan kembali tampil saat naik paket (#116).
+  const media: InvitationMediaView[] = args.mediaRows
+    .slice(0, Math.max(0, args.maxPhotos))
+    .map((r) => toMediaView(r, (p) => storage.getPublicUrl(p)));
 
   // Foto bernama (sampul/mempelai) → URL domain sendiri (SPEC §6.4: tema tak
   // pernah menerima storage_path mentah untuk foto ini). Mempelai hanya untuk

@@ -43,6 +43,7 @@ export const L = {
     calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
+    livestream: "Tonton Siaran Langsung",
   },
   rsvp: {
     admit: "Admit One",

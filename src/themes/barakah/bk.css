@@ -899,3 +899,11 @@
   outline: 2px solid var(--bk-gold-ink);
   outline-offset: -5px;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `bk-pill bk-pill--gold` yang sama dengan "Petunjuk Arah". */
+.bk-live {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}

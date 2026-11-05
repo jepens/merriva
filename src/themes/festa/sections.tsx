@@ -1,4 +1,4 @@
-import { CalendarPlus, MapPin } from "lucide-react";
+import { CalendarPlus, MapPin, Radio } from "lucide-react";
 
 import { GiftConfirm } from "@/components/public/guestbook/gift-confirm";
 import { googleCalendarUrl } from "@/lib/calendar";
@@ -131,10 +131,13 @@ export function Schedule({
   events,
   tz,
   slug,
+  livestreamUrl,
 }: {
   events: InvitationEventView[];
   tz: TimezoneId;
   slug: string;
+  /** Sudah digerbang server: Premium + https (DECISIONS #116). */
+  livestreamUrl?: string;
 }) {
   const icsServable = !isReservedSlug(slug) && !isDraftSlug(slug);
   return (
@@ -229,6 +232,21 @@ export function Schedule({
             </Reveal>
           );
         })}
+        {livestreamUrl ? (
+          <Reveal>
+            <div className="ft-live">
+              <a
+                className="ft-pill ft-pill--teal"
+                href={livestreamUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Radio size={15} />
+                {L.schedule.livestream}
+              </a>
+            </div>
+          </Reveal>
+        ) : null}
       </div>
     </section>
   );

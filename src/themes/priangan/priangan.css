@@ -890,3 +890,11 @@
   outline: 2px solid var(--pg-gold-ink);
   outline-offset: -5px;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `pg-pill` yang sama dengan "Petunjuk Lokasi". */
+.pg-live {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}

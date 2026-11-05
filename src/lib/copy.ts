@@ -511,6 +511,12 @@ export const copy = {
     merchantMissing:
       "Pembayaran sedang tidak tersedia. Tim kami sedang menyelesaikan penyiapan. Hubungi halo@merriva.id bila acara Anda sudah dekat.",
     packageUnavailable: "Paket tidak tersedia. Silakan coba lagi.",
+    // Tema bertier premium wajib paket Premium saat dibayar (DECISIONS #116).
+    premiumThemeRequired:
+      "Tema undangan ini khusus paket Premium. Pilih Premium untuk mengaktifkannya.",
+    premiumThemeNote:
+      "Tema yang Anda pilih termasuk tema premium, jadi hanya bisa diaktifkan dengan paket Premium.",
+    premiumThemeOnly: "Khusus tema standar",
     // Sejak Pakasir v2, penerbitan tautan adalah panggilan jaringan yang bisa
     // gagal (mis. plafon 2 permintaan/detik). Pesannya menenangkan dengan
     // fakta yang benar: order-nya SUDAH tersimpan, dan percobaan ulang memakai
@@ -889,6 +895,10 @@ export const copy = {
       working: "Menyiapkan & mengunggah…",
       limitReached:
         "Jumlah foto sudah mencapai batas paket. Naikkan paket undangan ini untuk menambah foto.",
+      // Foto di atas batas paket (turun paket / alih kepemilikan, DECISIONS
+      // #116): tetap tersimpan, tetapi undangan hanya menampilkan N pertama.
+      overLimit: (max: number) =>
+        `Undangan hanya menampilkan ${max} foto pertama sesuai paket. Foto lainnya tetap tersimpan — hapus yang tak perlu atau naikkan paket untuk menampilkannya.`,
       invalidFile: "Berkas harus berupa gambar (JPG, PNG, atau WebP).",
       tooLarge: "Foto terlalu besar setelah dikompres. Coba foto lain.",
       error: "Gagal mengunggah foto. Coba lagi.",

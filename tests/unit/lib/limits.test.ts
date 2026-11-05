@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   BASIC_LIMITS,
   guestQuotaAvailable,
+  packageAllowsTheme,
   photoQuotaAvailable,
   resolveLimits,
 } from "@/lib/limits";
@@ -102,5 +103,16 @@ describe("photoQuotaAvailable", () => {
     const l = resolveLimits(BASIC_JSON); // 8
     expect(photoQuotaAvailable(l, 7)).toBe(true);
     expect(photoQuotaAvailable(l, 8)).toBe(false);
+  });
+});
+
+describe("packageAllowsTheme (DECISIONS #116)", () => {
+  it("tema premium hanya untuk paket ber-allThemes; tema lain bebas", () => {
+    const basic = resolveLimits(BASIC_JSON);
+    const premium = resolveLimits(PREMIUM_JSON);
+    expect(packageAllowsTheme(basic, "premium")).toBe(false);
+    expect(packageAllowsTheme(premium, "premium")).toBe(true);
+    expect(packageAllowsTheme(basic, "standard")).toBe(true);
+    expect(packageAllowsTheme(basic, null)).toBe(true);
   });
 });

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { copy } from "@/lib/copy";
 import { DEFAULT_SETTINGS, emptyContent } from "@/lib/validation/content";
 import { buildInvitationData } from "@/server/invitation-data";
+import { eternalRoseOptions } from "@/themes/eternal-rose/options";
 
 /**
  * Builder data undangan = SATU titik saringan untuk halaman publik & pratinjau
@@ -25,6 +26,8 @@ function build(
     mediaRows: [],
     watermark: false,
     videoAllowed: true,
+    maxPhotos: 20,
+    themeOptions: null,
     music: null,
   });
 }
@@ -77,6 +80,8 @@ describe("buildInvitationData — foto bernama", () => {
       mediaRows: [],
       watermark: false,
       videoAllowed: true,
+      maxPhotos: 20,
+      themeOptions: null,
       music: null,
     });
   }
@@ -140,6 +145,8 @@ describe("buildInvitationData — video (FASE J)", () => {
       mediaRows: [],
       watermark: false,
       videoAllowed,
+      maxPhotos: 20,
+      themeOptions: null,
       music: null,
     });
   }
@@ -165,5 +172,87 @@ describe("buildInvitationData — video (FASE J)", () => {
     const { poster: _poster, ...tanpaPoster } = video;
     expect(dengan({ video: tanpaPoster }, true).video?.posterUrl).toBeNull();
     expect(dengan({}, true).video).toBeNull();
+  });
+});
+
+describe("buildInvitationData — yang tampil = yang dibayar (DECISIONS #116)", () => {
+  const ER = eternalRoseOptions;
+  const customPremium = {
+    v: 1 as const,
+    variant: ER.variants[0]!.id,
+    accent: "#aa3355",
+    fontPair: ER.fontPairs[1]!.id,
+    sections: ER.sections.map((s) => ({ id: s.id, visible: true })),
+    styles: { gallery: ER.styles.gallery!.at(-1)! },
+    motion: "full" as const,
+    grain: true,
+  };
+  const foto = (i: number) => ({
+    id: `m${i}`,
+    storage_path: `inv/a/m${i}`,
+    width: 1600,
+    height: 1200,
+  });
+
+  function bangun(opts: {
+    watermark: boolean;
+    maxPhotos?: number;
+    content?: Record<string, unknown>;
+    mediaRows?: ReturnType<typeof foto>[];
+  }) {
+    return buildInvitationData({
+      slug: "andi-sinta",
+      category: "wedding",
+      content: { ...emptyContent("wedding"), ...(opts.content ?? {}) },
+      settings: { ...DEFAULT_SETTINGS, custom: customPremium },
+      eventDate: null,
+      eventRows: [],
+      mediaRows: opts.mediaRows ?? [],
+      watermark: opts.watermark,
+      videoAllowed: !opts.watermark,
+      maxPhotos: opts.maxPhotos ?? 20,
+      themeOptions: ER,
+      music: null,
+    });
+  }
+
+  it("galeri hanya N foto PERTAMA sesuai paket (urutan pemilik)", () => {
+    const rows = [1, 2, 3, 4, 5].map(foto);
+    const d = bangun({ watermark: true, maxPhotos: 3, mediaRows: rows });
+    expect(d.media.map((m) => m.id)).toEqual(["m1", "m2", "m3"]);
+    expect(
+      bangun({ watermark: false, maxPhotos: 20, mediaRows: rows }).media,
+    ).toHaveLength(5);
+  });
+
+  it("bukan Premium: kustomisasi Premium tersimpan TIDAK tampil", () => {
+    const c = bangun({ watermark: true }).settings.custom!;
+    expect(c.fontPair).toBe(ER.fontPairs[0]!.id);
+    expect(c.accent).toBeNull();
+    expect(c.styles.gallery).toBe(ER.styles.gallery![0]);
+  });
+
+  it("Premium: kustomisasi tampil apa adanya", () => {
+    const c = bangun({ watermark: false }).settings.custom!;
+    expect(c.fontPair).toBe(customPremium.fontPair);
+    expect(c.accent).toBe("#aa3355");
+  });
+
+  it("live streaming: hanya Premium, hanya https", () => {
+    const https = "https://youtube.com/live/abc";
+    expect(
+      bangun({ watermark: false, content: { livestreamUrl: https } }).content
+        .livestreamUrl,
+    ).toBe(https);
+    expect(
+      bangun({ watermark: true, content: { livestreamUrl: https } }).content
+        .livestreamUrl,
+    ).toBeUndefined();
+    expect(
+      bangun({
+        watermark: false,
+        content: { livestreamUrl: "http://contoh.test/live" },
+      }).content.livestreamUrl,
+    ).toBeUndefined();
   });
 });

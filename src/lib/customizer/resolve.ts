@@ -76,6 +76,66 @@ export function lengkapiUrutanSection(
   return hasil;
 }
 
+/**
+ * Kustomisasi yang BOLEH tampil untuk paket yang berlaku SEKARANG (DECISIONS
+ * #116, SPEC §2 "Penegakan paket"). Cermin gerbang simpan
+ * `buildCustomSettingsSchema`: bukan Premium → pasangan font bawaan, gaya
+ * bawaan, tanpa aksen kustom. Aksen kustom juga gugur bila tema tak
+ * mendukungnya — gerbang simpan menolaknya, tetapi render dulu memakainya apa
+ * adanya. Varian, urutan section, motion & grain terbuka untuk semua paket dan
+ * tak disentuh.
+ *
+ * Kenapa di render, bukan hanya saat simpan: undangan bisa turun paket lewat
+ * jalur SAH (refund upgrade, perpanjangan dengan paket lebih rendah, alih
+ * kepemilikan, peran Pro dicabut) dan `settings` bisa ditulis di luar aksi
+ * Tampilan. MURNI — data tersimpan tak berubah, jadi naik paket mengembalikan
+ * semuanya.
+ */
+export function sesuaikanKePaket(
+  options: ThemeOptions,
+  custom: CustomSettings,
+  premium: boolean,
+): CustomSettings {
+  const accent =
+    premium && options.supports.customAccent ? custom.accent : null;
+  if (premium) return accent === custom.accent ? custom : { ...custom, accent };
+  const styles: Record<string, string> = {};
+  for (const [key, values] of Object.entries(options.styles)) {
+    styles[key] = values[0] ?? "";
+  }
+  return {
+    ...custom,
+    accent: null,
+    fontPair: options.fontPairs[0]?.id ?? custom.fontPair,
+    styles,
+  };
+}
+
+/**
+ * Pasangan `sesuaikanKePaket` di jalur SIMPAN Tampilan: tanpa Premium, gerbang
+ * simpan hanya menerima nilai BAWAAN untuk font, gaya, dan aksen (editor pun
+ * memuatnya sudah disesuaikan), jadi tiga isian itu tak membawa pilihan apa pun
+ * dari pemilik. Nilai yang TERSIMPAN dipertahankan — tetap tersembunyi saat
+ * render, dan kembali bila naik paket (SPEC §2 "Penegakan paket": tidak
+ * dihapus). Tanpa ini, satu simpanan varian/urutan oleh pemilik Basic (alih
+ * kepemilikan, peran Pro dicabut) menimpa pilihan Premium selamanya.
+ */
+export function pertahankanPilihanPremium(
+  next: CustomSettings,
+  stored: CustomSettings | null | undefined,
+  premium: boolean,
+): CustomSettings {
+  if (premium || !stored) return next;
+  return {
+    ...next,
+    fontPair: stored.fontPair,
+    // Aksen kustom melekat pada variannya: editor Premium pun mengosongkannya
+    // saat varian diganti, jadi ganti varian di sini juga melepasnya.
+    accent: next.variant === stored.variant ? stored.accent : null,
+    styles: stored.styles,
+  };
+}
+
 function resolveSections(
   options: ThemeOptions,
   custom: CustomSettings | null | undefined,

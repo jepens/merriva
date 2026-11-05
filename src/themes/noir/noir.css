@@ -977,3 +977,11 @@
   outline: 2px solid var(--nr-champ-2);
   outline-offset: -5px;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `nr-pill nr-pill--gold` yang sama dengan "Petunjuk Arah". */
+.nr-live {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}

@@ -47,6 +47,7 @@ export const L = {
     calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
+    livestream: "Tonton Siaran Langsung",
   },
   gallery: { eyebrow: "Lampah Katresnan · Galeri", caption: "Foto" },
   video: { eyebrow: "Kenangan Bergerak" },

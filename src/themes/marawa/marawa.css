@@ -940,3 +940,11 @@
   outline: 2px solid var(--mw-gold-soft);
   outline-offset: -5px;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `mw-pill` yang sama dengan "Petunjuk Lokasi". */
+.mw-live {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}

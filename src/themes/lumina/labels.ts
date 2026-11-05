@@ -52,6 +52,7 @@ export const L = {
     calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
+    livestream: "Tonton Siaran Langsung",
   },
   gallery: { eyebrow: "Album", heading: "Momen" },
   video: { eyebrow: "Video", heading: "Sepenggal Cerita" },

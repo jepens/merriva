@@ -990,3 +990,12 @@
   outline: 2px solid var(--pr-cyan);
   outline-offset: -5px;
 }
+
+/* Tombol live streaming di section acara (Premium, DECISIONS #116) — gaya
+   tombolnya `pr-pill pr-pill--lime` yang sama dengan "Petunjuk Arah"; rata
+   kiri mengikuti kartu lokasi. */
+.pr-live {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 22px;
+}
