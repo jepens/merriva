@@ -73,4 +73,4 @@ TypeScript `strict`, hindari `any`. Server Components secara default; `"use clie
 - Target performa halaman publik: **Lighthouse mobile ≥ 90, LCP < 2,5 dtk di 4G** — jangan menambah JS berat ke halaman undangan; render via ISR (revalidate saat pemilik menyimpan).
 - `guests.token` adalah identitas tamu dan kelak menjadi QR check-in Fase 2 — desain apa pun tidak boleh menghalangi itu.
 - Foto dikompres di browser klien (2 varian WebP: 400px & 1600px) sebelum upload — server tidak memproses gambar galeri.
-- Paket Basic dibatasi server-side (150 tamu, 8 foto, watermark); jangan hanya membatasi di UI.
+- Paket Basic dibatasi server-side (500 tamu, 8 foto, watermark); jangan hanya membatasi di UI.

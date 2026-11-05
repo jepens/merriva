@@ -62,7 +62,7 @@ QR check-in di lokasi & layar sapa (Fase 2) · denah meja, souvenir, doorprize (
 | Love story / agenda | ✓ | ✓ |
 | RSVP + ucapan & doa | ✓ | ✓ |
 | Amplop digital | ✓ | ✓ |
-| Daftar tamu + link WA personal | Maks. 150 tamu | Tanpa batas |
+| Daftar tamu + link WA personal | Maks. 500 tamu | Tanpa batas |
 | Link live streaming | — | ✓ |
 | Masa aktif | 6 bulan | 12 bulan |
 | Watermark footer | Ada (kecil) | Tanpa watermark |
@@ -162,7 +162,7 @@ CRUD tamu (nama, no. WA opsional, label/grup, alokasi pax, catatan) · **impor d
 
 Distribusi: halaman "Sebar Undangan" berisi template pesan yang bisa diedit dengan variabel `{nama}`, `{link}`, `{acara}` → per tamu tersedia tombol **"Kirim via WA"** (membuka `wa.me/{nomor}?text={pesan terisi}`) dan **"Salin pesan"**; plus "salin semua" untuk kirim massal manual. Status per tamu: terkirim (ditandai otomatis saat tombol WA diklik), dan **sudah dibuka** (tercatat saat link token pertama kali diakses).
 
-**Kriteria terima:** impor 500 tamu dari Excel < 30 detik dengan laporan baris gagal → link `wa.me` terbuka dengan pesan lengkap & benar di HP → penanda "sudah dibuka" tercatat saat tamu membuka link → limit 150 tamu (Basic) ditegakkan di server → ekspor daftar tamu + status RSVP ke Excel berfungsi.
+**Kriteria terima:** impor 500 tamu dari Excel < 30 detik dengan laporan baris gagal → link `wa.me` terbuka dengan pesan lengkap & benar di HP → penanda "sudah dibuka" tercatat saat tamu membuka link → limit 500 tamu (Basic) ditegakkan di server → ekspor daftar tamu + status RSVP ke Excel berfungsi.
 
 ### 4.8 Pembayaran (BinderPay — binderpay.id, API SNAP, dok: binderpay.id/docs)
 

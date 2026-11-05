@@ -6408,6 +6408,33 @@ Entri ini mencatat keputusan TEKNIS yang diambil saat menerapkannya.
   hanya `service_role`, advisor keamanan tanpa temuan baru. Sebelum menerapkan
   dipastikan logika fungsi lama di cloud identik `20261016111713` — tak ada
   hotfix tak tercatat yang tertimpa.
+
+---
+
+## #114 — 2026-11-05 · Kuota tamu Basic 150 → 500 (paket DAN lantai draft)
+
+**Keputusan:** kuota tamu Basic menjadi 500 (keputusan pemilik). Diubah di tiga
+tempat yang menjawab pertanyaan yang sama untuk populasi berbeda: baris
+`packages` Basic (undangan berbayar), lantai DB `normalize_package_limits`
+(draft tanpa paket & `limits` rusak — dibaca `invitation_effective_limits`,
+jadi `insert_guest`, `insert_guests_bulk`, dan trigger `enforce_guest_limit`
+ikut), dan cermin TypeScript `BASIC_LIMITS.maxGuests` (tampilan "x tamu dari
+y", tombol Tambah, halaman harga). Migrasi `20261105140000`. Premium tetap
+tanpa batas.
+
+**Alasan:** pemicunya undangan draft `rani-wanda` yang tertahan di 150/150 —
+batas itu datang dari LANTAI draft, bukan dari baris paket (di produksi belum
+ada satu pun undangan Basic berbayar). Mengubah hanya baris paket akan
+membiarkan draft di 150 lalu "naik" saat dibayar; mengubah hanya lantai akan
+membuat pembeli Basic turun dari draft-nya.
+
+**Ditolak:** menaikkan hanya undangan itu (draft tak punya paket untuk
+diubah; satu-satunya jalan per-undangan adalah membayar Premium).
+
+**Konsekuensi:** SPEC §2, PRD, CLAUDE.md, PAYMENT-E2E ikut diperbarui.
+Halaman harga membaca angka dari DB, jadi berubah begitu migrasi diterapkan.
+pgTAP `kuota_tamu_basic` mengunci bahwa draft menerima tamu ke-500 dan trigger
+menolak yang ke-501 (`check_violation`).
 - Durasi & orientasi hanya ditegakkan klien (server tak mentranskode); ukuran
   & tipe ditegakkan ulang server. Pemilik berpaket yang memalsukan metadata
   hanya bisa merugikan undangannya sendiri, dibatasi 40 MB.

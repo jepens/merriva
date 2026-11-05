@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * `uploadGalleryPhotoAction` — penegakan KUOTA FOTO PAKET di server, tanpa test
  * sampai AUDIT-2026-09-04 KUA-9. CLAUDE.md menegaskan: "Paket Basic dibatasi
- * server-side (150 tamu, 8 foto, watermark); jangan hanya membatasi di UI."
+ * server-side (500 tamu, 8 foto, watermark); jangan hanya membatasi di UI."
  *
  * Invarian yang dijaga:
  *  - batas paket ditegakkan RPC atomik (`insert_gallery_media`) — plafon PENUH

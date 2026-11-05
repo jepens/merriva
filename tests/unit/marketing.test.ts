@@ -56,7 +56,7 @@ describe("packageFeatures", () => {
     const feats = packageFeatures(BASIC_LIMITS, 6);
     expect(feats).toContain(f.standardThemes);
     expect(feats).toContain(f.watermark);
-    expect(feats).toContain(f.guestsLimited(150));
+    expect(feats).toContain(f.guestsLimited(500));
     expect(feats).toContain(f.photos(8));
     expect(feats).not.toContain(f.youtube);
     expect(feats).toContain(copy.checkout.perDuration(6));

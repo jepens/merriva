@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
-import { resolveLimits } from "@/lib/limits";
+import { BASIC_LIMITS, resolveLimits } from "@/lib/limits";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { dataOrThrow } from "@/lib/supabase/result";
 import { adminUpdatePackageAction } from "@/server/actions/admin-catalog";
@@ -126,7 +126,11 @@ export default async function AdminPackagesPage({
                         name="maxGuests"
                         type="number"
                         min={1}
-                        defaultValue={limits.maxGuests ?? 150}
+                        defaultValue={
+                          limits.maxGuests ??
+                          BASIC_LIMITS.maxGuests ??
+                          undefined
+                        }
                         className={fieldClass}
                       />
                     </label>

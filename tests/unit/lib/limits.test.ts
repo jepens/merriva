@@ -10,7 +10,7 @@ import {
 // Bentuk JSONB persis seperti yang di-seed migrasi (init_schema §7).
 const BASIC_JSON = {
   max_photos: 8,
-  max_guests: 150,
+  max_guests: 500,
   youtube: false,
   all_themes: false,
   watermark: true,
@@ -34,7 +34,7 @@ describe("resolveLimits", () => {
   it("JSONB Basic → nilai Basic", () => {
     expect(resolveLimits(BASIC_JSON)).toEqual({
       maxPhotos: 8,
-      maxGuests: 150,
+      maxGuests: 500,
       youtube: false,
       allThemes: false,
       watermark: true,
@@ -60,9 +60,9 @@ describe("resolveLimits", () => {
   });
 
   it("max_guests malformed (0/negatif/tipe lain) → lantai Basic, BUKAN unlimited", () => {
-    expect(resolveLimits({ max_guests: 0 }).maxGuests).toBe(150);
-    expect(resolveLimits({ max_guests: -5 }).maxGuests).toBe(150);
-    expect(resolveLimits({ max_guests: "banyak" }).maxGuests).toBe(150);
+    expect(resolveLimits({ max_guests: 0 }).maxGuests).toBe(500);
+    expect(resolveLimits({ max_guests: -5 }).maxGuests).toBe(500);
+    expect(resolveLimits({ max_guests: "banyak" }).maxGuests).toBe(500);
   });
 
   it("max_guests null eksplisit tetap tanpa batas (Premium)", () => {
@@ -83,10 +83,12 @@ describe("resolveLimits", () => {
 
 describe("guestQuotaAvailable", () => {
   it("ada batas: tersedia selama jumlah < batas", () => {
-    const l = resolveLimits(BASIC_JSON); // 150
-    expect(guestQuotaAvailable(l, 149)).toBe(true);
-    expect(guestQuotaAvailable(l, 150)).toBe(false);
-    expect(guestQuotaAvailable(l, 200)).toBe(false);
+    const l = resolveLimits(BASIC_JSON); // 500
+    expect(guestQuotaAvailable(l, 499)).toBe(true);
+    expect(guestQuotaAvailable(l, 500)).toBe(false);
+    expect(guestQuotaAvailable(l, 600)).toBe(false);
+    // Batas lama (150) bukan lagi batas: draft yang tertahan di sana bisa lanjut.
+    expect(guestQuotaAvailable(l, 150)).toBe(true);
   });
 
   it("tanpa batas (Premium) → selalu tersedia", () => {

@@ -46,7 +46,7 @@ Sepuluh modul (kriteria terima lengkap di `SPEC.md` §4): landing + katalog & de
 
 ## 7. Paket & harga awal (disimpan di DB, mudah diubah)
 
-**Basic Rp99.000** (tema standar, 8 foto, 150 tamu, 6 bulan, watermark kecil) · **Premium Rp199.000** (semua tema, 20 foto + video YouTube, tamu unlimited, live streaming, 12 bulan, tanpa watermark). Buat & preview selalu gratis; bayar saat aktivasi. Posisi: di atas pemain perang-harga, di bawah tier Gold–Platinum pasar (Rp150–400rb+). Fee Pakasir per transaksi ±Rp1.000–2.000 (QRIS).
+**Basic Rp99.000** (tema standar, 8 foto, 500 tamu, 6 bulan, watermark kecil) · **Premium Rp199.000** (semua tema, 20 foto + video YouTube, tamu unlimited, live streaming, 12 bulan, tanpa watermark). Buat & preview selalu gratis; bayar saat aktivasi. Posisi: di atas pemain perang-harga, di bawah tier Gold–Platinum pasar (Rp150–400rb+). Fee Pakasir per transaksi ±Rp1.000–2.000 (QRIS).
 
 ## 8. Non-goals Fase 1
 

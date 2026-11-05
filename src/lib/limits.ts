@@ -22,7 +22,7 @@ export interface PackageLimits {
 /** Lantai Basic — dipakai untuk draft tanpa paket & sebagai fallback aman. */
 export const BASIC_LIMITS: PackageLimits = {
   maxPhotos: 8,
-  maxGuests: 150,
+  maxGuests: 500,
   youtube: false,
   allThemes: false,
   watermark: true,
@@ -41,7 +41,7 @@ function bool(value: unknown, fallback: boolean): boolean {
 /**
  * Resolusi `packages.limits` (JSONB tak berbentuk / null) → `PackageLimits`
  * bertipe dengan lantai Basic per-kunci. Aturan `max_guests`:
- *  - kunci **tak ada** (draft / paket lawas) → lantai Basic (150),
+ *  - kunci **tak ada** (draft / paket lawas) → lantai Basic (500),
  *  - JSON **null** eksplisit → `null` = tanpa batas (Premium),
  *  - angka > 0 → nilai itu,
  *  - selain itu (0, negatif, tipe lain) → lantai Basic (fail-safe, BUKAN unlimited).

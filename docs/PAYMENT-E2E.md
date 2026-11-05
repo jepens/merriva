@@ -58,7 +58,7 @@ Butir di bawah ditulis untuk Pakasir; padanan BinderPay-nya di §D.
 - [ ] **Idempoten**: kirim ulang webhook / poll berkali-kali → tak menggandakan aktivasi (order tetap `paid`, satu kuitansi — `idempotencyKey`).
 - [ ] Order `pending` >24 jam → cron `expire-orders` → `expired` + `transactioncancel` (jalankan cron manual: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" .../api/cron/expire-orders`).
 - [ ] `api_key` tak pernah muncul di browser/log.
-- [ ] **Limit paket** ditegakkan: beli Premium → 20 foto / tamu tanpa batas / **tanpa watermark**; Basic → 8 foto / 150 tamu / watermark (penegakan foto & tamu OTORITATIF di DB `invitation_effective_limits` — sudah terverifikasi lokal).
+- [ ] **Limit paket** ditegakkan: beli Premium → 20 foto / tamu tanpa batas / **tanpa watermark**; Basic → 8 foto / 500 tamu / watermark (penegakan foto & tamu OTORITATIF di DB `invitation_effective_limits` — sudah terverifikasi lokal).
 
 ## D. Varian BinderPay (QRIS) — manual
 
