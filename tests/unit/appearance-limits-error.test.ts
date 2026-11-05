@@ -78,7 +78,12 @@ describe("updateInvitationAppearanceAction — galat DB", () => {
     expect(res).toEqual({ status: "error", message: copy.common.error });
     expect(refs.updates).toBe(0);
     // Benar-benar sampai ke pembacaan paket (bukan tertolak lebih awal).
-    expect(limits).toHaveBeenCalledWith(expect.anything(), "pkg-premium");
+    // Pemilik diteruskan agar draft admin/Pro memakai paket teratas (#115).
+    expect(limits).toHaveBeenCalledWith(
+      expect.anything(),
+      "pkg-premium",
+      "u-1",
+    );
     expect(reportHandledError).toHaveBeenCalledWith(boom, "appearance.limits", {
       id: ID,
     });

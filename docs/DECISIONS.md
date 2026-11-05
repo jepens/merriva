@@ -6408,6 +6408,16 @@ Entri ini mencatat keputusan TEKNIS yang diambil saat menerapkannya.
   hanya `service_role`, advisor keamanan tanpa temuan baru. Sebelum menerapkan
   dipastikan logika fungsi lama di cloud identik `20261016111713` — tak ada
   hotfix tak tercatat yang tertimpa.
+- Durasi & orientasi hanya ditegakkan klien (server tak mentranskode); ukuran
+  & tipe ditegakkan ulang server. Pemilik berpaket yang memalsukan metadata
+  hanya bisa merugikan undangannya sendiri, dibatasi 40 MB.
+- Tema baru WAJIB mendeklarasikan `video` (test kontrak menuntut label;
+  kosakata kanonik) dan menata `.video-frame` dkk. di CSS-nya sendiri;
+  `.video-frame--yt` butuh `aspect-ratio` dari CSS (bingkai YouTube tak
+  membawa rasio inline).
+- CSP repo parsial (tanpa `default-src`/`img-src`/`frame-src`/`media-src`),
+  jadi `i.ytimg.com` & `youtube-nocookie.com` tak perlu didaftarkan. Bila
+  kelak `default-src` ditambahkan, keduanya + domain media wajib ikut.
 
 ---
 
@@ -6435,16 +6445,55 @@ diubah; satu-satunya jalan per-undangan adalah membayar Premium).
 Halaman harga membaca angka dari DB, jadi berubah begitu migrasi diterapkan.
 pgTAP `kuota_tamu_basic` mengunci bahwa draft menerima tamu ke-500 dan trigger
 menolak yang ke-501 (`check_violation`).
-- Durasi & orientasi hanya ditegakkan klien (server tak mentranskode); ukuran
-  & tipe ditegakkan ulang server. Pemilik berpaket yang memalsukan metadata
-  hanya bisa merugikan undangannya sendiri, dibatasi 40 MB.
-- Tema baru WAJIB mendeklarasikan `video` (test kontrak menuntut label;
-  kosakata kanonik) dan menata `.video-frame` dkk. di CSS-nya sendiri;
-  `.video-frame--yt` butuh `aspect-ratio` dari CSS (bingkai YouTube tak
-  membawa rasio inline).
-- CSP repo parsial (tanpa `default-src`/`img-src`/`frame-src`/`media-src`),
-  jadi `i.ytimg.com` & `youtube-nocookie.com` tak perlu didaftarkan. Bila
-  kelak `default-src` ditambahkan, keduanya + domain media wajib ikut.
+
+---
+
+## #115 — 2026-11-05 · Draft milik admin/Pro memakai batas paket teratas
+
+**Keputusan:** selama undangan masih draft (paket NULL), batas efektifnya
+mengikuti peran PEMILIK: admin/Pro → batas paket undangan aktif termahal
+(paket yang ditawarkan aktivasi gratis), selain itu lantai Basic seperti
+biasa. Satu aturan di dua cermin: `getEffectiveLimits(supabase, packageId,
+ownerId)` (`server/limits.ts` — Tampilan & aksinya, editor, Tamu, pratinjau,
+route unggah video) dan `invitation_effective_limits` (migrasi
+`20261105160000` — penegak kuota foto & tamu di DB). Undangan berpaket tak
+berubah: paketnya yang berlaku. SPEC §4.8 + kriteria terima diperbarui.
+
+**Alasan:** pemilik (peran admin) mendapati palet & font Premium terkunci di
+Kustomisasi Tampilan draft miliknya. Pembebasan #100 baru berlaku saat
+aktivasi, jadi selama draft undangan admin/Pro jatuh ke lantai Basic: Tampilan,
+galeri 8 foto, video, dan watermark pratinjau terkunci, dengan lencana
+"Premium" yang mengundang mereka membeli sesuatu yang sudah gratis.
+
+**Ditolak:**
+- *Membuka hanya di layar Tampilan* — galeri, video, kuota tamu, dan watermark
+  tetap terkunci; dua jawaban untuk satu pertanyaan.
+- *Peran PEMANGGIL* (sesi) alih-alih pemilik — itu persis "membebaskan
+  berdasarkan peran saja" yang ditolak #100: admin yang membuka draft pelanggan
+  akan memberinya Premium.
+- *Memindahkan TS ke RPC `invitation_effective_limits`* (satu implementasi) —
+  menyentuh kontrak dan test galat-DB `/[slug]` (#45) demi satu cabang; cermin
+  dijaga test di kedua sisi.
+
+**Konsekuensi:**
+- Draft admin/Pro yang dibuat Premium lalu perannya dicabut kembali ke Basic;
+  isi yang sudah melebihi Basic (foto > 8, tamu > 500, palet Premium) tetap
+  tersimpan seperti pada turun paket — kuota hanya ditegakkan saat menambah.
+- Migrasi wajib di cloud SEBELUM kode di-push: tanpa itu TS membuka kuota foto
+  yang DB masih tolak (galat saat unggah foto ke-9).
+- `photoLimitFromPackage` kini tak dipakai kode app (hanya test-nya); sengaja
+  tak dihapus dalam perubahan ini.
+- **Jalur jasa EO (risiko diterima, butuh keputusan pemilik):** draft yang
+  dibuat admin untuk klien memakai batas teratas. Bila kemudian dialihkan ke
+  pelanggan (`admin_change_owner`) yang membayar Basic, isi yang melebihi Basic
+  (palet/font Premium, foto > 8, tamu > 500) TETAP tampil — render tak
+  menyaring ulang `settings.custom` maupun jumlah foto; hanya video & watermark
+  yang ikut paket. Hanya admin yang bisa memicunya. Sampai ada penjaga di
+  ganti-kepemilikan, admin yang mengalihkan draft EO wajib memastikan paket
+  pelanggan Premium atau menyesuaikan isinya dulu.
+- "Paket teratas" dipilih dengan pemecah seri `code` yang sama di DB, TS, dan
+  halaman aktifkan — tanpanya, dua paket berharga sama bisa membuat draft
+  memakai paket A sementara "Aktifkan gratis" memberi paket B.
 
 ---
 

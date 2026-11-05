@@ -66,7 +66,8 @@ export async function updateInvitationAppearanceAction(
   // pemilik Premium hanya karena kedipan DB, dan bukan melempar ke klien.
   let premium: boolean;
   try {
-    premium = !(await getEffectiveLimits(supabase, inv.package_id)).watermark;
+    premium = !(await getEffectiveLimits(supabase, inv.package_id, user.id))
+      .watermark;
   } catch (err) {
     // Ditangani → tak sampai `onRequestError`; laporkan sendiri.
     reportHandledError(err, "appearance.limits", { id });

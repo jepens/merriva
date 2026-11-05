@@ -88,7 +88,10 @@ export default async function ActivateInvitationPage({
     .select("code, name, price_idr, duration_months, limits, is_active")
     .eq("is_active", true)
     .eq("kind", "invitation") // hanya paket undangan (bukan add-on Momen)
-    .order("price_idr", { ascending: true });
+    .order("price_idr", { ascending: true })
+    // Pemecah seri: "paket teratas" (`slice(-1)` di bawah) harus sama dengan
+    // yang dipakai draft admin/Pro (`getEffectiveLimits`, DECISIONS #115).
+    .order("code", { ascending: true });
 
   const packages: CheckoutPackage[] = (rows ?? []).map((p) => ({
     code: p.code,

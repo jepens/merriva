@@ -106,7 +106,7 @@ export async function POST(
 
   // PENEGAKAN PAKET DI SERVER: flag `youtube` = fitur video untuk KEDUA sumber.
   // Draft tanpa paket jatuh ke lantai Basic (tanpa video).
-  const limits = await getEffectiveLimits(supabase, inv.package_id);
+  const limits = await getEffectiveLimits(supabase, inv.package_id, user.id);
   if (!limits.youtube) {
     return jawab({ status: "error", reason: "limit" }, 403);
   }

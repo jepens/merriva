@@ -58,7 +58,7 @@ QR check-in di lokasi & layar sapa (Fase 2) · denah meja, souvenir, doorprize (
 |---|---|---|
 | Tema | Tema kategori standar | Semua tema termasuk premium |
 | Galeri foto | Maks. 8 foto | Maks. 20 foto |
-| Video | — | Embed YouTube |
+| Video | — | Unggah klip (≤60 dtk, ≤40 MB, landscape) atau embed YouTube |
 | Love story / agenda | ✓ | ✓ |
 | RSVP + ucapan & doa | ✓ | ✓ |
 | Amplop digital | ✓ | ✓ |
@@ -131,7 +131,7 @@ Form terstruktur per bagian; skema field **berbeda per kategori acara** namun di
 | 1. Info dasar | Nama panggilan pasangan, judul, slug, tanggal utama | Nama acara, penyelenggara, slug, tanggal | Nama acara & anak, slug, tanggal |
 | 2. Detail pihak | Mempelai pria & wanita + nama orang tua, urutan anak, foto masing-masing | Deskripsi acara, logo perusahaan, kontak PIC | Nama lengkap anak, orang tua |
 | 3. Jadwal | Akad, resepsi (multi-sesi) — masing-masing: nama, tanggal-jam mulai/selesai, nama gedung, alamat, link Google Maps | Sesi/rundown (multi) | Sesi acara |
-| 4. Galeri & media | Upload foto (limit per paket), embed YouTube (Premium), musik latar | Sama | Sama |
+| 4. Galeri & media | Upload foto (limit per paket), video — unggah klip atau embed YouTube (Premium; klip menang bila keduanya diisi), musik latar | Sama | Sama |
 | 5. Cerita | Love story timeline (judul-tanggal-narasi, multi-entri) | Agenda/sambutan | Doa/harapan |
 | 6. Amplop digital | Multi-rekening (bank, no., a.n.) + e-wallet + alamat kirim kado — toggle on/off | Opsional (mis. donasi) | Sama dengan pernikahan |
 | 7. Pengaturan | Pilih tema & varian warna, ucapan pembuka/penutup, kutipan ayat/quote, toggle tampil/sembunyi per section, moderasi ucapan on/off | Sama | Sama |
@@ -202,9 +202,9 @@ Halaman bayar (juga halaman upgrade & Album Momen) mem-poll inti verifikasi yang
 
 **Kriteria terima:** order upgrade lunas menukar paket TANPA mengubah `active_until`, `published_at`, atau `status` → selisih ≤ 0 (paket sama, downgrade, atau harga katalog berubah) ditolak sebelum order dibuat → order `pending` aktivasi dan order `pending` upgrade tidak pernah dipakai-ulang silang, sehingga pelanggan tak pernah ditagih nominal jalur yang lain → order upgrade tidak pernah mengaku membeli masa aktif di kuitansi maupun riwayat pesanan → pemilik yang membayar QR di halaman upgrade (jalur lama: yang kembali dari Pakasir) melihat upgrade-nya direkonsiliasi tanpa menunggu webhook → refund order upgrade menurunkan paket kembali tanpa mematikan undangan yang masa aktifnya dibayar order lain.
 
-**Akun Admin & Pro tidak pernah ditagih (DECISIONS #100).** Untuk undangan MILIKNYA SENDIRI, aktivasi, perpanjangan, upgrade, dan add-on Album Momen langsung aktif tanpa gateway pembayaran: halaman menawarkan satu tombol "Aktifkan gratis" dengan paket/tier teratas. Server mencatatnya sebagai order Rp0 bermetode `gratis` lewat RPC `activate_free_order` — satu transaksi bersama `activate_paid_order`, sehingga hasilnya identik dengan aktivasi berbayar dan tercatat di riwayat pesanan tanpa menambah omzet. Syarat alamat & jadwal (langkah 0) tetap berlaku. Undangan milik orang lain tetap lewat jalur bayar biasa walau dibuka admin; menggratiskan undangan pelanggan memakai aktivasi manual di panel admin yang ter-audit.
+**Akun Admin & Pro tidak pernah ditagih (DECISIONS #100).** Untuk undangan MILIKNYA SENDIRI, aktivasi, perpanjangan, upgrade, dan add-on Album Momen langsung aktif tanpa gateway pembayaran: halaman menawarkan satu tombol "Aktifkan gratis" dengan paket/tier teratas. Server mencatatnya sebagai order Rp0 bermetode `gratis` lewat RPC `activate_free_order` — satu transaksi bersama `activate_paid_order`, sehingga hasilnya identik dengan aktivasi berbayar dan tercatat di riwayat pesanan tanpa menambah omzet. Syarat alamat & jadwal (langkah 0) tetap berlaku. Undangan milik orang lain tetap lewat jalur bayar biasa walau dibuka admin; menggratiskan undangan pelanggan memakai aktivasi manual di panel admin yang ter-audit. **Selama masih draft**, undangan milik admin/Pro sudah memakai batas paket teratas itu — palet & font Premium di Kustomisasi Tampilan, kuota galeri & tamu, video, tanpa watermark pratinjau — karena itulah paket yang akan didapat gratis saat diaktifkan (DECISIONS #115). Yang menentukan adalah peran PEMILIK undangan: draft pelanggan yang dibuka admin tetap lantai Basic. Draft yang dibuat admin untuk klien jasa EO ikut memakai batas teratas, dan isinya tak disaring ulang saat dialihkan — sebelum mengganti kepemilikannya, admin memastikan paket pelanggan sesuai isinya.
 
-**Kriteria terima:** admin/Pro pemilik tidak pernah melewati gateway pembayaran — tak ada QR maupun link bayar yang diterbitkan — di keempat jalur → admin yang membuka undangan pelanggan tetap melihat jalur bayar → aktivasi gratis yang gagal tidak meninggalkan order apa pun → klien tidak bisa memberi dirinya peran Pro/admin (test DB).
+**Kriteria terima:** admin/Pro pemilik tidak pernah melewati gateway pembayaran — tak ada QR maupun link bayar yang diterbitkan — di keempat jalur → admin yang membuka undangan pelanggan tetap melihat jalur bayar → draft milik admin/Pro membuka fitur paket teratas sebelum diaktifkan (Tampilan, galeri, tamu, video), sedangkan draft pelanggan yang dibuka admin tetap Basic (test DB) → aktivasi gratis yang gagal tidak meninggalkan order apa pun → klien tidak bisa memberi dirinya peran Pro/admin (test DB).
 
 **Dokumen legal (AUDIT-2026-10-01 A2).** Tiga halaman publik: `/syarat` (Syarat & Ketentuan), `/privasi`, `/refund`. Identitas pelaku usaha berasal dari SATU sumber (`copy.marketing.legal.merchant`) dan dirender di ketiganya; hanya field terisi yang tampil. Baris notis persetujuan — menautkan S&K + Privasi di `/daftar`, dan S&K + Refund tepat di atas tombol bayar — bukan checkbox, karena dasar pemrosesannya perjanjian. **Kriteria terima:** setiap klausul S&K cocok dengan perilaku kode (retensi, penangguhan, batas paket); identitas penjual tampil sebelum pembayaran.
 
@@ -243,7 +243,7 @@ profiles          id (=auth.users.id), full_name, phone, role('client'|'pro'|'ad
 themes            id, slug, name, categories[], tier('standard'|'premium'), preview_image,
                   demo_slug, is_active, sort_order
 packages          id, code('basic'|'premium'), name, price_idr int, duration_months,
-                  limits jsonb {max_photos, max_guests, youtube, all_themes, watermark},
+                  limits jsonb {max_photos, max_guests, youtube (= fitur video: unggah & YouTube), all_themes, watermark},
                   is_active
 invitations       id, user_id→profiles, theme_id→themes, package_id→packages (nullable),
                   slug unique, category('wedding'|'corporate'|'family'),

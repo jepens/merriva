@@ -81,7 +81,7 @@ export default async function PreviewPage({
     await supabase
       .from("invitations")
       .select(
-        "id, slug, category, content, settings, event_date, package_id, theme_id",
+        "id, slug, category, content, settings, event_date, package_id, theme_id, user_id",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -113,7 +113,11 @@ export default async function PreviewPage({
 
   // Batas paket efektif (satu sumber kebenaran) → watermark & video. Draft →
   // Basic.
-  const limits = await getEffectiveLimits(supabase, inv.package_id);
+  const limits = await getEffectiveLimits(
+    supabase,
+    inv.package_id,
+    inv.user_id,
+  );
   const songId = settingsSchema.safeParse(inv.settings).data?.songId;
   const music = await resolveMusic(supabase, songId);
 

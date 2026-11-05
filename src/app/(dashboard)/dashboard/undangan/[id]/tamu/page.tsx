@@ -26,7 +26,7 @@ export default async function GuestsPage({
   // RLS membatasi ke undangan milik pemilik; baris orang lain → tak ditemukan.
   const { data: inv } = await supabase
     .from("invitations")
-    .select("id, slug, package_id")
+    .select("id, slug, package_id, user_id")
     .eq("id", id)
     .maybeSingle();
   if (!inv) notFound();
@@ -42,7 +42,7 @@ export default async function GuestsPage({
         )
         .eq("invitation_id", inv.id)
         .order("created_at", { ascending: false }),
-      getEffectiveLimits(supabase, inv.package_id),
+      getEffectiveLimits(supabase, inv.package_id, inv.user_id),
       // Hanya JUMLAHNYA (head) — barisnya tak dipakai di halaman ini, dan route
       // ZIP membacanya sendiri. RLS `media_select` membatasi ke pemilik.
       supabase

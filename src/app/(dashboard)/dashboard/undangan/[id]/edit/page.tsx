@@ -10,13 +10,7 @@ import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
 import { copy } from "@/lib/copy";
 import { stepKeyFromParam } from "@/lib/editor-links";
 import { isUuid } from "@/lib/id";
-import { resolveLimits } from "@/lib/limits";
-import {
-  displayPath,
-  OG_ASPECT,
-  photoLimitFromPackage,
-  toMediaView,
-} from "@/lib/media";
+import { displayPath, OG_ASPECT, toMediaView } from "@/lib/media";
 import { toEventDraft } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
 import { getThemeOptions } from "@/themes/theme-options-registry";
@@ -27,6 +21,7 @@ import {
   settingsSchema,
 } from "@/lib/validation/content";
 import { requireUser } from "@/server/guards/auth";
+import { getEffectiveLimits } from "@/server/limits";
 import type { PhotoSlots } from "@/components/dashboard/editor/types";
 
 export const metadata: Metadata = { title: copy.editor.title };
@@ -50,7 +45,7 @@ export default async function EditInvitationPage({
   const { data: inv } = await supabase
     .from("invitations")
     .select(
-      "id, slug, category, status, content, settings, event_date, package_id, theme_id",
+      "id, slug, category, status, content, settings, event_date, package_id, theme_id, user_id",
     )
     .eq("id", id)
     .maybeSingle();
@@ -89,23 +84,23 @@ export default async function EditInvitationPage({
     toMediaView(r, (p) => storage.getPublicUrl(p)),
   );
 
-  let pkgLimits: { max_photos?: number | null } | null = null;
-  if (inv.package_id) {
-    const { data: pkg } = await supabase
-      .from("packages")
-      .select("limits")
-      .eq("id", inv.package_id)
-      .maybeSingle();
-    pkgLimits = (pkg?.limits as { max_photos?: number | null } | null) ?? null;
-  }
-  const maxPhotos = photoLimitFromPackage(pkgLimits);
+  // Batas paket efektif — sumber yang sama dengan Tampilan, Tamu, pratinjau,
+  // dan route unggah video. Draft milik admin/Pro memakai paket teratas
+  // (DECISIONS #115); `inv.user_id`, bukan user sesi, karena admin juga bisa
+  // membuka draft pelanggan di sini.
+  const limits = await getEffectiveLimits(
+    supabase,
+    inv.package_id,
+    inv.user_id,
+  );
+  const maxPhotos = limits.maxPhotos;
 
   // Video (FASE J): gerbang paket `limits.youtube` + URL tersimpan. Gerbang ini
   // hanya untuk tampilan editor — route unggah dan perakit render menegakkannya
   // sendiri di server.
   const v = content.video;
   const video = {
-    allowed: resolveLimits(pkgLimits).youtube,
+    allowed: limits.youtube,
     url: v ? storage.getPublicUrl(v.path) : null,
     posterUrl: v?.poster ? storage.getPublicUrl(v.poster) : null,
   };

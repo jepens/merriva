@@ -67,7 +67,7 @@ export default async function AppearancePage({
     );
   }
 
-  const premium = !(await getEffectiveLimits(supabase, inv.package_id))
+  const premium = !(await getEffectiveLimits(supabase, inv.package_id, user.id))
     .watermark;
   const parsedSettings = settingsSchema.safeParse(inv.settings);
   const saved = parsedSettings.data?.custom;
