@@ -14,6 +14,8 @@ import type {
 import { CopyButton } from "@/themes/_shared/copy-button";
 import { Countdown, Reveal } from "@/themes/_shared/motion";
 import type { InvitationEventView } from "@/types/invitation";
+import { copy } from "@/lib/copy";
+import { ThemeVideo, type VideoView } from "@/themes/_shared/video";
 
 import { L } from "./labels";
 
@@ -332,6 +334,33 @@ export function DoaBlock() {
       </Reveal>
       <Reveal delay={200}>
         <p className="sk-lead sk-doa__note">{L.doa.note}</p>
+      </Reveal>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------- Video ------- */
+export function VideoSection({
+  video,
+  youtubeUrl,
+}: {
+  video: VideoView | null | undefined;
+  youtubeUrl: string | undefined;
+}) {
+  return (
+    <section className="sk-section sk-center">
+      <Reveal>
+        <Eyebrow>{L.video.eyebrow}</Eyebrow>
+        <h2 className="sk-title">{L.video.heading}</h2>
+      </Reveal>
+      <Reveal delay={120}>
+        <div className="sk-video">
+          <ThemeVideo
+            video={video}
+            youtubeUrl={youtubeUrl}
+            labels={copy.public.video}
+          />
+        </div>
       </Reveal>
     </section>
   );

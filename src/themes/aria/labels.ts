@@ -11,6 +11,7 @@ export const L = {
     couple: "Mempelai",
     event: "Acara",
     gallery: "Galeri",
+    video: "Video",
     story: "Kisah",
     rsvp: "Konfirmasi",
     gift: "Tanda Kasih",

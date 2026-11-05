@@ -10,6 +10,7 @@ import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
 import { copy } from "@/lib/copy";
 import { stepKeyFromParam } from "@/lib/editor-links";
 import { isUuid } from "@/lib/id";
+import { resolveLimits } from "@/lib/limits";
 import {
   displayPath,
   OG_ASPECT,
@@ -98,6 +99,16 @@ export default async function EditInvitationPage({
     pkgLimits = (pkg?.limits as { max_photos?: number | null } | null) ?? null;
   }
   const maxPhotos = photoLimitFromPackage(pkgLimits);
+
+  // Video (FASE J): gerbang paket `limits.youtube` + URL tersimpan. Gerbang ini
+  // hanya untuk tampilan editor — route unggah dan perakit render menegakkannya
+  // sendiri di server.
+  const v = content.video;
+  const video = {
+    allowed: resolveLimits(pkgLimits).youtube,
+    url: v ? storage.getPublicUrl(v.path) : null,
+    posterUrl: v?.poster ? storage.getPublicUrl(v.poster) : null,
+  };
 
   // Bidang foto di editor dirakit dari apa yang TEMA AKTIF nyatakan dirender
   // (THEME-CONTRACT §2) — bukan dari daftar tetap. Tema yang tak menyebut
@@ -192,6 +203,7 @@ export default async function EditInvitationPage({
           maxPhotos={maxPhotos}
           songs={songs}
           photoSlots={photoSlots}
+          video={video}
           initialStep={initialStep}
           showGallery={showGallery}
         />
@@ -204,6 +216,7 @@ export default async function EditInvitationPage({
           maxPhotos={maxPhotos}
           songs={songs}
           photoSlots={photoSlots}
+          video={video}
           initialStep={initialStep}
         />
       ) : (
@@ -215,6 +228,7 @@ export default async function EditInvitationPage({
           maxPhotos={maxPhotos}
           songs={songs}
           photoSlots={photoSlots}
+          video={video}
           initialStep={initialStep}
         />
       )}

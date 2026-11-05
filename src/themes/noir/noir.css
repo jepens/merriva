@@ -890,3 +890,90 @@
 .nr[data-gallery="polaroid"] .nr-gallery__item:nth-child(even) {
   transform: rotate(2deg);
 }
+
+/* ================================================================ Video ===
+   Section video (FASE J) — kelas generik `_shared/video` ditata dengan token
+   tema. Tanpa aturan reduced-motion: komponennya sendiri yang tak autoplay. */
+.nr-video {
+  margin-top: 22px;
+}
+.nr .video-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #000;
+  border: 1px solid var(--nr-hairline);
+  box-shadow: 0 24px 50px -28px rgba(0, 0, 0, 0.9);
+}
+/* Bingkai YouTube tak membawa rasio inline (bingkai berkas membawanya). */
+.nr .video-frame--yt {
+  aspect-ratio: 16 / 9;
+}
+.nr .video-el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  object-fit: cover;
+}
+.nr .video-mute,
+.nr .video-play {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--nr-bone);
+  color: var(--nr-bg);
+}
+.nr .video-mute {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--nr-hairline);
+  cursor: pointer;
+}
+.nr .video-lite {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  background-color: #000;
+  background-size: cover;
+  background-position: center;
+}
+/* Peredup agar tombol putar terbaca di atas poster terang. */
+.nr .video-lite::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 13, 18, 0.38);
+}
+.nr .video-play {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
+}
+.nr .video-play svg {
+  margin-left: 3px;
+}
+.nr .video-mute:focus-visible {
+  outline: 2px solid var(--nr-champ-2);
+  outline-offset: 2px;
+}
+/* Di dalam bingkai `overflow: hidden` → cincin fokus ke dalam. */
+.nr .video-lite:focus-visible {
+  outline: 2px solid var(--nr-champ-2);
+  outline-offset: -5px;
+}

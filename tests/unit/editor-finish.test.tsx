@@ -67,6 +67,7 @@ function renderEditor() {
       maxPhotos={8}
       songs={[]}
       photoSlots={{}}
+      video={{ allowed: false, url: null, posterUrl: null }}
       steps={steps}
     />,
   );

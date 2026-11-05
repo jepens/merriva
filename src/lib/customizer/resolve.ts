@@ -42,6 +42,40 @@ export interface ResolvedAppearance {
   grain: boolean;
 }
 
+/**
+ * Lengkapi urutan TERSIMPAN dengan section yang ditambahkan ke tema SESUDAH
+ * pemilik menyimpannya (mis. `video`, FASE J). Tiap id yang hilang disisipkan
+ * tepat sesudah tetangga bawaannya yang terdekat di urutan pemilik, dan tampil.
+ *
+ * Tanpa ini, menambah satu section ke `options.ts` membuat SETIAP
+ * `settings.custom.sections` yang sudah tersimpan bukan lagi permutasi lengkap:
+ * render jatuh ke urutan bawaan (urutan & section yang disembunyikan pemilik
+ * hilang tanpa jejak) dan editor Tampilan mengirim daftar yang ditolak server,
+ * sehingga pemilik tak bisa menyimpan apa pun lagi. Dipakai render DAN editor.
+ *
+ * Hanya MENAMBAH. Id yang tak dikenal tema (section yang dibuang) tetap ada,
+ * dan permutasinya tetap gagal di bawah — perilaku lama, sengaja tak diubah.
+ */
+export function lengkapiUrutanSection(
+  options: ThemeOptions,
+  saved: ResolvedSection[],
+): ResolvedSection[] {
+  const hasil = saved.slice();
+  options.sections.forEach((opt, i) => {
+    if (hasil.some((s) => s.id === opt.id)) return;
+    let pos = 0;
+    for (let j = i - 1; j >= 0; j--) {
+      const idx = hasil.findIndex((s) => s.id === options.sections[j]?.id);
+      if (idx >= 0) {
+        pos = idx + 1;
+        break;
+      }
+    }
+    hasil.splice(pos, 0, { id: opt.id, visible: true });
+  });
+  return hasil;
+}
+
 function resolveSections(
   options: ThemeOptions,
   custom: CustomSettings | null | undefined,
@@ -50,8 +84,8 @@ function resolveSections(
     id: s.id,
     visible: true,
   }));
-  const wanted = custom?.sections;
-  if (!wanted || wanted.length === 0) return defaultOrder;
+  if (!custom?.sections || custom.sections.length === 0) return defaultOrder;
+  const wanted = lengkapiUrutanSection(options, custom.sections);
 
   const optById = new Map(options.sections.map((s) => [s.id, s]));
   const ids = wanted.map((s) => s.id);

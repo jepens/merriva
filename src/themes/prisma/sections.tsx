@@ -17,6 +17,8 @@ import type {
 } from "@/types/invitation";
 
 import { LightboxThumb } from "@/themes/_shared/lightbox";
+import { copy } from "@/lib/copy";
+import { ThemeVideo, type VideoView } from "@/themes/_shared/video";
 
 import { L } from "./labels";
 
@@ -281,6 +283,30 @@ export function Gallery({
             <figcaption>Fig. {String(i + 1).padStart(2, "0")}</figcaption>
           </figure>
         ))}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------- Video ------- */
+export function VideoSection({
+  no,
+  video,
+  youtubeUrl,
+}: {
+  no: string;
+  video: VideoView | null | undefined;
+  youtubeUrl: string | undefined;
+}) {
+  return (
+    <section className="pr-section pr-section--tight">
+      <SecLabel no={no} title={L.sec.video} />
+      <div className="pr-video pr-reveal">
+        <ThemeVideo
+          video={video}
+          youtubeUrl={youtubeUrl}
+          labels={copy.public.video}
+        />
       </div>
     </section>
   );

@@ -926,6 +926,38 @@ export const copy = {
       // karena yang disimpan hanya angka, bukan foto yang sudah terpangkas.
       adjustHint: "Seret fotonya untuk menggeser. Bingkai ini mengikuti tema.",
     },
+    // Blok "Video" langkah Pengaturan (FASE J) — unggah berkas + tautan YouTube.
+    video: {
+      legend: "Video",
+      fileLabel: "Unggah video",
+      limits: "Maks. 60 detik · 40 MB · landscape (mendatar) · MP4, WebM, MOV",
+      priority:
+        "Video unggahan tampil menggantikan tautan YouTube bila keduanya diisi.",
+      add: "Pilih video",
+      replace: "Ganti video",
+      remove: "Hapus video",
+      reading: "Memeriksa video…",
+      working: "Mengunggah video…",
+      preview: "Pratinjau video",
+      // Fitur paket yang sama dengan YouTube (`limits.youtube`) — ditegakkan
+      // server; teks ini hanya menjelaskan kenapa tombolnya mati.
+      locked:
+        "Video (unggahan maupun YouTube) tampil di undangan khusus paket Premium.",
+      errors: {
+        type: "Format video tidak didukung. Pakai MP4, WebM, atau MOV.",
+        size: "Ukuran video melebihi 40 MB. Potong atau kompres dulu.",
+        duration: "Durasi video melebihi 60 detik. Potong dulu sebelum unggah.",
+        orientation:
+          "Video harus landscape (mendatar). Putar atau rekam ulang secara mendatar.",
+        unreadable:
+          "Video tidak bisa dibaca peramban ini. Coba ekspor ulang sebagai MP4 (H.264).",
+        limit: "Video hanya tersedia untuk paket Premium.",
+        rate: "Terlalu banyak unggahan. Tunggu sebentar lalu coba lagi.",
+        auth: "Sesi berakhir. Muat ulang halaman lalu coba lagi.",
+        invalid: "Berkas video ditolak server. Periksa format & ukurannya.",
+        server: "Video gagal diunggah. Coba lagi.",
+      },
+    },
     schedule: {
       // Sesi berisi yang jam mulainya belum lengkap (DECISIONS #42).
       startMissing:
@@ -1077,6 +1109,7 @@ export const copy = {
       schedule: "Acara",
       agenda: "Agenda",
       gallery: "Galeri",
+      video: "Video",
       story: "Kisah",
       envelope: "Amplop hadiah",
       rsvp: "Ucapan & RSVP",
@@ -1106,6 +1139,13 @@ export const copy = {
       prev: "Foto sebelumnya",
       next: "Foto berikutnya",
       dialog: "Galeri foto",
+    },
+    // Label aria pemutar section video (komponen bersama `_shared/video`) —
+    // satu sumber untuk ke-14 tema; eyebrow-nya tetap di `labels.ts` tema.
+    video: {
+      play: "Putar video",
+      unmute: "Nyalakan suara",
+      mute: "Senyapkan",
     },
     cover: {
       recipient: "Kepada Yth.",

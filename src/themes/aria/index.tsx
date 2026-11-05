@@ -10,6 +10,7 @@ import {
 } from "@/lib/datetime";
 import { isSectionVisible } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { hasVideoSection } from "@/themes/_shared/video-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
@@ -29,6 +30,7 @@ import {
   Opening,
   Rsvp,
   StoryBlock,
+  VideoSection,
 } from "./sections";
 
 // Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). Instrument
@@ -134,6 +136,7 @@ export default function Aria({ data }: ThemeComponentProps) {
     isSectionVisible(settings, "countdown") && Boolean(countdownTarget);
   const showSchedule =
     isSectionVisible(settings, "schedule") && data.events.length > 0;
+  const hasVideo = hasVideoSection(data.video, content.youtubeUrl);
   const showGallery =
     isSectionVisible(settings, "gallery") && data.media.length > 0;
   const showStory =
@@ -202,6 +205,16 @@ export default function Aria({ data }: ThemeComponentProps) {
           <Lightbox media={data.media}>
             <Gallery no={no} media={data.media} />
           </Lightbox>
+        ),
+      },
+      video: {
+        has: hasVideo,
+        render: (no) => (
+          <VideoSection
+            no={no}
+            video={data.video}
+            youtubeUrl={content.youtubeUrl}
+          />
         ),
       },
       story: {
@@ -307,6 +320,14 @@ export default function Aria({ data }: ThemeComponentProps) {
         <Lightbox media={data.media}>
           <Gallery no={no()} media={data.media} />
         </Lightbox>
+      ) : null}
+
+      {hasVideo ? (
+        <VideoSection
+          no={no()}
+          video={data.video}
+          youtubeUrl={content.youtubeUrl}
+        />
       ) : null}
 
       {showStory ? <StoryBlock no={no()} story={content.story} /> : null}

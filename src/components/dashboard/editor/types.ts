@@ -41,3 +41,14 @@ export type SongOption = {
 export type PhotoSlotView = { aspect: number; url: string | null };
 
 export type PhotoSlots = Readonly<Partial<Record<string, PhotoSlotView>>>;
+
+/**
+ * Bidang video (FASE J): `allowed` = `limits.youtube` paket undangan ini, plus
+ * URL video & poster tersimpan. Dirakit di server — sama seperti slot foto,
+ * klien tak pernah merakit URL media sendiri.
+ */
+export type VideoSlotView = {
+  allowed: boolean;
+  url: string | null;
+  posterUrl: string | null;
+};

@@ -601,3 +601,90 @@
 .ar.is-open .ar-music {
   display: grid;
 }
+
+/* ================================================================ Video ===
+   Section video (FASE J) — kelas generik `_shared/video` ditata dengan token
+   tema. Tanpa aturan reduced-motion: komponennya sendiri yang tak autoplay. */
+.ar-video {
+  margin-top: 22px;
+}
+.ar .video-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0;
+  background: var(--ar-ink);
+  border: 1px solid var(--ar-ink);
+  box-shadow: none;
+}
+/* Bingkai YouTube tak membawa rasio inline (bingkai berkas membawanya). */
+.ar .video-frame--yt {
+  aspect-ratio: 16 / 9;
+}
+.ar .video-el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  object-fit: cover;
+}
+.ar .video-mute,
+.ar .video-play {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ar-paper);
+  color: var(--ar-ink);
+}
+.ar .video-mute {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--ar-hairline);
+  cursor: pointer;
+}
+.ar .video-lite {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  background-color: var(--ar-ink);
+  background-size: cover;
+  background-position: center;
+}
+/* Peredup agar tombol putar terbaca di atas poster terang. */
+.ar .video-lite::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(21, 19, 16, 0.28);
+}
+.ar .video-play {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
+}
+.ar .video-play svg {
+  margin-left: 3px;
+}
+.ar .video-mute:focus-visible {
+  outline: 2px solid var(--ar-red);
+  outline-offset: 2px;
+}
+/* Di dalam bingkai `overflow: hidden` → cincin fokus ke dalam. */
+.ar .video-lite:focus-visible {
+  outline: 2px solid var(--ar-red);
+  outline-offset: -5px;
+}

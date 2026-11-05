@@ -11,6 +11,7 @@ import {
   localToUtc,
 } from "@/lib/datetime";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { hasVideoSection } from "@/themes/_shared/video-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { StoryEntry } from "@/lib/validation/content";
 import type { ThemeComponentProps } from "@/themes/registry";
@@ -33,6 +34,7 @@ import {
   OrganizerBlock,
   Schedule,
   Timeline,
+  VideoSection,
 } from "./sections";
 
 // Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). Spectral =
@@ -203,6 +205,9 @@ export default function Lumina({ data }: ThemeComponentProps) {
           <Gallery media={data.media} />
         </Lightbox>
       ) : null,
+    video: hasVideoSection(data.video, content.youtubeUrl) ? (
+      <VideoSection video={data.video} youtubeUrl={content.youtubeUrl} />
+    ) : null,
     envelope: hasEnvelope ? <Envelope envelope={env} slug={data.slug} /> : null,
     rsvp: (
       <section className="lm-section">

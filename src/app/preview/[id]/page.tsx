@@ -111,7 +111,8 @@ export default async function PreviewPage({
   const eventRows = dataOrThrow(eventsRes, "invitation_events");
   const mediaRows = dataOrThrow(mediaRes, "media");
 
-  // Batas paket efektif (satu sumber kebenaran) → watermark. Draft → Basic.
+  // Batas paket efektif (satu sumber kebenaran) → watermark & video. Draft →
+  // Basic.
   const limits = await getEffectiveLimits(supabase, inv.package_id);
   const songId = settingsSchema.safeParse(inv.settings).data?.songId;
   const music = await resolveMusic(supabase, songId);
@@ -125,6 +126,7 @@ export default async function PreviewPage({
     eventRows: eventRows ?? [],
     mediaRows: mediaRows ?? [],
     watermark: limits.watermark,
+    videoAllowed: limits.youtube,
     music,
   });
 

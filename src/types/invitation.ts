@@ -3,6 +3,7 @@ import type {
   InvitationSettings,
 } from "@/lib/validation/content";
 import type { InvitationCategory } from "@/types";
+import type { VideoView } from "@/themes/_shared/video";
 
 /** Satu sesi acara siap-render (dari `invitation_events`; waktu UTC ISO string). */
 export interface InvitationEventView {
@@ -65,6 +66,14 @@ export interface InvitationData {
   coverPhoto?: PhotoView | null;
   groomPhoto?: PhotoView | null;
   bridePhoto?: PhotoView | null;
+  /**
+   * Video unggahan (FASE J) sudah di-resolve ke URL domain sendiri, atau `null`.
+   * Bersama `content.youtubeUrl` ia sudah DISARING paket di server
+   * (`limits.youtube`): paket tanpa fitur video menerima `null` DAN
+   * `youtubeUrl` kosong, jadi tema cukup memeriksa `hasThemeVideo()`.
+   * Opsional supaya demo-data tema tak perlu menyebutnya.
+   */
+  video?: VideoView | null;
   /** Musik latar terpilih, sudah di-resolve dari `songs` (URL domain sendiri). */
   music: { url: string; title: string } | null;
   /** Watermark footer untuk paket Basic (SPEC §2). */

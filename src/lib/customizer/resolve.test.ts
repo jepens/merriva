@@ -107,6 +107,52 @@ describe("resolveAppearance — sections (defensif)", () => {
   });
 });
 
+describe("resolveAppearance — section yang ditambahkan SESUDAH pemilik menyimpan", () => {
+  // Skenario FASE J: `video` masuk `options.ts` ke-14 tema, sedangkan setiap
+  // `settings.custom` yang tersimpan belum menyebutnya. Opsi disusun di sini
+  // supaya test tak bergantung pada isi options tema hari ini.
+  const tanpaVideo = opts.sections.filter((s) => s.id !== "video");
+  const gi = tanpaVideo.findIndex((s) => s.id === "gallery");
+  const optsBaru = {
+    ...opts,
+    sections: [
+      ...tanpaVideo.slice(0, gi + 1),
+      { id: "video", reorder: true, toggle: true },
+      ...tanpaVideo.slice(gi + 1),
+    ],
+  };
+  const tersimpan = (): CustomSettings => {
+    const c = clone(defaultCustomSettings({ ...opts, sections: tanpaVideo }));
+    // Pilihan pemilik: galeri disembunyikan & dipindah ke tepat sesudah hero.
+    const ids = c.sections.map((s) => s.id);
+    const [galeri] = c.sections.splice(ids.indexOf("gallery"), 1);
+    galeri!.visible = false;
+    c.sections.splice(1, 0, galeri!);
+    return c;
+  };
+
+  it("urutan & visibilitas pemilik DIPERTAHANKAN; section baru menempel tetangganya", () => {
+    const r = resolveAppearance(optsBaru, tersimpan());
+    const ids = r.sections.map((s) => s.id);
+    expect(ids.slice(0, 3)).toEqual(["hero", "gallery", "video"]);
+    expect(r.sections.find((s) => s.id === "gallery")!.visible).toBe(false);
+    expect(r.sections.find((s) => s.id === "video")!.visible).toBe(true);
+    expect(ids).toHaveLength(optsBaru.sections.length);
+  });
+
+  it("hasil pelengkapan lolos validator server (editor bisa menyimpan lagi)", async () => {
+    const { buildCustomSettingsSchema } =
+      await import("./settings-custom-schema");
+    const { lengkapiUrutanSection } = await import("./resolve");
+    const c = tersimpan();
+    c.sections = lengkapiUrutanSection(optsBaru, c.sections);
+    expect(
+      buildCustomSettingsSchema(optsBaru, { premium: true }).safeParse(c)
+        .success,
+    ).toBe(true);
+  });
+});
+
 describe("resolveAppearance — styles & motion/grain", () => {
   it("gaya galeri valid dipakai; invalid → bawaan", () => {
     const c = base();

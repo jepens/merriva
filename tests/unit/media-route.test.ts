@@ -97,6 +97,29 @@ describe("Range — pemutar musik undangan", () => {
     expect(await res.text()).toBe("2345");
   });
 
+  it("video undangan: tipe video (webm bukan audio) dan potongan yang di-stream", async () => {
+    // FASE J — `.webm` juga ada di peta audio; video harus menang supaya
+    // `<video>` tak diberi tipe audio. Isi dibaca sebatas rentang, bukan utuh.
+    const dir = ["video", "85d261d6", "abc"];
+    await taruh([...dir, "video.mp4"]);
+    await taruh([...dir, "video.webm"]);
+    const mp4 = await panggil([...dir, "video.mp4"], { range: "bytes=7-" });
+    expect(mp4.status).toBe(206);
+    expect(mp4.headers.get("Content-Type")).toBe("video/mp4");
+    expect(mp4.headers.get("Content-Range")).toBe(`bytes 7-9/${ISI.length}`);
+    expect(await mp4.text()).toBe("789");
+    const webm = await panggil([...dir, "video.webm"]);
+    expect(webm.headers.get("Content-Type")).toBe("video/webm");
+  });
+
+  it("berkas kosong tetap 200 dengan isi kosong", async () => {
+    await taruh(SEGMEN, "");
+    const res = await panggil(SEGMEN);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Length")).toBe("0");
+    expect(await res.text()).toBe("");
+  });
+
   it("rentang di luar ukuran → 416 dengan ukuran sebenarnya", async () => {
     await taruh(["songs", "abc.mp3"]);
     const res = await panggil(["songs", "abc.mp3"], { range: "bytes=99-200" });

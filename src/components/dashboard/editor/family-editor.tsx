@@ -11,7 +11,12 @@ import { InfoFamilyStep } from "./steps/info-family-step";
 import { ScheduleStep } from "./steps/schedule-step";
 import { SettingsStep } from "./steps/settings-step";
 import { TimelineStep } from "./steps/timeline-step";
-import type { EditorValues, PhotoSlots, SongOption } from "./types";
+import type {
+  EditorValues,
+  PhotoSlots,
+  SongOption,
+  VideoSlotView,
+} from "./types";
 
 const STEPS: EditorStep[] = [
   {
@@ -74,7 +79,9 @@ const STEPS: EditorStep[] = [
     render: (c) => (
       <SettingsStep
         form={c.form}
+        invitationId={c.invitationId}
         songs={c.songs}
+        video={c.video}
         timelineLabel={copy.editor.timeline.family.section}
       />
     ),
@@ -91,6 +98,7 @@ export function FamilyEditor(props: {
   maxPhotos: number;
   songs: SongOption[];
   photoSlots: PhotoSlots;
+  video: VideoSlotView;
   initialStep?: string;
 }) {
   return <EditorShell {...props} steps={STEPS} />;

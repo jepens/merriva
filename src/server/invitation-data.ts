@@ -80,13 +80,24 @@ export function buildInvitationData(args: {
   eventRows: EventRow[];
   mediaRows: MediaRow[];
   watermark: boolean;
+  /** `limits.youtube` paket — flag fitur video untuk KEDUA sumber (FASE J). */
+  videoAllowed: boolean;
   music: InvitationData["music"];
 }): InvitationData {
   const settingsParsed = settingsSchema.safeParse(args.settings);
   const settings = settingsParsed.success
     ? settingsParsed.data
     : DEFAULT_SETTINGS;
-  const content = parseContentForRender(args.content, args.category);
+  const parsed = parseContentForRender(args.content, args.category);
+  // Gerbang paket untuk video, SATU titik untuk halaman publik & pratinjau:
+  // paket tanpa fitur video tak menerima video unggahan maupun tautan YouTube,
+  // walau `content` menyimpannya (mis. tersimpan sebelum turun paket, atau
+  // ditulis langsung lewat autosave). Tautan dibuang dari `content` juga —
+  // bukan hanya `video` di-null-kan — karena tema membaca `youtubeUrl` dari
+  // sana; tanpa ini lubang penegakan `limits.youtube` tetap terbuka.
+  const content = args.videoAllowed
+    ? parsed
+    : { ...parsed, youtubeUrl: undefined, video: undefined };
 
   // Hanya sesi BERJAM yang sampai ke tema (DECISIONS #42): sesi draft tanpa jam
   // tersimpan agar isian pemilik tak hilang, tetapi tak pernah tampil ke tamu.
@@ -136,6 +147,17 @@ export function buildInvitationData(args: {
   const bridePhoto =
     content.category === "wedding" ? resolve(content.bride.photo) : null;
 
+  // Video unggahan → URL domain sendiri (path objek penuh, bukan prefix).
+  const v = content.video;
+  const video = v
+    ? {
+        url: storage.getPublicUrl(v.path),
+        posterUrl: v.poster ? storage.getPublicUrl(v.poster) : null,
+        width: v.width,
+        height: v.height,
+      }
+    : null;
+
   return {
     slug: args.slug,
     category: args.category,
@@ -147,6 +169,7 @@ export function buildInvitationData(args: {
     coverPhoto,
     groomPhoto,
     bridePhoto,
+    video,
     music: args.music,
     watermark: args.watermark,
   };

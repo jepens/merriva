@@ -20,6 +20,10 @@ supabase/seed.sql
 # prototipe tema (acuan visual, HTML tangan — di luar format Prettier)
 prototypes
 
+# paket serah-terima fitur (artefak acuan, tak diubah — template di dalamnya
+# sengaja bukan kode jadi)
+handoff
+
 # manifest foto demo (di-generate `pnpm demo:photos`, JSON — di luar format Prettier)
 src/themes/_shared/demo-photos.generated.ts
 

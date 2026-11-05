@@ -11,6 +11,7 @@ import {
   localToUtc,
 } from "@/lib/datetime";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { hasVideoSection } from "@/themes/_shared/video-gate";
 import type { ThemeComponentProps } from "@/themes/registry";
 
 // CSS tema TIDAK di-import di sini: ia dikirim sebagai aset statis lewat
@@ -26,6 +27,7 @@ import {
   Footer,
   Hero,
   Schedule,
+  VideoSection,
 } from "./sections";
 
 // Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). SEMUA
@@ -214,6 +216,9 @@ export default function Sakinah({ data }: ThemeComponentProps) {
         />
       ) : null,
     "x-doa": <DoaBlock />,
+    video: hasVideoSection(data.video, content.youtubeUrl) ? (
+      <VideoSection video={data.video} youtubeUrl={content.youtubeUrl} />
+    ) : null,
     rsvp: (
       <section className="sk-section">
         <div className="sk-inner">

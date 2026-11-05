@@ -94,13 +94,14 @@ export function parseContentForRender(
   if (!draft.success) return emptyContent(category);
   const d = draft.data;
 
-  // Field display bersama (greeting/quote/media/amplop) sama di semua kategori.
+  // Field display bersama (greeting/quote/media/video/amplop) sama di semua kategori.
   const common = {
     coverPhoto: d.coverPhoto,
     greetingOpen: d.greetingOpen,
     greetingClose: d.greetingClose,
     quote: coerceQuote(d.quote),
     youtubeUrl: d.youtubeUrl,
+    video: d.video,
     livestreamUrl: d.livestreamUrl,
     envelope: coerceEnvelope(d.envelope),
   };

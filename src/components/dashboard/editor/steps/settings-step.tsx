@@ -10,23 +10,30 @@ import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
 import { Field } from "../field";
 import { LimitedTextarea } from "../limited-textarea";
-import type { EditorValues, SongOption } from "../types";
+import type { EditorValues, SongOption, VideoSlotView } from "../types";
+import { VideoField } from "../video-field";
 
 /**
  * Label toggle section. Section KEY "story" menggerbangi LINIMASA (cerita/agenda/
  * doa); labelnya berbeda per kategori → `timelineLabel` (default wedding).
  * `songs` = pustaka lagu aktif (dirakit di server) untuk picker musik latar.
+ * `video` = gerbang paket + URL video tersimpan (FASE J, dirakit di server).
  */
 export function SettingsStep({
   form,
+  invitationId,
   songs,
+  video,
   timelineLabel = copy.editor.sections.story,
 }: {
   form: UseFormReturn<EditorValues>;
+  invitationId: string;
   songs: SongOption[];
+  video: VideoSlotView;
   timelineLabel?: string;
 }) {
   const { register, control } = form;
+  const videoValue = useWatch({ control, name: "content.video" });
   const m = copy.editor.music;
   // Pratinjau: lacak pilihan aktif agar `<audio>` menunjuk lagu terpilih.
   const songId = useWatch({ control, name: "settings.songId" });
@@ -113,13 +120,24 @@ export function SettingsStep({
           max={L.common.greeting}
         />
       </Field>
-      <Field label={copy.editor.fields.youtubeUrl}>
-        <Input
-          placeholder="https://youtu.be/…"
-          maxLength={L.common.youtubeUrl}
-          {...register("content.youtubeUrl")}
-        />
-      </Field>
+      <VideoField
+        invitationId={invitationId}
+        allowed={video.allowed}
+        value={videoValue}
+        initialUrl={video.url}
+        initialPosterUrl={video.posterUrl}
+        // Tanpa `shouldDirty` — nilai objek yang bisa jadi `undefined` memicu
+        // TypeError RHF 7.90 (DECISIONS #108).
+        onChange={(next) => form.setValue("content.video", next)}
+      >
+        <Field label={copy.editor.fields.youtubeUrl}>
+          <Input
+            placeholder="https://youtu.be/…"
+            maxLength={L.common.youtubeUrl}
+            {...register("content.youtubeUrl")}
+          />
+        </Field>
+      </VideoField>
       <Field label={copy.editor.fields.livestreamUrl}>
         <Input
           maxLength={L.common.livestreamUrl}

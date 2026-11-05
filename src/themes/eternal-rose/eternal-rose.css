@@ -892,3 +892,90 @@
 .er[data-motion="calm"] .er-cover__fallback {
   animation: none;
 }
+
+/* ================================================================ Video ===
+   Section video (FASE J) — kelas generik `_shared/video` ditata dengan token
+   tema. Tanpa aturan reduced-motion: komponennya sendiri yang tak autoplay. */
+.er-video {
+  margin-top: 22px;
+}
+.er .video-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--plum);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 18px 40px -24px rgba(46, 26, 34, 0.5);
+}
+/* Bingkai YouTube tak membawa rasio inline (bingkai berkas membawanya). */
+.er .video-frame--yt {
+  aspect-ratio: 16 / 9;
+}
+.er .video-el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  object-fit: cover;
+}
+.er .video-mute,
+.er .video-play {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--plum);
+}
+.er .video-mute {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  cursor: pointer;
+}
+.er .video-lite {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  background-color: var(--plum);
+  background-size: cover;
+  background-position: center;
+}
+/* Peredup agar tombol putar terbaca di atas poster terang. */
+.er .video-lite::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(46, 26, 34, 0.28);
+}
+.er .video-play {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
+}
+.er .video-play svg {
+  margin-left: 3px;
+}
+.er .video-mute:focus-visible {
+  outline: 2px solid var(--er-acc-ink);
+  outline-offset: 2px;
+}
+/* Di dalam bingkai `overflow: hidden` → cincin fokus ke dalam. */
+.er .video-lite:focus-visible {
+  outline: 2px solid var(--er-acc-ink);
+  outline-offset: -5px;
+}

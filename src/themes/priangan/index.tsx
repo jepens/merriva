@@ -11,6 +11,7 @@ import {
   localToUtc,
 } from "@/lib/datetime";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { hasVideoSection } from "@/themes/_shared/video-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
@@ -29,6 +30,7 @@ import {
   PepatahBlock,
   Schedule,
   Story,
+  VideoSection,
 } from "./sections";
 
 // Self-hosted (next/font); SEMUA `preload:false` (AUDIT-2026-09-04 PER-1 —
@@ -195,6 +197,9 @@ export default function Priangan({ data }: ThemeComponentProps) {
           <Gallery media={data.media} />
         </Lightbox>
       ) : null,
+    video: hasVideoSection(data.video, content.youtubeUrl) ? (
+      <VideoSection video={data.video} youtubeUrl={content.youtubeUrl} />
+    ) : null,
     envelope: hasEnvelope ? (
       <Envelope envelope={envelope} slug={data.slug} />
     ) : null,

@@ -21,6 +21,8 @@ import type {
   InvitationMediaView,
   PhotoView,
 } from "@/types/invitation";
+import { copy } from "@/lib/copy";
+import { ThemeVideo, type VideoView } from "@/themes/_shared/video";
 
 import { L } from "./labels";
 import { XiMark } from "./xi-mark";
@@ -381,6 +383,31 @@ export function Gallery({ media }: { media: InvitationMediaView[] }) {
             </figcaption>
           </figure>
         ))}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------- Video ------- */
+export function VideoSection({
+  video,
+  youtubeUrl,
+}: {
+  video: VideoView | null | undefined;
+  youtubeUrl: string | undefined;
+}) {
+  return (
+    <section className="mh-section">
+      <div className="mh-center mh-reveal">
+        <span className="mh-eyebrow">{L.video.eyebrow}</span>
+        <h2 className="mh-title">{L.video.heading}</h2>
+      </div>
+      <div className="mh-video mh-reveal">
+        <ThemeVideo
+          video={video}
+          youtubeUrl={youtubeUrl}
+          labels={copy.public.video}
+        />
       </div>
     </section>
   );

@@ -61,6 +61,7 @@ export const L = {
     source: "HR. Abu Dawud",
     note: "Sebagai pengganti galeri foto, kami memohon doa terbaik dari Bapak/Ibu untuk keberkahan rumah tangga kami.",
   },
+  video: { eyebrow: "Video", heading: "Kenangan Kami" },
   envelope: {
     eyebrow: "Tanda Kasih",
     heading: "Kirim Hadiah",

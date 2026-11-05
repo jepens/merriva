@@ -12,7 +12,12 @@ import { InfoStep } from "./steps/info-step";
 import { ScheduleStep } from "./steps/schedule-step";
 import { SettingsStep } from "./steps/settings-step";
 import { TimelineStep } from "./steps/timeline-step";
-import type { EditorValues, PhotoSlots, SongOption } from "./types";
+import type {
+  EditorValues,
+  PhotoSlots,
+  SongOption,
+  VideoSlotView,
+} from "./types";
 
 /**
  * Langkah Galeri. `showGallery` false = tema aktif tak punya section galeri
@@ -98,7 +103,9 @@ const STEPS: EditorStep[] = [
     render: (c) => (
       <SettingsStep
         form={c.form}
+        invitationId={c.invitationId}
         songs={c.songs}
+        video={c.video}
         timelineLabel={copy.editor.timeline.wedding.section}
       />
     ),
@@ -122,6 +129,7 @@ export function WeddingEditor({
   maxPhotos: number;
   songs: SongOption[];
   photoSlots: PhotoSlots;
+  video: VideoSlotView;
   initialStep?: string;
   /** `false` = tema aktif tak punya section galeri (dihitung di server). */
   showGallery?: boolean;

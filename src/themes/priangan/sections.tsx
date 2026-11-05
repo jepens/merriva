@@ -21,6 +21,8 @@ import type {
   InvitationMediaView,
   PhotoView,
 } from "@/types/invitation";
+import { copy } from "@/lib/copy";
+import { ThemeVideo, type VideoView } from "@/themes/_shared/video";
 
 import { L } from "./labels";
 
@@ -338,6 +340,31 @@ export function Gallery({ media }: { media: InvitationMediaView[] }) {
             </figcaption>
           </figure>
         ))}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------- Video ------- */
+export function VideoSection({
+  video,
+  youtubeUrl,
+}: {
+  video: VideoView | null | undefined;
+  youtubeUrl: string | undefined;
+}) {
+  return (
+    <section className="pg-section">
+      <div className="pg-center pg-reveal">
+        <span className="pg-eyebrow">{L.video.eyebrow}</span>
+        <h2 className="pg-title">{L.video.heading}</h2>
+      </div>
+      <div className="pg-video pg-reveal">
+        <ThemeVideo
+          video={video}
+          youtubeUrl={youtubeUrl}
+          labels={copy.public.video}
+        />
       </div>
     </section>
   );

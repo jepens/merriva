@@ -203,6 +203,7 @@ export default async function PublicInvitationPage({
     eventRows: eventRows ?? [],
     mediaRows: mediaRows ?? [],
     watermark: limits.watermark,
+    videoAllowed: limits.youtube,
     music,
   });
 

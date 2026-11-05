@@ -22,6 +22,7 @@ export const SECTION_STANDARD = [
   "schedule",
   "agenda",
   "gallery",
+  "video",
   "story",
   "envelope",
 ] as const;

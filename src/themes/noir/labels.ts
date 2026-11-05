@@ -41,6 +41,7 @@ export const L = {
     calendarIcs: "Apple / Outlook",
   },
   gallery: { eyebrow: "Behind the Scenes", heading: "Cuplikan Adegan" },
+  video: { eyebrow: "Cuplikan Film" },
   story: { eyebrow: "Naskah", heading: "Sinopsis Kami" },
   envelope: {
     eyebrow: "Wedding Gift",

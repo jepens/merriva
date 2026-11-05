@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prototipe — Section Video (FASE J)</title>
+<!--
+  Prototipe perilaku section "Video" (hibrida) — acuan visual FASE J.
+  Dua mode persis seperti src/themes/_shared/video.tsx:
+  1) FILE unggahan  : autoplay senyap + loop saat terlihat (IntersectionObserver
+                      play/pause), tombol toggle suara. prefers-reduced-motion →
+                      tanpa autoplay, kontrol native.
+  2) YOUTUBE (lite) : poster i.ytimg.com + tombol putar; iframe youtube-nocookie
+                      BARU dibuat setelah klik (tanpa beban pihak ketiga saat
+                      halaman dimuat).
+  Chrome visual meniru tema Kirana (krem/sogan/emas) hanya sebagai contoh —
+  di produksi tiap tema menata kelas generik .video-frame dkk. dengan tokennya
+  sendiri.
+-->
+<style>
+  :root {
+    --krem: #f5eddc; --panel: #fbf5e6; --sogan: #6b4a2b; --sogan-d: #452d15;
+    --gold: #c09a4a; --gold-d: #7b612a; --ink: #3b2f22;
+    --hairline: rgba(107, 74, 43, 0.22);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--krem); color: var(--ink);
+    font-family: system-ui, sans-serif;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 60px 26px 90px; }
+  .eyebrow {
+    display: block; text-align: center; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold-d);
+    margin: 48px 0 16px;
+  }
+  .note { font-size: 12.5px; line-height: 1.7; color: rgba(59,47,34,.72);
+    text-align: center; max-width: 360px; margin: 6px auto 0; }
+
+  /* ===== kelas generik (sama dengan _shared/video.tsx) ==================== */
+  .video-frame {
+    position: relative; width: 100%; overflow: hidden; border-radius: 10px;
+    background: var(--sogan-d); border: 1px solid var(--sogan);
+    box-shadow: 0 18px 38px -22px rgba(69, 45, 21, 0.55);
+  }
+  .video-frame::after { /* bingkai dalam tipis khas kartu Kirana */
+    content: ""; position: absolute; inset: 5px; border: 1px solid
+    rgba(245, 237, 220, 0.26); border-radius: 6px; pointer-events: none;
+  }
+  .video-el { position: absolute; inset: 0; width: 100%; height: 100%;
+    border: 0; display: block; object-fit: cover; }
+  .video-mute {
+    position: absolute; right: 10px; bottom: 10px; z-index: 2;
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid
+    var(--hairline); background: rgba(245, 237, 220, 0.92);
+    color: var(--sogan-d); display: grid; place-items: center; cursor: pointer;
+  }
+  .video-lite {
+    position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+    cursor: pointer; background-size: cover; background-position: center;
+    display: grid; place-items: center; padding: 0;
+  }
+  .video-lite::before { /* peredup agar tombol terbaca di poster terang */
+    content: ""; position: absolute; inset: 0;
+    background: rgba(40, 26, 12, 0.26);
+  }
+  .video-play {
+    position: relative; width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(245, 237, 220, 0.94); color: var(--sogan-d);
+    display: grid; place-items: center;
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
+  }
+  .video-play svg { margin-left: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="eyebrow">Video — File Unggahan (autoplay senyap)</span>
+  <div class="video-frame video-frame--file" style="aspect-ratio: 1920 / 1080" id="fileFrame">
+    <video id="fileVideo" class="video-el" src="../sample/contoh-klip.mp4"
+      poster="../sample/contoh-poster.jpg" playsinline muted loop
+      preload="metadata"></video>
+    <button id="muteBtn" class="video-mute" aria-label="Nyalakan suara"
+      aria-pressed="false">
+      <svg id="icoOff" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>
+      <svg id="icoOn" width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+    </button>
+  </div>
+  <p class="note">Berputar otomatis tanpa suara saat terlihat, berhenti saat
+    keluar layar. Ketuk ikon untuk menyalakan suara. Dengan
+    <i>prefers-reduced-motion</i>: tidak autoplay, kontrol native tampil.</p>
+
+  <span class="eyebrow">Video — YouTube (facade ringan)</span>
+  <div class="video-frame video-frame--yt" style="aspect-ratio: 16 / 9" id="ytFrame">
+    <button class="video-lite" id="ytBtn" aria-label="Putar video"
+      style="background-image:url('https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg')">
+      <span class="video-play" aria-hidden>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+      </span>
+    </button>
+  </div>
+  <p class="note">iframe YouTube <b>baru dibuat setelah diklik</b> — sebelum itu
+    hanya satu gambar poster. Embed memakai <code>youtube-nocookie.com</code>.</p>
+</div>
+
+<script>
+  // ===== FILE: autoplay senyap + loop, pause di luar layar ==================
+  const v = document.getElementById("fileVideo");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced) {
+    v.controls = true;
+    document.getElementById("muteBtn").style.display = "none";
+  } else {
+    const play = () => v.play().catch(() => {});
+    const io = new IntersectionObserver(
+      (es) => (es[0].isIntersecting ? play() : v.pause()),
+      { threshold: 0.25 },
+    );
+    io.observe(v);
+  }
+  const btn = document.getElementById("muteBtn");
+  btn.addEventListener("click", () => {
+    v.muted = !v.muted;
+    if (!v.muted) { v.volume = 1; v.play().catch(() => {}); }
+    btn.setAttribute("aria-pressed", String(!v.muted));
+    btn.setAttribute("aria-label", v.muted ? "Nyalakan suara" : "Senyapkan");
+    document.getElementById("icoOff").style.display = v.muted ? "" : "none";
+    document.getElementById("icoOn").style.display = v.muted ? "none" : "";
+  });
+
+  // ===== YOUTUBE: facade → iframe nocookie saat klik ========================
+  document.getElementById("ytBtn").addEventListener("click", () => {
+    const f = document.getElementById("ytFrame");
+    const ifr = document.createElement("iframe");
+    ifr.className = "video-el";
+    ifr.src =
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0&playsinline=1";
+    ifr.title = "YouTube";
+    ifr.allow =
+      "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+    ifr.allowFullscreen = true;
+    f.replaceChildren(ifr);
+  });
+</script>
+</body>
+</html>

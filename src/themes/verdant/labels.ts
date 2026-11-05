@@ -35,6 +35,7 @@ export const L = {
     calendarIcs: "Apple / Outlook",
   },
   gallery: { eyebrow: "Herbarium Kami", heading: "Potongan Kenangan" },
+  video: { eyebrow: "Video", heading: "Kenangan yang Tumbuh" },
   story: { eyebrow: "Kisah Bersemi", heading: "Perjalanan Kami" },
   envelope: {
     eyebrow: "Tanda Kasih",

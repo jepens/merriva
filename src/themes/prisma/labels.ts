@@ -17,6 +17,7 @@ export const L = {
     rundown: "Rundown",
     countdown: "Countdown",
     gallery: "Galeri",
+    video: "Video",
     rsvp: "RSVP",
     envelope: "Tanda Kasih",
   },

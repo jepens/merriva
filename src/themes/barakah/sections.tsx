@@ -21,6 +21,8 @@ import type {
 } from "@/types/invitation";
 
 import { LightboxThumb } from "@/themes/_shared/lightbox";
+import { copy } from "@/lib/copy";
+import { ThemeVideo, type VideoView } from "@/themes/_shared/video";
 
 import { L } from "./labels";
 
@@ -317,6 +319,30 @@ export function Gallery({ media }: { media: InvitationMediaView[] }) {
             <LightboxThumb m={m} index={i} />
           </figure>
         ))}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------- Video ------- */
+export function VideoSection({
+  video,
+  youtubeUrl,
+}: {
+  video: VideoView | null | undefined;
+  youtubeUrl: string | undefined;
+}) {
+  return (
+    <section className="bk-section">
+      <div className="bk-center bk-reveal">
+        <p className="bk-eyebrow">{L.video.eyebrow}</p>
+      </div>
+      <div className="bk-video bk-reveal">
+        <ThemeVideo
+          video={video}
+          youtubeUrl={youtubeUrl}
+          labels={copy.public.video}
+        />
       </div>
     </section>
   );

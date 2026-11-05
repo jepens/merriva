@@ -77,6 +77,7 @@ function renderWith(
       maxPhotos={8}
       songs={[]}
       photoSlots={{}}
+      video={{ allowed: false, url: null, posterUrl: null }}
     />,
   );
 }

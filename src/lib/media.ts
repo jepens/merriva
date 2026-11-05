@@ -160,6 +160,51 @@ export function isNamedPhotoPath(invitationId: string, path: string): boolean {
   );
 }
 
+/**
+ * Video undangan (FASE J). Seperti foto bernama, rujukannya hidup di `content`
+ * (`content.video`) dan disimpan AUTOSAVE — tak ada baris tabel. Bedanya, yang
+ * disimpan adalah path OBJEK PENUH (berkas video + poster), bukan prefix:
+ * ekstensi berkasnya mengikuti container unggahan (`mp4`/`webm`/`mov`) dan
+ * posternya mengikuti format yang benar-benar dihasilkan peramban
+ * (`webp`, atau `jpg` di Safari/iOS — `lib/image/encode`).
+ *
+ * Prefix `video/{invitationId}/{videoId}`; `videoId` UUID BARU setiap unggah
+ * dengan alasan yang sama seperti `namedPhotoPrefix` (cache `immutable`).
+ */
+export const VIDEO_EXT_BY_TYPE: Readonly<Record<string, string>> = {
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+};
+
+/** Batas poster (satu bingkai, lebar ≤ varian display) — sejalan foto. */
+export const VIDEO_POSTER_MAX_BYTES = MEDIA_MAX_BYTES.display;
+
+export function videoPrefix(invitationId: string, videoId: string): string {
+  return `video/${invitationId}/${videoId}`;
+}
+
+export function videoFilePath(prefix: string, ext: string): string {
+  return `${prefix}/video.${ext}`;
+}
+
+export function videoPosterPath(prefix: string, ext: string): string {
+  return `${prefix}/poster.${ext}`;
+}
+
+/**
+ * Apakah `path` benar-benar objek video/poster milik `invitationId`? Gerbang
+ * penghapusan, alasan & bentuknya sama dengan `isNamedPhotoPath`: path datang
+ * dari klien dan storage tak mengenal kepemilikan. Cermin regex di migrasi
+ * retensi video — keduanya harus berubah bersama.
+ */
+export function isVideoObjectPath(invitationId: string, path: string): boolean {
+  if (!new RegExp(`^${UUID}$`).test(invitationId)) return false;
+  return new RegExp(
+    `^video/${invitationId}/${UUID}/(video\\.(mp4|webm|mov)|poster\\.(webp|jpg))$`,
+  ).test(path);
+}
+
 /** Baris `media` → view siap render (URL domain sendiri via `getUrl`). */
 export function toMediaView(
   row: {

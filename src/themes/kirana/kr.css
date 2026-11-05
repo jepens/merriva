@@ -901,3 +901,100 @@
 .kr[data-gallery="polaroid"] .kr-g-item:nth-child(even) {
   transform: rotate(2deg);
 }
+
+/* ================================================================ Video ===
+   Section video (FASE J) — kelas generik `_shared/video` ditata dengan token
+   tema. Tanpa aturan reduced-motion: komponennya sendiri yang tak autoplay. */
+.kr-video {
+  margin-top: 22px;
+}
+.kr .video-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--kr-sogan-d);
+  border: 1px solid var(--kr-sogan);
+  box-shadow: 0 18px 38px -22px rgba(69, 45, 21, 0.55);
+}
+/* Bingkai YouTube tak membawa rasio inline (bingkai berkas membawanya). */
+.kr .video-frame--yt {
+  aspect-ratio: 16 / 9;
+}
+.kr .video-el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  object-fit: cover;
+}
+.kr .video-mute,
+.kr .video-play {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--kr-krem);
+  color: var(--kr-sogan-d);
+}
+.kr .video-mute {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--kr-hairline);
+  cursor: pointer;
+}
+.kr .video-lite {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  background-color: var(--kr-sogan-d);
+  background-size: cover;
+  background-position: center;
+}
+/* Peredup agar tombol putar terbaca di atas poster terang. */
+.kr .video-lite::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(40, 26, 12, 0.26);
+}
+.kr .video-play {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
+}
+.kr .video-play svg {
+  margin-left: 3px;
+}
+.kr .video-mute:focus-visible {
+  outline: 2px solid var(--kr-gold-d);
+  outline-offset: 2px;
+}
+/* Di dalam bingkai `overflow: hidden` → cincin fokus ke dalam. */
+.kr .video-lite:focus-visible {
+  outline: 2px solid var(--kr-gold-d);
+  outline-offset: -5px;
+}
+.kr .video-frame::after {
+  /* bingkai dalam tipis khas kartu Kirana (prototipe FASE J) */
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(245, 237, 220, 0.26);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 1;
+}

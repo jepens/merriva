@@ -24,6 +24,7 @@ function build(
     eventRows,
     mediaRows: [],
     watermark: false,
+    videoAllowed: true,
     music: null,
   });
 }
@@ -75,6 +76,7 @@ describe("buildInvitationData — foto bernama", () => {
       eventRows: [],
       mediaRows: [],
       watermark: false,
+      videoAllowed: true,
       music: null,
     });
   }
@@ -114,5 +116,54 @@ describe("buildInvitationData — foto bernama", () => {
     expect(d.coverPhoto).toBeNull();
     expect(d.groomPhoto).toBeNull();
     expect(d.bridePhoto).toBeNull();
+  });
+});
+
+describe("buildInvitationData — video (FASE J)", () => {
+  const VID = "dQw4w9WgXcQ";
+  const video = {
+    path: "video/a/b/video.mp4",
+    poster: "video/a/b/poster.webp",
+    width: 1920,
+    height: 1080,
+    durationSec: 42,
+  };
+
+  function dengan(content: Record<string, unknown>, videoAllowed: boolean) {
+    return buildInvitationData({
+      slug: "andi-sinta",
+      category: "wedding",
+      content: { ...emptyContent("wedding"), ...content },
+      settings: DEFAULT_SETTINGS,
+      eventDate: null,
+      eventRows: [],
+      mediaRows: [],
+      watermark: false,
+      videoAllowed,
+      music: null,
+    });
+  }
+
+  it("paket dengan fitur video: path objek penuh → URL domain sendiri", () => {
+    const d = dengan({ video, youtubeUrl: `https://youtu.be/${VID}` }, true);
+    expect(d.video?.url).toMatch(/\/video\/a\/b\/video\.mp4$/);
+    expect(d.video?.posterUrl).toMatch(/\/video\/a\/b\/poster\.webp$/);
+    expect(d.video).toMatchObject({ width: 1920, height: 1080 });
+    expect(d.content.youtubeUrl).toBe(`https://youtu.be/${VID}`);
+  });
+
+  it("paket TANPA fitur video: video DAN tautan YouTube tidak sampai ke tema", () => {
+    // Inilah lubang yang ditutup FASE J: `limits.youtube` dulu hanya label
+    // harga — tautan yang tersimpan tetap ikut ke tema paket mana pun.
+    const d = dengan({ video, youtubeUrl: `https://youtu.be/${VID}` }, false);
+    expect(d.video).toBeNull();
+    expect(d.content.youtubeUrl).toBeUndefined();
+    expect(d.content.video).toBeUndefined();
+  });
+
+  it("tanpa poster → posterUrl null; tanpa video → null", () => {
+    const { poster: _poster, ...tanpaPoster } = video;
+    expect(dengan({ video: tanpaPoster }, true).video?.posterUrl).toBeNull();
+    expect(dengan({}, true).video).toBeNull();
   });
 });

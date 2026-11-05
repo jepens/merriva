@@ -11,6 +11,7 @@ import {
   localToUtc,
 } from "@/lib/datetime";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { hasVideoSection } from "@/themes/_shared/video-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
@@ -31,6 +32,7 @@ import {
   Scallop,
   Schedule,
   Wishes,
+  VideoSection,
 } from "./sections";
 
 // Self-hosted (next/font) → tanpa request eksternal (WebView/LCP). Bricolage
@@ -175,6 +177,9 @@ export default function Festa({ data }: ThemeComponentProps) {
           </Lightbox>
         </>
       ) : null,
+    video: hasVideoSection(data.video, c.youtubeUrl) ? (
+      <VideoSection video={data.video} youtubeUrl={c.youtubeUrl} />
+    ) : null,
     story: c.wishes.length > 0 ? <Wishes wishes={c.wishes} /> : null,
     envelope: hasEnvelope ? <Envelope envelope={env} slug={data.slug} /> : null,
     rsvp: (

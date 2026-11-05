@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { VIDEO_MAX_SECONDS } from "@/lib/video";
+
 import { FIELD_LIMITS as L } from "./field-limits";
 
 /**
@@ -58,6 +60,24 @@ export const photoSchema = z.preprocess(
 );
 
 export type Photo = z.output<typeof photoSchema>;
+
+/**
+ * Video undangan (FASE J) — path OBJEK PENUH berkas video + poster (bukan
+ * prefix, lihat `lib/media.ts`), plus metadata yang dibaca klien saat unggah.
+ * Dimensi dipakai tema untuk rasio bingkai; durasi dicatat sebagai bukti
+ * batas ≤60 dtk yang ditegakkan klien (server tak mentranskode, jadi tak bisa
+ * membacanya sendiri). Tak ada `.catch()` seperti foto: satu-satunya penulis
+ * nilai ini adalah editor kita, sesaat setelah unggah.
+ */
+export const videoSchema = z.object({
+  path: storagePathSchema,
+  poster: storagePathSchema.optional(),
+  width: z.number().int().positive().max(8000),
+  height: z.number().int().positive().max(8000),
+  durationSec: z.number().positive().max(VIDEO_MAX_SECONDS),
+});
+
+export type Video = z.output<typeof videoSchema>;
 
 /**
  * True bila string TIDAK diawali skema URL berbahaya (`javascript:`/`data:`/
@@ -207,6 +227,9 @@ export const commonContentFields = {
   quote: quoteSchema.optional(),
   /** Embed YouTube (fitur Premium; tier ditegakkan di server). */
   youtubeUrl: optionalFormat(youtubeUrlSchema),
+  /** Video unggahan (fitur paket yang sama dengan YouTube — `limits.youtube`;
+   * ditegakkan saat unggah DAN saat render). Menang atas `youtubeUrl`. */
+  video: videoSchema.optional(),
   /** Tautan live streaming (fitur Premium — SPEC §2). WAJIB https. */
   livestreamUrl: optionalFormat(
     httpsUrlSchema(

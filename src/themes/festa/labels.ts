@@ -25,6 +25,7 @@ export const L = {
     calendarIcs: "Apple / Outlook",
   },
   gallery: { eyebrow: "Galeri", heading: "Momen Bahagia" },
+  video: { eyebrow: "Video Bahagia" },
   wishes: { eyebrow: "Doa & Harapan", heading: "Untaian Doa" },
   envelope: {
     eyebrow: "Amplop Digital",

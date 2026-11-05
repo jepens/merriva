@@ -10,6 +10,7 @@ import {
 } from "@/lib/datetime";
 import { isSectionVisible } from "@/lib/validation/content";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { hasVideoSection } from "@/themes/_shared/video-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
@@ -30,6 +31,7 @@ import {
   Rsvp,
   Rundown,
   type PrismaStat,
+  VideoSection,
 } from "./sections";
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
@@ -170,6 +172,7 @@ export default function Prisma({ data }: ThemeComponentProps) {
   const showSchedule =
     isSectionVisible(settings, "schedule") && data.events.length > 0;
   const showEventBlock = showCountdown || showSchedule;
+  const hasVideo = hasVideoSection(data.video, content.youtubeUrl);
   const showGallery =
     isSectionVisible(settings, "gallery") && data.media.length > 0;
   // `rsvp` dideklarasikan `toggle: false` di options.ts = WAJIB TAMPIL
@@ -253,6 +256,16 @@ export default function Prisma({ data }: ThemeComponentProps) {
           <Lightbox media={data.media}>
             <Gallery no={no} media={data.media} />
           </Lightbox>
+        ),
+      },
+      video: {
+        has: hasVideo,
+        render: (no) => (
+          <VideoSection
+            no={no}
+            video={data.video}
+            youtubeUrl={content.youtubeUrl}
+          />
         ),
       },
       rsvp: {
@@ -371,6 +384,14 @@ export default function Prisma({ data }: ThemeComponentProps) {
         <Lightbox media={data.media}>
           <Gallery no={no()} media={data.media} />
         </Lightbox>
+      ) : null}
+
+      {hasVideo ? (
+        <VideoSection
+          no={no()}
+          video={data.video}
+          youtubeUrl={content.youtubeUrl}
+        />
       ) : null}
 
       {showRsvp ? (

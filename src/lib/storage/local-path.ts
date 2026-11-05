@@ -6,6 +6,7 @@ import {
   ENCODE_MIME,
   type EncodedFormat,
 } from "@/lib/image/encode";
+import { VIDEO_EXT_BY_TYPE } from "@/lib/media";
 
 /**
  * Aturan path untuk driver storage `local` (SPEC §6.4) — MURNI, tanpa I/O.
@@ -77,13 +78,18 @@ function ekstensiGambar(): Record<string, string> {
 
 /**
  * Ekstensi yang BOLEH keluar dari route penyaji, beserta tipe isinya. Diturunkan
- * dari dua sumber yang sudah ada (`lib/image/encode` untuk foto, `lib/audio`
- * untuk musik) supaya daftar ini tak bisa tertinggal saat format baru diterima
- * di sisi unggah.
+ * dari sumber yang sudah ada (`lib/image/encode` untuk foto, `lib/audio` untuk
+ * musik, `lib/media` untuk video) supaya daftar ini tak bisa tertinggal saat
+ * format baru diterima di sisi unggah.
  */
 export const TIPE_ISI_PER_EKSTENSI: Readonly<Record<string, string>> = {
   ...balik(AUDIO_MIME_EXT),
   ...ekstensiGambar(),
+  // TERAKHIR, sehingga `.webm` disajikan `video/webm`, bukan `audio/webm`:
+  // container-nya sama, `<audio>` memutar `video/webm` tanpa keluhan, tetapi
+  // `<video>` yang diberi tipe audio bisa ditolak peramban yang menghormati
+  // Content-Type.
+  ...balik(VIDEO_EXT_BY_TYPE),
 };
 
 /**

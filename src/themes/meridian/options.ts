@@ -42,6 +42,7 @@ export const meridianOptions: ThemeOptions = {
     { id: "countdown", reorder: true, toggle: true },
     { id: "schedule", reorder: true, toggle: true },
     { id: "gallery", reorder: true, toggle: true },
+    { id: "video", reorder: true, toggle: true },
     { id: "rsvp", reorder: true, toggle: false },
     { id: "envelope", reorder: true, toggle: true },
   ],

@@ -45,6 +45,7 @@ export const L = {
       String(n + 1),
   },
   gallery: { eyebrow: "Moments", caption: "Foto" },
+  video: { eyebrow: "Cuplikan" },
   rsvp: { eyebrow: "RSVP" },
   gift: {
     eyebrow: "Wedding Gift",

@@ -1,4 +1,6 @@
-import { readFile, stat } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { Readable } from "node:stream";
 
 import { getMediaRoot, getStorageDriver } from "@/lib/env";
 import { berkasObjek, tipeIsi } from "@/lib/storage/local-path";
@@ -16,10 +18,12 @@ import { parseRange } from "@/lib/storage/range";
  * selamanya; Cloudflare di depannya yang menanggung beban hari-H dan origin
  * hanya tersentuh sekali per objek.
  *
- * Isi berkas dibaca UTUH ke memori, bukan di-stream. Objek di produk ini
- * berukuran ratusan KB (foto) sampai ±3MB (lagu) dan sudah dibatasi di sisi
- * unggah, jadi yang dibeli dengan sedikit memori adalah penanganan Range yang
- * sederhana dan tipe yang lurus. Bila kelak ada video, ini yang pertama diganti.
+ * Isi berkas di-STREAM sebatas rentang yang diminta, bukan dibaca utuh ke
+ * memori. Dulu dibaca utuh (foto ratusan KB, lagu ±3MB — murah); sejak video
+ * undangan (FASE J, ≤40MB) tidak lagi: pemutar video meminta puluhan Range
+ * kecil per tamu, dan `.mov` tak di-cache Cloudflare secara bawaan, jadi tiap
+ * Range sampai ke origin. Membaca 40MB untuk mengirim 64KB, dikali tamu yang
+ * membuka undangan bersamaan, adalah jalan tercepat menuju OOM di hari-H.
  */
 
 export const runtime = "nodejs";
@@ -72,15 +76,23 @@ export async function GET(
     return tolak(416, { ...dasar, "Content-Range": `bytes */${info.size}` });
   }
 
-  const isi = await readFile(berkas);
-  const potongan = rentang ? isi.subarray(rentang.start, rentang.end + 1) : isi;
+  const start = rentang ? rentang.start : 0;
+  const end = rentang ? rentang.end : info.size - 1;
+  const panjang = end - start + 1;
+  // Berkas kosong: `createReadStream` dengan `end: -1` tidak sah.
+  const isi =
+    panjang > 0
+      ? (Readable.toWeb(
+          createReadStream(berkas, { start, end }),
+        ) as ReadableStream<Uint8Array>)
+      : new Uint8Array(0);
 
-  return new Response(new Uint8Array(potongan), {
+  return new Response(isi, {
     status: rentang ? 206 : 200,
     headers: {
       ...dasar,
       "Content-Type": tipe,
-      "Content-Length": String(potongan.byteLength),
+      "Content-Length": String(panjang),
       ...(rentang
         ? {
             "Content-Range": `bytes ${rentang.start}-${rentang.end}/${info.size}`,

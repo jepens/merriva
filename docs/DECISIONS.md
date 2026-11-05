@@ -6336,6 +6336,91 @@ memaksa keadaan buruk):
 
 ---
 
+## #113 — 2026-11-05 · FASE J video: unggah lewat Route Handler, gerbang paket di perakit render, `settings.custom` lama dilengkapi
+
+Keputusan produk (sumber, batas, prioritas, gating `limits.youtube`, facade)
+terkunci di `handoff/video/VIDEO-SPEC.md` §0 dan tidak dibuka ulang di sini.
+Entri ini mencatat keputusan TEKNIS yang diambil saat menerapkannya.
+
+**Keputusan:**
+1. Unggah video = `POST /api/invitations/[id]/video` (Route Handler), bukan
+   Server Action. Hapus tetap Server Action (`server/actions/video.ts`). Pola
+   wajibnya utuh: auth → kepemilikan → paket → validasi → storage, tanpa tulis
+   DB (autosave yang menyimpan `content.video`, pola `named-photo.ts`).
+2. Gerbang paket render di `buildInvitationData` (`videoAllowed`): paket tanpa
+   `limits.youtube` menerima `video = null` DAN `content.youtubeUrl` dibuang —
+   satu titik untuk `/[slug]` dan pratinjau.
+3. `content.video` menyimpan path OBJEK PENUH (`video/{inv}/{uuid}/video.{ext}`
+   + `poster.{webp|jpg}`), bukan prefix seperti foto.
+4. Retensi: `purge_invitation_data` memanen kedua path dari `content.video` ke
+   `momen_paths` (arti kolomnya "path objek penuh, hapus langsung"), disaring
+   regex terikat id undangan (migrasi `20261105100000`). Migrasi yang sama
+   membuka bucket `media` untuk `video/mp4|webm|quicktime` hingga 40 MB.
+5. `/media/[...path]` men-stream rentang yang diminta (bukan `readFile` utuh)
+   dan menyajikan `mp4/webm/mov`.
+6. `lengkapiUrutanSection`: section yang ditambahkan ke `options.ts` sesudah
+   pemilik menyimpan `settings.custom` disisipkan sesudah tetangga bawaannya —
+   dipakai resolver render DAN halaman editor Tampilan.
+7. `hasVideoSection` (`_shared/video-gate.ts`) = kembaran server dari
+   `hasThemeVideo`; modul handoff disalin tanpa perubahan.
+
+**Alasan:**
+1. Server Action dibatasi `bodySizeLimit` 3 MB GLOBAL; menaikkannya ke 40 MB
+   berlaku juga bagi aksi publik anonim (ucapan, Album Momen) yang body-nya
+   ditampung sebelum rate limit. Dan aksi editor di-POST ke `/dashboard/*` yang
+   dilewati middleware: body digandakan dan DIPOTONG DIAM-DIAM di 10 MB
+   (`proxyClientMaxBodySize`, dokumentasi Next 16 — "the request will not fail").
+   Route di `/api` lepas dari keduanya, dan bisa menolak lewat `Content-Length`
+   + sesi + paket SEBELUM membaca body.
+2. `limits.youtube` sebelumnya hanya label harga: tautan YouTube tersimpan
+   ikut ke tema paket apa pun. Undangan uji lokal `uji-binderpay` (Basic)
+   memang menyimpan satu.
+3. Ekstensi video mengikuti container unggahan dan ekstensi poster mengikuti
+   format yang benar-benar dihasilkan peramban; prefix saja tak cukup untuk
+   merakit URL.
+4. Tanpa pemanenan, klip wajah tertinggal di storage setelah `content`
+   di-scrub (lubang yang sama dengan #20261014120000). Kolom baru berarti
+   `drop function` + ubah tiga pemanggil TS; preseden memilih kolom yang ada.
+5. Komentar route itu sendiri menyebut "bila kelak ada video, ini yang pertama
+   diganti": puluhan Range per tamu × 40 MB dibaca utuh = OOM di hari-H, dan
+   `.mov` tak di-cache Cloudflare secara bawaan.
+6. `resolveSections` menuntut permutasi LENGKAP. Menambah `video` ke 14 tema
+   tanpa ini membuat SETIAP `settings.custom` tersimpan jatuh ke urutan
+   bawaan (urutan & section tersembunyi pemilik hilang) dan editor Tampilan
+   mengirim daftar yang ditolak server — pemilik tak bisa menyimpan lagi.
+7. Fungsi dari modul `"use client"` di Server Component hanyalah client
+   reference; memanggilnya melempar. Unit test tak melihat batas RSC.
+
+**Ditolak:**
+- Menaikkan `serverActions.bodySizeLimit` + `proxyClientMaxBodySize` ke 41 MB
+  (dua batas global demi satu fitur, termasuk untuk permukaan anonim).
+- Unggah langsung ke vendor (presigned PUT): driver `local` (produksi hari
+  ini) tak punya padanannya.
+- Migrasi data `settings.custom` (menulis ulang baris pelanggan) — pelengkapan
+  saat dibaca sudah cukup dan tak menyentuh data produksi.
+
+**Konsekuensi:**
+- Migrasi `20261105100000_video_undangan.sql` SUDAH di cloud (5 Nov 2026,
+  diterapkan pemilik lewat SQL Editor; versi dicatat manual di
+  `schema_migrations` karena MCP `apply_migration` ditolak klien). Diverifikasi
+  sesudahnya: sidik logika fungsi (komentar & spasi dibuang) = berkas yang
+  lulus pgTAP `purge_video` 7/7, bucket 40 MB + MIME video, eksekusi tetap
+  hanya `service_role`, advisor keamanan tanpa temuan baru. Sebelum menerapkan
+  dipastikan logika fungsi lama di cloud identik `20261016111713` — tak ada
+  hotfix tak tercatat yang tertimpa.
+- Durasi & orientasi hanya ditegakkan klien (server tak mentranskode); ukuran
+  & tipe ditegakkan ulang server. Pemilik berpaket yang memalsukan metadata
+  hanya bisa merugikan undangannya sendiri, dibatasi 40 MB.
+- Tema baru WAJIB mendeklarasikan `video` (test kontrak menuntut label;
+  kosakata kanonik) dan menata `.video-frame` dkk. di CSS-nya sendiri;
+  `.video-frame--yt` butuh `aspect-ratio` dari CSS (bingkai YouTube tak
+  membawa rasio inline).
+- CSP repo parsial (tanpa `default-src`/`img-src`/`frame-src`/`media-src`),
+  jadi `i.ytimg.com` & `youtube-nocookie.com` tak perlu didaftarkan. Bila
+  kelak `default-src` ditambahkan, keduanya + domain media wajib ikut.
+
+---
+
 ## Template entri baru
 
 ```

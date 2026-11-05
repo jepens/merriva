@@ -10,6 +10,7 @@ import {
   localToUtc,
 } from "@/lib/datetime";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { hasVideoSection } from "@/themes/_shared/video-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
@@ -29,6 +30,7 @@ import {
   Programme,
   Rsvp,
   WeddingGift,
+  VideoSection,
 } from "./sections";
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (aman WebView &
@@ -239,6 +241,9 @@ export default function Meridian({ data }: ThemeComponentProps) {
           <Moments media={data.media} />
         </Lightbox>
       ) : null,
+    video: hasVideoSection(data.video, content.youtubeUrl) ? (
+      <VideoSection video={data.video} youtubeUrl={content.youtubeUrl} />
+    ) : null,
     rsvp: <Rsvp slug={data.slug} />,
     envelope: hasEnvelope ? <WeddingGift envelope={env} /> : null,
   };

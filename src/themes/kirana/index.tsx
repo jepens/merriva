@@ -11,6 +11,7 @@ import {
   localToUtc,
 } from "@/lib/datetime";
 import { CoverGate } from "@/themes/_shared/cover-gate";
+import { hasVideoSection } from "@/themes/_shared/video-gate";
 import { Lightbox } from "@/themes/_shared/lightbox";
 import type { ThemeComponentProps } from "@/themes/registry";
 
@@ -30,6 +31,7 @@ import {
   Schedule,
   SekarBlock,
   Story,
+  VideoSection,
 } from "./sections";
 
 // Self-hosted (next/font) → tanpa request eksternal saat runtime (WebView/LCP).
@@ -253,6 +255,9 @@ export default function Kirana({ data }: ThemeComponentProps) {
           <Gallery media={data.media} />
         </Lightbox>
       ) : null,
+    video: hasVideoSection(data.video, content.youtubeUrl) ? (
+      <VideoSection video={data.video} youtubeUrl={content.youtubeUrl} />
+    ) : null,
     story: content.story.length > 0 ? <Story story={content.story} /> : null,
     rsvp: (
       <section className="kr-section">
