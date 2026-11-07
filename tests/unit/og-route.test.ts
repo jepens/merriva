@@ -20,6 +20,8 @@ const { refs, reportHandledError, rateLimit } = vi.hoisted(() => ({
     eventsError: null as unknown,
     image: null as null | { headers?: Record<string, string> },
     queries: 0,
+    /** Byte yang "dirender" ImageResponse tiruan; `null` = render melempar. */
+    png: null as Uint8Array | null,
   },
   reportHandledError: vi.fn(),
   rateLimit: vi.fn(async () => ({ ok: true, remaining: 1, retryAfterMs: 0 })),
@@ -31,6 +33,11 @@ vi.mock("next/og", () => ({
   ImageResponse: class {
     constructor(_el: unknown, opts: { headers?: Record<string, string> }) {
       refs.image = opts;
+    }
+    // Satori merender saat body dibaca — galat render muncul di sini.
+    async arrayBuffer() {
+      if (!refs.png) throw new Error("satori meledak");
+      return refs.png.slice().buffer;
     }
   },
 }));
@@ -53,8 +60,19 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }));
 
+import { encode as encodePng } from "fast-png";
+
 import { GET } from "@/app/api/og/[slug]/route";
 import { DEFAULT_SETTINGS, emptyContent } from "@/lib/validation/content";
+
+/** PNG RGBA kecil yang sah — bentuk keluaran next/og. */
+const PNG_RGBA = encodePng({
+  width: 8,
+  height: 4,
+  data: new Uint8Array(8 * 4 * 4).fill(200),
+  channels: 4,
+  depth: 8,
+});
 
 /** Bentuk galat postgrest-js sungguhan (objek polos, bukan Error). */
 const BOOM = {
@@ -84,6 +102,7 @@ beforeEach(() => {
   refs.eventsError = null;
   refs.image = null;
   refs.queries = 0;
+  refs.png = PNG_RGBA;
   reportHandledError.mockClear();
   rateLimit.mockClear();
 });
@@ -96,9 +115,47 @@ const sementara = (res: Response) => {
 };
 
 describe("GET /api/og/[slug]", () => {
-  it("undangan aktif → gambar dirender dengan cache CDN panjang", async () => {
-    await panggil();
-    expect(refs.image?.headers?.["Cache-Control"]).toContain("s-maxage=86400");
+  it("undangan aktif → JPEG dengan cache CDN panjang (DECISIONS #119)", async () => {
+    const res = await panggil();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(res.headers.get("Cache-Control")).toContain("s-maxage=86400");
+    const b = new Uint8Array(await res.arrayBuffer());
+    expect([b[0], b[1]]).toEqual([0xff, 0xd8]); // SOI JPEG, bukan signature PNG
+  });
+
+  it("konversi JPEG gagal → PNG lama, dilaporkan, dan TIDAK ter-cache CDN", async () => {
+    // 16-bit: bukan bentuk keluaran next/og → pngToJpeg melempar.
+    refs.png = encodePng({
+      width: 2,
+      height: 2,
+      data: new Uint16Array(2 * 2 * 4).fill(65535),
+      channels: 4,
+      depth: 16,
+    });
+    const res = await panggil();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("image/png");
+    // Gambar terdegradasi (bisa > batas WhatsApp) tak boleh tertahan di CDN
+    // sesudah perbaikannya dideploy.
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(reportHandledError).toHaveBeenCalledWith(
+      expect.any(Error),
+      "og.jpeg",
+      { slug: "andi-sinta" },
+    );
+  });
+
+  it("render satori gagal → 500 no-store (tak boleh ter-cache CDN) dan dilaporkan", async () => {
+    refs.png = null;
+    const res = await panggil();
+    expect(res.status).toBe(500);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(reportHandledError).toHaveBeenCalledWith(
+      expect.any(Error),
+      "og.render",
+      { slug: "andi-sinta" },
+    );
   });
 
   it("undangan tak aktif (tanpa galat) → gambar default statis yang boleh di-cache", async () => {

@@ -302,6 +302,55 @@ describe("/{slug} — judul metadata (pratinjau tautan WhatsApp)", () => {
   });
 });
 
+/**
+ * Syarat RESMI pratinjau tautan WhatsApp (DECISIONS #119): og:title,
+ * og:description, dan og:url WAJIB; og:url harus kanonik tanpa parameter
+ * identitas pengguna. Dulu og:url tak pernah dikeluarkan dan gambarnya PNG
+ * 1,4 MB — kartu jatuh ke tautan polos, persis rupa pesan penipuan.
+ */
+describe("/{slug} — metadata kartu pratinjau WhatsApp", () => {
+  const meta = async (slug = "andi-sinta") =>
+    generateMetadata({ params: Promise.resolve({ slug }) });
+
+  it("og:url = path kanonik undangan, TANPA ?g= token tamu", async () => {
+    const m = await meta();
+    expect(m.openGraph?.url).toBe("/andi-sinta");
+    expect(String(m.openGraph?.url)).not.toContain("?");
+  });
+
+  it("gambar dinyatakan JPEG (route kini mengirim JPEG, bukan PNG)", async () => {
+    const images = (await meta()).openGraph?.images as Array<{ type: string }>;
+    expect(images[0].type).toBe("image/jpeg");
+  });
+
+  it("deskripsi = hari & tanggal (zona acara) · tempat — ajakan", async () => {
+    // 2026-12-20T02:00Z di WIB = Minggu 20 Desember 2026, 09.00.
+    expect((await meta()).description).toBe(
+      "Minggu, 20 Desember 2026 · Masjid — buka undangan & konfirmasi kehadiran",
+    );
+  });
+
+  it("nama tempat yang panjang tak ikut (kartu 1–2 baris)", async () => {
+    const rows = refs.tables.invitation_events.data as Array<
+      Record<string, unknown>
+    >;
+    rows[0].venue_name = "Gedung Serbaguna Pemuda Pancasila Kecamatan Sukasari";
+    expect((await meta()).description).toBe(
+      "Minggu, 20 Desember 2026 — buka undangan & konfirmasi kehadiran",
+    );
+  });
+
+  it("tanpa sesi & tanpa event_date → kembali ke deskripsi lama (bukan tanggal kosong)", async () => {
+    refs.tables.invitation_events = { data: [], error: null };
+    expect((await meta()).description).toBe("Undangan");
+  });
+
+  it("galat membaca jadwal → MELEMPAR, bukan kartu tanpa tanggal yang di-cache (#45)", async () => {
+    refs.tables.invitation_events = { data: null, error: BOOM };
+    await expect(meta()).rejects.toSatisfy(galatBacaan("invitation_events"));
+  });
+});
+
 describe("/preview/{id} — pratinjau pemilik tak menampilkan isian palsu", () => {
   const buka = (embed?: string) =>
     PreviewPage({

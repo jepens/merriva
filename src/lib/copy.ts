@@ -1167,6 +1167,13 @@ export const copy = {
       groomFallback: "Mempelai Pria",
       brideFallback: "Mempelai Wanita",
     },
+    // Deskripsi kartu pratinjau tautan (og:description, DECISIONS #119):
+    // "Minggu, 6 Desember 2026 · Gedung X — buka undangan & konfirmasi kehadiran".
+    // Nama tempat hanya ikut bila pendek — Meta menyarankan 1–2 baris.
+    linkPreview: {
+      cta: "buka undangan & konfirmasi kehadiran",
+      venueMax: 40,
+    },
     music: {
       play: "Putar musik",
       pause: "Jeda musik",

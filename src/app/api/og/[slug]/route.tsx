@@ -4,10 +4,11 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 import { copy } from "@/lib/copy";
-import { formatDateOnly, formatEventDateTime } from "@/lib/datetime";
+import { eventDateLabel } from "@/lib/event-date-label";
 import { parseContentForRender } from "@/lib/invitation-content";
 import { ogPath } from "@/lib/media";
 import { reportHandledError } from "@/lib/observability";
+import { pngToJpeg } from "@/lib/og/jpeg";
 import { checkClientRateLimit } from "@/lib/request-ip";
 import { isDraftSlug, isPlausibleSlug, isReservedSlug } from "@/lib/slug";
 import { getStorage } from "@/lib/storage";
@@ -168,14 +169,11 @@ async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
     "invitation_events",
   );
 
-  let dateLabel: string | null = null;
-  if (firstEvent?.start_at) {
-    const f = formatEventDateTime(firstEvent.start_at, tz);
-    dateLabel = f ? `${f.weekday}, ${f.date}` : null;
-  } else if (inv.event_date) {
-    const f = formatDateOnly(inv.event_date);
-    dateLabel = f ? `${f.weekday}, ${f.date}` : null;
-  }
+  const dateLabel = eventDateLabel(
+    firstEvent?.start_at ?? null,
+    tz,
+    inv.event_date,
+  );
 
   return {
     kicker: names ? c.weddingKicker : c.defaultKicker,
@@ -292,7 +290,7 @@ export async function GET(
   const foto = fields.cover ? await sampulDataUri(fields.cover, slug) : null;
   const P = foto ? CF : C;
 
-  return new ImageResponse(
+  const png = new ImageResponse(
     <div
       style={{
         width: "100%",
@@ -414,13 +412,40 @@ export async function GET(
         { name: "Crimson Text", data: serif, style: "normal", weight: 600 },
         { name: "Great Vibes", data: greatVibes, style: "normal", weight: 400 },
       ],
-      headers: {
-        "Content-Type": "image/png",
-        // Butuh Cloudflare Cache Rule (path tanpa ekstensi tak ter-cache default)
-        // agar s-maxage berlaku — lihat catatan modul di atas & docs/ARCHITECTURE.md.
-        "Cache-Control":
-          "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
-      },
     },
   );
+
+  // 4. PNG → JPEG (DECISIONS #119). PNG berfoto ±1,4 MB melampaui batas resmi
+  // WhatsApp (< 600 KB) — kartu pratinjau gagal dan tautan tampil polos, persis
+  // pola pesan penipuan. Konversi gagal (praktis tak terjangkau: resvg selalu
+  // menghasilkan RGBA 8-bit) → kembali ke PNG lama — perilaku sebelum #119, yang
+  // untuk undangan berfoto bisa melampaui batas WhatsApp — dilaporkan og.jpeg,
+  // dan `no-store` agar gambar terdegradasi tak tertahan di CDN.
+  let pngBytes: Uint8Array;
+  try {
+    // Satori/resvg merender saat body dibaca; galatnya muncul di sini, bukan
+    // di konstruktor. Jawab 500 no-store (tak boleh ter-cache CDN).
+    pngBytes = new Uint8Array(await png.arrayBuffer());
+  } catch (err) {
+    reportHandledError(err, "og.render", { slug });
+    return noImage(500);
+  }
+  let jpeg: Uint8Array | null = null;
+  try {
+    jpeg = pngToJpeg(pngBytes);
+  } catch (err) {
+    reportHandledError(err, "og.jpeg", { slug });
+  }
+
+  return new Response((jpeg ?? pngBytes) as BodyInit, {
+    status: 200,
+    headers: {
+      "Content-Type": jpeg ? "image/jpeg" : "image/png",
+      // Butuh Cloudflare Cache Rule (path tanpa ekstensi tak ter-cache default)
+      // agar s-maxage berlaku — lihat catatan modul di atas & docs/ARCHITECTURE.md.
+      "Cache-Control": jpeg
+        ? "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800"
+        : "no-store",
+    },
+  });
 }

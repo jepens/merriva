@@ -6,6 +6,7 @@ import { ExpiredNotice } from "@/components/public/expired-notice";
 import { GuestPersonalizationProvider } from "@/components/public/guest-personalization";
 import { MomenFab } from "@/components/public/momen/momen-fab";
 import { copy } from "@/lib/copy";
+import { eventDateLabel } from "@/lib/event-date-label";
 import { parseContentForRender } from "@/lib/invitation-content";
 import { isDraftSlug, isPlausibleSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -62,6 +63,21 @@ const getInvitationBySlug = cache(async (slug: string) => {
   return dataOrThrow({ data, error }, "invitations");
 });
 
+/**
+ * Sesi acara undangan, urut `sort_order` lalu jam. `cache()` → generateMetadata
+ * (tanggal & tempat untuk `og:description`) dan render berbagi SATU query.
+ * Galat dikembalikan apa adanya; pemanggil wajib `dataOrThrow` (#45).
+ */
+const getEventRows = cache(async (invitationId: string) => {
+  const admin = createSupabaseAdminClient();
+  return admin
+    .from("invitation_events")
+    .select("id, name, start_at, end_at, venue_name, address, maps_url")
+    .eq("invitation_id", invitationId)
+    .order("sort_order", { ascending: true })
+    .order("start_at", { ascending: true });
+});
+
 function coupleNames(content: InvitationContent) {
   if (content.category !== "wedding") return null;
   const c = copy.public.cover;
@@ -98,8 +114,22 @@ export async function generateMetadata({
     : content.category !== "wedding" && content.eventName
       ? content.eventName
       : copy.brand.name;
-  const description =
-    content.category === "wedding" && content.greetingOpen
+  // Deskripsi kartu = FAKTA yang bisa dicek tamu (hari, tanggal, tempat) +
+  // ajakan, bukan salam pembuka generik (DECISIONS #119). Tak ada klaim
+  // "aman/terverifikasi": isi kartu bisa dipalsukan siapa pun (NDSS 2020).
+  const eventRows = dataOrThrow(
+    await getEventRows(inv.id),
+    "invitation_events",
+  );
+  const first = (eventRows ?? []).find((e) => e.start_at);
+  const tz =
+    settingsSchema.safeParse(inv.settings).data?.timezone ?? "Asia/Jakarta";
+  const dateLabel = eventDateLabel(first?.start_at ?? null, tz, inv.event_date);
+  const venue = first?.venue_name?.trim();
+  const lp = copy.public.linkPreview;
+  const description = dateLabel
+    ? `${dateLabel}${venue && venue.length <= lp.venueMax ? ` · ${venue}` : ""} — ${lp.cta}`
+    : content.category === "wedding" && content.greetingOpen
       ? content.greetingOpen.slice(0, 160)
       : copy.public.cover.defaultKicker;
 
@@ -122,13 +152,18 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
+      // WAJIB menurut syarat resmi pratinjau WhatsApp (bersama og:title &
+      // og:description), dan harus URL kanonik "undecorated" — TANPA `?g=`
+      // token tamu walau tautan yang disebar personal (DECISIONS #119).
+      // `metadataBase` di layout menjadikannya absolut.
+      url: `/${slug}`,
       type: "website",
       images: [
         {
           url: ogImage,
           width: 1200,
           height: 630,
-          type: "image/png",
+          type: "image/jpeg",
           alt: title,
         },
       ],
@@ -160,12 +195,7 @@ export default async function PublicInvitationPage({
   const admin = createSupabaseAdminClient();
   const [themeRes, eventsRes, mediaRes, momenRes] = await Promise.all([
     admin.from("themes").select("slug").eq("id", inv.theme_id).maybeSingle(),
-    admin
-      .from("invitation_events")
-      .select("id, name, start_at, end_at, venue_name, address, maps_url")
-      .eq("invitation_id", inv.id)
-      .order("sort_order", { ascending: true })
-      .order("start_at", { ascending: true }),
+    getEventRows(inv.id),
     admin
       .from("media")
       .select("id, storage_path, width, height")

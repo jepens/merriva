@@ -6682,6 +6682,58 @@ bukan sebagai bahasa pengantar. Kalimat fallback di `index.tsx` tema (mis.
 
 ---
 
+## #119 — 2026-11-08 · Pratinjau tautan WhatsApp: JPEG < 300 KB, og:url kanonik, deskripsi berisi fakta
+
+**Masalah (laporan pemilik, klien nyata `rani-wanda`):** link yang disebar
+lewat WhatsApp tampil polos — kartu hanya "merriva.id" + URL, tanpa judul,
+deskripsi, maupun foto. Di tengah maraknya penipuan "undangan pernikahan"
+(APK) di WhatsApp, link polos terlihat mencurigakan.
+
+**Temuan (diukur + riset terverifikasi silang):** HTML halaman sudah benar
+(og:title/description/image di `<head>` byte ~3.000, sama untuk UA WhatsApp,
+facebookexternalhit, Chrome; token `?g=` tak berpengaruh). Tetapi dua syarat
+RESMI Meta untuk pratinjau WhatsApp dilanggar: (1) **`og:url` tidak pernah
+dikeluarkan** — wajib bersama og:title & og:description, dan harus kanonik
+tanpa parameter identitas pengguna; (2) **gambar PNG 1,46 MB** — batas resmi
+< 600 KB (Wix & laporan komunitas: < 300 KB). Penyebab (2): `ImageResponse`
+hanya bisa PNG, dan PNG berfoto ±10× lebih besar dari JPEG-nya. Kaitan
+sebab-akibat keduanya dengan hilangnya JUDUL belum dibuktikan sumber mana pun —
+pembuktiannya uji kirim nyata setelah deploy. Pratinjau dibuat di perangkat
+PENGIRIM, jadi pesan yang sudah terkirim tanpa kartu tak bisa diperbaiki dari
+server; setelan "Nonaktifkan pratinjau tautan" pengirim juga mematikannya.
+
+**Keputusan (pemilik, 8 Nov 2026):**
+1. `og:url` = `/{slug}` (absolut lewat `metadataBase`), tanpa `?g=`.
+2. Route `/api/og/[slug]` mengonversi PNG satori → **JPEG** (kualitas 82,
+   turun ke 65 bila > 300 KB) dengan `fast-png` (dekode, MIT) + `jpeg-js`
+   (enkode, BSD-3) — JS murni, tanpa binari native/WASM. Terukur pada gambar
+   produksi: 1,46 MB → 116 KB, +±130 ms per render. Konversi gagal (praktis tak
+   terjangkau — resvg selalu RGBA 8-bit) → PNG lama (perilaku sebelum #119) +
+   laporan `og.jpeg` + `no-store`; render satori gagal → 500 `no-store` +
+   `og.render`.
+   `og:image:type` = image/jpeg.
+3. `og:description` = fakta yang bisa dicek tamu: "Minggu, 6 Desember 2026 ·
+   {tempat} — buka undangan & konfirmasi kehadiran" (tempat hanya bila ≤ 40
+   karakter). Tanpa klaim "aman/terverifikasi": riset NDSS 2020 menunjukkan isi
+   kartu — termasuk label domain di WhatsApp — bisa dipalsukan siapa pun.
+   Label tanggal satu sumber (`src/lib/event-date-label.ts`) untuk gambar OG,
+   deskripsi, dan `{tanggal}` pesan Sebar.
+
+**Ditolak:** `sharp` (cepat, tetapi dependency native besar yang sengaja tak
+dibundel — next.config); varian `og.jpg` klien langsung sebagai og:image
+(kehilangan geser/perbesar foto & teks nama-tanggal); WASM mozjpeg (berkas
+`.wasm` berisiko tak ter-trace ke build standalone).
+
+**Konsekuensi:** Cloudflare Cache Rule `/api/og/*` (LAUNCH-CHECKLIST Fase 6)
+makin penting — tiap kiriman membuat perangkat pengirim mengambil gambar.
+Dengan cache key "path saja", foto/tanggal yang diganti pemilik baru tampil
+setelah Edge TTL habis (`?v=updated_at` diabaikan CDN) — pilih Edge TTL pendek
+(mis. 1 jam) atau sertakan query `v` di cache key.
+Uji penerimaan: tempel link ke WhatsApp HP, tunggu kartu muncul (± 10 dtk),
+baru kirim.
+
+---
+
 ## Template entri baru
 
 ```
