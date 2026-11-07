@@ -117,6 +117,13 @@ describe("Syarat & Ketentuan mencerminkan perilaku kode, bukan sebaliknya", () =
     expect(teks).toContain("dihapus permanen");
   });
 
+  it("tak menjanjikan 'tidak dapat dipulihkan' tanpa menyebut jendela salinan cadangan", () => {
+    // DECISIONS #117: snapshot harian di R2 menyimpan data yang dipurge sampai
+    // lifecycle bucket memusnahkannya (~30 hari). Janji mutlak tanpa itu tak
+    // lagi cocok dengan perilaku sistem.
+    expect(teks).toContain("salinan cadangannya ikut musnah otomatis");
+  });
+
   it("menyebut penangguhan konten — hak yang adminSuspendInvitation sudah jalankan", () => {
     expect(teks).toContain("menangguhkan");
   });

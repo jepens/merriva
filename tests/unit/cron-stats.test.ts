@@ -52,6 +52,9 @@ describe("label statistik", () => {
       "warnFinal",
       "warnNoOwner",
       "warnFailed",
+      // backup-media (laporan skrip host)
+      "files",
+      "bytes",
     ];
     const tanpaLabel = ditulis.filter((k) => !label[k]);
     expect(tanpaLabel).toEqual([]);

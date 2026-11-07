@@ -68,6 +68,9 @@ const JADWAL_JAM: Record<CronJobName, number> = {
   // dan `idempotencyKey` Resend hanya berlaku 24 jam — kadens di bawah itu
   // mencegah peringatan ganda bila penandaan gagal setelah email terkirim.
   "purge-expired": 12,
+  // Backup media harian dari crontab HOST (DECISIONS #117). Basi = 48 jam:
+  // dua snapshot berturut-turut terlewat, bukan satu malam yang tersendat.
+  "backup-media": 24,
 };
 
 export const CRON_JOBS = Object.keys(JADWAL_JAM) as CronJobName[];

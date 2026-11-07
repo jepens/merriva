@@ -20,7 +20,12 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 /** Nama job = segmen route-nya, supaya tak ada peta yang perlu dirawat. */
 export type CronJobName =
-  "expire-orders" | "expire-invitations" | "expiry-reminders" | "purge-expired";
+  | "expire-orders"
+  | "expire-invitations"
+  | "expiry-reminders"
+  | "purge-expired"
+  // Dilaporkan skrip host `scripts/backup-media.sh` (DECISIONS #117).
+  | "backup-media";
 
 export async function recordCronRun(
   name: CronJobName,

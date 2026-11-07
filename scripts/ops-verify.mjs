@@ -487,7 +487,7 @@ async function periksaData(env, app, basisMedia) {
       if (!row) {
         gagal(
           `cron ${nama}`,
-          "BELUM PERNAH jalan — job belum terpasang di Easypanel",
+          "BELUM PERNAH jalan — belum terpasang di crontab host (Fase 3 pasang-cron-host.sh; backup-media: Fase 5 pasang-backup-media.sh)",
         );
         continue;
       }

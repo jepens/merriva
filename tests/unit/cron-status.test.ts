@@ -86,12 +86,20 @@ describe("hitungHealth", () => {
     expect(hitungHealth(baris(25), "purge-expired", NOW)).toBe("basi");
   });
 
-  it("keempat job terdaftar — tak ada yang luput dari panel", () => {
+  it("kelima job terdaftar — tak ada yang luput dari panel", () => {
     expect([...CRON_JOBS].sort()).toEqual([
+      "backup-media",
       "expire-invitations",
       "expire-orders",
       "expiry-reminders",
       "purge-expired",
     ]);
+  });
+
+  it("backup-media harian: basi setelah dua snapshot terlewat (48 jam)", () => {
+    // DECISIONS #117 — snapshot 20:30 UTC. Satu malam yang tersendat (redeploy,
+    // gangguan R2) belum alarm; dua malam berturut-turut sudah.
+    expect(hitungHealth(baris(47), "backup-media", NOW)).toBe("ok");
+    expect(hitungHealth(baris(49), "backup-media", NOW)).toBe("basi");
   });
 });

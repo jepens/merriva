@@ -19,6 +19,7 @@ export const JADWAL_JAM = {
   "expire-invitations": 24,
   "expiry-reminders": 12,
   "purge-expired": 12,
+  "backup-media": 24,
 };
 
 /**

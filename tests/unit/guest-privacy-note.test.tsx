@@ -70,6 +70,16 @@ describe("kebijakan privasi mencerminkan apa yang BENAR-BENAR dikumpulkan", () =
     expect(teks).toContain("luar indonesia");
   });
 
+  it("menyebut backup media: pemrosesnya, lokasinya, dan jendela ~30 hari", () => {
+    // DECISIONS #117: foto (termasuk wajah tamu Album Momen) tersalin harian ke
+    // Cloudflare R2, dan salinan data yang dihapus bertahan sampai lifecycle
+    // bucket memusnahkannya. Pemroses yang tak dinamai adalah pelanggaran (#58).
+    expect(teks).toContain("cloudflare r2");
+    expect(teks).toContain("salinan cadangan");
+    expect(teks).toContain("asia-pasifik");
+    expect(teks).toContain("30 hari");
+  });
+
   it("menyatakan dasar pemrosesan, bukan menjanjikan tarik persetujuan", () => {
     // Dulu kebijakan menjanjikan hak "menarik persetujuan" padahal tak ada
     // persetujuan yang pernah dikumpulkan — klaim yang justru melemahkan posisi

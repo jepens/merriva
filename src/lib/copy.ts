@@ -1724,9 +1724,12 @@ export const copy = {
           warnFinal: "peringatan final",
           warnNoOwner: "peringatan: tanpa pemilik",
           warnFailed: "peringatan gagal",
+          // backup-media (skrip host, DECISIONS #117)
+          files: "berkas dicadangkan",
+          bytes: "ukuran arsip (byte)",
         } as Record<string, string>,
         staleHint:
-          "Melewati dua kali jadwalnya. Periksa scheduled job di panel Easypanel — job yang terhapus atau salah ketik tidak mengirim galat apa pun.",
+          "Melewati dua kali jadwalnya. Periksa crontab host VPS (LAUNCH-CHECKLIST Fase 3; backup-media: Fase 5) — job yang terhapus atau salah ketik tidak mengirim galat apa pun.",
       },
       recentActivity: "Aktivitas admin terakhir",
       noActivity: "Belum ada aktivitas admin.",
@@ -2293,13 +2296,16 @@ export const copy = {
               "Resend — pengiriman email transaksional (kuitansi & pengingat).",
               "Cloudflare Turnstile — perlindungan anti-bot pada formulir publik.",
               "Sentry — pemantauan galat & kinerja pada versi produksi. Laporan galat disaring lebih dulu: token tamu, cookie, header, dan isi formulir dibuang sebelum dikirim.",
+              // Backup media harian (DECISIONS #117). Pemroses yang tak dinamai
+              // adalah pelanggaran (#58) — foto Album Momen memuat wajah tamu.
+              "Cloudflare R2 — penyimpanan salinan cadangan foto & media (terenkripsi saat disimpan, kawasan Asia-Pasifik), terhapus otomatis sekitar 30 hari setelah dibuat.",
               "Masing-masing memproses data sesuai kebijakan privasinya sendiri.",
             ],
           },
           {
             heading: "Tempat data diproses",
             body: [
-              "Basis data dan penyimpanan berkas kami berada di pusat data Singapura. Layanan email, anti-bot, dan pemantauan galat yang kami gunakan juga memproses data di luar Indonesia.",
+              "Basis data dan penyimpanan berkas kami berada di pusat data Singapura; salinan cadangan berkas disimpan di kawasan Asia-Pasifik. Layanan email, anti-bot, dan pemantauan galat yang kami gunakan juga memproses data di luar Indonesia.",
               "Kami memilih penyedia yang menerapkan enkripsi saat transit maupun saat disimpan, serta terikat kebijakan privasinya masing-masing.",
             ],
           },
@@ -2314,6 +2320,7 @@ export const copy = {
             body: [
               "Data disimpan selama akun dan undangan Anda aktif.",
               "Undangan yang telah kedaluwarsa tetap kami simpan hingga 6 bulan agar dapat Anda perpanjang, setelah itu dapat dihapus.",
+              "Salinan cadangan foto & media kami simpan untuk pemulihan bencana dan terhapus otomatis sekitar 30 hari setelah dibuat, termasuk salinan data yang sudah dihapus.",
               "Anda dapat meminta penghapusan akun dan data kapan saja lewat alamat kontak di bawah. Permintaan diverifikasi ke alamat email akun Anda sendiri sebelum dijalankan.",
               "Pengecualian: catatan pesanan (nomor order, nominal, tanggal) tetap kami simpan untuk kewajiban pembukuan, tetapi sudah tidak lagi tertaut pada identitas Anda.",
             ],
@@ -2396,7 +2403,7 @@ export const copy = {
               // berkas kamera aslinya tak pernah sampai ke server (SPEC §4.4).
               // Menyebut "foto galeri bisa diunduh" tanpa batas itu akan menjadi
               // janji ketiga yang salah.
-              "Enam bulan setelah masa aktif berakhir, data pribadi pada undangan tersebut — daftar tamu, RSVP, ucapan, catatan amplop, foto galeri, dan foto Album Momen — dihapus permanen dan tidak dapat dipulihkan. Sebelum tenggat itu Anda dapat mengunduh seluruhnya dari dashboard: daftar tamu beserta RSVP, catatan amplop, foto Album Momen, dan foto galeri sebagai berkas ZIP. Khusus foto galeri, yang kami simpan dan berikan adalah versi 1600 piksel yang tampil di undangan — foto dikompres di perangkat Anda sebelum diunggah sehingga berkas asli dari kamera tidak pernah kami terima; simpan aslinya sendiri.",
+              "Enam bulan setelah masa aktif berakhir, data pribadi pada undangan tersebut — daftar tamu, RSVP, ucapan, catatan amplop, foto galeri, dan foto Album Momen — dihapus permanen dan tidak dapat dipulihkan; salinan cadangannya ikut musnah otomatis sekitar 30 hari kemudian. Sebelum tenggat itu Anda dapat mengunduh seluruhnya dari dashboard: daftar tamu beserta RSVP, catatan amplop, foto Album Momen, dan foto galeri sebagai berkas ZIP. Khusus foto galeri, yang kami simpan dan berikan adalah versi 1600 piksel yang tampil di undangan — foto dikompres di perangkat Anda sebelum diunggah sehingga berkas asli dari kamera tidak pernah kami terima; simpan aslinya sendiri.",
             ],
           },
           {

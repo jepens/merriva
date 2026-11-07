@@ -125,10 +125,10 @@ Driver `local` menyimpan foto & lagu di disk VPS dan menyajikannya lewat route `
    C=$(docker ps --format '{{.Names}}' | grep '^etc_merriva' | head -1)
    docker inspect "$C" --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{println}}{{end}}'
    ```
-   Harus muncul baris yang berujung `/app/data/media`. Host path-nya ada di `/etc/easypanel/projects/etc/merriva/volumes/media`.
+   Harus muncul baris yang berujung `/app/data/media`. Sumbernya volume Docker BERNAMA `<proyek>_merriva_media` (proyek `etc` → `etc_merriva_media`); host path-nya dibaca, bukan ditebak: `docker volume inspect -f '{{.Mountpoint}}' etc_merriva_media` → `/var/lib/docker/volumes/etc_merriva_media/_data`. Bind path `/etc/easypanel/projects/etc/merriva/volumes/media` memang ada tetapi KOSONG — jangan dicadangkan.
 4. Uji daur hidupnya sekali, sekarang juga, selagi belum ada klien: unggah satu foto → **redeploy** → buka editornya lagi. Foto yang masih tampil adalah satu-satunya bukti yang berarti.
 
-Backup: tidak ada bawaan. Isinya `/etc/easypanel/projects/etc/merriva/volumes/media` — ikutkan ke rutinitas backup VPS (LAUNCH-CHECKLIST Fase 5).
+Backup: snapshot harian volume ini ke R2 lewat crontab host — pemasangan di LAUNCH-CHECKLIST Fase 5, pemulihan di RUNBOOK "Backup & restore media" (DECISIONS #117). Proyek Easypanel bernama selain `etc` → pasang dengan `VOLUME=<proyek>_merriva_media`.
 
 ---
 

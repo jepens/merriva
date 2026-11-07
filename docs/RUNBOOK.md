@@ -8,7 +8,7 @@ Prosedur singkat pemulihan ketika VPS/aplikasi bermasalah. Prinsip inti: **aplik
 |---|---|---|
 | Aplikasi Next.js | Container Docker di VPS (Easypanel) | Ya — tapi bisa dibangun ulang dari repo Git |
 | Database (Postgres + Auth) | Supabase cloud | Tidak |
-| Media (foto & lagu) | **Disk VPS** — volume `/app/data/media` (host: `/etc/easypanel/projects/etc/merriva/volumes/media`); → R2 di M4 | **YA** — satu-satunya komponen yang ikut mati bersama VPS. Selama `STORAGE_DRIVER=local`, backup direktori itu adalah satu-satunya salinan yang ada |
+| Media (foto & lagu) | **Disk VPS** — volume Docker bernama `etc_merriva_media`, di kontainer `/app/data/media` (host: `/var/lib/docker/volumes/etc_merriva_media/_data`; bind path Easypanel `/etc/easypanel/projects/etc/merriva/volumes/media` KOSONG, jangan tertipu); → R2 di M4 | **YA** — satu-satunya komponen yang ikut mati bersama VPS. Salinannya: snapshot harian di bucket R2 `merriva-backup` (DECISIONS #117, bagian "Backup & restore media") |
 | Secrets/env | Panel Easypanel (+ password manager pemilik) | Perlu diisi ulang saat provision baru |
 | DNS | Cloudflare | Tidak |
 
@@ -81,7 +81,7 @@ lebih dulu dari backup (lihat bagian berikutnya).
 1. Provision VPS baru, pasang **Easypanel**.
 2. Buat app dari repo Git (Dockerfile), port `3000` — lihat [`DEPLOYMENT.md`](DEPLOYMENT.md) §3–4.
 3. Isi ulang **environment variables** di panel (dari password manager) — lihat [`../.env.example`](../.env.example). Bila whitelist IP proyek BinderPay sudah diisi, daftarkan IP VPS baru — kalau tidak, setiap panggilan BinderPay gagal dengan galat generik (DECISIONS #99).
-4. **Buat kembali volume media** `/app/data/media` (DEPLOYMENT §4a) lalu **restore isinya dari backup**. Lewati langkah ini dan hasilnya adalah kegagalan yang paling menyesatkan di dokumen ini: situs hidup, dasbor normal, setiap undangan merender — dengan semua fotonya 404, karena baris `media` menyimpan path relatif ke objek yang sudah tak ada salinannya.
+4. **Buat kembali volume media** `/app/data/media` (DEPLOYMENT §4a) lalu **restore isinya dari backup** (bagian "Backup & restore media" di bawah), dan pasang ulang backup-nya (`pasang-backup-media.sh`) — crontab VPS baru kosong. Lewati langkah ini dan hasilnya adalah kegagalan yang paling menyesatkan di dokumen ini: situs hidup, dasbor normal, setiap undangan merender — dengan semua fotonya 404, karena baris `media` menyimpan path relatif ke objek yang sudah tak ada salinannya.
 5. Attach domain `merriva.id` + SSL.
 6. Cloudflare → arahkan DNS `merriva.id` ke IP/host VPS baru (proxy ON).
 7. Verifikasi `https://merriva.id/api/health` **dan** satu URL media nyata (`https://merriva.id/media/songs/<hash>.mp3`).
@@ -93,6 +93,82 @@ lebih dulu dari backup (lihat bagian berikutnya).
 - **Supabase Pro**: backup harian otomatis (retensi 7 hari). Upgrade ke Pro **sebelum** ada klien berbayar.
 - **Latihan restore wajib 1×** sebelum launch (checklist M4): restore backup ke project sementara, verifikasi jumlah baris & login.
 - Restore PITR/backup dilakukan dari **Supabase Dashboard → Database → Backups**.
+
+## Backup & restore media
+
+Selama `STORAGE_DRIVER=local` (DECISIONS #117): snapshot penuh volume
+`etc_merriva_media` tiap 20:30 UTC (03:30 WIB) dari crontab host ke bucket R2
+privat `merriva-backup`, prefix `media/`, satu objek `.tar.zst` per jalan.
+Retensi 30 hari diatur aturan lifecycle bucket. Pemasangan: LAUNCH-CHECKLIST
+Fase 5.
+
+- **Sehat atau tidak:** `/admin` → Scheduled job → `backup-media`, atau
+  `pnpm ops:verify`. "Tidak jalan" = dua malam berturut-turut tanpa laporan
+  (crontab hilang, VPS diganti, `/etc/merriva-cron.conf` rusak). "Gagal"
+  membawa pesannya (`unggah ditolak: HTTP 403 …` = token dicabut/salah scope;
+  `sumber kosong` = volume tak ter-mount).
+- **Log:** `/var/log/merriva-backup.log` di VPS. Jalankan manual:
+  `ssh samsara merriva-backup-media`.
+
+**Memulihkan berkas yang HILANG DARI DISK (VPS masih hidup, baris DB-nya masih
+ada) — per undangan, bukan seluruh snapshot:**
+
+```bash
+ssh samsara
+merriva-backup-media daftar                     # 20 snapshot terbaru
+K=media/merriva-media-<UTC>.tar.zst             # snapshot SEBELUM berkasnya hilang
+INV=<invitation-id>                             # galeri ada di inv/<invitationId>/
+merriva-backup-media unduh "$K" /root/pulih.tar.zst \
+  && D=$(docker volume inspect -f '{{.Mountpoint}}' etc_merriva_media) \
+  && [ -d "$D" ] \
+  && zstd -dc /root/pulih.tar.zst | tar -C "$D" --skip-old-files -xvf - "./inv/$INV"
+rm -f /root/pulih.tar.zst
+```
+
+- Rantai `&&` sengaja: `unduh` yang gagal (koneksi putus, checksum zstd salah)
+  atau volume yang tak ditemukan menghentikan semuanya — tanpa itu `D` kosong
+  membuat tar mengekstrak ke `/`.
+- `--skip-old-files` tak pernah menimpa berkas yang ada, jadi aman pada volume
+  yang hidup — tetapi karena itu pula ia tak memperbaiki berkas RUSAK yang masih
+  ada: hapus dulu berkas rusaknya (`rm "$D/inv/$INV/<mediaId>/1600.webp"`), baru
+  jalankan blok di atas.
+- **Jangan pulihkan seluruh snapshot pada volume yang hidup, dan jangan pulihkan
+  foto yang dihapus LEWAT APLIKASI** (editor, moderasi Album Momen, hapus akun,
+  purge retensi). Barisnya sudah tiada, jadi pelanggan tak tertolong — sementara
+  berkasnya kembali tersaji publik di URL lamanya (`/media` menyajikan berkas
+  apa pun yang ada di disk) dan tak akan pernah di-purge lagi.
+
+**VPS baru (Skenario B langkah 4):** setelah app Easypanel dibuat (volume ada),
+jalankan `pasang-backup-media.sh` dengan token yang sama atau token baru
+ber-scope bucket (LAUNCH-CHECKLIST Fase 5 langkah 4). Proyek Easypanel bernama
+selain `etc` → `VOLUME=<proyek>_merriva_media bash /root/pasang-backup-media.sh`.
+Backup pertamanya GAGAL "sumber kosong", dan memang harus begitu (ia menolak
+mengunggah volume kosong). Pulihkan SELURUH snapshot terbaru — hanya di sini,
+karena volumenya kosong:
+
+```bash
+K=$(merriva-backup-media daftar | tail -1)
+merriva-backup-media unduh "$K" /root/pulih.tar.zst \
+  && D=$(docker volume inspect -f '{{.Mountpoint}}' etc_merriva_media) \
+  && [ -d "$D" ] \
+  && zstd -dc /root/pulih.tar.zst | tar -C "$D" -xf - \
+  && merriva-backup-media                       # kali ini harus OK
+rm -f /root/pulih.tar.zst
+```
+
+**Latihan bulanan (5 menit):** `unduh` snapshot terbaru ke `/tmp`, pastikan
+"utuh (zstd checksum lulus), N berkas" dengan N mendekati
+`find "$D" -type f ! -name '*.tmp' | wc -l`, lalu hapus berkasnya. Backup yang
+tak pernah dipulihkan adalah asumsi, bukan backup.
+
+**UU PDP:** data yang dipurge retensi 6 bulan masih ada di snapshot sampai
+lifecycle menghapusnya (sekitar 30 hari; lifecycle R2 berjalan asinkron). Pemulihan
+snapshot penuh menghidupkan lagi semua yang dipurge sesudah snapshot itu dibuat —
+alasan lain ia hanya untuk volume kosong. Permintaan hapus akun yang menuntut
+pemusnahan segera → hapus juga snapshot yang memuatnya di dashboard R2. Snapshot
+berumur < 7 hari TERKUNCI bucket lock: cabut dulu aturan lock-nya (akun Admin),
+hapus snapshotnya, lalu pasang lagi aturan yang sama — atau jelaskan jendela 30
+hari itu ke pemohon.
 
 ## Data migrasi & skema
 

@@ -6580,6 +6580,86 @@ galeri 8 foto, video, dan watermark pratinjau terkunci, dengan lencana
 
 ---
 
+## #117 — 2026-11-08 · Backup media harian ke R2, hasilnya tercatat di `cron_runs`
+
+**Keputusan (pemilik, 8 Nov 2026 — "kerjakan sesuai rekomendasi"):**
+1. **Snapshot penuh harian** volume media (`etc_merriva_media`, dibaca lewat
+   `docker volume inspect`, bukan path yang ditebak) → `tar` + `zstd` → satu
+   objek per jalan di **bucket R2 privat**, kunci ber-cap waktu
+   (`media/merriva-media-<UTC>.tar.zst`) yang tak pernah menimpa objek lama.
+   Skrip host `scripts/backup-media.sh`, dipasang idempoten oleh
+   `scripts/pasang-backup-media.sh` (pola `pasang-cron-host.sh`), jalan
+   20:30 UTC (03:30 WIB) dari crontab host. Berkas `*.tmp` (tulisan driver
+   local yang belum di-rename) tak ikut.
+2. **Unggahan dibuktikan**, bukan diasumsikan: HEAD sesudah PUT harus
+   menunjukkan ukuran yang sama dan ETag (MD5, unggahan satu-bagian) sama dengan
+   MD5 lokal; arsip diuji `zstd -t` sebelum diunggah. Sumber nol berkas = gagal
+   (mount hilang), bukan "backup kosong yang sehat".
+3. **Hasilnya dilaporkan ke `POST /api/cron/backup-media`** (Bearer
+   `CRON_SECRET`, sama dengan cron lain) → baris `cron_runs` "backup-media"
+   (jadwal 24 jam, basi 48 jam) → panel `/admin` dan `pnpm ops:verify`. Sesuai
+   keputusan pemilik di AUDIT-2026-10-01: jejak di panel, bukan dead-man switch
+   eksternal. Backup yang berhenti jalan terlihat sebagai "Tidak jalan".
+4. **Retensi 30 hari lewat aturan lifecycle bucket** (prefix `media/`), bukan
+   oleh skrip — skrip tak pernah menghapus, dan retensi tetap berlaku walau
+   skrip berhenti. Token Object Read & Write R2 tetap BISA menghapus (R2 tak
+   punya izin tulis-tanpa-hapus); yang melindungi snapshot dari root VPS yang
+   dibobol adalah **bucket lock 7 hari** pada prefix yang sama — WAJIB di
+   LAUNCH-CHECKLIST Fase 5, dan hanya akun Admin yang bisa mencabutnya.
+5. **Kegagalan aktif juga ke Sentry** (`cron.backup-media`), sama dengan
+   keempat route cron lain (#60): panel tak mendorong notifikasi, sementara
+   lifecycle terus menghapus snapshot sehat berumur > 30 hari walau yang baru
+   tak pernah masuk.
+
+**Alasan:** selama `STORAGE_DRIVER=local`, volume itu satu-satunya salinan foto
+pelanggan, dan tak ada backup apa pun (cron backup di VPS hanya untuk Directus,
+dan itu pun lokal). Disk rusak = foto pernikahan hilang permanen, sementara
+restore DB justru mengembalikan baris `media` yang menunjuk objek yang tak ada.
+R2 sudah ada di rencana arsitektur (driver `r2`), di luar VPS dan di luar
+Supabase. `curl --aws-sigv4` (curl 8.5 di VPS) cukup — tak ada paket baru.
+Diuji ujung-ke-ujung di ubuntu:24.04 (curl yang sama) terhadap server S3
+SeaweedFS di jaringan internal: 34 cek, termasuk pemulihan yang identik
+byte-per-byte, kunci salah, sumber kosong, volume salah, kunci proses, dan
+backup di tengah unggahan + hapus-folder yang berjalan (tar mentah terbukti
+keluar 1 di bawah churn yang sama). Tiga mutan tertangkap: tanpa pengecualian
+`*.tmp`, tanpa pembersih kutip JSON, dan pembacaan PIPESTATUS sesudah pipeline
+(pola awal — trap ERR tetap terpicu di bawah `set +e`, sehingga toleransi tar
+exit 1 tak pernah jalan; ditemukan tinjauan adversarial).
+
+**Ditolak:**
+- *rclone/restic* — paket baru di VPS bersama 20 aplikasi; untuk ~14 MB tak
+  sepadan. Ditinjau ulang bila arsip mendekati batas satu PUT (skrip menolak di
+  atas 4,5 GB dengan pesan jelas).
+- *Sinkron inkremental* — snapshot penuh lebih sederhana dipulihkan (satu
+  berkas) dan murah pada ukuran sekarang.
+- *Enkripsi sisi-klien* — R2 sudah mengenkripsi saat disimpan; kunci tambahan
+  yang hilang = semua backup tak terbaca. Akses dibatasi token ber-scope satu
+  bucket yang hanya terbaca root.
+- *Bucket Supabase Storage* — butuh service-role key (kuasa penuh DB) di host,
+  tanpa aturan lifecycle, dan ikut risiko pause free tier.
+
+**Konsekuensi:**
+- **Data yang dipurge retensi UU PDP masih ada di backup paling lama 30 hari.**
+  Teksnya diperbarui atas persetujuan pemilik (8 Nov 2026), ter-deploy SEBELUM
+  installer dijalankan (langkah 0 LAUNCH-CHECKLIST Fase 5): /privasi menamai
+  Cloudflare R2 sebagai pemroses (#58), menyebut lokasi Asia-Pasifik dan
+  jendela ~30 hari; /syarat menambahkan "salinan cadangannya ikut musnah
+  otomatis sekitar 30 hari kemudian" di belakang "dihapus permanen". Dijaga
+  test (`guest-privacy-note`, `support-copy`).
+- Sampai pemilik membuat bucket dan menjalankan installer, `/admin` menampilkan
+  backup-media "Belum pernah jalan" dan `ops:verify` GAGAL di butir itu —
+  sengaja, supaya pemasangannya tak terlupa.
+- Snapshot < 7 hari terkunci: pemusnahan segera atas permintaan hapus akun
+  butuh mencabut aturan lock lebih dulu (RUNBOOK, paragraf UU PDP).
+- Pemulihan dilakukan PER UNDANGAN (`./inv/<id>`), bukan seluruh snapshot:
+  `/media` menyajikan berkas apa pun di disk, jadi memulihkan foto yang sudah
+  dihapus lewat aplikasi (barisnya tiada) menghidupkannya lagi secara publik
+  dan permanen. Snapshot penuh hanya untuk volume kosong (VPS baru).
+- Pindah ke `STORAGE_DRIVER=r2` kelak mengubah sumbernya; skrip ini hanya untuk
+  driver `local`.
+
+---
+
 ## Template entri baru
 
 ```
