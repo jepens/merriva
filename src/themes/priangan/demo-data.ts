@@ -41,31 +41,31 @@ export const demoInvitationData: InvitationData = {
     },
     story: [
       {
-        title: "Patepang Munggaran",
+        title: "Pertemuan Pertama",
         date: "2021",
         narrative:
           "Bertemu pertama kali di sanggar angklung kampus — satu nada, dua hati yang saling menyelaraskan irama.",
       },
       {
-        title: "Ngalamar",
+        title: "Lamaran",
         date: "2024",
         narrative:
           "Keluarga Galih datang membawa niat baik; seserahan diterima dengan haru dan doa.",
       },
       {
-        title: "Pawiwahan",
+        title: "Pernikahan",
         date: "2027",
         narrative:
           "Dengan doa restu kedua keluarga, kami melangkah ke jenjang pernikahan.",
       },
     ],
     greetingOpen:
-      "Wilujeng sumping — dengan rahmat Allah ﷻ dan restu kedua orang tua, kami bermaksud menyatukan dua hati dalam ikatan pernikahan.",
+      "Dengan rahmat Allah ﷻ dan restu kedua orang tua, kami bermaksud menyatukan dua hati dalam ikatan pernikahan.",
     greetingClose:
-      "Hatur nuhun kana sadaya perhatosanana — mugia kersa rawuh sareng maparin du'a restu.",
+      "Terima kasih atas segala perhatiannya — merupakan kebahagiaan bagi kami apabila Bapak/Ibu berkenan hadir dan memberikan doa restu.",
     quote: {
-      text: "Silih asih, silih asah, silih asuh.",
-      source: "Pepatah Sunda",
+      text: "Saling mengasihi, saling mengasah diri, saling menjaga.",
+      source: "Falsafah Sunda",
     },
     envelope: {
       enabled: true,
@@ -95,7 +95,7 @@ export const demoInvitationData: InvitationData = {
     },
     {
       id: "demo-resepsi",
-      name: "Resepsi · Ngunduh Mantu",
+      name: "Resepsi",
       startAt: "2027-01-23T04:00:00.000Z", // 11.00 WIB
       endAt: "2027-01-23T08:00:00.000Z",
       venueName: "Bale Pakuan Convention Hall",

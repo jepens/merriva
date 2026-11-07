@@ -6660,6 +6660,28 @@ exit 1 tak pernah jalan; ditemukan tinjauan adversarial).
 
 ---
 
+## #118 — 2026-11-08 · Teks undangan seluruhnya Bahasa Indonesia; identitas daerah lewat visual
+
+**Keputusan (pemilik, 5 Nov 2026; dicatat 8 Nov saat di-commit):** tak ada
+bahasa daerah di teks undangan mana pun — label sampul, sapaan, hitung mundur,
+judul section, cerita & data demo. Tema daerah membawa identitasnya lewat
+VISUAL, bukan bahasa. Diterapkan pada tiga tema yang sebelumnya berbahasa
+daerah: **Kirana** (Jawa — kini dengan ornamen gunungan, wayang putra/putri,
+sulur, dan pita truntum di `public/ornaments/kirana/`, dipetakan di
+`src/themes/kirana/ornaments.ts`), **Marawa** (Minang), dan **Priangan** (Sunda;
+"sareng" → "&").
+
+**Alasan:** tamu undangan berasal dari berbagai daerah; sapaan dan judul yang
+tak dipahami sebagian tamu mengurangi keterbacaan undangan, sementara
+identitas budaya tetap tersampaikan oleh rupa (motif, ornamen, palet).
+
+**Konsekuensi:** tema daerah baru mengikuti aturan yang sama — istilah budaya
+boleh muncul sebagai nama motif/acara yang umum dikenal (mis. "truntum"),
+bukan sebagai bahasa pengantar. Kalimat fallback di `index.tsx` tema (mis.
+"Mempelai Pria/Wanita") ikut diseragamkan.
+
+---
+
 ## Template entri baru
 
 ```

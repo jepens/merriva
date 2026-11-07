@@ -26,6 +26,7 @@ import { copy } from "@/lib/copy";
 import { ThemeVideo, type VideoView } from "@/themes/_shared/video";
 
 import { L } from "./labels";
+import { ORN } from "./ornaments";
 
 const PRELINE = { whiteSpace: "pre-line" as const };
 
@@ -40,12 +41,42 @@ function MaskLine({ children }: { children: ReactNode }) {
 
 const initialOf = (s: string) => (s.trim()[0] ?? "•").toUpperCase();
 
-/** Ukel divider — ornamen line-art yang menggambar diri saat scroll. */
-function Ukel() {
+/** Pita truntum — pembatas antar-section (ubin webp seamless, tepi memudar). */
+function TruntumBand() {
   return (
-    <svg className="kr-ukel kr-draw" viewBox="0 0 240 36" aria-hidden>
-      <path d="M8 18 H86 M154 18 H232 M120 4 C 106 4 100 16 108 24 C 114 30 124 28 124 20 C 124 14 118 12 114 16 M120 4 C 134 4 140 16 132 24 C 126 30 116 28 116 20" />
-    </svg>
+    <div className="kr-reveal">
+      <div className="kr-pita" aria-hidden />
+    </div>
+  );
+}
+
+/** Sepasang sulur lung-lungan di sudut kartu (aset sudut kiri-bawah dirotasi). */
+function SulurCorners() {
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        className="kr-sulur kr-sulur--tl"
+        src={ORN.sulur}
+        alt=""
+        width={480}
+        height={480}
+        loading="lazy"
+        decoding="async"
+        aria-hidden
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        className="kr-sulur kr-sulur--br"
+        src={ORN.sulur}
+        alt=""
+        width={480}
+        height={480}
+        loading="lazy"
+        decoding="async"
+        aria-hidden
+      />
+    </>
   );
 }
 
@@ -63,7 +94,7 @@ export function Hero({ greetingOpen }: { greetingOpen?: string }) {
       <p className="kr-lead kr-reveal" style={PRELINE}>
         {greetingOpen ?? L.hero.lead}
       </p>
-      <Ukel />
+      <TruntumBand />
     </header>
   );
 }
@@ -105,20 +136,7 @@ function Keraton({
   return (
     <div className="kr-keraton kr-reveal">
       <div className="kr-keraton__inner">
-        <svg
-          className="kr-tr-corner kr-tr-corner--a kr-draw"
-          viewBox="0 0 40 40"
-          aria-hidden
-        >
-          <path d="M2 38 V10 C2 5 5 2 10 2 H38 M8 30 C 8 20 14 12 26 10" />
-        </svg>
-        <svg
-          className="kr-tr-corner kr-tr-corner--b kr-draw"
-          viewBox="0 0 40 40"
-          aria-hidden
-        >
-          <path d="M2 38 V10 C2 5 5 2 10 2 H38 M8 30 C 8 20 14 12 26 10" />
-        </svg>
+        <SulurCorners />
         <div className="kr-foto-oval">
           <div className="kr-foto-oval__ph" aria-hidden>
             {photo ? (
@@ -164,6 +182,38 @@ export function Couple({
       <div className="kr-center kr-reveal">
         <span className="kr-eyebrow">{L.couple.eyebrow}</span>
       </div>
+      <div className="kr-pengapit kr-reveal" aria-hidden>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={ORN.wayangPutri}
+          alt=""
+          width={420}
+          height={833}
+          loading="lazy"
+          decoding="async"
+        />
+        {/* Kayon kecil di antara sepasang wayang — ikonografi pakeliran.
+            Aset sama dengan cover → sudah ter-cache. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="kr-pengapit__gn"
+          src={ORN.gunungan}
+          alt=""
+          width={700}
+          height={1050}
+          loading="lazy"
+          decoding="async"
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={ORN.wayangPutra}
+          alt=""
+          width={420}
+          height={833}
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
       <div className="kr-couple">
         <Keraton
           person={bride}
@@ -178,6 +228,7 @@ export function Couple({
           photo={groomPhoto}
         />
       </div>
+      <TruntumBand />
     </section>
   );
 }
@@ -188,6 +239,7 @@ export function CountdownBlock({ targetIso }: { targetIso: string }) {
     <section className="kr-section kr-center">
       <span className="kr-eyebrow kr-reveal">{L.countdown.eyebrow}</span>
       <div className="kr-cd-frame kr-reveal">
+        <SulurCorners />
         <Countdown
           targetIso={targetIso}
           labels={{
@@ -322,6 +374,7 @@ export function Schedule({
           </a>
         </div>
       ) : null}
+      <TruntumBand />
     </section>
   );
 }
@@ -466,6 +519,7 @@ export function Envelope({
           <GiftConfirm slug={slug} />
         </div>
       </div>
+      <TruntumBand />
     </section>
   );
 }

@@ -63,7 +63,7 @@ export function PrianganCover({
 
   // Nama yang lebih lebar dari sampul pada ukuran desain terpotong masker
   // `.pg-line` — kecilkan HANYA baris nama itu (_shared/fit-names.ts). Baris
-  // pertama & terakhir h1 = nama; baris tengahnya "sareng".
+  // pertama & terakhir h1 = nama; baris tengahnya "&".
   useEffect(() => {
     const inner = innerRef.current;
     const h1 = inner?.querySelector<HTMLElement>(".pg-cover__names");
@@ -160,7 +160,7 @@ export function PrianganCover({
         <h1 className="pg-cover__names">
           <Line>{brideName}</Line>
           <span className="pg-line">
-            <span className="pg-cover__sareng">sareng</span>
+            <span className="pg-cover__sareng">&amp;</span>
           </span>
           <Line>{groomName}</Line>
         </h1>

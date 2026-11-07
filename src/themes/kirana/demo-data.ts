@@ -3,7 +3,7 @@ import type { InvitationData } from "@/types/invitation";
 
 /**
  * Data contoh pratinjau tema Kirana (wedding adat Jawa modern) — acuan
- * `prototypes/kirana-story.html` (Larasati & Panji — Dhaup Ageng, Surakarta).
+ * `prototypes/kirana-story.html` (Larasati & Panji, Surakarta).
  * Foto galeri = gradasi SVG data-URI palet sogan (coklat batik + krem lawas +
  * emas) agar mandiri (tanpa request eksternal). Waktu WIB disimpan sebagai UTC.
  */
@@ -41,31 +41,31 @@ export const demoInvitationData: InvitationData = {
     },
     story: [
       {
-        title: "Witing Tresna",
+        title: "Awal Bertemu",
         date: "2019",
         narrative:
-          "Berjumpa di sanggar tari keraton — dua langkah yang tanpa sengaja saling menyelaraskan irama gending.",
+          "Berjumpa di sanggar tari keraton — dua langkah yang tanpa sengaja saling menyelaraskan irama.",
       },
       {
-        title: "Semi Truntum",
+        title: "Tumbuh Bersama",
         date: "2023",
         narrative:
           "Seperti motif truntum yang bersemi kembali, rasa itu tumbuh perlahan menjadi niat yang teguh.",
       },
       {
-        title: "Dhaup Ageng",
+        title: "Menuju Pelaminan",
         date: "2027",
         narrative:
           "Kini kami memohon doa restu untuk bersanding, menyatukan dua keluarga dalam satu rumah.",
       },
     ],
     greetingOpen:
-      "Kanthi nyuwun berkah saking Gusti, kami mengundang Bapak/Ibu/Saudara/i untuk hadir dan memberikan doa restu di hari bahagia kami.",
+      "Dengan memohon berkah Tuhan Yang Maha Esa, kami mengundang Bapak/Ibu/Saudara/i untuk hadir dan memberikan doa restu di hari bahagia kami.",
     greetingClose:
-      "Atur nuwun — merupakan kebahagiaan bagi kami apabila Bapak/Ibu berkenan rawuh paring pangestu.",
+      "Terima kasih — merupakan kebahagiaan bagi kami apabila Bapak/Ibu berkenan hadir dan memberikan doa restu.",
     quote: {
-      text: "Witing tresna jalaran saka kulina.",
-      source: "Paribasan Jawa",
+      text: "Cinta tumbuh karena terbiasa bersama.",
+      source: "Peribahasa",
     },
     envelope: {
       enabled: true,
@@ -99,12 +99,12 @@ export const demoInvitationData: InvitationData = {
     },
     {
       id: "demo-panggih",
-      name: "Upacara Panggih",
+      name: "Temu Pengantin",
       startAt: "2027-05-08T03:00:00.000Z", // 10.00 WIB
       endAt: "2027-05-08T04:00:00.000Z",
       venueName: "Pendopo Utama",
       address:
-        "Pertemuan pertama mempelai sebagai suami-istri — lempar sirih, wijikan, dan sinduran; simbol dua insan menuju satu rumah.",
+        "Pertemuan pertama mempelai sebagai suami-istri; simbol dua insan menuju satu rumah.",
       mapsUrl: null,
     },
     {
@@ -113,7 +113,8 @@ export const demoInvitationData: InvitationData = {
       startAt: "2027-05-08T04:00:00.000Z", // 11.00 WIB
       endAt: "2027-05-08T07:00:00.000Z",
       venueName: "Pendopo & Taman",
-      address: "Busana: batik / nuansa sogan — tanpa motif parang, nyuwun sewu",
+      address:
+        "Busana: batik / nuansa cokelat keemasan — mohon tanpa motif parang.",
       mapsUrl: "https://maps.google.com/?q=-7.58,110.82",
     },
   ],

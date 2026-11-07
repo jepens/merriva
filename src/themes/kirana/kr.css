@@ -137,18 +137,81 @@
   opacity: 0;
 }
 
-/* Ornamen line-art (menggambar diri via gsap) ----------------------------- */
-.kr-ukel {
-  display: block;
-  width: min(64vw, 240px);
-  height: auto;
-  margin: 28px auto 0;
+/* Pita truntum — pembatas antar-section dari ubin webp seamless
+   (public/ornaments/kirana/truntum.webp, 234×175; satu baris motif = setengah
+   tinggi ubin → background-size auto 2× tinggi pita). Tepi memudar via mask. */
+.kr-pita {
+  width: min(78vw, 340px);
+  height: 52px;
+  margin: 30px auto 0;
+  background-image: url("/ornaments/kirana/truntum.webp");
+  background-size: auto 104px;
+  background-position: center top;
+  background-repeat: repeat-x;
+  opacity: 0.85;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 18%,
+    #000 82%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 18%,
+    #000 82%,
+    transparent
+  );
 }
-.kr-ukel path {
-  fill: none;
-  stroke: var(--kr-gold);
-  stroke-width: 1.2;
-  stroke-linecap: round;
+
+/* Sulur lung-lungan di sudut kartu — aset ber-bidang kiri-bawah, dirotasi per
+   sudut. Dekoratif murni (aria-hidden), lazy. */
+.kr-sulur {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  pointer-events: none;
+  opacity: 0.95;
+}
+.kr-sulur--tl {
+  top: 6px;
+  left: 6px;
+  transform: rotate(90deg);
+}
+.kr-sulur--br {
+  bottom: 6px;
+  right: 6px;
+  transform: rotate(-90deg);
+}
+/* Bingkai hitung mundur lebih ramping → sulur lebih kecil agar tak menyentuh
+   angka. */
+.kr-cd-frame .kr-sulur {
+  width: 54px;
+  height: 54px;
+}
+
+/* Sepasang wayang kulit mengapit gunungan kecil — pembuka section mempelai.
+   Putri menghadap kanan (kiri panggung), putra menghadap kiri (kanan) →
+   keduanya saling berhadapan. */
+.kr-pengapit {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(10px, 4vw, 26px);
+  margin: 26px auto 0;
+  max-width: 420px;
+}
+.kr-pengapit img {
+  width: min(27vw, 118px);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 14px 22px rgba(69, 45, 21, 0.25));
+}
+.kr-pengapit img.kr-pengapit__gn {
+  width: min(15vw, 64px);
+  margin-bottom: 10px;
+  flex: none;
 }
 
 /* ---------------------------------------------------------------- Cover --- */
@@ -205,33 +268,41 @@
 }
 .kr-gunungan-wrap {
   position: relative;
-  width: min(64vw, 250px);
-  margin: 10px auto 2px;
+  width: min(50vw, 200px);
+  margin: 14px auto 0;
 }
-.kr-gunungan {
+/* Gunungan ukiran raster (latar transparan) — pengganti line-art lama. */
+.kr-gunungan-foto {
   width: 100%;
   height: auto;
   display: block;
+  filter: drop-shadow(0 20px 32px rgba(69, 45, 21, 0.3));
 }
-.kr-gunungan path {
-  fill: none;
-  stroke: var(--kr-gold);
-  stroke-width: 1.4;
-  stroke-linecap: round;
+/* Layar pendek: kecilkan gunungan agar seluruh isi cover tetap muat. */
+@media (max-height: 700px) {
+  .kr-gunungan-wrap {
+    width: min(42vw, 165px);
+  }
+  .kr-guest {
+    margin: 14px auto 16px;
+  }
+  .kr-cover__hint {
+    display: none;
+  }
 }
-.kr-gunungan .kr-gn-sg {
-  stroke: var(--kr-sogan);
-  stroke-width: 1.1;
+@media (max-height: 580px) {
+  .kr-gunungan-wrap {
+    width: min(34vw, 125px);
+  }
 }
-/* Kolom grid selebar tengah gunungan, bukan seketat nama terlebar: di kolom
-   seketat teks lebar konten masker = lebar teksnya, jadi luapan keluar gunungan
-   tak pernah terukur dan selisih sub-piksel membuat pengepas
-   (_shared/fit-names.ts) mengecilkan nama yang sebenarnya muat. Teks tetap
-   terpusat oleh text-align. */
+/* Bidang nama di BAWAH gunungan (ukiran terlalu padat untuk teks di atasnya).
+   Kolom grid selebar cover, bukan seketat nama terlebar: di kolom seketat teks
+   lebar konten masker = lebar teksnya, jadi luapan tak pernah terukur dan
+   selisih sub-piksel membuat pengepas (_shared/fit-names.ts) mengecilkan nama
+   yang sebenarnya muat. Teks tetap terpusat oleh text-align. */
 .kr-gn-center {
-  position: absolute;
-  inset: 30% 8% 16%;
   display: grid;
+  margin-top: 14px;
   /* Baris "&" seukuran isinya: maskernya (overflow:hidden) boleh menyusut ke 0
      di trek auto, jadi saat nama membungkus seluruh kekurangan tinggi bidang
      tengah diserap "&" dan ia hilang. */
@@ -244,7 +315,7 @@
 .kr-gn-name {
   font-family: var(--kr-disp-stack);
   font-weight: 500;
-  font-size: clamp(30px, 8.5vw, 40px);
+  font-size: clamp(26px, 7.5vw, 36px);
   line-height: 1.14;
   color: var(--kr-sogan-d);
   min-width: 0;
@@ -409,26 +480,7 @@
   text-align: center;
   position: relative;
 }
-.kr-tr-corner {
-  position: absolute;
-  width: 40px;
-  height: 40px;
-  pointer-events: none;
-}
-.kr-tr-corner path {
-  fill: none;
-  stroke: var(--kr-gold);
-  stroke-width: 1.1;
-}
-.kr-tr-corner--a {
-  top: 10px;
-  left: 10px;
-}
-.kr-tr-corner--b {
-  bottom: 10px;
-  right: 10px;
-  transform: rotate(180deg);
-}
+/* Sudut kartu keraton memakai .kr-sulur (lihat blok ornamen di atas). */
 .kr-foto-oval {
   width: 150px;
   height: 186px;

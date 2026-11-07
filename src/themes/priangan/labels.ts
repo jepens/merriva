@@ -6,24 +6,24 @@
  */
 export const L = {
   cover: {
-    eyebrow: "Pawiwahan · Undangan Pernikahan",
-    recipient: "Kahatur Bapak/Ibu/Saudara/i",
+    eyebrow: "Undangan Pernikahan",
+    recipient: "Kepada Yth. Bapak/Ibu/Saudara/i",
     recipientFallback: "Tamu Undangan",
     open: "Buka Undangan",
-    hint: "Gulir saparantos dibuka",
+    hint: "Gulir setelah terbuka",
   },
   hero: {
-    eyebrow: "Wilujeng Sumping",
+    eyebrow: "Selamat Datang",
     lead: "Dengan rahmat Allah ﷻ dan restu kedua orang tua, kami bermaksud menyatukan dua hati dalam ikatan pernikahan.",
   },
   quote: {
-    fallbackText: "Silih asih, silih asah, silih asuh.",
-    fallbackSource: "Pepatah Sunda",
-    caption: "Pepatah Sunda",
+    fallbackText: "Saling mengasihi, saling mengasah diri, saling menjaga.",
+    fallbackSource: "Falsafah Sunda",
+    caption: "Falsafah Sunda",
   },
   couple: {
-    eyebrow: "Calon Pangantén · Kedua Mempelai",
-    heading: "Neda Pidu'a",
+    eyebrow: "Kedua Mempelai",
+    heading: "Memohon Doa Restu",
     bride: "Mempelai Wanita",
     groom: "Mempelai Pria",
     parents: (father?: string, mother?: string) => {
@@ -36,16 +36,16 @@ export const L = {
     },
   },
   countdown: {
-    eyebrow: "Ngitung Dinten · Menghitung Hari",
-    done: "Dinten anu diantos-antos parantos sumping",
+    eyebrow: "Menghitung Hari",
+    done: "Hari yang dinanti telah tiba",
     days: "Hari",
     hours: "Jam",
     minutes: "Menit",
     seconds: "Detik",
   },
   schedule: {
-    eyebrow: "Rangkaian Acara",
-    heading: "Hatur Uninga",
+    eyebrow: "Jadwal",
+    heading: "Rangkaian Acara",
     maps: "Petunjuk Lokasi",
     calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
@@ -54,7 +54,7 @@ export const L = {
   },
   gallery: { eyebrow: "Galeri", heading: "Potret Kenangan", caption: "Foto" },
   video: { eyebrow: "Video", heading: "Kenangan Bergerak" },
-  story: { eyebrow: "Lalampahan", heading: "Kisah Kami" },
+  story: { eyebrow: "Perjalanan", heading: "Kisah Kami" },
   envelope: {
     eyebrow: "Tanda Kasih",
     heading: "Kirim Hadiah",
@@ -65,9 +65,9 @@ export const L = {
     holder: "a.n.",
   },
   footer: {
-    eyebrow: "Hatur Nuhun",
+    eyebrow: "Terima Kasih",
     thanks:
-      "Mugia kersa rawuh sareng maparin du'a restu — hatur nuhun kana sadaya perhatosanana.",
+      "Merupakan kehormatan bagi kami apabila Bapak/Ibu berkenan hadir dan memberikan doa restu — terima kasih atas segala perhatiannya.",
     by: "Dibuat dengan",
     brand: "Merriva",
   },

@@ -40,30 +40,30 @@ export const demoInvitationData: InvitationData = {
     },
     story: [
       {
-        title: "Basuo di Rantau",
+        title: "Bertemu di Rantau",
         date: "2020",
         narrative:
-          "Bertemu di perantauan Jakarta, dipertemukan komunitas urang awak.",
+          "Bertemu di perantauan Jakarta, dipertemukan komunitas sesama perantau Minang.",
       },
       {
-        title: "Maminang",
+        title: "Lamaran",
         date: "2025",
         narrative:
-          "Keluarga datang maminang; kedua kaum sepakat, tando diikat.",
+          "Keluarga datang melamar; kedua keluarga sepakat, ikatan diresmikan.",
       },
       {
-        title: "Baralek Gadang",
+        title: "Pernikahan",
         date: "2027",
         narrative: "Doa dan restu mengiringi langkah kami ke pelaminan.",
       },
     ],
     greetingOpen:
-      "Dengan memohon rahmat Allah ﷻ serta restu niniak mamak dan keluarga, kami bermaksud melangsungkan pernikahan.",
+      "Dengan memohon rahmat Allah ﷻ serta restu keluarga besar, kami bermaksud melangsungkan pernikahan.",
     greetingClose:
-      "Sagalo kehadiran jo doa restu Bapak/Ibu adolah kehormatan bagi kaluargo kami.",
+      "Segala kehadiran dan doa restu Bapak/Ibu adalah kehormatan bagi keluarga kami.",
     quote: {
-      text: "Adat basandi syarak, syarak basandi Kitabullah.",
-      source: "Pepatah Minang",
+      text: "Adat bersendikan syariat, syariat bersendikan Kitabullah.",
+      source: "Falsafah Minangkabau",
     },
     envelope: {
       enabled: true,
@@ -97,7 +97,7 @@ export const demoInvitationData: InvitationData = {
     },
     {
       id: "demo-baralek",
-      name: "Baralek · Resepsi",
+      name: "Resepsi",
       startAt: "2027-02-06T04:00:00.000Z", // 11.00 WIB
       endAt: "2027-02-06T09:00:00.000Z",
       venueName: "Istana Bung Hatta Ballroom",

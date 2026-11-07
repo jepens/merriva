@@ -171,7 +171,7 @@ const FONT_VARS = [
 /**
  * Tema "Kirana" (wedding adat Jawa modern, tier Story) — acuan
  * `prototypes/kirana-story.html`. Motif truntum & gunungan line-art, palet
- * sogan, rangkaian upacara termasuk Panggih. SERVER component: section dirender
+ * sogan, rangkaian upacara termasuk Temu Pengantin. SERVER component: section dirender
  * di server (SSR/ISR) lalu dibungkus `CoverGate` (klien) yang memegang cover +
  * musik (`coverMode:'theme'`). TIDAK mengambil data sendiri (SPEC §7.1); section
  * tampil sesuai `settings.sections`. Khusus kategori pernikahan.
@@ -192,9 +192,9 @@ export default function Kirana({ data }: ThemeComponentProps) {
 
   const content = data.content;
   const groomName =
-    content.groom.nickname || content.groom.name || "Mempelai Kakung";
+    content.groom.nickname || content.groom.name || "Mempelai Pria";
   const brideName =
-    content.bride.nickname || content.bride.name || "Mempelai Putri";
+    content.bride.nickname || content.bride.name || "Mempelai Wanita";
 
   const firstEvent = data.events[0];
   const heroDateLabel = firstEvent

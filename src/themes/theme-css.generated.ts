@@ -8,7 +8,7 @@ export const themeCssHrefs: Record<string, string> = {
   "barakah": "/themes/barakah.594a133984.css",
   "eternal-rose": "/themes/eternal-rose.928839d128.css",
   "festa": "/themes/festa.d1f360b373.css",
-  "kirana": "/themes/kirana.5b8d64bc99.css",
+  "kirana": "/themes/kirana.74d3f62653.css",
   "lumina": "/themes/lumina.bbd16cf67e.css",
   "marawa": "/themes/marawa.8812c1ec6d.css",
   "meihua": "/themes/meihua.7a6c960ceb.css",
