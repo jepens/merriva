@@ -272,6 +272,8 @@ export type Database = {
           purged_at: string | null;
           reminder_sent_at: string | null;
           settings: Json;
+          share_template: string | null;
+          share_template_general: string | null;
           slug: string;
           status: Database["public"]["Enums"]["invitation_status"];
           theme_id: string;
@@ -292,6 +294,8 @@ export type Database = {
           purged_at?: string | null;
           reminder_sent_at?: string | null;
           settings?: Json;
+          share_template?: string | null;
+          share_template_general?: string | null;
           slug: string;
           status?: Database["public"]["Enums"]["invitation_status"];
           theme_id: string;
@@ -312,6 +316,8 @@ export type Database = {
           purged_at?: string | null;
           reminder_sent_at?: string | null;
           settings?: Json;
+          share_template?: string | null;
+          share_template_general?: string | null;
           slug?: string;
           status?: Database["public"]["Enums"]["invitation_status"];
           theme_id?: string;

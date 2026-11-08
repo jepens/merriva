@@ -228,5 +228,38 @@ export async function markWaClickedAction(
   if (error) return { status: "error", message: copy.common.error };
 
   revalidatePath(`/dashboard/undangan/${invitationId}/sebar`);
+  revalidatePath(`/dashboard/undangan/${invitationId}/tamu`);
+  return { status: "success" };
+}
+
+/**
+ * Batalkan tanda "terkirim" (DECISIONS #120). Penanda kini juga dipasang saat
+ * "Salin pesan" dan saat tombol kirim diketuk SEBELUM pemilik benar-benar
+ * mengirim (WhatsApp tak memberi sinyal terkirim lewat tautan resmi), jadi
+ * salah ketuk / salah pilih kontak / batal kirim harus bisa ditarik kembali.
+ * `first_viewed_at` TIDAK disentuh — itu bukti tamu membuka link, bukan tanda
+ * pemilik. Auth → RLS `guests_update` (kepemilikan) → validasi id → update.
+ */
+export async function unmarkWaClickedAction(
+  invitationId: string,
+  guestId: string,
+): Promise<DeleteGuestResult> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "error" };
+  if (!isUuid(invitationId) || !isUuid(guestId)) return { status: "error" };
+
+  const { error } = await supabase
+    .from("guests")
+    .update({ wa_clicked_at: null })
+    .eq("id", guestId)
+    .eq("invitation_id", invitationId);
+
+  if (error) return { status: "error", message: copy.common.error };
+
+  revalidatePath(`/dashboard/undangan/${invitationId}/sebar`);
+  revalidatePath(`/dashboard/undangan/${invitationId}/tamu`);
   return { status: "success" };
 }

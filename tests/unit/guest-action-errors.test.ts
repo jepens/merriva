@@ -196,6 +196,16 @@ describe("submitRsvpAction — galat DB tak boleh terdengar permanen / tersimpan
     });
   });
 
+  it("link UMUM (tanpa token): jumlah orang dibatasi 4, bukan 2 (DECISIONS #120)", async () => {
+    const umum = { ...input, guestToken: undefined };
+    await submitRsvpAction({ ...umum, pax: 6 });
+    await submitRsvpAction({ ...umum, pax: 3 });
+    expect(refs.inserts.map((i) => i.payload)).toMatchObject([
+      { guest_id: null, pax: 4 },
+      { guest_id: null, pax: 3 },
+    ]);
+  });
+
   it("undangan memang tak aktif (tanpa galat) → tetap pesan 'ditutup'", async () => {
     refs.tables.invitations = {
       data: { id: "inv-1", status: "expired" },

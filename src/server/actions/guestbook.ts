@@ -6,6 +6,7 @@ import { checkClientRateLimit, getClientIp } from "@/lib/request-ip";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { settingsSchema } from "@/lib/validation/content";
+import { RSVP_PAX_TANPA_TOKEN } from "@/lib/rsvp-limits";
 import {
   giftNoteSchema,
   rsvpSchema,
@@ -105,9 +106,10 @@ export async function submitRsvpAction(input: RsvpInput): Promise<RsvpResult> {
   const moderated =
     settingsSchema.safeParse(inv.settings).data?.moderateGuestbook ?? true;
 
-  // Tamu bertoken (opsional): kap pax = alokasi; tanpa token maks 2.
+  // Tamu bertoken (opsional): kap pax = alokasi; tanpa token maks
+  // RSVP_PAX_TANPA_TOKEN (4, DECISIONS #120).
   let guestId: string | null = null;
-  let paxCap = 2;
+  let paxCap = RSVP_PAX_TANPA_TOKEN;
   if (d.guestToken) {
     const { data: guest, error: guestError } = await admin
       .from("guests")

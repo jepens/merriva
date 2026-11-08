@@ -4,7 +4,8 @@ import { z } from "zod";
  * Skema RSVP + ucapan (SPEC §4.6) — satu form gabungan. Divalidasi ulang di
  * server (`submitRsvpAction`). `website` = honeypot (harus kosong; diperiksa di
  * action, bukan sebagai error field). Batas `pax` sebenarnya (alokasi tamu /
- * maks 2 tanpa token) ditegakkan di server, bukan di skema.
+ * `RSVP_PAX_TANPA_TOKEN` tanpa token, lib/rsvp-limits.ts) ditegakkan di
+ * server, bukan di skema.
  */
 
 export const RSVP_ATTENDANCE = ["yes", "no"] as const;

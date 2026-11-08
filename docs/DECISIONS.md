@@ -6734,6 +6734,93 @@ baru kirim.
 
 ---
 
+## #120 — 2026-11-08 · Sebar Undangan: kirim ke semua tamu, ter-tracking, template tersimpan, pesan umum
+
+**Masalah (pemilik, klien nyata `rani-wanda`):** 222 tamu, 0 bernomor WA →
+tombol "Kirim via WA" (satu-satunya yang mencatat "terkirim") tak pernah
+muncul; alur nyata "salin → buka WhatsApp → tempel → kirim" ×222 tanpa jejak
+siapa yang sudah dikirimi; status "dibuka" (sudah tercatat) tak tampil di
+halaman Sebar; template hilang tiap muat ulang; tak ada pesan untuk tamu yang
+terlupa dari daftar.
+
+**Keputusan (pemilik, 8 Nov 2026 — "paket lengkap"; RSVP umum dinaikkan ke 4):**
+1. **`wa.me/?text=` tanpa nomor** untuk tamu tanpa nomor — FAQ resmi WhatsApp
+   (https://faq.whatsapp.com/5913398998672934): daftar kontak terbuka dengan
+   pesan terisi; terverifikasi `wa.me` → 302 `api.whatsapp.com/send` →
+   `whatsapp://send?text=`. `waShareUrl` kini SELALU mengembalikan tautan.
+2. **Tanda "terkirim" = konfirmasi pemilik**, dipasang saat tombol kirim
+   diketuk (permintaannya berangkat SEBELUM pindah ke WhatsApp — Page Lifecycle:
+   tab tersembunyi bisa dibuang tanpa event) dan saat pesan disalin; bisa
+   dibatalkan (`unmarkWaClickedAction`). Tak ada metode resmi tanpa API yang
+   memberi sinyal terkirim (Web Share pun resolve `undefined`). Status
+   "dibuka" (`first_viewed_at`, dicatat dari klien) adalah sinyal objektif.
+   (Server Action Next diantre serial: bila aksi lain masih berjalan, tanda
+   berangkat sesudahnya; urutan batal→tandai terjamin.) Server MENOLAK →
+   tanda dibalik + diberitahukan; transport putus → tanda lokal dipertahankan
+   + diberitahukan (UPDATE-nya bisa sudah commit; membalik diam-diam memicu
+   kirim ganda). Tamu yang baru ditandai lewat tombol baris tetap menempel di
+   tampilan sampai filter/cari berubah — tanpa itu ketukan kedua jatuh ke
+   tamu berikutnya. Tamu yang menunggu konfirmasi di mode beruntun diingat di
+   sessionStorage, supaya "Sudah terkirim?" muncul lagi bila tab dibuang saat
+   pemilik di WhatsApp.
+3. **Status turunan** (`src/lib/sebar-status.ts`, murni): belum → terkirim →
+   dibuka → hadir/tidak hadir; filter kumulatif + progres + cari. Pola yang
+   sama dengan Katsudoto (Invited/Opened/Going) & Evite ("Viewed").
+4. **Mode "Kirim satu per satu"**: antrean = semua tamu belum dikirim yang cocok
+   dengan pencarian (filter status diabaikan — filter "Terkirim"/"Dibuka" tak
+   pernah memuat yang belum); konfirmasi "Sudah terkirim?" tampil langsung sesudah tombol
+   diketuk dengan fokus di "Ya" — bukan bergantung pada `visibilitychange`
+   (urutan blur/focus/visibility tak konsisten antar-platform, dan di desktop
+   halaman bisa tetap "visible").
+5. **Template tersimpan** di dua kolom baru `invitations.share_template` &
+   `share_template_general` (migrasi 20261108100000; NULL = bawaan, CHECK ≤
+   2.000, GRANT UPDATE kolom ke authenticated — allowlist tetap ketat, diuji
+   pgTAP). Bukan di `settings` JSON: simpanan editor bisa menimpanya dan
+   kolomnya ikut terbaca halaman publik. Template bisa memuat data pribadi
+   (nama keluarga, nomor HP), jadi `purge_invitation_data` (cron retensi &
+   hapus akun) ikut mengosongkannya. Kirim hanya dari template TERSIMPAN:
+   suntingan yang belum disimpan mengunci tombol kirim template itu (per
+   template), karena hilang saat tab dibuang dan pesan berikutnya diam-diam
+   kembali ke teks lama.
+6. **Template bawaan** memuat `{tanggal}` (label dari `event-date-label.ts`,
+   sama dengan kartu pratinjau #119) dan "Undangan ini berupa halaman web di
+   merriva.id — cukup ketuk tautannya, tidak perlu memasang aplikasi apa pun."
+   TIDAK memuat "mohon maaf hanya mengundang lewat pesan" — persis pancingan
+   Tria Stealer (Kaspersky, Feb 2025) — dan tak menjanjikan "tanpa mengunduh
+   berkas" (ada unduhan .ics). Template tanpa `{link}` ditolak server & UI.
+7. **Pesan umum** (link `/{slug}` tanpa token, opsional `?to=Nama` yang sudah
+   disanitasi halaman publik). RSVP tanpa token **maks 4** (dari 2;
+   `src/lib/rsvp-limits.ts` — modul tanpa dependency supaya form RSVP publik
+   tak menyeret Zod ke bundel halaman undangan). Angka di atas batas ditolak
+   form dengan pesan jelas (bukan clamp di onChange — mengetik "3" sesudah
+   "1" menjadi 13 → 4); server tetap memotong sebagai pertahanan.
+
+**Ditolak:** WhatsApp Business Platform (tamu wajib opt-in ke Merriva, undangan
+acara = kategori marketing ±Rp586/pesan, tetap butuh nomor — klien 0/222;
+SPEC tetap Fase 4); API WhatsApp tak resmi (boundary JANGAN PERNAH); Contact
+Picker API (eksperimental, Android Chrome saja); Web Share sebagai jalur utama
+(tak ada sinyal terkirim, Android WebView tak mendukung).
+
+**Konsekuensi / risiko:**
+- Salah pilih kontak di pemilih WhatsApp = tamu lain menerima link personal
+  orang lain → nama tamu ditampilkan besar di mode beruntun & di awal pesan,
+  tanda bisa dibatalkan. Tak bisa dicegah sepenuhnya tanpa nomor tamu.
+- "Terkirim" adalah tanda pemilik, bukan bukti; "Dibuka" ikut tercatat bila
+  pemilik membuka link tamu sendiri — UI memperingatkannya.
+- Menyimpan template mengubah `updated_at` undangan (trigger) → `?v` gambar OG
+  ikut berganti; tak berbahaya.
+- Perilaku `wa.me` tanpa nomor DI DALAM aplikasi (pemilih kontak, emoji/baris
+  baru) wajib diuji di Android, iPhone, dan WhatsApp Desktop sebelum dianggap
+  selesai.
+- Migrasi wajib diterapkan SEBELUM kode di-push: halaman Sebar membaca kolom
+  baru.
+- Teks dasbor Sebar di `copy.ts` ikut ke bundel JS halaman undangan publik
+  (objek `copy` diimpor komponen klien publik) — ±1,1 KB gzip. Diterima demi
+  konvensi "teks terpusat di copy.ts"; bila bundel publik mendekati anggaran,
+  pecah `copy` per permukaan (dasbor vs publik) untuk SEMUA blok sekaligus.
+
+---
+
 ## Template entri baru
 
 ```

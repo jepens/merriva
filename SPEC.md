@@ -152,7 +152,7 @@ Ketentuan teknis: render **SSR + cache ISR** (di-revalidate saat pemilik menyimp
 
 ### 4.6 RSVP, ucapan & amplop
 
-Satu form gabungan: kehadiran (hadir / tidak hadir), jumlah pax (maks. sesuai alokasi tamu; default maks. 2 untuk tamu tanpa token), dan ucapan/doa. Ucapan tampil di dinding (terbaru di atas, paginasi). Pemilik bisa menyembunyikan ucapan tertentu; bila moderasi diaktifkan, ucapan baru tampil setelah disetujui. Konfirmasi amplop (transfer/kado + nominal opsional) bersifat **privat** — hanya terlihat pemilik di dashboard.
+Satu form gabungan: kehadiran (hadir / tidak hadir), jumlah pax (maks. sesuai alokasi tamu; maks. 4 untuk tamu tanpa token — link umum, DECISIONS #120), dan ucapan/doa. Ucapan tampil di dinding (terbaru di atas, paginasi). Pemilik bisa menyembunyikan ucapan tertentu; bila moderasi diaktifkan, ucapan baru tampil setelah disetujui. Konfirmasi amplop (transfer/kado + nominal opsional) bersifat **privat** — hanya terlihat pemilik di dashboard.
 
 **Anti-spam:** Cloudflare Turnstile (invisible) + rate limit per IP + honeypot field. Tanpa CAPTCHA gambar yang mengganggu tamu.
 
@@ -162,9 +162,13 @@ Satu form gabungan: kehadiran (hadir / tidak hadir), jumlah pax (maks. sesuai al
 
 CRUD tamu (nama, no. WA opsional, label/grup, alokasi pax, catatan) · **impor dari Excel/CSV** (template disediakan; hasil impor di-preview dulu, baris bermasalah ditandai) · setiap tamu otomatis mendapat `token` unik → link personal.
 
-Distribusi: halaman "Sebar Undangan" berisi template pesan yang bisa diedit dengan variabel `{nama}`, `{link}`, `{acara}` → per tamu tersedia tombol **"Kirim via WA"** (membuka `wa.me/{nomor}?text={pesan terisi}`) dan **"Salin pesan"**; plus "salin semua" untuk kirim massal manual. Status per tamu: terkirim (ditandai otomatis saat tombol WA diklik), dan **sudah dibuka** (tercatat saat link token pertama kali diakses).
+Distribusi (DECISIONS #120): halaman "Sebar Undangan" berisi dua template pesan yang bisa diedit dan **tersimpan per undangan** — **personal** (`{nama}`, `{link}` personal, `{acara}`, `{tanggal}`) dan **umum tanpa nama tamu** (link polos tanpa token, `{nama}` = nama yang diketik atau "Bapak/Ibu/Saudara/i"). Template bawaan menyebut tanggal acara dan menegaskan undangan berupa halaman web tanpa perlu memasang aplikasi; tidak memakai kalimat "mohon maaf hanya lewat pesan" (pola pancingan penipuan APK). Template wajib memuat `{link}`.
+- **"Kirim via WA" untuk SEMUA tamu**: bernomor → `wa.me/{nomor}?text=`; tanpa nomor → `wa.me/?text=` (WhatsApp membuka daftar kontak dengan pesan terisi). Tetap ada **"Salin pesan"** dan "salin semua" (aksi sekunder).
+- **Status per tamu** (tertinggi yang tampil): belum dikirim → **terkirim** (ditandai otomatis saat tombol kirim diketuk atau pesan disalin; **bisa dibatalkan**) → **dibuka** (tercatat saat link token pertama kali diakses) → hadir / tidak hadir (RSVP tertaut). Ringkasan progres (terkirim/total · dibuka · RSVP), filter (bawaan "Belum dikirim"), dan pencarian nama/grup.
+- **Mode "Kirim satu per satu"**: satu tamu per layar, mengantre semua tamu belum dikirim yang cocok dengan pencarian; setelah membuka WhatsApp pemilik mengonfirmasi "Sudah terkirim?" (ya / belum, kirim ulang / lewati) lalu maju ke tamu berikutnya. WhatsApp tak memberi sinyal terkirim lewat tautan resmi — konfirmasi pemilik adalah satu-satunya sinyal "terkirim"; "dibuka" adalah sinyal objektif.
+- **Kartu "Undangan umum"** untuk tamu yang tak ada di daftar: kirim/salin pesan umum, opsional nama (`?to=Nama`); tidak terlacak per tamu, RSVP-nya tanpa token (maks. 4 orang).
 
-**Kriteria terima:** impor 500 tamu dari Excel < 30 detik dengan laporan baris gagal → link `wa.me` terbuka dengan pesan lengkap & benar di HP → penanda "sudah dibuka" tercatat saat tamu membuka link → limit 500 tamu (Basic) ditegakkan di server → ekspor daftar tamu + status RSVP ke Excel berfungsi.
+**Kriteria terima:** impor 500 tamu dari Excel < 30 detik dengan laporan baris gagal → link `wa.me` terbuka dengan pesan lengkap & benar di HP, **termasuk untuk tamu tanpa nomor (pemilih kontak WhatsApp)** → tanda terkirim tercatat saat kirim/salin dan bisa dibatalkan → penanda "sudah dibuka" tercatat saat tamu membuka link dan tampil di halaman Sebar → template personal & umum tersimpan dan kembali utuh setelah muat ulang → limit 500 tamu (Basic) ditegakkan di server → ekspor daftar tamu + status RSVP ke Excel berfungsi.
 
 ### 4.8 Pembayaran (BinderPay — binderpay.id, API SNAP, dok: binderpay.id/docs)
 

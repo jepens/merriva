@@ -464,25 +464,109 @@ export const copy = {
     cardMomen: "Album Momen",
     cardUpgrade: "Upgrade paket",
     // Sebar Undangan (SPEC §4.7).
+    // Sebar Undangan (SPEC §4.7, DECISIONS #120). Template bawaan memuat tanggal
+    // dan kalimat "tanpa aplikasi": penipuan undangan pernikahan di Indonesia
+    // hampir selalu berupa berkas APK. Sengaja TIDAK memuat "mohon maaf hanya
+    // mengundang lewat pesan" — persis kalimat pancingan Tria Stealer
+    // (Kaspersky, Feb 2025). Jangan pula menjanjikan "tanpa mengunduh berkas":
+    // tombol Simpan Kalender mengunduh .ics.
     sebar: {
       title: "Sebar Undangan",
       subtitle: "Kirim link personal ke tiap tamu lewat WhatsApp.",
       back: "Kembali ke undangan",
-      templateLabel: "Template pesan",
+      templateLabel: "Pesan personal",
       templateHint:
-        "Gunakan {nama}, {link}, dan {acara} — otomatis terisi untuk tiap tamu.",
+        "Gunakan {nama}, {link}, {acara}, dan {tanggal} — otomatis terisi untuk tiap tamu.",
+      templateGeneralLabel: "Pesan umum (tanpa nama tamu)",
+      templateGeneralHint:
+        "{nama} diisi nama yang Anda ketik di kartu Undangan umum, atau “Bapak/Ibu/Saudara/i”.",
+      saveTemplate: "Simpan template",
+      savingTemplate: "Menyimpan…",
+      savedTemplate: "Template tersimpan",
+      resetTemplate: "Kembalikan ke bawaan",
+      unsavedTemplate: "Perubahan template belum disimpan",
+      templateTooLong: "Template terlalu panjang (maks 2.000 karakter).",
+      templateNeedsLink: "Template wajib memuat {link}.",
+      templateNeedsLinkPersonal: "Pesan personal wajib memuat {link}.",
+      templateNeedsLinkGeneral: "Pesan umum wajib memuat {link}.",
+      saveFirst: "Simpan template dulu sebelum mengirim.",
+      markFailed: (nama: string) =>
+        `Tanda untuk ${nama} gagal disimpan — coba lagi.`,
+      markUncertain: (nama: string) =>
+        `Tanda untuk ${nama} mungkin belum tersimpan — muat ulang halaman untuk memastikan.`,
+      unmarkFailed: (nama: string) =>
+        `Pembatalan tanda ${nama} gagal — ${nama} tetap tercatat terkirim.`,
+      unmarkUncertain: (nama: string) =>
+        `Pembatalan tanda ${nama} mungkin belum tersimpan — muat ulang halaman untuk memastikan.`,
+      dateFallback: "hari bahagia kami",
+      generalNameFallback: "Bapak/Ibu/Saudara/i",
+      previewTip:
+        "Di WhatsApp, tunggu kartu pratinjau (foto & nama mempelai) muncul di atas kolom ketik sebelum menekan Kirim. Kartu tak pernah muncul? Pastikan Setelan › Privasi › Lanjutan › “Nonaktifkan pratinjau tautan” dalam keadaan mati.",
+      etiquetteTip:
+        "Kirim satu per satu ke kontak yang Anda kenal — WhatsApp dapat memblokir akun yang mengirim pesan massal.",
+      desktopTip:
+        "Di komputer, setiap kiriman membuka tab WhatsApp baru — menyebar ke banyak tamu lebih nyaman dari HP.",
+      testWarning:
+        "Jangan membuka link tamu sungguhan untuk menguji — tamu itu akan tercatat “Dibuka”.",
+      generalTitle: "Undangan umum",
+      generalDesc:
+        "Untuk tamu yang belum ada di daftar. Linknya tanpa token dan tidak terlacak per tamu — tambahkan tamu ke daftar bila ingin terlacak.",
+      generalNameLabel: "Nama tamu (opsional)",
+      generalNamePlaceholder: "mis. Bu Siti sekeluarga",
+      generalRsvpNote: (max: number) =>
+        `Tamu mengetik namanya sendiri saat konfirmasi kehadiran (maks ${max} orang).`,
+      sendGeneral: "Kirim via WhatsApp",
+      copyGeneral: "Salin pesan umum",
       guestListTitle: "Daftar Tamu",
       empty: "Belum ada tamu. Tambahkan tamu lewat menu Tamu terlebih dahulu.",
-      noPhone: "Tanpa nomor WA",
+      noPhone: "Tanpa nomor — pilih kontak di WhatsApp",
       waSend: "Kirim via WA",
       copyMsg: "Salin pesan",
       copied: "Tersalin",
-      copyAll: "Salin semua pesan",
-      copiedAll: "Semua pesan tersalin",
+      copyAll: "Salin pesan di daftar ini",
+      copiedAll: "Pesan di daftar ini tersalin",
       sent: "Terkirim",
+      undo: "Batalkan",
+      undoLabel: (nama: string) => `Tandai ${nama} belum dikirim`,
       countUnit: "tamu",
+      progress: (sent: number, total: number, opened: number, rsvp: number) =>
+        `Terkirim ${sent}/${total} · Dibuka ${opened} · RSVP ${rsvp}`,
+      searchPlaceholder: "Cari nama tamu…",
+      noMatch: "Tidak ada tamu di filter ini.",
+      filter: {
+        unsent: "Belum dikirim",
+        sent: "Terkirim",
+        opened: "Dibuka",
+        rsvp: "Sudah RSVP",
+        all: "Semua",
+      },
+      status: {
+        unsent: "Belum dikirim",
+        sent: "Terkirim",
+        opened: "Dibuka",
+        attending: "Hadir",
+        notAttending: "Tidak hadir",
+      },
+      seq: {
+        start: "Kirim satu per satu",
+        title: "Kirim satu per satu",
+        counter: (i: number, n: number) => `Tamu ${i} dari ${n}`,
+        send: "Kirim via WhatsApp",
+        noPhoneHint: "Tamu ini tanpa nomor — pilih kontaknya di WhatsApp.",
+        waitHint: "Setelah mengirim di WhatsApp, kembali ke halaman ini.",
+        confirm: (nama: string) => `Sudah terkirim ke ${nama}?`,
+        yes: "Ya, lanjut",
+        no: "Belum, kirim ulang",
+        skip: "Lewati",
+        exit: "Selesai",
+        done: "Antrean selesai.",
+        empty: "Tidak ada tamu yang belum dikirimi.",
+        showMessage: "Lihat pesan",
+      },
       defaultTemplate:
-        "Kepada Yth. {nama},\n\nDengan penuh sukacita, kami mengundang Anda untuk hadir di {acara}. Doa serta kehadiran Anda sangat berarti bagi kami.\n\nInformasi lengkap & konfirmasi kehadiran dapat diakses melalui tautan berikut:\n{link}\n\nMerupakan suatu kehormatan bila Anda berkenan hadir. Terima kasih 🙏",
+        "Kepada Yth. {nama},\n\nDengan penuh sukacita, kami mengundang Anda untuk hadir di {acara} pada {tanggal}. Doa serta kehadiran Anda sangat berarti bagi kami.\n\nInformasi lengkap & konfirmasi kehadiran dapat diakses melalui tautan berikut:\n{link}\n\nUndangan ini berupa halaman web di merriva.id — cukup ketuk tautannya, tidak perlu memasang aplikasi apa pun.\n\nMerupakan suatu kehormatan bila Anda berkenan hadir. Terima kasih 🙏",
+      defaultTemplateGeneral:
+        "Kepada Yth.\n{nama}\ndi tempat\n\nDengan penuh sukacita, kami mengundang Bapak/Ibu/Saudara/i untuk hadir di {acara} pada {tanggal}.\n\nInformasi lengkap acara & konfirmasi kehadiran:\n{link}\n\nUndangan ini berupa halaman web di merriva.id — cukup ketuk tautannya, tidak perlu memasang aplikasi apa pun. Mohon tuliskan nama Bapak/Ibu/Saudara/i saat mengisi konfirmasi kehadiran.\n\nMerupakan suatu kehormatan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu. Terima kasih 🙏",
     },
   },
   // Checkout / aktivasi paket (SPEC §4.8).
@@ -1209,6 +1293,11 @@ export const copy = {
       captchaFailed:
         "Verifikasi anti-bot gagal. Muat ulang halaman lalu coba lagi.",
       closed: "Undangan ini sedang tidak menerima konfirmasi.",
+      // Link umum (tanpa token, DECISIONS #120): ditolak di form dengan pesan
+      // jelas — dulu angka di atas batas dipotong diam-diam oleh server.
+      paxMax: (max: number) =>
+        `Maksimal ${max} orang untuk konfirmasi lewat tautan ini. Untuk rombongan lebih besar, hubungi tuan rumah.`,
+      paxInvalid: "Isi jumlah tamu dengan angka bulat, minimal 1.",
     },
     wall: {
       heading: "Ucapan & Doa",

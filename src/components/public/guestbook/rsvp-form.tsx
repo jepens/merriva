@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, type FormEvent } from "react";
 
 import { GuestPrivacyNote } from "@/components/public/guest-privacy-note";
 import { copy } from "@/lib/copy";
+import { RSVP_PAX_TANPA_TOKEN } from "@/lib/rsvp-limits";
 import { submitRsvpAction } from "@/server/actions/guestbook";
 
 import { TurnstileWidget } from "./turnstile-widget";
@@ -42,7 +43,11 @@ export function RsvpForm({
   // saat nama tiba (lihat GuestbookSection) → tak perlu efek sinkronisasi.
   const [name, setName] = useState(prefillName ?? "");
   const [attendance, setAttendance] = useState<"yes" | "no">("yes");
-  const [pax, setPax] = useState(1);
+  // TEKS saat diketik, angka saat dikirim. Dulu `Number(v) || 1` di onChange
+  // membuat kolom tak bisa dikosongkan: menghapus "1" mengembalikannya ke "1",
+  // jadi tamu yang mengetik 4 mendapat "14" (DECISIONS #120).
+  const [paxText, setPaxText] = useState("1");
+  const pax = Math.max(1, Math.trunc(Number(paxText)) || 1);
   const [message, setMessage] = useState("");
   const [token, setToken] = useState("");
   const honeypotRef = useRef<HTMLInputElement>(null);
@@ -70,9 +75,33 @@ export function RsvpForm({
     setTsReset((n) => n + 1);
   }, []);
 
+  /** Ganti kehadiran → pesan galat jumlah tamu yang tertinggal ikut hilang. */
+  function pilihKehadiran(v: "yes" | "no") {
+    setAttendance(v);
+    if (status === "error") {
+      setStatus("idle");
+      setFeedback("");
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (status === "sending") return;
+    // Link umum: form ber-`noValidate` dan atribut `max` tak mencegah angka
+    // yang DIKETIK, sementara server memotong diam-diam ke batasnya. Tolak di
+    // sini dengan pesan jelas — tanpa memanggil server, token Turnstile utuh.
+    // Angka yang TAMPIL harus sama dengan yang terkirim: "2.5"/"abc"/"0"
+    // dulu diam-diam menjadi 2/1/1.
+    if (attendance === "yes" && !/^[1-9]\d*$/.test(paxText.trim())) {
+      setStatus("error");
+      setFeedback(t.paxInvalid);
+      return;
+    }
+    if (attendance === "yes" && !guestToken && pax > RSVP_PAX_TANPA_TOKEN) {
+      setStatus("error");
+      setFeedback(t.paxMax(RSVP_PAX_TANPA_TOKEN));
+      return;
+    }
     setStatus("sending");
     setFeedback("");
     try {
@@ -142,7 +171,7 @@ export function RsvpForm({
             type="radio"
             name="attendance"
             checked={attendance === "yes"}
-            onChange={() => setAttendance("yes")}
+            onChange={() => pilihKehadiran("yes")}
           />
           <span>{t.attending}</span>
         </label>
@@ -151,7 +180,7 @@ export function RsvpForm({
             type="radio"
             name="attendance"
             checked={attendance === "no"}
-            onChange={() => setAttendance("no")}
+            onChange={() => pilihKehadiran("no")}
           />
           <span>{t.notAttending}</span>
         </label>
@@ -163,9 +192,13 @@ export function RsvpForm({
           <input
             type="number"
             min={1}
-            max={20}
-            value={pax}
-            onChange={(e) => setPax(Number(e.target.value) || 1)}
+            // Link umum (tanpa token): batas yang sama dengan server untuk
+            // panah/spinner; angka yang diketik di atasnya ditolak saat kirim
+            // (handleSubmit) — DECISIONS #120. Bertoken: server memakai alokasi
+            // tamu yang tak diketahui form.
+            max={guestToken ? 20 : RSVP_PAX_TANPA_TOKEN}
+            value={paxText}
+            onChange={(e) => setPaxText(e.target.value)}
           />
         </label>
       ) : null}
