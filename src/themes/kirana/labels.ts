@@ -51,8 +51,8 @@ export const L = {
     calendarIcs: "Apple / Outlook",
     livestream: "Tonton Siaran Langsung",
   },
-  gallery: { eyebrow: "Galeri Kenangan", caption: "Foto" },
-  video: { eyebrow: "Kenangan Bergerak" },
+  gallery: { eyebrow: "Foto Moment", caption: "Foto" },
+  video: { eyebrow: "Video Moment" },
   story: { eyebrow: "Perjalanan Cinta", heading: "Kisah Kami" },
   envelope: {
     eyebrow: "Tanda Kasih",

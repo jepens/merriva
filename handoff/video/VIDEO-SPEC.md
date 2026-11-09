@@ -105,7 +105,7 @@ Per tema (pola identik, ±30 baris):
 1. `options.ts`: `sections` += `{ id: "video", reorder: true, toggle: true }`
    setelah `gallery`.
 2. `labels.ts`: `video: { eyebrow: "Video" }` — Bahasa Indonesia, nada sesuai
-   tema (mis. kirana "Kenangan Bergerak" — bebas tapi Indonesia; TANPA bahasa
+   tema (mis. kirana "Video Moment" — bebas tapi Indonesia; TANPA bahasa
    daerah, keputusan owner 5 Nov 2026).
 3. `index.tsx`: `sectionNodes.video = hasThemeVideo(data.video, content.youtubeUrl) ? <VideoSection .../> : null`
    — section kecil di `sections.tsx` tema: eyebrow + `<ThemeVideo video={data.video} youtubeUrl={content.youtubeUrl} labels={...}/>`
