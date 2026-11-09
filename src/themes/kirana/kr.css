@@ -851,16 +851,13 @@
   position: relative;
   overflow: hidden;
 }
+/* Kayon ukiran raster (aset cover), selebar kayon kecil di bagian mempelai. */
 .kr-gn-mini {
-  width: 56px;
+  width: 64px;
   height: auto;
-  margin: 0 auto 14px;
+  margin: 0 auto 16px;
   display: block;
-}
-.kr-gn-mini path {
-  fill: none;
-  stroke: var(--kr-gold);
-  stroke-width: 1.4;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.28));
 }
 .kr-footer__role {
   font-size: 9px;

@@ -534,9 +534,18 @@ export function Footer({
 }) {
   return (
     <footer className="kr-footer kr-center">
-      <svg className="kr-gn-mini" viewBox="0 0 250 300" aria-hidden>
-        <path d="M125 8 C 112 30 96 42 84 62 C 70 84 76 104 66 126 C 56 150 64 172 58 196 C 52 222 66 250 92 268 C 106 278 116 284 125 292 C 134 284 144 278 158 268 C 184 250 198 222 192 196 C 186 172 194 150 184 126 C 174 104 180 84 166 62 C 154 42 138 30 125 8 Z" />
-      </svg>
+      {/* Kayon ukiran yang sama dengan cover (menggantikan siluet garis lama)
+          — aset sudah ter-cache dari cover, jadi tanpa unduhan tambahan. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        className="kr-gn-mini"
+        src={ORN.gunungan}
+        alt=""
+        width={700}
+        height={1050}
+        loading="lazy"
+        decoding="async"
+      />
       <div className="kr-reveal">
         <div className="kr-footer__role">{L.footer.coupleRole}</div>
         <div className="kr-footer__mono">{L.footer.fin}</div>
