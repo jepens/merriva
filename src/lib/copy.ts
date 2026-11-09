@@ -1055,7 +1055,7 @@ export const copy = {
     // Lagu MP3 unggahan pemilik (DECISIONS #121) — di bawah pilihan pustaka.
     customMusic: {
       legend: "Lagu sendiri (MP3)",
-      limits: "MP3 · maks. 8 MB · durasi 10 detik–7 menit",
+      limits: "MP3 · maks. 10 MB · durasi 10 detik–7 menit",
       priority:
         "Lagu sendiri diputar menggantikan pilihan dari pustaka di atas. Bila dihapus, undangan kembali memakai lagu pustaka.",
       // Versi teks ini = CUSTOM_MUSIC_ATTEST_VERSION (lib/custom-music.ts).
@@ -1093,7 +1093,7 @@ export const copy = {
       errors: {
         empty: "Berkas kosong. Pilih berkas MP3 lain.",
         type: "Format tidak didukung. Pilih berkas MP3.",
-        size: "Ukuran berkas melebihi 8 MB. Pilih versi berkualitas lebih rendah (mis. 128 kbps) atau lagu yang lebih pendek.",
+        size: "Ukuran berkas melebihi 10 MB. Pilih versi berkualitas lebih rendah (mis. 128 kbps) atau lagu yang lebih pendek.",
         format:
           "Berkas ini bukan MP3 yang bisa diputar. Pilih berkas MP3 lain.",
         corrupt: "Berkas MP3 rusak atau tidak utuh. Pilih berkas lain.",

@@ -242,9 +242,9 @@ describe("MusicField — validasi klien (sebelum mengirim apa pun)", () => {
       M.errors.type,
     ],
     [
-      "> 8 MB",
+      "> 10 MB",
       () => {
-        // Ukuran dipalsukan — tak perlu mengalokasikan 8 MB di test.
+        // Ukuran dipalsukan — tak perlu mengalokasikan 10 MB di test.
         const f = mp3();
         Object.defineProperty(f, "size", { value: CUSTOM_MUSIC_MAX_BYTES + 1 });
         return f;

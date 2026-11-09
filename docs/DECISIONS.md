@@ -6849,9 +6849,14 @@ menemukan:
 **Keputusan produk (pemilik, 8–9 Nov 2026, dijawab per nomor):**
 1. **Premium saja.** Draft milik admin/Pro ikut paket teratas (#115).
 2. **MP3 saja.**
-3. **Berkas ≤ 8 MB, durasi 10 detik–7 menit, dihitung server.** Dengan 8 MB,
-   lagu 320 kbps hanya muat ±3,5 menit; teks galat ukuran menyarankan
-   128–192 kbps.
+3. **Berkas ≤ 10 MB, durasi 10 detik–7 menit, dihitung server.** Semula
+   8 MB; **dinaikkan ke 10 MB atas permintaan pemilik (9 Nov 2026, sesudah
+   rilis)** supaya lagu 7 menit tetap muat pada 192 kbps (320 kbps ±4,4 menit).
+   Batas lagu pustaka admin (`AUDIO_MAX_BYTES`) tetap 8 MB. Biayanya kuota
+   tamu ≤ 10 MB per pendengar (500 tamu ≈ 5 GB per acara, sebagian besar dari
+   cache Cloudflare); tak perlu migrasi (kolom `bytes` hanya `> 0`, bucket
+   `media` 40 MB). Teks galat ukuran menyarankan 128 kbps atau lagu yang lebih
+   pendek.
 4. **Paket pengaman lengkap:** pernyataan hak di setiap unggahan dengan versi
    teksnya dicatat server · tabel catatan unggah `music_uploads` yang hanya
    bisa disentuh `service_role` · kuota 5 unggahan per undangan per 24 jam ·
@@ -7054,7 +7059,7 @@ menemukan:
 - Backup media harian (#117) ikut menyalin `audio/`. Berkas yang di-takedown
   bertahan di snapshot R2 privat sampai lifecycle (±30 hari), tidak tersaji ke
   publik.
-- Kuota tamu bertambah paling banyak sebesar berkasnya (≤ 8 MB). Audio
+- Kuota tamu bertambah paling banyak sebesar berkasnya (≤ 10 MB). Audio
   ber-`preload="none"` dan baru diambil setelah "Buka Undangan", jadi LCP tidak
   terpengaruh.
 - Teks pernyataan di editor berubah → **naikkan `CUSTOM_MUSIC_ATTEST_VERSION`**

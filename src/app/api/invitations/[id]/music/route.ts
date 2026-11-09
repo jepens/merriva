@@ -28,7 +28,7 @@ import { getEffectiveLimits } from "@/server/limits";
  * `CUSTOM_MUSIC_ATTEST_HEADER`. Pernyataan, `Content-Length`, sesi, kepemilikan
  * (undangan purged = bukan milik siapa pun), PAKET (Premium), kunci takedown,
  * dan kuota harian diputuskan SEBELUM body dibaca — hanya pemilik undangan
- * Premium yang belum habis kuotanya yang bisa membuat server menampung 8MB.
+ * Premium yang belum habis kuotanya yang bisa membuat server menampung 10 MB.
  *
  * Isi berkas ditegakkan DI SINI, bukan di editor: `parseMp3` menelusuri rantai
  * frame dan yang disimpan HANYA byte frame (tag ID3/sampul/ekor/sisipan
@@ -105,7 +105,7 @@ export async function POST(
   if (!user) return jawab({ status: "error", reason: "auth" }, 401);
 
   // Per jaringan (seperti video) DAN per akun: unggahan yang DITOLAK isinya
-  // (bukan MP3, terlalu pendek) tetap membuat server membaca 8MB, tetapi tak
+  // (bukan MP3, terlalu pendek) tetap membuat server membaca 10 MB, tetapi tak
   // menambah baris kuota — plafon akun inilah yang membatasinya.
   if (
     !(

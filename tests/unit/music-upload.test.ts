@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *
  * Seperti video, yang dijaga adalah URUTAN gerbangnya: pernyataan hak,
  * `Content-Length`, sesi, kepemilikan, PAKET, kunci takedown, dan kuota harian
- * wajib diputuskan sebelum body 8MB dibaca — dan storage tak boleh tersentuh
+ * wajib diputuskan sebelum body 10 MB dibaca — dan storage tak boleh tersentuh
  * oleh siapa pun yang gugur. Berbeda dari video, route ini menulis SATU baris
  * `music_uploads` (catatan pernyataan + sidik byte yang disimpan), dan yang
  * disimpan HANYA byte frame MP3 — bukan berkas kiriman klien apa adanya.
@@ -282,7 +282,7 @@ describe("POST /api/invitations/[id]/music — gerbang sebelum sesi", () => {
     expect(client().auth.getUser).not.toHaveBeenCalled();
   });
 
-  it("Content-Length di atas 8MB → 413 size SEBELUM auth", async () => {
+  it("Content-Length di atas 10 MB → 413 size SEBELUM auth", async () => {
     await expectTolak(
       await kirim(MP3, {
         "content-length": String(CUSTOM_MUSIC_MAX_BYTES + 1),

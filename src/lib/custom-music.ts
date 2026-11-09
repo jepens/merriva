@@ -10,8 +10,12 @@
  * Android & iOS, dan di-cache Cloudflare secara bawaan (`.m4a` tidak).
  */
 
-/** Batas ukuran berkas yang DIUNGGAH — sama dengan lagu pustaka (`AUDIO_MAX_BYTES`). */
-export const CUSTOM_MUSIC_MAX_BYTES = 8 * 1024 * 1024;
+/**
+ * Batas ukuran berkas yang DIUNGGAH. 10 MB (keputusan pemilik 9 Nov 2026,
+ * naik dari 8 MB): lagu 7 menit masih muat pada 192 kbps. Sengaja terpisah
+ * dari batas lagu pustaka admin (`AUDIO_MAX_BYTES`, 8 MB).
+ */
+export const CUSTOM_MUSIC_MAX_BYTES = 10 * 1024 * 1024;
 export const CUSTOM_MUSIC_MIN_SECONDS = 10;
 export const CUSTOM_MUSIC_MAX_SECONDS = 7 * 60;
 /**
@@ -24,7 +28,7 @@ const DURATION_TOLERANCE_SECONDS = 1;
  * Unggahan per undangan per 24 jam — dihitung dari tabel `music_uploads`
  * (bertahan melewati deploy, berbeda dengan rate limit di memori). Satu lagu
  * per undangan; lima cukup untuk mencoba-ganti beberapa kali, dan membatasi
- * objek yang menunggu disapu cron (≤ 5 × 8 MB per undangan).
+ * objek yang menunggu disapu cron (≤ 5 × 10 MB per undangan).
  */
 export const CUSTOM_MUSIC_UPLOADS_PER_DAY = 5;
 

@@ -565,7 +565,7 @@ describe("parseMp3 — fuzz (seed tetap) tak pernah melempar", () => {
 // -----------------------------------------------------------------------------
 
 describe("validateCustomMusicFile", () => {
-  const MB8 = CUSTOM_MUSIC_MAX_BYTES;
+  const MAKS = CUSTOM_MUSIC_MAX_BYTES;
 
   it.each([
     ["audio/mpeg", "lagu.mp3"],
@@ -597,11 +597,11 @@ describe("validateCustomMusicFile", () => {
     expect(validateCustomMusicFile({ ...f, size: Number.NaN })).toBe("empty");
   });
 
-  it("tepat 8 MB diterima, 8 MB + 1 → size", () => {
+  it("tepat 10 MB diterima, 10 MB + 1 → size", () => {
     const f = { name: "a.mp3", type: "audio/mpeg" };
-    expect(MB8).toBe(8 * 1024 * 1024);
-    expect(validateCustomMusicFile({ ...f, size: MB8 })).toBeNull();
-    expect(validateCustomMusicFile({ ...f, size: MB8 + 1 })).toBe("size");
+    expect(MAKS).toBe(10 * 1024 * 1024);
+    expect(validateCustomMusicFile({ ...f, size: MAKS })).toBeNull();
+    expect(validateCustomMusicFile({ ...f, size: MAKS + 1 })).toBe("size");
   });
 });
 

@@ -62,7 +62,7 @@ Aturan lengkap dan kriteria terimanya ada di SPEC §4.4 "Musik unggahan".
 Ringkasnya:
 
 - Hanya undangan Premium (draft milik admin/Pro ikut paket teratas). Formatnya
-  MP3 saja, berkas ≤ 8 MB, durasi 10 detik–7 menit yang dihitung server.
+  MP3 saja, berkas ≤ 10 MB, durasi 10 detik–7 menit yang dihitung server.
 - Pernyataan hak wajib dicentang di setiap unggahan. Server menyimpan HANYA
   rantai frame audio (tag ID3, sampul, depan & ekor dibuang; isi badan frame
   tidak diperiksa) ke `audio/<id undangan>/<uuid>.mp3` dan mencatat
