@@ -362,6 +362,17 @@ describe("/{slug} — metadata kartu pratinjau WhatsApp", () => {
     expect(images[0].type).toBe("image/jpeg");
   });
 
+  it("og:image berakhiran .jpg + ?v=updated_at (ms) — ter-cache Cloudflare tanpa Cache Rule (DECISIONS #122)", async () => {
+    const m = await meta();
+    // Fixture: updated_at 2026-09-20T00:00:00.000Z.
+    const url = `/api/og/andi-sinta.jpg?v=${Date.UTC(2026, 8, 20)}`;
+    const images = m.openGraph?.images as Array<{ url: string }>;
+    expect(images[0].url).toBe(url);
+    expect((m.twitter as { images?: unknown } | undefined)?.images).toEqual([
+      url,
+    ]);
+  });
+
   it("deskripsi = hari & tanggal (zona acara) · tempat — ajakan", async () => {
     // 2026-12-20T02:00Z di WIB = Minggu 20 Desember 2026, 09.00.
     expect((await meta()).description).toBe(

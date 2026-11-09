@@ -8,6 +8,7 @@ import { eventDateLabel } from "@/lib/event-date-label";
 import { parseContentForRender } from "@/lib/invitation-content";
 import { ogPath } from "@/lib/media";
 import { reportHandledError } from "@/lib/observability";
+import { ogSlugFromSegment } from "@/lib/og/image-url";
 import { pngToJpeg } from "@/lib/og/jpeg";
 import { checkClientRateLimit } from "@/lib/request-ip";
 import { isDraftSlug, isPlausibleSlug, isReservedSlug } from "@/lib/slug";
@@ -28,12 +29,12 @@ import { fotoStyle } from "@/themes/_shared/foto";
  *   1. Rate limit per-IP (satori render ± DB tiap hit = mahal & asimetris).
  *   2. Cheap-reject: slug reserved/draft/tak-aktif/tak-ada → redirect ke gambar
  *      STATIS `/og-default.png` (tanpa render) — hanya undangan AKTIF yang dirender.
- *   3. Cache-Control agar CDN menyerap scrape berulang. CATATAN DEPLOY: path
- *      `/api/og/*` TANPA ekstensi → Cloudflare TIDAK meng-cache-nya secara default.
- *      Wajib menambah Cache Rule "Eligible for cache" untuk `/api/og/*` dengan
- *      cache key = path saja (abaikan query) agar `s-maxage` benar-benar berlaku
- *      (lihat docs/ARCHITECTURE.md). Rate limit + cheap-reject membatasi biaya
- *      origin bahkan tanpa aturan itu.
+ *   3. Cache-Control agar CDN menyerap scrape berulang. og:image menunjuk
+ *      `/api/og/<slug>.jpg?v=…` (DECISIONS #122): berekstensi gambar → Cloudflare
+ *      meng-cache-nya secara bawaan, tanpa Cache Rule; `?v` ikut kunci cache, jadi
+ *      simpanan baru = entri baru. Path polos `/api/og/<slug>` tetap dilayani
+ *      (pratinjau lama) tetapi tak ter-cache. `?v` acak melewati cache → biaya
+ *      origin dibatasi rate limit + cheap-reject, sama seperti sebelum #122.
  *
  * Runtime Node (satori bawaan `next/og`); font di-embed dari `public/fonts`
  * (satori tak bisa memakai variabel CSS `next/font`).
@@ -45,6 +46,25 @@ export const dynamic = "force-dynamic";
 const WIDTH = 1200;
 const HEIGHT = 630;
 const OG_LIMIT = { max: 60, windowMs: 60_000 };
+
+/**
+ * Gambar utuh: 1 jam di peramban, 24 jam di edge. TANPA
+ * `stale-while-revalidate`: Cloudflare tak menyajikan salinan basi bila ada
+ * `s-maxage` (dok cache-control), dan URL ber-`?v` tak membutuhkannya (#122).
+ */
+const CACHE_GAMBAR = "public, max-age=3600, s-maxage=86400";
+
+/**
+ * Undangan BERSAMPUL yang fotonya tak ikut terender (apa pun sebabnya: galat,
+ * batas waktu, tipe salah, atau 404): gambar tanpa foto hanya ditahan edge 5
+ * menit. 404 ikut di sini karena tak bisa dibedakan dari sini antara sampul
+ * lama tanpa varian OG dan media yang salah konfigurasi (`/media` menjawab 404
+ * juga untuk galat volume). Kedipan atau salah konfigurasi tak menahan
+ * pratinjau tanpa wajah sehari penuh, tetapi kegagalan yang menetap tetap
+ * tersaji cepat dari edge — `no-store` akan mengembalikan SEMUA undangan
+ * bersampul ke render lambat (#122).
+ */
+const CACHE_TANPA_SAMPUL = "public, max-age=60, s-maxage=300";
 
 // Palet eternal-rose (selaras tema).
 const C = {
@@ -153,7 +173,7 @@ async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
   const tz =
     settingsSchema.safeParse(inv.settings).data?.timezone ?? "Asia/Jakarta";
   // Galat DB dilempar juga: dulu jatuh ke tanggal `event_date` (atau tanpa
-  // tanggal), dan gambar SALAH itu di-cache CDN hingga 1 hari + 7 hari SWR.
+  // tanggal), dan gambar SALAH itu di-cache CDN hingga 1 hari.
   const firstEvent = dataOrThrow(
     await admin
       .from("invitation_events")
@@ -184,26 +204,35 @@ async function resolveOgFields(rawSlug: string): Promise<OgFields | null> {
   };
 }
 
+/** Batas mengambil foto sampul. WhatsApp Desktop/Web hanya menunggu kartu
+ * 7 detik (DECISIONS #122): sampul yang menggantung lebih baik jatuh ke
+ * tipografi ber-TTL pendek daripada menghabiskan jatah itu. */
+const SAMPUL_TIMEOUT_MS = 3000;
+
 /**
- * Varian OG foto sampul sebagai data URI — atau `null` bila tak ada.
+ * Varian OG foto sampul sebagai data URI — atau `null` bila tak terambil.
  *
  * Berkasnya diambil SENDIRI alih-alih menyerahkan URL-nya ke satori, karena
  * satori gagal tanpa suara: diberi WebP ia mencatat "Unsupported image type"
  * lalu tetap menghasilkan PNG yang sah tanpa fotonya. Dengan mengambil sendiri,
  * tipe isinya bisa diperiksa SEBELUM render, dan kegagalannya bisa dilaporkan.
  *
- * 404 TIDAK dilaporkan: itu berarti foto sampul yang diunggah sebelum varian
- * OG ada, bukan kerusakan. Pemiliknya cukup mengunggah ulang. Sisanya — tipe
- * salah, 5xx, jaringan — dilaporkan, karena di sanalah "pratinjau tanpa wajah"
- * lahir tanpa satu pun gejala lain.
+ * 404 TIDAK dilaporkan: biasanya foto sampul yang diunggah sebelum varian OG
+ * ada, bukan kerusakan — pemiliknya cukup mengunggah ulang. Sisanya — tipe
+ * salah, status lain, jaringan, batas waktu, bahkan galat merakit URL —
+ * dilaporkan, karena di sanalah "pratinjau tanpa wajah" lahir tanpa satu pun
+ * gejala lain. Apa pun sebabnya, `null` untuk undangan bersampul membuat
+ * gambarnya hanya ditahan edge 5 menit (`CACHE_TANPA_SAMPUL`).
  */
 async function sampulDataUri(
   cover: Photo,
   slug: string,
 ): Promise<string | null> {
-  const url = getStorage().getPublicUrl(ogPath(cover.path));
   try {
-    const res = await fetch(url);
+    const url = getStorage().getPublicUrl(ogPath(cover.path));
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(SAMPUL_TIMEOUT_MS),
+    });
     const tipe = res.headers.get("content-type") ?? "";
     if (res.status === 404) return null;
     if (!res.ok || !tipe.startsWith("image/jpeg")) {
@@ -227,9 +256,9 @@ async function sampulDataUri(
 /**
  * Respons tanpa gambar dengan `no-store` EKSPLISIT (DECISIONS #45). Tanpa
  * `Cache-Control`, Cloudflare hanya meng-cache status 200/206/301/302/303/404/410
- * dengan TTL bawaan — jadi 429/5xx kemungkinan besar tak ter-cache walau di bawah
- * Cache Rule `/api/og/*`. `no-store` tetap dipasang agar jawaban sesaat tak
- * bergantung pada perilaku bawaan CDN/perantara (defensif).
+ * dengan TTL bawaan — jadi 429/5xx kemungkinan besar tak ter-cache walau path
+ * `.jpg` kini ter-cache secara bawaan (#122). `no-store` tetap dipasang agar
+ * jawaban sesaat tak bergantung pada perilaku bawaan CDN/perantara (defensif).
  */
 function noImage(
   status: 429 | 500 | 503,
@@ -251,7 +280,7 @@ export async function GET(
     return noImage(429, { "Retry-After": "60" });
   }
 
-  const { slug } = await params;
+  const slug = ogSlugFromSegment((await params).slug);
   let fields: OgFields | null;
   try {
     fields = await resolveOgFields(slug);
@@ -437,15 +466,22 @@ export async function GET(
     reportHandledError(err, "og.jpeg", { slug });
   }
 
-  return new Response((jpeg ?? pngBytes) as BodyInit, {
+  const body = jpeg ?? pngBytes;
+  return new Response(body as BodyInit, {
     status: 200,
     headers: {
       "Content-Type": jpeg ? "image/jpeg" : "image/png",
-      // Butuh Cloudflare Cache Rule (path tanpa ekstensi tak ter-cache default)
-      // agar s-maxage berlaku — lihat catatan modul di atas & docs/ARCHITECTURE.md.
-      "Cache-Control": jpeg
-        ? "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800"
-        : "no-store",
+      // Eksplisit: tanpa ini Next mengirim `Transfer-Encoding: chunked` (terukur
+      // di produksi), padahal gambarnya sudah utuh di memori. Dua pesaing yang
+      // diukur menyajikan og:image statis ber-Content-Length (#122).
+      "Content-Length": String(body.byteLength),
+      // Ter-cache Cloudflare secara bawaan HANYA lewat path `.jpg` (og:image
+      // sejak #122) — lihat catatan modul di atas & docs/ARCHITECTURE.md.
+      "Cache-Control": !jpeg
+        ? "no-store"
+        : fields.cover && !foto
+          ? CACHE_TANPA_SAMPUL
+          : CACHE_GAMBAR,
     },
   });
 }

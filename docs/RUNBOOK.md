@@ -186,15 +186,32 @@ lewat SQL editor.
 1. Verifikasi bahwa permintaannya berasal dari pemilik akun — balas dari alamat
    dukungan ke **alamat email akun itu sendiri** dan minta konfirmasi. Jangan
    menerima permintaan dari alamat lain.
-2. Buka `/admin/pengguna`, cari akunnya, tekan **Hapus akun**.
-3. Isi alasan (masuk `admin_logs`, jadi satu-satunya penjelasan kelak) dan
+2. Bila pemohon menuntut pemusnahan SEGERA, **catat dulu** undangan & albumnya
+   — sesudah penghapusan tak bisa dicari lagi (`user_id` undangan menjadi
+   NULL, baris album terhapus). SQL editor, baca-saja:
+   `select i.id, i.slug, a.id as album from invitations i left join momen_albums a on a.invitation_id = i.id where i.user_id = '<id pengguna>';`
+3. Buka `/admin/pengguna`, cari akunnya, tekan **Hapus akun**.
+4. Isi alasan (masuk `admin_logs`, jadi satu-satunya penjelasan kelak) dan
    **ketik ulang email akun tersebut**. Server mencocokkannya; salah ketik →
    tak ada yang dihapus.
-4. Bila ditolak dengan *"masih punya undangan AKTIF"*: itu disengaja. Tamunya
+5. Bila ditolak dengan *"masih punya undangan AKTIF"*: itu disengaja. Tamunya
    sudah memegang tautan dan acaranya mungkin belum lewat. Beri tahu pelanggan
    tanggal `active_until`-nya, atau — bila ia memang ingin undangannya mati
    sekarang — buat undangannya kedaluwarsa dulu lewat `/admin/undangan/<id>`,
    baru hapus akunnya.
+6. Pemusnahan segera, sesudah penghapusan berhasil: pastikan Sentry
+   `admin.delete-account.storage` kosong untuk penghapusan ini — berkas yang
+   gagal dihapus tetap tersaji dan mengisi ulang cache; hapus dulu path di
+   pesan galatnya dari volume media. Lalu untuk SETIAP undangan dari catatan
+   langkah 2: Cloudflare → Caching → Configuration → Purge Cache → *Custom
+   Purge* → **Prefix** `merriva.id/api/og/<slug>.jpg` (gambar pratinjau
+   tautan: nama, tanggal, foto sampul — tertahan edge ≤ 24 jam walau origin
+   sudah menjawab 302, DECISIONS #122), `merriva.id/media/inv/<id>/`,
+   `merriva.id/media/video/<id>/`, `merriva.id/media/audio/<id>/`, dan
+   `merriva.id/media/momen/<album>/` bila ada (media `immutable` setahun di
+   edge; `audio/` 1 jam). Periksa dengan `curl -sI` satu URL media lama:
+   harapannya 404, bukan `cf-cache-status: HIT`. Snapshot R2: lihat bagian
+   backup di atas (**UU PDP**).
 
 **Apa yang terjadi**
 
@@ -312,7 +329,17 @@ lambat 2 hari kerja**.
 
 **Perintah Kementerian** (bukan aduan swasta) tunduk pada tenggat Permenkominfo
 5/2020: 1×24 jam, atau lebih singkat untuk konten mendesak. Tindak hari itu
-juga dengan langkah 3–4, termasuk purge Cloudflare.
+juga dengan langkah 3–4, termasuk purge Cloudflare. Bila perintahnya
+menyangkut undangan itu sendiri, suspend lewat `/admin/undangan/<id>` lalu
+purge **Prefix** `merriva.id/api/og/<slug>.jpg`: gambar pratinjau tautan
+tertahan edge ≤ 24 jam walau origin sudah menjawab 302 (DECISIONS #122).
+Berkas `/media` undangan yang di-suspend tetap tersaji (route media tak
+memeriksa status, dan purge retensi tak menyentuh undangan suspended sebelum
+jadwalnya). Bila perintahnya menyangkut foto/video: hapus berkasnya dari
+volume media (path dari tabel `media`, `content.coverPhoto`, `content.video`),
+lalu purge **Prefix** `merriva.id/media/inv/<id>/` dan
+`merriva.id/media/video/<id>/`; periksa dengan `curl -sI` → 404, bukan
+`cf-cache-status: HIT`.
 
 ### Lagu pustaka yang dilaporkan
 

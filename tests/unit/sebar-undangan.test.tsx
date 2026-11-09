@@ -68,6 +68,7 @@ function pasang(
     <SebarUndangan
       invitationId={INV}
       slug="rani-wanda"
+      ogImage={null}
       acara="pernikahan Wanda & Rani"
       tanggal="Minggu, 6 Desember 2026"
       templates={{ personal: null, general: null }}
@@ -467,6 +468,92 @@ describe("mode kirim satu per satu", () => {
     expect(sessionStorage.getItem(`sebar-menunggu:${INV}`)).toBe("g1");
     await user.click(within(dlg).getByRole("button", { name: t.seq.yes }));
     expect(sessionStorage.getItem(`sebar-menunggu:${INV}`)).toBeNull();
+  });
+});
+
+/**
+ * Kartu pratinjau tautan (DECISIONS #122). Pemilik mengirim kartu sementara
+ * "merriva.id" (tanpa gambar) karena menekan Kirim sebelum kartu lengkap siap —
+ * gambar OG yang tak ter-cache memakan jatah tunggu WhatsApp Desktop/Web.
+ */
+describe("kartu pratinjau tautan", () => {
+  const OG = "/api/og/rani-wanda.jpg?v=1762600000000";
+  const ambil = vi.fn(
+    async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      new Response(new Uint8Array(4)),
+  );
+  beforeEach(() => {
+    ambil.mockClear();
+    vi.stubGlobal("fetch", ambil);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("undangan aktif: og:image diminta SEKALI saat halaman dibuka — URL persis, tanpa cookie", () => {
+    pasang({ ogImage: OG });
+    expect(ambil).toHaveBeenCalledTimes(1);
+    const [url, init] = ambil.mock.calls[0];
+    expect(url).toBe(OG);
+    // no-store: lewati cache PERAMBAN agar permintaan selalu sampai ke edge.
+    expect(init).toMatchObject({ credentials: "omit", cache: "no-store" });
+  });
+
+  it("render ulang dengan URL sama → tak diminta lagi; URL baru (simpanan baru) → dipanaskan lagi", () => {
+    const props = {
+      invitationId: INV,
+      slug: "rani-wanda",
+      acara: "pernikahan Wanda & Rani",
+      tanggal: "Minggu, 6 Desember 2026",
+      templates: { personal: null, general: null },
+      initial: GUESTS,
+    };
+    const { rerender } = render(<SebarUndangan {...props} ogImage={OG} />);
+    rerender(<SebarUndangan {...props} ogImage={OG} />);
+    expect(ambil).toHaveBeenCalledTimes(1);
+    const BARU = "/api/og/rani-wanda.jpg?v=1762600099999";
+    rerender(<SebarUndangan {...props} ogImage={BARU} />);
+    expect(ambil).toHaveBeenCalledTimes(2);
+    expect(ambil.mock.calls[1][0]).toBe(BARU);
+  });
+
+  it("tak aktif (null): tak ada permintaan", () => {
+    pasang({ ogImage: null });
+    expect(ambil).not.toHaveBeenCalled();
+  });
+
+  it("gagal memanaskan → diam, halaman tetap utuh", () => {
+    ambil.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    pasang({ ogImage: OG });
+    expect(
+      screen.getByRole("button", { name: t.seq.start }),
+    ).toBeInTheDocument();
+  });
+
+  it("tips menjelaskan kartu 'merriva.id' = belum siap, dan jeda Desktop/Web", () => {
+    pasang();
+    expect(t.previewTip).toContain("merriva.id");
+    expect(screen.getByText(t.previewTip)).toBeInTheDocument();
+    expect(screen.getByText(t.previewDesktopTip)).toBeInTheDocument();
+  });
+
+  it("dialog satu per satu: petunjuk kartu terbaca di samping tombol kirim (dialog menutupi tips)", async () => {
+    const user = pasang();
+    await user.click(screen.getByRole("button", { name: t.seq.start }));
+    const dlg = screen.getByRole("dialog");
+    const kirim = within(dlg).getByRole("button", { name: t.seq.send });
+    const petunjuk = within(dlg).getByText(t.seq.previewHint);
+    // Jalan keluar menyebut tombol dialog apa adanya — label & petunjuk sejalan.
+    expect(t.seq.previewHint).toContain(`“${t.seq.no}”`);
+    expect(petunjuk.id).not.toBe("");
+    expect(kirim.getAttribute("aria-describedby")?.split(" ")).toContain(
+      petunjuk.id,
+    );
+  });
+
+  it("kartu umum: satu kontak per kiriman (beberapa sekaligus = tanpa kartu)", () => {
+    pasang();
+    expect(screen.getByText(t.generalOneContact)).toBeInTheDocument();
   });
 });
 

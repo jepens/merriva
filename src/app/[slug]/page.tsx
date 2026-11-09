@@ -8,6 +8,7 @@ import { MomenFab } from "@/components/public/momen/momen-fab";
 import { copy } from "@/lib/copy";
 import { eventDateLabel } from "@/lib/event-date-label";
 import { parseContentForRender } from "@/lib/invitation-content";
+import { ogImageUrl } from "@/lib/og/image-url";
 import { isDraftSlug, isPlausibleSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { dataOrThrow } from "@/lib/supabase/result";
@@ -141,11 +142,13 @@ export async function generateMetadata({
   // alias dua simpan dalam detik yang sama) untuk mem-bust cache CDN/browser,
   // sehingga scrape BARU setelah pemilik menyimpan mendapat gambar segar
   // (revalidatePath sudah dipanggil di action simpan → meta memuat `?v` baru).
+  // Berakhiran `.jpg` agar ter-cache Cloudflare secara bawaan; halaman Sebar
+  // memanaskan URL dari helper & kolom yang sama — bisa tertinggal satu versi
+  // bila baris diubah tanpa revalidate (lihat src/lib/og/image-url.ts, #122).
   // Catatan: ini TIDAK mem-bust pratinjau WhatsApp untuk tautan yang SUDAH
   // tersebar — WA meng-cache per URL halaman (yang tak berubah) tanpa purge
   // publik; keterbatasan WA yang tak bisa dihindari dari sisi kode.
-  const version = new Date(inv.updated_at).getTime();
-  const ogImage = `/api/og/${slug}?v=${version}`;
+  const ogImage = ogImageUrl(slug, inv.updated_at);
 
   return {
     title,

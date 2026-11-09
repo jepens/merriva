@@ -11,6 +11,7 @@ import { copy } from "@/lib/copy";
 import { eventDateLabel } from "@/lib/event-date-label";
 import { isUuid } from "@/lib/id";
 import { parseContentForRender } from "@/lib/invitation-content";
+import { ogImageUrl } from "@/lib/og/image-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { settingsSchema } from "@/lib/validation/content";
 import { requireUser } from "@/server/guards/auth";
@@ -31,7 +32,7 @@ export default async function SebarPage({
   const { data: inv, error: invError } = await supabase
     .from("invitations")
     .select(
-      "id, slug, category, content, settings, event_date, share_template, share_template_general",
+      "id, slug, status, updated_at, category, content, settings, event_date, share_template, share_template_general",
     )
     .eq("id", id)
     .maybeSingle();
@@ -90,6 +91,13 @@ export default async function SebarPage({
     inv.event_date,
   );
 
+  // Gambar pratinjau tautan dipanaskan HANYA untuk undangan aktif (DECISIONS
+  // #122): hanya halaman undangan aktif yang memancarkan og:image; untuk
+  // status lain route OG menjawab redirect ke gambar default — tak ada yang
+  // perlu dipanaskan.
+  const ogImage =
+    inv.status === "active" ? ogImageUrl(inv.slug, inv.updated_at) : null;
+
   const rsvpByGuest = new Map(
     (rsvpRes.data ?? []).map((r) => [r.guest_id, r.attendance]),
   );
@@ -125,6 +133,7 @@ export default async function SebarPage({
       <SebarUndangan
         invitationId={inv.id}
         slug={inv.slug}
+        ogImage={ogImage}
         acara={acara}
         tanggal={tanggal}
         templates={{

@@ -68,7 +68,7 @@ export async function saveShareTemplatesAction(
     // Undangan yang sudah di-purge (retensi UU PDP) tak menerima data pribadi
     // baru — purge tak akan berjalan kedua kalinya untuk mengosongkannya.
     .is("purged_at", null)
-    .select("id");
+    .select("id, slug");
 
   // 0 baris = bukan milik pemilik (RLS) atau tak ada — jangan lapor sukses.
   if (error || !data || data.length === 0) {
@@ -76,5 +76,10 @@ export async function saveShareTemplatesAction(
   }
 
   revalidatePath(`/dashboard/undangan/${invitationId}/sebar`);
+  // Simpanan ini menaikkan `updated_at` (trigger) = versi `?v` og:image. Tanpa
+  // revalidate, halaman undangan (ISR) terus memancarkan `?v` lama sementara
+  // halaman Sebar memanaskan yang baru — pemanasan meleset (DECISIONS #122).
+  const slug = data[0]?.slug;
+  if (slug) revalidatePath(`/${slug}`);
   return { status: "success" };
 }

@@ -500,8 +500,15 @@ export const copy = {
         `Pembatalan tanda ${nama} mungkin belum tersimpan — muat ulang halaman untuk memastikan.`,
       dateFallback: "hari bahagia kami",
       generalNameFallback: "Bapak/Ibu/Saudara/i",
+      // Kartu "merriva.id" (judul = domain, tanpa gambar) adalah kartu
+      // SEMENTARA WhatsApp; menekan Kirim saat ia tampil mengirimnya apa
+      // adanya (DECISIONS #122). Pemilik mengira itu pratinjaunya.
       previewTip:
-        "Di WhatsApp, tunggu kartu pratinjau (foto & nama mempelai) muncul di atas kolom ketik sebelum menekan Kirim. Kartu tak pernah muncul? Pastikan Setelan › Privasi › Lanjutan › “Nonaktifkan pratinjau tautan” dalam keadaan mati.",
+        "Di WhatsApp, tunggu sampai kartu pratinjau bergambar muncul di atas kolom ketik, baru tekan Kirim — kartu yang hanya bertuliskan “merriva.id” berarti belum siap dan akan terkirim tanpa gambar. Kartu tak pernah muncul? Pastikan Setelan › Privasi › Lanjutan › “Nonaktifkan pratinjau tautan” dalam keadaan mati.",
+      // ±10 detik = patokan resmi Meta; batas tunggu internal Desktop/Web 7
+      // detik, sesudahnya kartu "merriva.id" menjadi hasil AKHIR (#122).
+      previewDesktopTip:
+        "Di WhatsApp komputer (Desktop/Web), kartu bergambar bisa butuh hingga ±10 detik — biarkan WhatsApp di HP tetap tersambung internet. Masih “merriva.id” sesudahnya? Kartu itu tak akan berubah: jangan kirim — hapus pesan di kolom ketik, lalu kirim ulang dari halaman ini.",
       etiquetteTip:
         "Kirim satu per satu ke kontak yang Anda kenal — WhatsApp dapat memblokir akun yang mengirim pesan massal.",
       desktopTip:
@@ -517,9 +524,15 @@ export const copy = {
         `Tamu mengetik namanya sendiri saat konfirmasi kehadiran (maks ${max} orang).`,
       sendGeneral: "Kirim via WhatsApp",
       copyGeneral: "Salin pesan umum",
+      // Kode WhatsApp Web: satu kontak → pesan masuk kolom ketik (kartu dibuat
+      // seperti biasa); beberapa kontak → langsung terkirim tanpa kartu (#122).
+      generalOneContact:
+        "Di daftar kontak WhatsApp, pilih satu kontak per kiriman — di WhatsApp Desktop/Web, memilih beberapa kontak sekaligus mengirim pesan tanpa kartu pratinjau.",
       guestListTitle: "Daftar Tamu",
       empty: "Belum ada tamu. Tambahkan tamu lewat menu Tamu terlebih dahulu.",
-      noPhone: "Tanpa nomor — pilih kontak di WhatsApp",
+      // "satu": tanpa nomor = pemilih kontak; beberapa kontak sekaligus di
+      // Desktop/Web terkirim tanpa kartu pratinjau (#122).
+      noPhone: "Tanpa nomor — pilih satu kontak di WhatsApp",
       waSend: "Kirim via WA",
       copyMsg: "Salin pesan",
       copied: "Tersalin",
@@ -552,7 +565,14 @@ export const copy = {
         title: "Kirim satu per satu",
         counter: (i: number, n: number) => `Tamu ${i} dari ${n}`,
         send: "Kirim via WhatsApp",
-        noPhoneHint: "Tamu ini tanpa nomor — pilih kontaknya di WhatsApp.",
+        noPhoneHint:
+          "Tamu ini tanpa nomor — pilih kontaknya di WhatsApp (satu kontak saja).",
+        // Dialog menutupi daftar tips; petunjuk kartu — termasuk jalan keluar
+        // bila kartu "merriva.id" menjadi hasil akhir — harus terbaca di sini,
+        // tepat sebelum pemilik pindah ke WhatsApp (#122). Menyebut tombol
+        // `no` ("Belum, kirim ulang") apa adanya; test menjaga keduanya sama.
+        previewHint:
+          "Di WhatsApp, tekan Kirim setelah kartu bergambar muncul. Tetap “merriva.id” lewat ±10 detik? Jangan kirim — hapus pesan di kolom ketik, kembali ke sini, lalu pilih “Belum, kirim ulang”.",
         waitHint: "Setelah mengirim di WhatsApp, kembali ke halaman ini.",
         confirm: (nama: string) => `Sudah terkirim ke ${nama}?`,
         yes: "Ya, lanjut",

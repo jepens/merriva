@@ -1,13 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Route OG `/api/og/[slug]` (pratinjau tautan WhatsApp). Di bawah Cache Rule
- * `/api/og/*` (LAUNCH-CHECKLIST: "Eligible for cache", kunci = path saja) apa
- * pun yang dijawab route ini bisa ter-cache untuk SEMUA scraper. Karena itu
- * (DECISIONS #45):
+ * Route OG `/api/og/[slug]` (pratinjau tautan WhatsApp). og:image menunjuk
+ * `/api/og/<slug>.jpg?v=…`, yang di-cache Cloudflare secara bawaan (DECISIONS
+ * #122), jadi apa pun yang dijawab route ini bisa ter-cache untuk SEMUA scraper.
+ * Karena itu (DECISIONS #45):
  *  - galat DB → 503 `no-store`, BUKAN gambar default ber-`s-maxage=86400`
  *    (dulu: satu kedipan DB = pratinjau default selama sehari) dan BUKAN
- *    gambar bertanggal salah (dulu: jatuh ke `event_date`, di-cache 1 + 7 hari);
+ *    gambar bertanggal salah (dulu: jatuh ke `event_date`, di-cache sehari);
  *  - 429 ber-`no-store` agar tak menjadi jawaban ter-cache.
  * Render gambar (satori) tak diuji di sini — `ImageResponse` di-mock.
  */
@@ -20,6 +20,8 @@ const { refs, reportHandledError, rateLimit } = vi.hoisted(() => ({
     eventsError: null as unknown,
     image: null as null | { headers?: Record<string, string> },
     queries: 0,
+    /** Nilai `.eq("slug", …)` yang dikirim ke DB. */
+    slugs: [] as string[],
     /** Byte yang "dirender" ImageResponse tiruan; `null` = render melempar. */
     png: null as Uint8Array | null,
   },
@@ -28,6 +30,11 @@ const { refs, reportHandledError, rateLimit } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/request-ip", () => ({ checkClientRateLimit: rateLimit }));
+vi.mock("@/lib/storage", () => ({
+  getStorage: () => ({
+    getPublicUrl: (p: string) => `https://media.test/${p}`,
+  }),
+}));
 vi.mock("@/lib/observability", () => ({ reportHandledError }));
 vi.mock("next/og", () => ({
   ImageResponse: class {
@@ -46,9 +53,13 @@ vi.mock("@/lib/supabase/admin", () => ({
     from: (table: string) => {
       refs.queries += 1;
       const chain: Record<string, unknown> = {};
-      for (const op of ["select", "eq", "not", "order", "limit"]) {
+      for (const op of ["select", "not", "order", "limit"]) {
         chain[op] = () => chain;
       }
+      chain.eq = (col: string, val: unknown) => {
+        if (col === "slug") refs.slugs.push(String(val));
+        return chain;
+      };
       chain.maybeSingle = () =>
         Promise.resolve(
           table === "invitations"
@@ -102,6 +113,7 @@ beforeEach(() => {
   refs.eventsError = null;
   refs.image = null;
   refs.queries = 0;
+  refs.slugs = [];
   refs.png = PNG_RGBA;
   reportHandledError.mockClear();
   rateLimit.mockClear();
@@ -122,6 +134,24 @@ describe("GET /api/og/[slug]", () => {
     expect(res.headers.get("Cache-Control")).toContain("s-maxage=86400");
     const b = new Uint8Array(await res.arrayBuffer());
     expect([b[0], b[1]]).toEqual([0xff, 0xd8]); // SOI JPEG, bukan signature PNG
+    // Cloudflare tak menyajikan salinan basi bila ada s-maxage (#122).
+    expect(res.headers.get("Cache-Control")).not.toContain(
+      "stale-while-revalidate",
+    );
+  });
+
+  it("segmen `<slug>.jpg` (og:image sejak #122) → slug TANPA ekstensi ke DB, dirender sama", async () => {
+    const res = await panggil("andi-sinta.jpg");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(refs.slugs).toEqual(["andi-sinta"]);
+  });
+
+  it("Content-Length eksplisit = panjang badan (tanpa ini Next mengirim chunked)", async () => {
+    const res = await panggil("andi-sinta.jpg");
+    const b = new Uint8Array(await res.arrayBuffer());
+    expect(b.byteLength).toBeGreaterThan(0);
+    expect(res.headers.get("Content-Length")).toBe(String(b.byteLength));
   });
 
   it("konversi JPEG gagal → PNG lama, dilaporkan, dan TIDAK ter-cache CDN", async () => {
@@ -139,6 +169,9 @@ describe("GET /api/og/[slug]", () => {
     // Gambar terdegradasi (bisa > batas WhatsApp) tak boleh tertahan di CDN
     // sesudah perbaikannya dideploy.
     expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("Content-Length")).toBe(
+      String((await res.arrayBuffer()).byteLength),
+    );
     expect(reportHandledError).toHaveBeenCalledWith(
       expect.any(Error),
       "og.jpeg",
@@ -217,5 +250,118 @@ describe("GET /api/og/[slug]", () => {
     expect(res.status).toBe(429);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Retry-After")).toBe("60");
+  });
+});
+
+/**
+ * Foto sampul (DECISIONS #122). Sejak og:image ter-cache edge, undangan
+ * BERSAMPUL yang fotonya tak ikut terender — jaringan, 5xx, tipe salah, batas
+ * waktu, atau 404 (sampul lama tanpa varian OG ATAU media salah konfigurasi:
+ * `/media` menjawab 404 juga untuk galat volume) — tak boleh tertahan sehari
+ * penuh: dulu path tanpa ekstensi tak ter-cache, jadi hit berikutnya merender
+ * ulang dengan foto. 404 tak dilaporkan (bukan kerusakan yang bisa ditindak).
+ */
+describe("GET /api/og/[slug] — foto sampul", () => {
+  const SAMPUL =
+    "inv/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222";
+  const PENDEK = "public, max-age=60, s-maxage=300";
+  const ambil = vi.fn(
+    async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      new Response(null, { status: 404 }),
+  );
+
+  beforeEach(() => {
+    refs.inv = {
+      ...(refs.inv as object),
+      content: { ...emptyContent("wedding"), coverPhoto: { path: SAMPUL } },
+    };
+    ambil.mockClear();
+    vi.stubGlobal("fetch", ambil);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("sampul terbaca → gambar ber-cache panjang; diambil dengan batas 3 detik", async () => {
+    const batas = vi.spyOn(AbortSignal, "timeout");
+    ambil.mockResolvedValueOnce(
+      new Response(new Uint8Array([0xff, 0xd8, 0xff]), {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      }),
+    );
+    const res = await panggil();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toContain("s-maxage=86400");
+    const [url, init] = ambil.mock.calls[0];
+    expect(url).toBe(`https://media.test/${SAMPUL}/og.jpg`);
+    // Sampul yang menggantung tak boleh menghabiskan jatah 7 detik WhatsApp.
+    expect(batas).toHaveBeenCalledWith(3000);
+    expect(init?.signal).toBe(batas.mock.results[0]?.value);
+    expect(reportHandledError).not.toHaveBeenCalled();
+  });
+
+  it("jaringan gagal → tetap 200 (tanpa foto) tetapi hanya ditahan edge 5 menit; dilaporkan", async () => {
+    ambil.mockRejectedValueOnce(new TypeError("fetch failed"));
+    const res = await panggil();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(res.headers.get("Cache-Control")).toBe(
+      "public, max-age=60, s-maxage=300",
+    );
+    expect(reportHandledError).toHaveBeenCalledWith(
+      expect.any(Error),
+      "og.cover",
+      { slug: "andi-sinta" },
+    );
+  });
+
+  it("5xx → TTL pendek yang sama; dilaporkan", async () => {
+    ambil.mockResolvedValueOnce(
+      new Response("galat", {
+        status: 502,
+        headers: { "content-type": "text/html" },
+      }),
+    );
+    const res = await panggil();
+    expect(res.headers.get("Cache-Control")).toBe(PENDEK);
+    expect(reportHandledError).toHaveBeenCalledWith(
+      expect.any(Error),
+      "og.cover",
+      { slug: "andi-sinta" },
+    );
+  });
+
+  it("200 tetapi bukan JPEG (satori diam-diam membuang WebP) → TTL pendek; dilaporkan", async () => {
+    ambil.mockResolvedValueOnce(
+      new Response(new Uint8Array([1]), {
+        status: 200,
+        headers: { "content-type": "image/webp" },
+      }),
+    );
+    const res = await panggil();
+    expect(res.headers.get("Cache-Control")).toBe(PENDEK);
+    expect(reportHandledError).toHaveBeenCalledWith(
+      expect.any(Error),
+      "og.cover",
+      { slug: "andi-sinta" },
+    );
+  });
+
+  it("404 → TTL pendek juga (sampul lama ATAU media salah konfigurasi), tanpa laporan", async () => {
+    ambil.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    const res = await panggil();
+    expect(ambil).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe(PENDEK);
+    expect(reportHandledError).not.toHaveBeenCalled();
+  });
+
+  it("undangan TANPA sampul → cache panjang, tanpa mengambil apa pun", async () => {
+    refs.inv = { ...(refs.inv as object), content: emptyContent("wedding") };
+    const res = await panggil();
+    expect(ambil).not.toHaveBeenCalled();
+    expect(res.headers.get("Cache-Control")).toContain("s-maxage=86400");
   });
 });

@@ -93,6 +93,16 @@ describe("saveShareTemplatesAction", () => {
     );
   });
 
+  it("halaman undangan ikut di-revalidate: simpanan menaikkan updated_at = ?v og:image yang dipanaskan Sebar (DECISIONS #122)", async () => {
+    refs.returned = [{ id: INV, slug: "rani-wanda" }];
+    const res = await saveShareTemplatesAction(INV, {
+      personal: "Halo {nama} {link}",
+      general: null,
+    });
+    expect(res).toEqual({ status: "success" });
+    expect(revalidatePath).toHaveBeenCalledWith("/rani-wanda");
+  });
+
   it("teks SAMA dengan bawaan → NULL (perbaikan teks bawaan tetap sampai)", async () => {
     await saveShareTemplatesAction(INV, {
       personal: t.defaultTemplate,

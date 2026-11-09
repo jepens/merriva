@@ -149,7 +149,7 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 5. **Webhook byte cap KERAS**: baca body via stream + hitung byte (batalkan >8KB), tak lagi hanya percaya `Content-Length` (bisa absen pada chunked).
 6. **`requireAdmin()` di TIAP page admin** (bukan hanya guard layout) — tutup staleness peran saat soft-nav. Migrasi `20260808130000` mencabut DEFAULT PRIVILEGES anon-SELECT & authenticated-DML untuk tabel MASA DEPAN (footgun RLS-by-default; tabel existing tak terpengaruh — grant eksplisit).
 **Alasan:** transformasi provably-setara/non-destruktif; memperkuat lapis anti-abuse & validasi tanpa mengubah perilaku sah. Diverifikasi: 332 test hijau + smoke login/admin/auth.
-**Sisa = OPS (LAUNCH-CHECKLIST):** Cloudflare Cache Rule `/api/og/*` (path-only) + WAF rate-limit edge (mitigasi DoS OG), kunci allowed-hostnames widget Turnstile, toggle "Secure password change" + Leaked-Password Protection, review `[auth.rate_limit]/[auth.captcha]` cloud.
+**Sisa = OPS (LAUNCH-CHECKLIST):** Cloudflare Cache Rule `/api/og/*` (path-only; **digantikan #122** — path `.jpg` ter-cache bawaan, jangan pasang aturan path-saja) + WAF rate-limit edge (mitigasi DoS OG), kunci allowed-hostnames widget Turnstile, toggle "Secure password change" + Leaked-Password Protection, review `[auth.rate_limit]/[auth.captcha]` cloud.
 
 ---
 
@@ -6725,8 +6725,10 @@ dibundel — next.config); varian `og.jpg` klien langsung sebagai og:image
 (kehilangan geser/perbesar foto & teks nama-tanggal); WASM mozjpeg (berkas
 `.wasm` berisiko tak ter-trace ke build standalone).
 
-**Konsekuensi:** Cloudflare Cache Rule `/api/og/*` (LAUNCH-CHECKLIST Fase 6)
-makin penting — tiap kiriman membuat perangkat pengirim mengambil gambar.
+**Konsekuensi:** **Digantikan #122 (10 Nov 2026):** og:image kini `.jpg`
+yang ter-cache Cloudflare secara bawaan (kunci memuat `?v`) — jangan pasang
+Cache Rule "path saja". Teks asli: Cloudflare Cache Rule `/api/og/*`
+(LAUNCH-CHECKLIST Fase 6) makin penting — tiap kiriman membuat perangkat pengirim mengambil gambar.
 Dengan cache key "path saja", foto/tanggal yang diganti pemilik baru tampil
 setelah Edge TTL habis (`?v=updated_at` diabaikan CDN) — pilih Edge TTL pendek
 (mis. 1 jam) atau sertakan query `v` di cache key.
@@ -7100,6 +7102,131 @@ menemukan:
   https://www.zola.com/faq/115002259532-can-i-add-a-song-to-my-website-
 - Kebijakan API YouTube (III.I.7 dan III.I.9):
   https://developers.google.com/youtube/terms/developer-policies
+
+---
+
+## #122 — 2026-11-10 · Pratinjau tautan WhatsApp: gambar OG ter-cache CDN lewat path `.jpg`, dipanaskan dari Sebar, petunjuk kartu "merriva.id"
+
+**Masalah (pemilik, kirim dari halaman Sebar lewat WhatsApp Desktop):** kartu
+yang terkirim hanya bertuliskan "merriva.id" dan URL — tanpa gambar, tanpa
+nama mempelai. Dugaan "bot Meta diblokir Cloudflare" (utas forum Cloudflare)
+gugur oleh dasbor pemilik: Bot Fight Mode mati, crawler AI diizinkan, dan tak
+ada event mitigasi untuk WhatsApp/facebookexternalhit.
+
+**Temuan (kode WhatsApp Web client_revision 1053702607, dibaca langsung):**
+- Kartu "merriva.id" adalah kartu MINIMAL buatan WhatsApp sendiri
+  (`genMinimalLinkPreview`: judul = domain, deskripsi = URL). Kolom ketik
+  memasangnya sebagai kartu sementara (`isLoading`) begitu tautan terdeteksi,
+  dan tombol Kirim mengirim kartu yang SEDANG tampil.
+- Desktop/Web tak mengambil halaman sendiri: ia meminta HP utama
+  (`GENERATE_LINK_PREVIEW`) dan menunggu `link_preview_wait_time` = 7 detik.
+  Lewat dari itu, atau unggah thumbnail HQ gagal → kartu minimal.
+- Dialog "Kirim pesan ke" (`wa.me/?text=`): satu kontak → teks masuk kolom
+  ketik, kartu dibuat seperti biasa; beberapa kontak → `sendTextMsgToChat`
+  tanpa `linkPreview`, pesan terkirim tanpa kartu sama sekali.
+- Sisi Merriva: HTML & meta memenuhi syarat resmi Meta dari ±50 titik uji.
+  Satu pembeda nyata dibanding dua pesaing yang diukur: og:image
+  `/api/og/<slug>` tanpa ekstensi → `cf-cache-status: DYNAMIC` (5/5), dirender
+  ulang tiap hit (TTFB 0,6–3,3 dtk dari Indonesia, 10,4 dtk saat ±40 pengambil
+  serentak), chunked tanpa `Content-Length`. Pesaing: `.jpg` statis, HIT,
+  ±0,09 dtk.
+
+Kesimpulan: pratinjau BISA. Yang terkirim adalah kartu sementara, karena Kirim
+ditekan sebelum kartu lengkap datang, dan gambar yang lambat memperbesar
+peluangnya. Ini penilaian dari kode dan pengukuran, bukan reproduksi di
+perangkat pemilik.
+
+**Keputusan (pemilik, 10 Nov 2026):**
+1. og:image = `/api/og/<slug>.jpg?v=<updated_at ms>`, dirakit SATU helper
+   (`src/lib/og/image-url.ts`) untuk metadata dan halaman Sebar. Berekstensi
+   gambar → Cloudflare meng-cache-nya secara bawaan, tanpa Cache Rule (terukur
+   di produksi sebelum deploy: path `.jpg` di bawah `/api/og/` MISS → HIT,
+   query unik ikut kunci). `?v` ikut kunci cache bawaan → simpanan baru = entri
+   baru — busting yang hilang bila memakai Cache Rule "path saja". Route tetap
+   melayani `/api/og/<slug>` polos (pratinjau yang sudah tersebar).
+2. Respons 200 ber-`Content-Length` eksplisit: gambarnya sudah utuh di memori,
+   dan tanpa header itu Next mengirim chunked. Header `vary: rsc, …` bawaan
+   Next tak menghalangi cache (terbukti pada `/media`: MISS → HIT).
+3. Halaman Sebar memanaskan URL yang sama sekali saat dibuka: fetch tanpa
+   cookie, prioritas rendah, `cache: "no-store"` (melewati cache PERAMBAN agar
+   selalu sampai edge; header `no-cache` yang ikut terkirim diabaikan
+   Cloudflare — terukur tetap HIT), body dibaca habis, gagal diam-diam. Hanya
+   undangan aktif — hanya halaman undangan aktif yang memancarkan og:image.
+   Simpan template Sebar kini juga me-revalidate `/{slug}`: kolom template ikut
+   menaikkan `updated_at` (trigger), dan tanpa itu halaman ISR terus
+   memancarkan `?v` lama sementara Sebar memanaskan yang baru.
+4. Petunjuk di Sebar: tips daftar (kartu "merriva.id" = belum siap dan akan
+   terkirim tanpa gambar; Desktop/Web bisa ±10 detik — patokan resmi Meta;
+   batas internalnya 7 detik, sesudahnya kartu itu hasil AKHIR, jadi: jangan
+   kirim, hapus teksnya, kirim ulang dari Sebar; WhatsApp di HP tetap
+   tersambung), dialog "Kirim satu per satu" (dialog itu menutupi tips; kini
+   bisa digulir di layar pendek), kartu Undangan umum dan teks tamu tanpa nomor
+   ("pilih satu kontak").
+5. Undangan BERSAMPUL yang fotonya tak ikut terender — status selain 200
+   (404, 403 WAF, 5xx), tipe salah, jaringan, batas waktu 3 detik, galat
+   merakit URL — → gambar tanpa foto ber-`public, max-age=60, s-maxage=300`.
+   Sejak path `.jpg` ter-cache, satu kedipan jaringan saat render pertama
+   (sering = pemanasan Sebar) akan menahan pratinjau tanpa wajah sehari penuh.
+   404 ikut TTL pendek karena tak bisa dibedakan antara sampul lama tanpa
+   varian OG dan media salah konfigurasi (`/media` menjawab 404 juga untuk
+   galat volume); 404 tetap tak dilaporkan. `stale-while-revalidate` dibuang:
+   dok Cloudflare — `s-maxage` menonaktifkannya, edge tak menyajikan salinan
+   basi.
+
+**Ditolak:**
+- Cloudflare Cache Rule `/api/og/*` (LAUNCH-CHECKLIST lama): butuh pengaturan
+  dasbor yang tak pernah terpasang, dan kunci "path saja" mengabaikan `?v`
+  sehingga foto baru tertahan sampai Edge TTL habis.
+- Cache memori di origin: PoP lain bisa ditutup Tiered Cache tanpa kode;
+  ditambah hanya bila pengukuran sesudah deploy menunjukkan perlu.
+- `no-store` untuk gambar tanpa foto: kegagalan media yang MENETAP (mis. URL
+  media salah, aturan WAF yang menyaring permintaan VPS ke dirinya) akan
+  mengembalikan SEMUA undangan bersampul ke render lambat. TTL 5 menit menahan
+  keduanya.
+- Versi di path (`/api/og/<slug>/<v>.jpg`) agar kode lama tak bisa menjawab
+  URL baru dengan 302 selama deploy: skema URL baru untuk risiko sekali jalan.
+  Cukup prosedur uji penerimaan di bawah.
+- Memvalidasi `?v` terhadap `updated_at` (redirect bila beda) untuk menahan
+  `?v` acak: itu penguatan DoS, bukan bagian masalah ini.
+- og:site_name / og:locale: pembeda dibanding pesaing, tetapi tak terbukti
+  memengaruhi kartu.
+
+**Konsekuensi:**
+- `?v` acak melewati cache edge → render di origin, dibatasi rate limit
+  per-IP 60/menit + cheap-reject. Sama dengan sebelum #122, ketika SEMUA
+  permintaan melewati cache.
+- Cache Cloudflare per data center: pemanasan mengisi PoP jaringan perangkat
+  pemilik, dan PoP yang belum punya salinan mengambil dari origin (satu
+  render). Disarankan, tanpa ubah kode: Tiered Cache dengan topologi Smart —
+  tersedia di paket Free menurut tabel dok Cloudflare (Nov 2026; kini bagian
+  dari "Smart Shield"): Caching → Tiered Cache → aktifkan → Smart.
+- Gambar ter-cache bertahan ≤ 24 jam per PoP untuk URL `?v` itu — juga sesudah
+  undangan di-suspend/kedaluwarsa/dihapus: origin sudah menjawab 302, tetapi
+  edge masih memegang salinan `?v` lama, yang tak lagi tercatat di DB. Hilang
+  segera = purge prefix `merriva.id/api/og/<slug>.jpg` (RUNBOOK). Sesudah 24
+  jam edge mengambil ulang dari origin — yang untuk undangan tak aktif
+  menjawab 302 ke gambar default — tanpa salinan basi. Lebih pendek dari
+  `/media` (immutable setahun).
+- Penanda pengingat cron (`reminder_sent_at`) dan ganti pemilik oleh admin
+  menaikkan `updated_at` tanpa me-revalidate `/{slug}`: halaman ISR bisa
+  tertinggal satu versi sampai dirender ulang, dan kiriman pertama kena satu
+  render — sama seperti sebelum #122.
+- Pesan yang sudah terkirim tanpa kartu tak berubah, karena penerima tak
+  mengambil ulang pratinjaunya. Kirim ulang bila perlu.
+- LAUNCH-CHECKLIST: Cache Rule `/api/og/*` tak lagi diperlukan; risiko `?v`
+  acak (security review #2) dicatat di butir WAF Rate Limiting.
+
+**Uji penerimaan:** HANYA sesudah deploy selesai, dan URL diambil dari
+og:image halaman produksi (`curl -s https://merriva.id/<slug> | grep -o
+'property="og:image" content="[^"]*'`) — harus berbentuk
+`/api/og/<slug>.jpg?v=<angka>`. JANGAN merakit URL `.jpg?v=` sendiri sebelum
+itu: kode lama menjawab 302 → gambar default ber-`s-maxage=86400`, dan
+Cloudflare menahannya pada URL persis yang akan dipancarkan halaman baru
+(deploy tak mengubah `updated_at`). Bila terlanjur: purge URL itu (Custom
+Purge) atau simpan undangan sekali di EDITOR (`?v` baru dan revalidate). Lalu
+`curl -sI` URL itu dua kali → ada `content-length`, `cf-cache-status` MISS
+lalu HIT. Terakhir, di WhatsApp Desktop dan HP: buka dari Sebar, tunggu kartu
+bergambar, kirim ke nomor sendiri.
 
 ---
 

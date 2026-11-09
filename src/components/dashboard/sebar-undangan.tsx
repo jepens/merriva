@@ -79,6 +79,7 @@ type Seq = {
 export function SebarUndangan({
   invitationId,
   slug,
+  ogImage,
   acara,
   tanggal,
   templates,
@@ -86,6 +87,8 @@ export function SebarUndangan({
 }: {
   invitationId: string;
   slug: string;
+  /** URL og:image undangan, dirakit helper yang sama dengan metadata; `null` = tak aktif, tak dipanaskan. */
+  ogImage: string | null;
   acara: string;
   tanggal: string | null;
   templates: { personal: string | null; general: string | null };
@@ -136,6 +139,23 @@ export function SebarUndangan({
       setSimpan({ s: "error", message: res.message });
     }
   }
+
+  // --- Pratinjau tautan ---------------------------------------------------
+  // Pemanasan cache (DECISIONS #122). WhatsApp Desktop/Web menunggu kartu
+  // pratinjau ±7 detik; gambar yang belum ada di cache edge dirender ulang
+  // 1–3 detik dan memakan jatah itu. Membuka halaman ini meminta gambarnya
+  // sekali, jadi kiriman pertama dari jaringan yang sama mendapati salinannya
+  // siap di PoP Cloudflare itu. Tanpa cookie (gambar publik); `no-store`
+  // melewati cache PERAMBAN agar permintaan selalu sampai ke edge — header
+  // `no-cache` yang ikut terkirim diabaikan Cloudflare (terukur: tetap HIT),
+  // jadi tak memicu render ulang. Dibaca sampai habis agar unduhannya — dan
+  // pengisian cache edge — tuntas; gagal diam-diam: ini percepatan, bukan fungsi.
+  useEffect(() => {
+    if (!ogImage) return;
+    fetch(ogImage, { credentials: "omit", cache: "no-store", priority: "low" })
+      .then((res) => res.arrayBuffer())
+      .catch(() => {});
+  }, [ogImage]);
 
   // --- Tamu & status ------------------------------------------------------
   const [guests, setGuests] = useState<SebarGuest[]>(initial);
@@ -533,6 +553,7 @@ export function SebarUndangan({
           {umumKotor ? (
             <p className="text-muted-foreground text-xs">{t.saveFirst}</p>
           ) : null}
+          <p className="text-muted-foreground text-xs">{t.generalOneContact}</p>
           <p className="text-muted-foreground text-xs">
             {t.generalRsvpNote(RSVP_PAX_TANPA_TOKEN)}
           </p>
@@ -587,6 +608,7 @@ export function SebarUndangan({
 
         <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-xs">
           <li>{t.previewTip}</li>
+          <li>{t.previewDesktopTip}</li>
           <li>{t.etiquetteTip}</li>
           <li>{t.desktopTip}</li>
           <li>{t.testWarning}</li>
@@ -717,7 +739,10 @@ export function SebarUndangan({
           aria-modal="true"
           aria-labelledby="seq-judul"
         >
-          <Card className="w-full max-w-md">
+          {/* max-h + gulir: di layar pendek dengan "Lihat pesan" terbuka,
+              kartu yang menempel di bawah meluap ke atas layar — judul dan
+              penghitung tak terjangkau karena gulir latar dikunci. */}
+          <Card className="max-h-full w-full max-w-md overflow-y-auto">
             <CardContent className="space-y-4 py-5">
               <div className="flex items-center justify-between gap-3">
                 <h2 id="seq-judul" className="text-base font-medium">
@@ -765,23 +790,32 @@ export function SebarUndangan({
                   ) : null}
 
                   {seq.phase === "ready" ? (
-                    // autoFocus: tombol ini dipasang ulang tiap kembali ke fase
-                    // "ready" — fokus mengikuti langkah berikutnya, satu ketuk.
-                    <Button
-                      autoFocus
-                      type="button"
-                      className="w-full"
-                      // Pembaca layar mengumumkan nama/grup tamu, bukan cuma label.
-                      aria-describedby="seq-tamu"
-                      disabled={!personalSiap}
-                      onClick={() => {
-                        ingatMenunggu(current.id);
-                        kirim(current);
-                        setSeq((s) => (s ? { ...s, phase: "awaiting" } : s));
-                      }}
-                    >
-                      {t.seq.send}
-                    </Button>
+                    <div className="space-y-2">
+                      {/* autoFocus: tombol ini dipasang ulang tiap kembali ke
+                          fase "ready" — fokus mengikuti langkah berikutnya. */}
+                      <Button
+                        autoFocus
+                        type="button"
+                        className="w-full"
+                        // Pembaca layar mengumumkan nama/grup tamu dan petunjuk
+                        // kartu, bukan cuma label.
+                        aria-describedby="seq-tamu seq-kartu"
+                        disabled={!personalSiap}
+                        onClick={() => {
+                          ingatMenunggu(current.id);
+                          kirim(current);
+                          setSeq((s) => (s ? { ...s, phase: "awaiting" } : s));
+                        }}
+                      >
+                        {t.seq.send}
+                      </Button>
+                      <p
+                        id="seq-kartu"
+                        className="text-muted-foreground text-xs"
+                      >
+                        {t.seq.previewHint}
+                      </p>
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       <p className="text-muted-foreground text-xs">
