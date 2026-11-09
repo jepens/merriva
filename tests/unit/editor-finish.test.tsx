@@ -1,4 +1,11 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,6 +32,7 @@ import {
   EditorShell,
   type EditorStep,
 } from "@/components/dashboard/editor/editor-shell";
+import { SettingsStep } from "@/components/dashboard/editor/steps/settings-step";
 import { copy } from "@/lib/copy";
 import { DEFAULT_SETTINGS, emptyContent } from "@/lib/validation/content";
 
@@ -67,6 +75,7 @@ function renderEditor() {
       maxPhotos={8}
       songs={[]}
       photoSlots={{}}
+      music={{ allowed: false, lockedAt: null, path: null, url: null }}
       video={{ allowed: false, url: null, posterUrl: null }}
       steps={steps}
     />,
@@ -334,5 +343,141 @@ describe("ketikan terakhir sebelum berpindah halaman", () => {
     await Promise.all([user.click(btn), user.click(btn)]);
 
     await waitFor(() => expect(push).toHaveBeenCalledTimes(1));
+  });
+});
+
+/**
+ * Unggahan lagu sendiri (DECISIONS #121) yang belum selesai: hasilnya baru
+ * masuk form — lalu autosave — sesudah server menjawab. "Selesai" di tengah
+ * unggahan dulu membawa pemilik ke pratinjau dan membuang hasilnya diam-diam.
+ */
+describe("Selesai ditahan selama lagu diunggah", () => {
+  const INV = "9a500f03-f12d-4d66-85fc-af8ebcedd350";
+  const BARU = `audio/${INV}/66666666-6666-4666-8666-666666666666.mp3`;
+  const M = copy.editor.customMusic;
+
+  /** MP3 sintetis 15 dtk (frame MPEG-1 Layer III 32 kbps, 104 byte). */
+  const mp3 = () => {
+    const frames = Math.ceil((15 * 44100) / 1152);
+    const b = new Uint8Array(frames * 104);
+    for (let i = 0; i < frames; i++) b.set([0xff, 0xfb, 0x10, 0x00], i * 104);
+    return new File([b as BlobPart], "lagu-kami.mp3", { type: "audio/mpeg" });
+  };
+
+  const langkahLagu: EditorStep[] = [
+    steps[0]!,
+    {
+      key: "settings",
+      label: "Pengaturan",
+      render: (c) => (
+        <SettingsStep
+          form={c.form}
+          invitationId={c.invitationId}
+          songs={c.songs}
+          music={c.music}
+          video={c.video}
+        />
+      ),
+      complete: () => true,
+    },
+  ];
+
+  let lepasUnggah: (r: Response) => void = () => {};
+  const fetchMock = vi.fn(
+    (_url: string, _init?: RequestInit) =>
+      new Promise<Response>((r) => {
+        lepasUnggah = r;
+      }),
+  );
+  beforeEach(() => vi.stubGlobal("fetch", fetchMock));
+  afterEach(() => vi.unstubAllGlobals());
+
+  function renderEditorLagu() {
+    return render(
+      <EditorShell
+        invitationId={INV}
+        slug="draft-abc"
+        defaultValues={{
+          eventDate: "",
+          content: emptyContent("wedding"),
+          settings: DEFAULT_SETTINGS,
+          events: [],
+        }}
+        initialMedia={[]}
+        maxPhotos={8}
+        songs={[]}
+        photoSlots={{}}
+        music={{ allowed: true, lockedAt: null, path: null, url: null }}
+        video={{ allowed: false, url: null, posterUrl: null }}
+        steps={langkahLagu}
+        initialStep="settings"
+      />,
+    );
+  }
+
+  function mulaiUnggah() {
+    fireEvent.click(screen.getByRole("checkbox", { name: M.attest }));
+    fireEvent.change(screen.getByLabelText(M.add), {
+      target: { files: [mp3()] },
+    });
+  }
+
+  const suksesUnggah = () =>
+    new Response(
+      JSON.stringify({
+        status: "success",
+        path: BARU,
+        url: `https://cdn.test/${BARU}`,
+        durationSec: 15,
+      }),
+    );
+
+  it("tombol Selesai mati selama unggahan; sesudahnya hidup dan hasilnya ikut tersimpan", async () => {
+    renderEditorLagu();
+    expect(tombolKanan()).toHaveTextContent(copy.editor.nav.finish);
+    expect(tombolKanan()).toBeEnabled();
+
+    mulaiUnggah();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(tombolKanan()).toBeDisabled();
+    fireEvent.click(tombolKanan());
+    expect(push).not.toHaveBeenCalled();
+
+    lepasUnggah(suksesUnggah());
+    await waitFor(() => expect(tombolKanan()).toBeEnabled());
+    fireEvent.click(tombolKanan());
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith(`/preview/${INV}`));
+    expect(saveDraft.mock.calls.at(-1)?.[1]).toMatchObject({
+      content: { customMusic: { path: BARU, name: "lagu-kami.mp3" } },
+    });
+  });
+
+  it("unggahan GAGAL melepas tahanan (Selesai tak terkunci selamanya)", async () => {
+    renderEditorLagu();
+    mulaiUnggah();
+    await waitFor(() => expect(tombolKanan()).toBeDisabled());
+    lepasUnggah(new Response("oops", { status: 500 }));
+    await waitFor(() => expect(tombolKanan()).toBeEnabled());
+  });
+
+  it("pindah langkah di tengah unggahan lalu kembali: Selesai tetap mati sampai unggahan benar-benar selesai", async () => {
+    // Bidang lagu ter-unmount saat pindah langkah; tahanan dilepas oleh alur
+    // unggah itu sendiri, bukan oleh unmount — kalau tidak, kembali ke langkah
+    // terakhir menghidupkan Selesai selagi unggahannya masih berjalan.
+    renderEditorLagu();
+    mulaiUnggah();
+    await waitFor(() => expect(tombolKanan()).toBeDisabled());
+
+    fireEvent.click(screen.getByRole("button", { name: copy.editor.nav.prev }));
+    expect(screen.queryByRole("group", { name: M.legend })).toBeNull();
+    fireEvent.click(tombolKanan()); // Berikutnya → kembali ke Pengaturan
+    expect(tombolKanan()).toHaveTextContent(copy.editor.nav.finish);
+    expect(tombolKanan()).toBeDisabled();
+
+    lepasUnggah(suksesUnggah());
+    await waitFor(() => expect(tombolKanan()).toBeEnabled());
+    // Hasilnya masuk form walau bidang yang memulainya sudah ter-unmount.
+    expect(screen.getByText("lagu-kami.mp3")).toBeInTheDocument();
   });
 });

@@ -394,6 +394,59 @@ export function renderSuspendedEmail(data: SuspendedEmailData): RenderedEmail {
   };
 }
 
+export interface MusicRemovedEmailData {
+  name: string | null;
+  slug: string;
+  /** Alasan yang DITULIS UNTUK PELANGGAN, atau null bila admin tak menulisnya. */
+  publicReason: string | null;
+  supportEmail: string;
+  dashboardUrl: string;
+}
+
+/**
+ * Pemberitahuan takedown musik unggahan (DECISIONS #121). Saudara ringan
+ * `renderSuspendedEmail`: undangannya tetap tayang, yang hilang hanya musik
+ * unggahannya dan hak unggahnya (dikunci). Aturan dua kolomnya sama — alasan
+ * dari kolom publik, catatan internal (yang bisa memuat identitas pelapor) tak
+ * pernah sampai ke sini — dan jalur sanggahan dicetak baik alasannya ada
+ * maupun tidak.
+ */
+export function renderMusicRemovedEmail(
+  data: MusicRemovedEmailData,
+): RenderedEmail {
+  const r = C.musicRemoved;
+  const alasan = data.publicReason?.trim() || r.alasanKosong;
+  const inner = `<p style="margin:0 0 16px">${escapeHtml(r.greeting(data.name))}</p>
+<p style="margin:0 0 20px">${escapeHtml(r.intro(data.slug))}</p>
+<p style="margin:0 0 4px;font-size:13px;font-weight:700;color:${MUTED}">${escapeHtml(r.alasanJudul)}</p>
+<p style="margin:0 0 20px;padding:12px 16px;background:#f9fafb;border-radius:10px;font-size:14px">${escapeHtml(alasan)}</p>
+<p style="margin:0 0 20px;font-size:14px;color:${MUTED}">${escapeHtml(r.kunci)}</p>
+<p style="margin:0 0 4px;font-size:13px;font-weight:700;color:${MUTED}">${escapeHtml(r.sanggahJudul)}</p>
+<p style="margin:0 0 20px;font-size:14px">${escapeHtml(r.sanggah(data.supportEmail))}</p>
+<p style="margin:0">${button(data.dashboardUrl, r.ctaDashboard)}</p>`;
+
+  const text = [
+    r.greeting(data.name),
+    "",
+    r.intro(data.slug),
+    "",
+    `${r.alasanJudul}: ${alasan}`,
+    "",
+    r.kunci,
+    "",
+    r.sanggahJudul,
+    r.sanggah(data.supportEmail),
+    "",
+    `${r.ctaDashboard}: ${data.dashboardUrl}`,
+  ].join("\n");
+
+  return {
+    subject: r.subject(data.slug),
+    html: layout(r.preheader, r.heading, inner),
+    text,
+  };
+}
+
 export interface ReinstatedEmailData {
   name: string | null;
   slug: string;

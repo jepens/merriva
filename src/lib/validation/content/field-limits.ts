@@ -25,7 +25,13 @@ export const FIELD_LIMITS = {
   ewallet: { provider: 40, number: 40, holder: 120 },
   envelope: { banks: 6, ewallets: 6, giftAddress: 300 },
   storyEntry: { title: 120, date: 60, narrative: 2000 },
-  common: { greeting: 1000, youtubeUrl: 200, livestreamUrl: 500 },
+  common: {
+    greeting: 1000,
+    youtubeUrl: 200,
+    livestreamUrl: 500,
+    /** Nama berkas musik unggahan (hanya tampil di editor). */
+    customMusicName: 120,
+  },
   wedding: { title: 160, story: 20 },
   corporate: { eventName: 160, organizer: 160, description: 2000, agenda: 30 },
   pic: { name: 120, phone: 40, email: 160 },

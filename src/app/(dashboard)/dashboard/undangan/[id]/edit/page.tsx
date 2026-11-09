@@ -10,10 +10,16 @@ import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
 import { copy } from "@/lib/copy";
 import { stepKeyFromParam } from "@/lib/editor-links";
 import { isUuid } from "@/lib/id";
-import { displayPath, OG_ASPECT, toMediaView } from "@/lib/media";
+import {
+  displayPath,
+  isCustomMusicPath,
+  OG_ASPECT,
+  toMediaView,
+} from "@/lib/media";
 import { toEventDraft } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
 import { getThemeOptions } from "@/themes/theme-options-registry";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   DEFAULT_SETTINGS,
@@ -21,8 +27,12 @@ import {
   settingsSchema,
 } from "@/lib/validation/content";
 import { requireUser } from "@/server/guards/auth";
+import { liveCustomMusicPaths } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
-import type { PhotoSlots } from "@/components/dashboard/editor/types";
+import type {
+  MusicSlotView,
+  PhotoSlots,
+} from "@/components/dashboard/editor/types";
 
 export const metadata: Metadata = { title: copy.editor.title };
 
@@ -45,7 +55,7 @@ export default async function EditInvitationPage({
   const { data: inv } = await supabase
     .from("invitations")
     .select(
-      "id, slug, category, status, content, settings, event_date, package_id, theme_id, user_id",
+      "id, slug, category, status, content, settings, event_date, package_id, theme_id, user_id, music_locked_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -103,6 +113,34 @@ export default async function EditInvitationPage({
     allowed: limits.youtube,
     url: v ? storage.getPublicUrl(v.path) : null,
     posterUrl: v?.poster ? storage.getPublicUrl(v.poster) : null,
+  };
+
+  // Lagu sendiri (DECISIONS #121): Premium = tanpa watermark (konvensi gerbang
+  // live streaming; draft admin/Pro sudah dapat paket teratas lewat
+  // `getEffectiveLimits`). Path di `content` ditulis klien, jadi URL hanya
+  // dirakit untuk objek musik milik undangan INI yang masih hidup menurut
+  // `music_uploads` — objek yang sudah disapu/di-takedown tak diberi pemutar
+  // (editor tetap menampilkan nama + tombol Hapus dari nilai form). Seperti
+  // video, gerbang di sini hanya tampilan — route unggah dan perakit render
+  // menegakkannya.
+  //
+  // `music_uploads` hanya service_role: dibaca lewat admin client SESUDAH
+  // kepemilikan terverifikasi (`inv` dibaca client pemilik di bawah RLS), dan
+  // hanya bila memang ada rujukan yang perlu diperiksa.
+  const cm = content.customMusic;
+  let pathHidup: string | null = null;
+  if (cm && isCustomMusicPath(inv.id, cm.path)) {
+    const hidup = await liveCustomMusicPaths(
+      createSupabaseAdminClient(),
+      inv.id,
+    );
+    if (hidup.includes(cm.path)) pathHidup = cm.path;
+  }
+  const music: MusicSlotView = {
+    allowed: !limits.watermark,
+    lockedAt: inv.music_locked_at,
+    path: pathHidup,
+    url: pathHidup ? storage.getPublicUrl(pathHidup) : null,
   };
 
   // Bidang foto di editor dirakit dari apa yang TEMA AKTIF nyatakan dirender
@@ -198,6 +236,7 @@ export default async function EditInvitationPage({
           maxPhotos={maxPhotos}
           songs={songs}
           photoSlots={photoSlots}
+          music={music}
           video={video}
           initialStep={initialStep}
           showGallery={showGallery}
@@ -211,6 +250,7 @@ export default async function EditInvitationPage({
           maxPhotos={maxPhotos}
           songs={songs}
           photoSlots={photoSlots}
+          music={music}
           video={video}
           initialStep={initialStep}
         />
@@ -223,6 +263,7 @@ export default async function EditInvitationPage({
           maxPhotos={maxPhotos}
           songs={songs}
           photoSlots={photoSlots}
+          music={music}
           video={video}
           initialStep={initialStep}
         />

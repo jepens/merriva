@@ -20,6 +20,10 @@ import {
   adminReinstateInvitationAction,
   adminSuspendInvitationAction,
 } from "@/server/actions/admin";
+import {
+  adminRemoveCustomMusicAction,
+  adminUnlockCustomMusicAction,
+} from "@/server/actions/admin-music";
 import type { InvitationStatus, OrderStatus } from "@/types";
 
 export const metadata: Metadata = { title: copy.admin.detail.title };
@@ -31,6 +35,8 @@ const OK_MSG = new Set([
   "suspend_ok",
   "reinstate_ok",
   "owner_ok",
+  "music_ok",
+  "music_unlock_ok",
 ]);
 const PAYABLE = new Set<InvitationStatus>([
   "draft",
@@ -57,7 +63,7 @@ export default async function AdminInvitationDetailPage({
   const { data: inv } = await admin
     .from("invitations")
     .select(
-      "id, slug, category, status, active_until, created_at, published_at, user_id, package_id",
+      "id, slug, category, status, active_until, created_at, published_at, user_id, package_id, music_locked_at, custom_music:content->customMusic",
     )
     .eq("id", id)
     .maybeSingle();
@@ -68,21 +74,30 @@ export default async function AdminInvitationDetailPage({
   // `.eq("id", null)` di sini akan memecahkan halaman — kemungkinan yang
   // tersembunyi dari compiler selama tipe DB menyatakan kolomnya non-null.
   const ownerId = inv.user_id;
-  const [{ data: orders }, { data: packages }] = await Promise.all([
-    admin
-      .from("orders")
-      .select(
-        "order_code, status, amount_idr, payment_method, created_at, paid_at",
-      )
-      .eq("invitation_id", id)
-      .order("created_at", { ascending: false }),
-    admin
-      .from("packages")
-      .select("code, name, price_idr")
-      .eq("is_active", true)
-      .eq("kind", "invitation") // aktivasi manual hanya paket undangan
-      .order("price_idr", { ascending: true }),
-  ]);
+  const [{ data: orders }, { data: packages }, { count: musicLive }] =
+    await Promise.all([
+      admin
+        .from("orders")
+        .select(
+          "order_code, status, amount_idr, payment_method, created_at, paid_at",
+        )
+        .eq("invitation_id", id)
+        .order("created_at", { ascending: false }),
+      admin
+        .from("packages")
+        .select("code, name, price_idr")
+        .eq("is_active", true)
+        .eq("kind", "invitation") // aktivasi manual hanya paket undangan
+        .order("price_idr", { ascending: true }),
+      // Berkas musik unggahan yang objeknya masih ada (DECISIONS #121) — termasuk
+      // yang diunggah lalu tak tersimpan/diganti tetapi belum disapu cron. Itulah
+      // yang dihapus takedown, bukan hanya yang sedang dipakai.
+      admin
+        .from("music_uploads")
+        .select("id", { count: "exact", head: true })
+        .eq("invitation_id", id)
+        .is("removed_at", null),
+    ]);
 
   const [profileRes, ownerRes] = ownerId
     ? await Promise.all([
@@ -100,6 +115,7 @@ export default async function AdminInvitationDetailPage({
     : d.ownerDeleted;
   const status = inv.status as InvitationStatus;
   const draftSlug = isDraftSlug(inv.slug);
+  const musicPath = customMusicPathOf(inv.custom_music);
   const msgText =
     msg && msg in copy.admin.msg
       ? copy.admin.msg[msg as keyof typeof copy.admin.msg]
@@ -352,6 +368,79 @@ export default async function AdminInvitationDetailPage({
             </form>
           )}
 
+          {/*
+            Takedown musik unggahan (DECISIONS #121): lebih ringan dari suspend —
+            undangan tetap tayang. Dua kolom alasan dengan aturan yang sama
+            dengan suspend (DECISIONS #68). Form hanya muncul bila masih ada
+            berkas hidup; hitungan yang gagal dibaca (`null`) tetap
+            menampilkannya — takedown tak boleh terhalang oleh kueri hitung.
+          */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{d.musicTitle}</p>
+            <p className="text-muted-foreground text-xs">
+              {musicLive === null
+                ? copy.admin.common.dash
+                : musicLive === 0
+                  ? d.musicNone
+                  : d.musicLive(musicLive)}
+            </p>
+            {musicPath ? (
+              <p className="text-xs">
+                <span className="text-muted-foreground">{d.musicCurrent}</span>{" "}
+                <span className="font-mono break-all">{musicPath}</span>
+              </p>
+            ) : null}
+            {inv.music_locked_at ? (
+              <p className="text-xs text-amber-800">
+                {d.musicLockedSince(wibDate(inv.music_locked_at))}
+              </p>
+            ) : null}
+            {musicLive !== 0 ? (
+              <form
+                action={adminRemoveCustomMusicAction.bind(null, id)}
+                className="space-y-2"
+              >
+                <p className="text-muted-foreground text-xs">{d.musicHint}</p>
+                <input
+                  name="reason"
+                  placeholder={d.musicReason}
+                  aria-label={d.musicReason}
+                  className={`${fieldClass} w-full`}
+                  maxLength={SUSPEND_REASON_LIMIT}
+                  required
+                />
+                <input
+                  name="publicReason"
+                  placeholder={d.musicPublicReason}
+                  aria-label={d.musicPublicReason}
+                  className={`${fieldClass} w-full`}
+                  maxLength={SUSPEND_REASON_LIMIT}
+                />
+                <p className="text-muted-foreground text-xs">
+                  {d.musicPublicHint}
+                </p>
+                <Button type="submit" size="sm" variant="destructive">
+                  {d.musicCta}
+                </Button>
+              </form>
+            ) : null}
+          </div>
+
+          {inv.music_locked_at ? (
+            <form
+              action={adminUnlockCustomMusicAction.bind(null, id)}
+              className="space-y-2"
+            >
+              <p className="text-sm font-medium">{d.musicUnlockTitle}</p>
+              <p className="text-muted-foreground text-xs">
+                {d.musicUnlockHint}
+              </p>
+              <Button type="submit" size="sm" variant="outline">
+                {d.musicUnlockCta}
+              </Button>
+            </form>
+          ) : null}
+
           <form
             action={adminChangeOwnerAction.bind(null, id)}
             className="space-y-2"
@@ -374,6 +463,16 @@ export default async function AdminInvitationDetailPage({
       </Card>
     </div>
   );
+}
+
+/**
+ * `content.customMusic.path` untuk ditampilkan. `content` ditulis klien, jadi
+ * bentuknya tak dijamin — apa pun selain objek ber-`path` string → null.
+ */
+function customMusicPathOf(value: unknown): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const path = (value as { path?: unknown }).path;
+  return typeof path === "string" && path ? path : null;
 }
 
 function Row({

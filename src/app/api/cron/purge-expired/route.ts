@@ -4,6 +4,7 @@ import { reportHandledError } from "@/lib/observability";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { recordCronRun } from "@/server/cron/record";
 import { isAuthorizedCron } from "@/server/cron/auth";
+import { sapuMusikUsang, type HasilSapuMusik } from "@/server/cron/music-sweep";
 import {
   bolehPurge,
   dueWithinIso,
@@ -27,6 +28,11 @@ import { sendPurgeWarning } from "@/server/email/notify";
  *     best-effort — orphan tak berbahaya & tak tertebak.
  *
  * Cutoff = now − 6 bulan atas `active_until` (saat undangan menjadi expired).
+ *
+ * Langkah tambahan: sapu objek musik unggahan yang tak lagi dirujuk `content`
+ * (`sapuMusikUsang`, DECISIONS #121). Galatnya dilaporkan tetapi tak
+ * menggagalkan purge retensi.
+ *
  * Auth: header `Authorization: Bearer <CRON_SECRET>`. Mutasi → service_role.
  */
 
@@ -224,6 +230,33 @@ export async function POST(req: Request) {
     if (results.some((r) => r.status === "rejected")) storageFailed += 1;
   }
 
+  // === FASE 3 — SAPU MUSIK UNGGAHAN USANG (DECISIONS #121) ==================
+  // Sesudah purge, dan TERISOLASI darinya: galat di sini dilaporkan dan tampil
+  // di `stats` (`musicSweepFailed`/`musicFailed` — akhiran `Failed` dibaca
+  // `ops:verify` sebagai pekerjaan yang tak terjadi), tetapi run tetap `ok`
+  // karena kewajiban retensinya sudah terpenuhi. Objek yang gagal dihapus
+  // barisnya tetap hidup, jadi dicoba lagi jalankan berikutnya.
+  let musik: HasilSapuMusik | null = null;
+  try {
+    musik = await sapuMusikUsang(admin, storage, now);
+  } catch (err) {
+    reportHandledError(err, "cron.purge-expired.music");
+  }
+  if (musik && musik.failed > 0) {
+    reportHandledError(
+      new Error(`${musik.failed} objek musik usang gagal disapu`),
+      "cron.purge-expired.music",
+      { failed: musik.failed, swept: musik.swept },
+    );
+  }
+  const musicStats = {
+    musicScanned: musik?.scanned ?? 0,
+    musicSwept: musik?.swept ?? 0,
+    musicFailed: musik?.failed ?? 0,
+    musicTruncated: musik?.truncated ? 1 : 0,
+    musicSweepFailed: musik ? 0 : 1,
+  };
+
   // Objek yang gagal dihapus WAJIB berbunyi. Sebelum ini angkanya hanya
   // ditulis ke `cron_runs.stats` sementara runnya tetap ditandai `ok: true` —
   // dan `ok: true` me-NULL-kan `last_error` serta tidak menaikkan `failures`
@@ -266,6 +299,7 @@ export async function POST(req: Request) {
     warnFinal,
     warnNoOwner,
     warnFailed,
+    ...musicStats,
   });
   return json(
     {
@@ -280,6 +314,7 @@ export async function POST(req: Request) {
       warnFinal,
       warnNoOwner,
       warnFailed,
+      ...musicStats,
       // Batch penuh → mungkin masih ada sisa; observabilitas backlog.
       truncated: scanned === BATCH,
     },

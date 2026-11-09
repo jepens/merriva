@@ -106,6 +106,7 @@ function renderEditor(cat: Cat, values = seed(cat)) {
       maxPhotos={8}
       songs={[]}
       photoSlots={{}}
+      music={{ allowed: false, lockedAt: null, path: null, url: null }}
       video={{ allowed: false, url: null, posterUrl: null }}
     />,
   );

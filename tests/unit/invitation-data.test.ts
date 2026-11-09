@@ -5,6 +5,8 @@ import { DEFAULT_SETTINGS, emptyContent } from "@/lib/validation/content";
 import { buildInvitationData } from "@/server/invitation-data";
 import { eternalRoseOptions } from "@/themes/eternal-rose/options";
 
+const INV = "85d261d6-1c2b-4e3a-9f00-0a1b2c3d4e5f";
+
 /**
  * Builder data undangan = SATU titik saringan untuk halaman publik & pratinjau
  * (DECISIONS #42). Sesi draft tanpa jam tersimpan di DB, tetapi tak boleh
@@ -17,6 +19,7 @@ function build(
   eventRows: Parameters<typeof buildInvitationData>[0]["eventRows"],
 ) {
   return buildInvitationData({
+    invitationId: INV,
     slug: "andi-sinta",
     category: "wedding",
     content: emptyContent("wedding"),
@@ -29,6 +32,8 @@ function build(
     maxPhotos: 20,
     themeOptions: null,
     music: null,
+    musicLocked: false,
+    liveMusicPaths: [],
   });
 }
 
@@ -71,6 +76,7 @@ describe("buildInvitationData — foto bernama", () => {
    */
   function dengan(content: Record<string, unknown>) {
     return buildInvitationData({
+      invitationId: INV,
       slug: "andi-sinta",
       category: "wedding",
       content: { ...emptyContent("wedding"), ...content },
@@ -83,6 +89,8 @@ describe("buildInvitationData — foto bernama", () => {
       maxPhotos: 20,
       themeOptions: null,
       music: null,
+      musicLocked: false,
+      liveMusicPaths: [],
     });
   }
 
@@ -136,6 +144,7 @@ describe("buildInvitationData — video (FASE J)", () => {
 
   function dengan(content: Record<string, unknown>, videoAllowed: boolean) {
     return buildInvitationData({
+      invitationId: INV,
       slug: "andi-sinta",
       category: "wedding",
       content: { ...emptyContent("wedding"), ...content },
@@ -148,6 +157,8 @@ describe("buildInvitationData — video (FASE J)", () => {
       maxPhotos: 20,
       themeOptions: null,
       music: null,
+      musicLocked: false,
+      liveMusicPaths: [],
     });
   }
 
@@ -201,6 +212,7 @@ describe("buildInvitationData — yang tampil = yang dibayar (DECISIONS #116)", 
     mediaRows?: ReturnType<typeof foto>[];
   }) {
     return buildInvitationData({
+      invitationId: INV,
       slug: "andi-sinta",
       category: "wedding",
       content: { ...emptyContent("wedding"), ...(opts.content ?? {}) },
@@ -213,6 +225,8 @@ describe("buildInvitationData — yang tampil = yang dibayar (DECISIONS #116)", 
       maxPhotos: opts.maxPhotos ?? 20,
       themeOptions: ER,
       music: null,
+      musicLocked: false,
+      liveMusicPaths: [],
     });
   }
 
@@ -255,4 +269,128 @@ describe("buildInvitationData — yang tampil = yang dibayar (DECISIONS #116)", 
       }).content.livestreamUrl,
     ).toBeUndefined();
   });
+});
+
+describe("buildInvitationData — musik unggahan (DECISIONS #121)", () => {
+  const LAGU = "0f1e2d3c-4b5a-4968-8776-655443322110";
+  const PATH = `audio/${INV}/${LAGU}.mp3`;
+  const PUSTAKA = { url: "https://cdn.test/songs/abc.mp3", title: "Pustaka" };
+
+  function bangun(opts: {
+    customMusic?: unknown;
+    watermark?: boolean;
+    musicLocked?: boolean;
+    music?: typeof PUSTAKA | null;
+    /** Bawaan: objek PATH masih hidup — gerbang lain yang diuji. */
+    liveMusicPaths?: readonly string[];
+  }) {
+    return buildInvitationData({
+      invitationId: INV,
+      slug: "andi-sinta",
+      category: "wedding",
+      content: {
+        ...emptyContent("wedding"),
+        groom: { name: "Andi" },
+        bride: { name: "Sinta" },
+        ...("customMusic" in opts ? { customMusic: opts.customMusic } : {}),
+      },
+      settings: DEFAULT_SETTINGS,
+      eventDate: null,
+      eventRows: [],
+      mediaRows: [],
+      watermark: opts.watermark ?? false,
+      videoAllowed: true,
+      maxPhotos: 20,
+      themeOptions: null,
+      music: opts.music === undefined ? PUSTAKA : opts.music,
+      musicLocked: opts.musicLocked ?? false,
+      liveMusicPaths: opts.liveMusicPaths ?? [PATH],
+    });
+  }
+
+  it("Premium + path milik undangan ini + objek hidup → musik sendiri menang atas pustaka", () => {
+    const d = bangun({ customMusic: { path: PATH, name: "Lagu Kami" } });
+    expect(d.music?.url).toMatch(new RegExp(`/audio/${INV}/${LAGU}\.mp3$`));
+  });
+
+  it("judul ke tamu SELALU label generik — nama berkas asli tak pernah ikut payload", () => {
+    // `name` = nama berkas di perangkat pemilik ("unduhan-yt-…", nama orang):
+    // hanya untuk editor. Ia juga tak boleh menumpang `content` yang diterima
+    // tema — tema tak membacanya, dan satu tema yang meneruskan `content` ke
+    // komponen klien akan membocorkannya ke setiap tamu.
+    const NAMA = "unduhan-yt-Rahasia Pemilik.mp3";
+    const d = bangun({ customMusic: { path: PATH, name: NAMA } });
+    expect(d.music?.title).toBe(copy.editor.customMusic.unnamed);
+    expect(d.content.customMusic).toBeUndefined();
+    expect(JSON.stringify(d)).not.toContain("Rahasia Pemilik");
+  });
+
+  it("tanpa nama → judul cadangan; tanpa lagu pustaka pun tetap diputar", () => {
+    const d = bangun({ customMusic: { path: PATH }, music: null });
+    expect(d.music?.title).toBe(copy.editor.customMusic.unnamed);
+    expect(d.music?.url).toMatch(/\.mp3$/);
+  });
+
+  it.each([
+    ["tak ada baris hidup (disapu cron / takedown)", []],
+    [
+      "hanya objek LAIN undangan ini yang hidup",
+      [`audio/${INV}/99999999-9999-4999-8999-999999999999.mp3`],
+    ],
+  ])(
+    "rujukan basi: %s → lagu pustaka, bukan URL 404",
+    (_label, liveMusicPaths) => {
+      // Takedown lalu kunci dibuka (tab editor lama menulis rujukannya
+      // kembali), atau autosave tertunda > 24 jam sehingga cron sudah
+      // menyapu objeknya: `content` masih merujuk path yang SAH bentuknya.
+      const d = bangun({ customMusic: { path: PATH }, liveMusicPaths });
+      expect(d.music).toEqual(PUSTAKA);
+    },
+  );
+
+  it("Basic → lagu pustaka (rujukan tersimpan diabaikan, bukan dihapus)", () => {
+    const d = bangun({ customMusic: { path: PATH }, watermark: true });
+    expect(d.music).toEqual(PUSTAKA);
+  });
+
+  it("dikunci admin sesudah takedown → lagu pustaka", () => {
+    const d = bangun({ customMusic: { path: PATH }, musicLocked: true });
+    expect(d.music).toEqual(PUSTAKA);
+  });
+
+  it.each([
+    ["undangan lain", `audio/11111111-2222-4333-8444-555555555555/${LAGU}.mp3`],
+    ["lagu pustaka", "songs/abc.mp3"],
+    ["video", `video/${INV}/${LAGU}/video.mp4`],
+    ["bukan uuid", `audio/${INV}/lagu.mp3`],
+    ["huruf besar", `audio/${INV}/${LAGU.toUpperCase()}.mp3`],
+    ["ekstensi lain", `audio/${INV}/${LAGU}.m4a`],
+  ])("path %s → lagu pustaka", (_label, path) => {
+    // Path-nya sendiri dinyatakan "hidup": yang harus menolaknya adalah
+    // pengikatan bentuk (`isCustomMusicPath`), bukan gerbang objek hidup.
+    expect(
+      bangun({ customMusic: { path }, liveMusicPaths: [path] }).music,
+    ).toEqual(PUSTAKA);
+  });
+
+  it.each([
+    ["URL vendor", { path: "https://vendor.test/a.mp3" }],
+    ["traversal", { path: `audio/${INV}/../x.mp3` }],
+    ["bukan objek", "lagu.mp3"],
+    ["tanpa path", { name: "x" }],
+  ])(
+    "customMusic rusak (%s) TIDAK mengosongkan undangan",
+    (_label, customMusic) => {
+      // Tanpa pemisahan, satu field gagal menjatuhkan skema strict & draft di
+      // `parseContentForRender` → kerangka kosong: nama mempelai hilang dari
+      // halaman tamu hanya karena rujukan musik rusak.
+      const d = bangun({ customMusic });
+      expect(d.content.category).toBe("wedding");
+      if (d.content.category === "wedding") {
+        expect(d.content.groom.name).toBe("Andi");
+        expect(d.content.bride.name).toBe("Sinta");
+      }
+      expect(d.music).toEqual(PUSTAKA);
+    },
+  );
 });

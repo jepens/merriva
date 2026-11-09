@@ -76,7 +76,19 @@ Satu folder per tema di `src/themes/{slug}/`: `index.tsx` (komponen menerima pro
 | Menjelang launch (checklist M4, **wajib sebelum event ramai**) | Cloudflare R2 (free: 10GB + **egress gratis**) via `cdn.merriva.id` + cache CF | Rp0 | Egress Supabase free hanya 5GB ≈ 3–4 event |
 | > 10GB (±1.000 undangan) | R2 $0,015/GB/bln | ±Rp10–25rb/bln | Siap video kenangan Fase 3 |
 
-Aturan yang membuat migrasi = ganti env: DB hanya menyimpan `storage_path` relatif; semua akses via `lib/storage/` (interface `upload/getUrl/delete`, driver dipilih `STORAGE_DRIVER`); media disajikan dari domain sendiri (`NEXT_PUBLIC_MEDIA_URL`); nama file immutable (hash). Migrasi: script copy S3-sync + ganti env. **Google Drive dilarang** (rate limit saat ramai = mati di hari-H; risiko akun; lihat DECISIONS #6). Upload: kompresi & resize di browser klien (2 varian WebP), naik via presigned/signed upload — VPS tidak memproses gambar.
+Prefix objek di bucket/volume `media` (satu bucket; validasi per tipe di aplikasi). Path selalu relatif dan disusun server; setiap prefix per-undangan diikat ke id undangannya oleh regex/constraint:
+
+| Prefix | Isi | Penulis | Cache `/media` | Ikut purge |
+|---|---|---|---|---|
+| `inv/<undangan>/<id>` + `/1600.webp`, `/400.webp` | foto galeri (prefix 2 varian); foto bernama di `inv/<undangan>/foto/<uuid>` | klien (dikompres di peramban) | `immutable` 1 tahun | ya (`media_paths`) |
+| `songs/<sha256>.<ext>` | pustaka lagu (content-addressed, dipakai bersama) | admin `/admin/lagu` | `immutable` 1 tahun — lagu yang dilaporkan wajib dihapus **dan** URL-nya di-purge di Cloudflare; menonaktifkan saja tidak menghentikan sajian (RUNBOOK) | tidak (milik platform) |
+| `momen/<album>/<foto>/(display\|thumb).(webp\|jpg)` | foto Album Momen | tamu | `immutable` 1 tahun | ya (`momen_paths`) |
+| `video/<undangan>/<uuid>/video.(mp4\|webm\|mov)` + `poster.(webp\|jpg)` | video undangan (#113) | pemilik Premium | `immutable` 1 tahun | ya (`momen_paths`) |
+| `audio/<undangan>/<uuid>.mp3` | musik unggahan klien, hanya rantai frame audio — data di luar frame dibuang, isi badan frame tak diperiksa; selalu `audio/mpeg` + `nosniff` (#121) | pemilik Premium, dicatat di `music_uploads` | **maks 1 jam**, supaya takedown efektif ≤ 1 jam tanpa purge Cloudflare. Jangan pasang Edge TTL override untuk `/media/audio/*` | ya (`momen_paths`, dipanen dari `music_uploads`) |
+
+Kolom cache berlaku untuk driver `local` (route `/media`, produksi sejak 14 Okt 2026). **Sebelum pindah driver**, janji cache 1 jam untuk `audio/` wajib dibawa: driver `supabase` memaku `cacheControl` setahun pada setiap unggahan, dan driver `r2` tidak memberi `Cache-Control` sama sekali, sehingga edge `cdn.merriva.id` memakai TTL bawaan Cloudflare.
+
+Aturan yang membuat migrasi = ganti env: DB hanya menyimpan `storage_path` relatif; semua akses via `lib/storage/` (interface `upload/getUrl/delete`, driver dipilih `STORAGE_DRIVER`); media disajikan dari domain sendiri (`NEXT_PUBLIC_MEDIA_URL`); nama file immutable (hash/UUID; `audio/` memakai UUID tetapi cache pendek, lihat tabel). Migrasi: script copy S3-sync + ganti env. **Google Drive dilarang** (rate limit saat ramai = mati di hari-H; risiko akun; lihat DECISIONS #6). Upload: kompresi & resize di browser klien (2 varian WebP), naik via presigned/signed upload — VPS tidak memproses gambar.
 
 ## 7. Email & cron
 

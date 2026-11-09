@@ -1,5 +1,6 @@
 "use client";
 
+import { useContext } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,32 +9,47 @@ import { Select } from "@/components/ui/select";
 import { copy } from "@/lib/copy";
 import { FIELD_LIMITS as L } from "@/lib/validation/content/field-limits";
 
+import { EditorUploadContext } from "../editor-shell";
 import { Field } from "../field";
 import { LimitedTextarea } from "../limited-textarea";
-import type { EditorValues, SongOption, VideoSlotView } from "../types";
+import { MusicField } from "../music-field";
+import type {
+  EditorValues,
+  MusicSlotView,
+  SongOption,
+  VideoSlotView,
+} from "../types";
 import { VideoField } from "../video-field";
 
 /**
  * Label toggle section. Section KEY "story" menggerbangi LINIMASA (cerita/agenda/
  * doa); labelnya berbeda per kategori → `timelineLabel` (default wedding).
  * `songs` = pustaka lagu aktif (dirakit di server) untuk picker musik latar.
+ * `music` = gerbang Premium + kunci admin + path & URL lagu sendiri yang masih
+ * hidup (DECISIONS #121); status unggahnya diteruskan ke kerangka editor lewat
+ * `EditorUploadContext`.
  * `video` = gerbang paket + URL video tersimpan (FASE J, dirakit di server).
  */
 export function SettingsStep({
   form,
   invitationId,
   songs,
+  music,
   video,
   timelineLabel = copy.editor.sections.story,
 }: {
   form: UseFormReturn<EditorValues>;
   invitationId: string;
   songs: SongOption[];
+  music: MusicSlotView;
   video: VideoSlotView;
   timelineLabel?: string;
 }) {
   const { register, control } = form;
+  // Unggahan lagu yang sedang berjalan menahan "Selesai" di kerangka editor.
+  const onUploadingChange = useContext(EditorUploadContext);
   const videoValue = useWatch({ control, name: "content.video" });
+  const customMusicValue = useWatch({ control, name: "content.customMusic" });
   const m = copy.editor.music;
   // Pratinjau: lacak pilihan aktif agar `<audio>` menunjuk lagu terpilih.
   const songId = useWatch({ control, name: "settings.songId" });
@@ -93,6 +109,18 @@ export function SettingsStep({
           />
         ) : null}
       </div>
+
+      <MusicField
+        invitationId={invitationId}
+        allowed={music.allowed}
+        lockedAt={music.lockedAt}
+        value={customMusicValue}
+        initialPath={music.path}
+        initialUrl={music.url}
+        // Tanpa `shouldDirty`, sama seperti video (DECISIONS #108).
+        onChange={(next) => form.setValue("content.customMusic", next)}
+        onBusyChange={onUploadingChange}
+      />
 
       <fieldset className="space-y-2">
         <legend className="mb-1 text-sm font-medium">

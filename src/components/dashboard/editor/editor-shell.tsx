@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import {
+  createContext,
   useCallback,
   useState,
   type Dispatch,
@@ -25,6 +26,7 @@ import { EditorErrorsContext } from "./editor-errors";
 import { stepForPath } from "./step-fields";
 import type {
   EditorValues,
+  MusicSlotView,
   PhotoSlots,
   SongOption,
   VideoSlotView,
@@ -34,6 +36,22 @@ import {
   type FlushResult,
   type SaveStatus,
 } from "./use-autosave";
+
+/**
+ * Pelapor "unggahan sedang berjalan" (`true` saat mulai, `false` saat selesai)
+ * dari bidang di dalam langkah ke kerangka editor, yang menahan "Selesai"
+ * selama ada unggahan: berpindah ke pratinjau sebelum hasilnya masuk form
+ * membuang unggahan itu diam-diam (autosave tak pernah melihatnya).
+ *
+ * React context, bukan field `EditorStepContext`: langkah Pengaturan dirender
+ * oleh `render` milik ketiga editor kategori dengan props eksplisit, sedangkan
+ * yang butuh pelapor ini hanya bidang lagu di dalamnya (pola
+ * `EditorErrorsContext`). Di luar kerangka (test langkah tunggal) nilainya
+ * `undefined` = tak ada yang ditahan.
+ */
+export const EditorUploadContext = createContext<
+  ((busy: boolean) => void) | undefined
+>(undefined);
 
 /** Konteks yang diberikan ke tiap step (form + helper galeri + identitas). */
 export interface EditorStepContext {
@@ -46,6 +64,8 @@ export interface EditorStepContext {
   songs: SongOption[];
   /** Slot foto yang dirender TEMA AKTIF + URL foto tersimpan (dari server). */
   photoSlots: PhotoSlots;
+  /** Gerbang Premium + kunci admin + path & URL lagu sendiri yang hidup. */
+  music: MusicSlotView;
   /** Gerbang paket + URL video tersimpan (dari server). */
   video: VideoSlotView;
 }
@@ -90,6 +110,7 @@ export function EditorShell({
   maxPhotos,
   songs,
   photoSlots,
+  music,
   video,
   steps,
   initialStep,
@@ -101,6 +122,7 @@ export function EditorShell({
   maxPhotos: number;
   songs: SongOption[];
   photoSlots: PhotoSlots;
+  music: MusicSlotView;
   video: VideoSlotView;
   steps: EditorStep[];
   /** Kunci langkah yang dibuka pertama (`?langkah=`, #44); tak dikenal → 0. */
@@ -123,6 +145,9 @@ export function EditorShell({
   } = useDraftAutosave(form, invitationId);
   const router = useRouter();
   const [finishing, setFinishing] = useState(false);
+  // Unggahan (lagu sendiri) yang belum selesai — dilaporkan lewat
+  // `EditorUploadContext`. Setter state stabil, jadi aman jadi nilai context.
+  const [uploading, setUploading] = useState(false);
   const [finishProblem, setFinishProblem] = useState<Exclude<
     FlushResult,
     "ok"
@@ -151,10 +176,12 @@ export function EditorShell({
    * Langkah terakhir → pratinjau (SPEC §4.4). Autosave di-debounce 800 ms, jadi
    * navigasi harus MENUNGGU simpanan tertunda: tanpa ini ketikan terakhir ikut
    * hilang saat editor ter-unmount. Simpan gagal → tetap di halaman, pemilik
-   * diberi tahu dan bisa menekan tombolnya lagi.
+   * diberi tahu dan bisa menekan tombolnya lagi. Selama unggahan berjalan
+   * tombolnya mati dan handler ini menolak: hasil unggahan baru masuk form
+   * (lalu autosave) sesudah server menjawab.
    */
   const handleFinish = useCallback(async () => {
-    if (finishing) return;
+    if (finishing || uploading) return;
     setFinishing(true);
     setFinishProblem(null);
     const hasil = await flush();
@@ -166,7 +193,7 @@ export function EditorShell({
     // `finishing` sengaja dibiarkan true: tombol tetap terkunci sampai halaman
     // pratinjau menggantikan editor (tak ada navigasi ganda).
     router.push(`/preview/${invitationId}`);
-  }, [finishing, flush, invitationId, router]);
+  }, [finishing, uploading, flush, invitationId, router]);
 
   const ctx: EditorStepContext = {
     form,
@@ -177,6 +204,7 @@ export function EditorShell({
     maxPhotos,
     songs,
     photoSlots,
+    music,
     video,
   };
 
@@ -202,7 +230,9 @@ export function EditorShell({
       <Card>
         <CardContent className="py-6">
           <EditorErrorsContext.Provider value={rejected}>
-            {steps[step].render(ctx)}
+            <EditorUploadContext.Provider value={setUploading}>
+              {steps[step].render(ctx)}
+            </EditorUploadContext.Provider>
           </EditorErrorsContext.Provider>
         </CardContent>
       </Card>
@@ -235,7 +265,7 @@ export function EditorShell({
           {copy.editor.nav.prev}
         </Button>
         <Button
-          disabled={finishing}
+          disabled={finishing || (isLast && uploading)}
           aria-busy={finishing}
           onClick={
             isLast

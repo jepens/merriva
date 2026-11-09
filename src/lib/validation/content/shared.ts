@@ -80,6 +80,30 @@ export const videoSchema = z.object({
 export type Video = z.output<typeof videoSchema>;
 
 /**
+ * Musik unggahan klien (DECISIONS #121) — rujukan ke objek
+ * `audio/{undangan}/{uuid}.mp3` yang dikembalikan route unggah, plus nama
+ * berkas asli untuk ditampilkan di editor (tak pernah dirender ke tamu).
+ *
+ * Sengaja TANPA durasi/pernyataan hak: nilai di `content` ditulis klien (dan
+ * bisa ditulis langsung lewat PostgREST), jadi catatan yang bisa dipercaya
+ * tinggal di tabel `music_uploads` yang hanya ditulis server. `.catch()` hanya
+ * pada `name` (pola `photoSchema`): nama rusak tak boleh menjatuhkan SELURUH
+ * draft. `path` tetap ketat seperti video — satu-satunya penulisnya editor kita,
+ * dan perakit render tetap mengikatnya ke undangan lewat `isCustomMusicPath`.
+ */
+export const customMusicSchema = z.object({
+  path: storagePathSchema,
+  name: z
+    .string()
+    .trim()
+    .max(L.common.customMusicName)
+    .optional()
+    .catch(undefined),
+});
+
+export type CustomMusic = z.output<typeof customMusicSchema>;
+
+/**
  * True bila string TIDAK diawali skema URL berbahaya (`javascript:`/`data:`/
  * `vbscript:`/`file:`). Semua karakter kontrol/spasi (code ≤ 0x20) dibuang dulu
  * agar obfuscasi seperti "java script:" / "java\tscript:" tetap terdeteksi.
@@ -230,6 +254,14 @@ export const commonContentFields = {
   /** Video unggahan (fitur paket yang sama dengan YouTube — `limits.youtube`;
    * ditegakkan saat unggah DAN saat render). Menang atas `youtubeUrl`. */
   video: videoSchema.optional(),
+  /** Lagu MP3 unggahan pemilik (Premium; ditegakkan saat unggah DAN saat
+   * render). Menang atas lagu pustaka `settings.songId` saat diputar.
+   * `.catch()` di sini (bukan hanya di `name`): rujukan rusak — mis. ditulis
+   * langsung lewat PostgREST — cukup berarti "tanpa lagu sendiri", bukan
+   * menjatuhkan skema strict & draft sekaligus sehingga undangan, judul
+   * metadata, dan gambar OG jatuh ke kerangka kosong. Satu-satunya penulis
+   * sahnya editor kita, yang selalu menulis bentuk yang dikembalikan route. */
+  customMusic: customMusicSchema.optional().catch(undefined),
   /** Tautan live streaming (fitur Premium — SPEC §2). WAJIB https. */
   livestreamUrl: optionalFormat(
     httpsUrlSchema(

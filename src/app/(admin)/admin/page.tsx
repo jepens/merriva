@@ -60,6 +60,9 @@ const STAT_PERHATIAN = new Set([
   "notifyNoOwner",
   "warnNoOwner",
   "backstop",
+  "musicFailed",
+  "musicTruncated",
+  "musicSweepFailed",
 ]);
 
 const cronBadge: Record<CronHealth, string> = {

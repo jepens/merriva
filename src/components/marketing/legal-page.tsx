@@ -5,6 +5,8 @@ import { copy } from "@/lib/copy";
 interface LegalSection {
   heading: string;
   body: readonly string[];
+  /** Anchor bagian (`/syarat#laporan-hak-cipta`) — opsional. */
+  id?: string;
 }
 
 /**
@@ -47,7 +49,7 @@ export function LegalPage({
 
         {sections.map((s) => (
           <div key={s.heading}>
-            <h2>{s.heading}</h2>
+            <h2 id={s.id}>{s.heading}</h2>
             {s.body.length === 1 ? (
               <p>{s.body[0]}</p>
             ) : (

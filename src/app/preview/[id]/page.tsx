@@ -11,9 +11,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
 import { activationCtaFor } from "@/lib/invitation-status";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { dataOrThrow } from "@/lib/supabase/result";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { buildInvitationData, resolveMusic } from "@/server/invitation-data";
+import {
+  buildInvitationData,
+  liveCustomMusicPaths,
+  resolveMusic,
+} from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
 import { requireUser } from "@/server/guards/auth";
 import { settingsSchema } from "@/lib/validation/content";
@@ -82,7 +87,7 @@ export default async function PreviewPage({
     await supabase
       .from("invitations")
       .select(
-        "id, slug, category, content, settings, event_date, package_id, theme_id, user_id",
+        "id, slug, category, content, settings, event_date, package_id, theme_id, user_id, music_locked_at",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -120,9 +125,17 @@ export default async function PreviewPage({
     inv.user_id,
   );
   const songId = settingsSchema.safeParse(inv.settings).data?.songId;
-  const music = await resolveMusic(supabase, songId);
+  const [music, liveMusicPaths] = await Promise.all([
+    resolveMusic(supabase, songId),
+    // `music_uploads` hanya service_role (RLS menyembunyikannya dari client
+    // pemilik). Aman: `inv` di atas dibaca lewat client PEMILIK — baris ini
+    // hanya ada bila RLS mengizinkan pengguna sesi membuka undangan ini — dan
+    // yang dibaca hanya path objek undangan itu (DECISIONS #121).
+    liveCustomMusicPaths(createSupabaseAdminClient(), inv.id),
+  ]);
 
   const data = buildInvitationData({
+    invitationId: inv.id,
     slug: inv.slug,
     category: inv.category,
     content: inv.content,
@@ -137,6 +150,10 @@ export default async function PreviewPage({
     // tema: pasangan font & gaya bawaan adalah index 0 milik tema ini.
     themeOptions: theme?.slug ? getThemeOptions(theme.slug) : null,
     music,
+    // Pratinjau = yang dilihat tamu: musik yang dikunci admin juga tak diputar
+    // di sini (editor menjelaskan sebabnya).
+    musicLocked: inv.music_locked_at !== null,
+    liveMusicPaths,
   });
 
   // Slug ditangkap terpisah agar tetap ter-narrow setelah guard di bawah

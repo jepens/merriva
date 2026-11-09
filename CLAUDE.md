@@ -65,7 +65,7 @@ TypeScript `strict`, hindari `any`. Server Components secara default; `"use clie
 
 **TANYA DULU:** ubah harga/struktur paket · migrasi destruktif pada data production · dependency besar / layanan berbayar baru · ubah kontrak props tema (berdampak semua tema).
 
-**JANGAN PERNAH:** commit secrets/`.env` · simpan URL vendor storage di DB atau serve media dari URL vendor (selalu via `lib/storage/` + domain sendiri) · Google Drive/file-sharing personal sebagai backend media · WA blast lewat API tidak resmi · simpan data pembayaran sensitif · hapus undangan yang masih aktif · musik berhak-cipta · ekspos `guests`/`gift_notes`/`orders` di API publik.
+**JANGAN PERNAH:** commit secrets/`.env` · simpan URL vendor storage di DB atau serve media dari URL vendor (selalu via `lib/storage/` + domain sendiri) · Google Drive/file-sharing personal sebagai backend media · WA blast lewat API tidak resmi · simpan data pembayaran sensitif · hapus undangan yang masih aktif · biarkan musik yang dilaporkan/diketahui melanggar hak cipta tetap tersaji, termasuk lewat URL langsung & cache edge (DECISIONS #121) · ekspos `guests`/`gift_notes`/`orders` di API publik.
 
 ## Konteks penting yang sering terlupa
 

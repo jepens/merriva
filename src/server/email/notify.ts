@@ -8,6 +8,7 @@ import {
   renderExpiredNoticeEmail,
   renderExpiryReminderEmail,
   renderMomenReceiptEmail,
+  renderMusicRemovedEmail,
   renderPurgeWarningEmail,
   renderReceiptEmail,
   renderReinstatedEmail,
@@ -387,6 +388,52 @@ export async function sendSuspendedNotice(
       html: rendered.html,
       text: rendered.text,
       idempotencyKey: `suspended/${invitationId}/${Math.floor(now / 60_000)}`,
+    });
+    if (res.status === "error") {
+      reportHandledError(new Error(`resend:${res.code}`), AREA, {
+        invitationId,
+        statusCode: res.statusCode,
+      });
+    }
+    return res.status;
+  } catch (err) {
+    reportHandledError(err, AREA, { invitationId });
+    return "error";
+  }
+}
+
+/**
+ * Pemberitahuan takedown musik unggahan (DECISIONS #121) — klon ringkas
+ * `sendSuspendedNotice` dengan aturan yang sama: hanya alasan PUBLIK yang
+ * diterima (catatan internal di `admin_logs` tak pernah dibaca di sini), jalur
+ * sanggahan selalu dicetak, dan kunci idempotensi bercap menit sehingga takedown
+ * kedua sesudah buka kunci berhak atas email kedua. Best-effort: tak pernah
+ * melempar — musiknya SUDAH dihapus saat fungsi ini dipanggil.
+ */
+export async function sendMusicRemovedNotice(
+  admin: Admin,
+  invitationId: string,
+  publicReason: string | null,
+  now: number = Date.now(),
+): Promise<StatusKirim> {
+  const AREA = "email.music-removed";
+  try {
+    const target = await pemilikUndangan(admin, invitationId, AREA);
+    if (!target) return "nodata";
+
+    const rendered = renderMusicRemovedEmail({
+      name: target.name,
+      slug: target.slug,
+      publicReason,
+      supportEmail: copy.support.email,
+      dashboardUrl: `${appUrl}/dashboard/undangan/${invitationId}`,
+    });
+    const res = await sendTransactionalEmail({
+      to: target.email,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      idempotencyKey: `music-removed/${invitationId}/${Math.floor(now / 60_000)}`,
     });
     if (res.status === "error") {
       reportHandledError(new Error(`resend:${res.code}`), AREA, {

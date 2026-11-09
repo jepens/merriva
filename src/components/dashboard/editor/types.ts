@@ -52,3 +52,23 @@ export type VideoSlotView = {
   url: string | null;
   posterUrl: string | null;
 };
+
+/**
+ * Bidang lagu sendiri (DECISIONS #121), dirakit di server seperti slot video:
+ * - `allowed` = undangan Premium (`!limits.watermark`, konvensi gerbang
+ *   Premium yang sama dengan live streaming);
+ * - `lockedAt` = `invitations.music_locked_at` — kunci unggah sesudah takedown
+ *   admin (ISO, null = tidak dikunci);
+ * - `path` + `url` = lagu tersimpan (`content.customMusic.path`) dan URL-nya,
+ *   KEDUANYA null bila belum ada, path-nya bukan objek musik milik undangan
+ *   ini (`isCustomMusicPath`), atau objeknya sudah tak hidup menurut
+ *   `music_uploads` (disapu cron / takedown). `path` memberi tahu editor untuk
+ *   rujukan MANA `url` ini berlaku — sesudah unggah ulang, rujukan di form
+ *   berbeda dan `url` tersimpan tak boleh diputar di bawah nama baru.
+ */
+export type MusicSlotView = {
+  allowed: boolean;
+  lockedAt: string | null;
+  path: string | null;
+  url: string | null;
+};

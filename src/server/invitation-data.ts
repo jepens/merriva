@@ -6,7 +6,7 @@ import { copy } from "@/lib/copy";
 import { sesuaikanKePaket } from "@/lib/customizer/resolve";
 import type { ThemeOptions } from "@/lib/customizer/theme-options";
 import { parseContentForRender } from "@/lib/invitation-content";
-import { displayPath, toMediaView } from "@/lib/media";
+import { displayPath, isCustomMusicPath, toMediaView } from "@/lib/media";
 import { scheduledEvents } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
 import { dataOrThrow } from "@/lib/supabase/result";
@@ -73,6 +73,35 @@ export async function resolveMusic(
   };
 }
 
+/**
+ * Path musik unggahan undangan ini yang objeknya MASIH HIDUP menurut
+ * `music_uploads` (DECISIONS #121) — syarat perakit render memutar
+ * `content.customMusic`. `content` bisa merujuk objek yang sudah tiada:
+ * takedown lalu kunci dibuka (tab editor lama menulis rujukannya kembali), atau
+ * autosave yang tertunda melewati 24 jam sehingga cron sudah menyapu objeknya.
+ * Tanpa syarat ini tamu memutar URL 404, bukan lagu pustaka.
+ *
+ * `music_uploads` HANYA service_role (RLS tanpa policy): pemanggil memakai
+ * admin client, dan di jalur pemilik baru SESUDAH kepemilikan undangan
+ * terverifikasi lewat client pemilik.
+ */
+export async function liveCustomMusicPaths(
+  client: SupabaseClient<Database>,
+  invitationId: string,
+): Promise<string[]> {
+  // Galat DB DILEMPAR (DECISIONS #45): kedipan DB tak boleh di-cache ISR
+  // sebagai undangan yang musik unggahannya "tak hidup".
+  const rows = dataOrThrow(
+    await client
+      .from("music_uploads")
+      .select("path")
+      .eq("invitation_id", invitationId)
+      .is("removed_at", null),
+    "music_uploads",
+  );
+  return (rows ?? []).map((r) => r.path);
+}
+
 function isHttpsUrl(url: string | undefined): url is string {
   if (!url) return false;
   try {
@@ -83,6 +112,8 @@ function isHttpsUrl(url: string | undefined): url is string {
 }
 
 export function buildInvitationData(args: {
+  /** Id undangan — pengikat path musik unggahan (`isCustomMusicPath`). */
+  invitationId: string;
   slug: string;
   category: InvitationCategory;
   content: unknown;
@@ -97,7 +128,12 @@ export function buildInvitationData(args: {
   maxPhotos: number;
   /** Options tema undangan ini; `null` = tema tanpa kustomisasi. */
   themeOptions: ThemeOptions | null;
+  /** Lagu pustaka terpilih (`resolveMusic`). Kalah oleh musik unggahan yang sah. */
   music: InvitationData["music"];
+  /** `invitations.music_locked_at` terisi — musik unggahan dikunci admin. */
+  musicLocked: boolean;
+  /** `liveCustomMusicPaths` — objek musik unggahan yang belum dihapus. */
+  liveMusicPaths: readonly string[];
 }): InvitationData {
   // Premium = tanpa watermark — konvensi gerbang Premium yang sama dengan aksi
   // Tampilan (DECISIONS #13).
@@ -200,11 +236,41 @@ export function buildInvitationData(args: {
       }
     : null;
 
+  // Musik unggahan (DECISIONS #121) — gerbang SATU titik untuk halaman publik &
+  // pratinjau, pola yang sama dengan video: hanya Premium, tidak dikunci admin,
+  // path-nya benar-benar objek milik undangan INI (`content` ditulis klien;
+  // path undangan lain atau bentuk asing diabaikan), DAN objeknya masih hidup
+  // menurut `music_uploads` (rujukan basi sesudah takedown + buka kunci, atau
+  // objek yang sudah disapu cron, akan memutar 404). Gagal gerbang → lagu
+  // pustaka. Rujukannya TIDAK dihapus saat turun paket (diputar lagi bila naik
+  // paket); takedown yang membuang rujukan + objeknya, dan kunci menahan
+  // rujukan yang ditulis ulang tab editor lama. Rujukan rusak sudah gugur jadi
+  // `undefined` di skema (`.catch` di `commonContentFields`).
+  //
+  // Judulnya SELALU label generik: `name` adalah nama berkas asli di perangkat
+  // pemilik (bisa memuat nama orang, "unduhan-yt", dsb.) — hanya untuk editor,
+  // tak pernah dikirim ke tamu. Karena itu juga `customMusic` dibuang dari
+  // `content` yang diterima tema: tema tak membacanya, dan tanpa ini nama
+  // berkas ikut payload halaman publik begitu sebuah tema meneruskan
+  // `content` ke komponen klien.
+  const customMusic = content.customMusic;
+  const music =
+    premium &&
+    !args.musicLocked &&
+    customMusic &&
+    isCustomMusicPath(args.invitationId, customMusic.path) &&
+    args.liveMusicPaths.includes(customMusic.path)
+      ? {
+          url: storage.getPublicUrl(customMusic.path),
+          title: copy.editor.customMusic.unnamed,
+        }
+      : args.music;
+
   return {
     slug: args.slug,
     category: args.category,
     eventDate: args.eventDate,
-    content,
+    content: { ...content, customMusic: undefined },
     settings,
     events,
     media,
@@ -212,7 +278,7 @@ export function buildInvitationData(args: {
     groomPhoto,
     bridePhoto,
     video,
-    music: args.music,
+    music,
     watermark: args.watermark,
   };
 }

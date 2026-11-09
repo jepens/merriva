@@ -12,7 +12,11 @@ import { isDraftSlug, isPlausibleSlug, isReservedSlug } from "@/lib/slug";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { dataOrThrow } from "@/lib/supabase/result";
 import { settingsSchema } from "@/lib/validation/content";
-import { buildInvitationData, resolveMusic } from "@/server/invitation-data";
+import {
+  buildInvitationData,
+  liveCustomMusicPaths,
+  resolveMusic,
+} from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
 import { getThemeLoader } from "@/themes/registry";
 import { getThemeOptions } from "@/themes/theme-options-registry";
@@ -48,7 +52,7 @@ const getInvitationBySlug = cache(async (slug: string) => {
   const { data, error } = await admin
     .from("invitations")
     .select(
-      "id, slug, category, content, settings, event_date, package_id, theme_id, status, updated_at",
+      "id, slug, category, content, settings, event_date, package_id, theme_id, status, updated_at, music_locked_at",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -215,7 +219,8 @@ export default async function PublicInvitationPage({
   // revalidasi meng-cache undangan TANPA jadwal/galeri/tombol Momen, atau 404
   // (tema null → notFound), bagi SEMUA tamu sampai simpanan berikutnya. Kini
   // render melempar dan tak pernah di-cache (lihat `getInvitationBySlug`); batas
-  // paket & musik (`getEffectiveLimits`, `resolveMusic`) melempar dengan cara sama.
+  // paket & musik (`getEffectiveLimits`, `resolveMusic`,
+  // `liveCustomMusicPaths`) melempar dengan cara sama.
   const theme = dataOrThrow(themeRes, "themes");
   const eventRows = dataOrThrow(eventsRes, "invitation_events");
   const mediaRows = dataOrThrow(mediaRes, "media");
@@ -223,9 +228,15 @@ export default async function PublicInvitationPage({
 
   const limits = await getEffectiveLimits(admin, inv.package_id);
   const songId = settingsSchema.safeParse(inv.settings).data?.songId;
-  const music = await resolveMusic(admin, songId);
+  const [music, liveMusicPaths] = await Promise.all([
+    resolveMusic(admin, songId),
+    // Satu kueri berindeks per render ISR: musik unggahan hanya diputar bila
+    // objeknya masih hidup (DECISIONS #121).
+    liveCustomMusicPaths(admin, inv.id),
+  ]);
 
   const data = buildInvitationData({
+    invitationId: inv.id,
     slug: inv.slug,
     category: inv.category,
     content: inv.content,
@@ -240,6 +251,8 @@ export default async function PublicInvitationPage({
     // tema: pasangan font & gaya bawaan adalah index 0 milik tema ini.
     themeOptions: theme?.slug ? getThemeOptions(theme.slug) : null,
     music,
+    musicLocked: inv.music_locked_at !== null,
+    liveMusicPaths,
   });
 
   const themeSlug = theme?.slug ?? null;

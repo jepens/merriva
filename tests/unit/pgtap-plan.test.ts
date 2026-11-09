@@ -32,6 +32,7 @@ const ASSERTIONS = [
   "set_eq",
   "row_eq",
   "matches",
+  "table_privs_are",
 ];
 
 const files = readdirSync(DIR).filter((f) => f.endsWith(".test.sql"));

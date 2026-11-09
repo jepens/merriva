@@ -203,7 +203,8 @@ lewat SQL editor.
 | `auth.users` (login) | dihapus |
 | `profiles` (nama, WhatsApp) | dihapus |
 | `guests`, `rsvps`, `gift_notes`, `media`, `invitation_events`, `momen_albums`+foto | dihapus permanen |
-| Objek storage (foto galeri & Album Momen) | dihapus (best-effort) |
+| Objek storage (foto galeri & Album Momen, video, musik unggahan) | dihapus (best-effort) |
+| Baris `music_uploads` (catatan unggah musik) | **tetap ada**, `removed_reason = 'purge'`, `user_id` → NULL (DECISIONS #121) |
 | Baris `invitations` | **tetap ada** sebagai kerangka kosong (`content = {}`, `purged_at` terisi, `user_id` → NULL) — ia menahan FK `orders.invitation_id` |
 | Baris `orders` | **tetap ada**, `user_id` → NULL |
 
@@ -225,6 +226,135 @@ pribadi setelah pemiliknya dilepas.
 
 **Belum ada:** tombol hapus mandiri di dashboard pelanggan. Permintaan masuk
 lewat alamat dukungan dan dieksekusi admin.
+
+## Laporan pelanggaran hak cipta (musik unggahan) — DECISIONS #121
+
+Undangan Premium boleh mengunggah MP3 sendiri. Merriva karena itu termasuk
+platform UGC yang menurut Putusan MK 84/2023 dilarang **membiarkan** pelanggaran
+yang diketahuinya. Laporan yang masuk lalu didiamkan adalah risiko terbesar fitur
+ini, jauh lebih besar daripada lagu yang belum pernah dilaporkan. `/syarat`
+bagian "Laporan pelanggaran hak cipta" menjanjikan tindakan **segera, paling
+lambat 2 hari kerja**.
+
+**Prosedur**
+
+1. **Terima laporan** di alamat dukungan (`halo@merriva.id`, sumbernya
+   `copy.support.email`). Laporan yang bisa ditindak memuat: identitas dan
+   kontak pelapor (beserta kuasa bila mewakili pemegang hak), karya yang
+   diklaim beserta bukti haknya, tautan undangan (`merriva.id/<slug>`), dan
+   pernyataan itikad baik bahwa pemakaiannya tidak diizinkan dan isi laporannya
+   benar. Laporan yang kurang lengkap tetap dibalas untuk meminta
+   kelengkapannya; jangan didiamkan. Catat tanggal laporan masuk.
+2. **Periksa.** Buka `/admin/undangan/<id>`. Kartu "Musik unggahan (laporan hak
+   cipta)" menampilkan jumlah berkas tersimpan dan berkas yang sedang dipakai.
+   Dengarkan lagunya lewat tautan undangan.
+   - Yang diputar ternyata **lagu pustaka**, bukan unggahan: tanggung jawabnya
+     ada pada Merriva sendiri, dan tombol takedown di atas tidak menyentuhnya.
+     Ikuti **"Lagu pustaka yang dilaporkan"** di bawah. Menonaktifkan trek saja
+     **tidak** menghentikan sajiannya.
+   - Laporan jelas tak berdasar (lagu bebas royalti yang lisensinya bisa
+     ditunjukkan, atau rekaman pemilik sendiri): tolak dengan alasan tertulis
+     kepada pelapor. Permenkominfo 5/2020 Pasal 10 ayat (4) memang mengenal
+     penolakan aduan atas konten yang tidak dilarang.
+   - **Bila ragu, condonglah ke takedown.** Sanggahan dengan bukti bisa
+     membuka kuncinya kembali (langkah 6), sedangkan membiarkan tidak bisa
+     ditarik kembali.
+3. **Tindak.** Di halaman yang sama, tekan **"Hapus musik & kunci unggah"**.
+   - **Catatan internal** boleh memuat identitas pelapor dan rujukan email
+     laporannya. Isinya hanya masuk `admin_logs` dan menjadi satu-satunya
+     penjelasan kelak.
+   - **Alasan untuk pelanggan** dikirim lewat email. **Jangan cantumkan data
+     pribadi pelapor**; cukup mis. "Laporan dari pemegang hak cipta atas lagu
+     yang diunggah". Boleh dikosongkan; emailnya tetap menyebut jalur
+     sanggahan.
+   - Yang terjadi dalam satu transaksi: semua berkas musik unggahan undangan
+     itu ditandai `takedown`, rujukannya dibuang dari `content`, unggah
+     dikunci (`music_locked_at`, berlaku **sampai admin membukanya** di
+     langkah 6; tidak ada batas waktu otomatis), dan `admin_logs`
+     `invitation.music_takedown` mencatat kedua alasan beserta sidik setiap
+     berkas. Sesudah itu objek dihapus dari storage dan email terkirim ke
+     pemilik. **Undangan tetap tayang**, dengan lagu pustaka pilihan pemilik
+     atau tanpa musik.
+   - Arti pesan hasilnya: `music_ok` berarti selesai. `music_ok_no_email`
+     berarti email gagal, jadi kabari pemilik manual dari alamat dukungan
+     dengan alasan publik yang sama. `music_ok_partial` berarti sebagian objek
+     gagal dihapus; musiknya sudah tak diputar, tetapi URL langsungnya masih
+     hidup sampai objeknya dihapus. Ambil path-nya dari Sentry
+     (`admin.music-takedown.storage`) dan hapus manual dari volume media.
+4. **Pastikan berhenti tersaji.** Berkas `audio/` disajikan dengan cache
+   maksimal 1 jam, jadi URL langsungnya mati paling lambat ±1 jam sesudah
+   objeknya terhapus. Bila harus hilang **segera** (mis. pelapor menunjuk URL
+   langsungnya), buka Cloudflare → Caching → Configuration → Purge Cache →
+   *Custom Purge* → **Prefix** `merriva.id/media/audio/<id undangan>/`.
+   Periksa dengan `curl -sI https://merriva.id/media/audio/<id>/<uuid>.mp3`:
+   harapannya 404, bukan `cf-cache-status: HIT`. Jangan pernah memasang Edge
+   TTL override atau "Cache Everything" ber-TTL panjang untuk
+   `/media/audio/*`, karena itu mematikan langkah ini.
+5. **Balas pelapor**: tindakan sudah diambil, tanpa membagikan data pemilik
+   undangan. Data pengunggah hanya diserahkan kepada penegak hukum yang
+   berwenang, bukan kepada pelapor.
+6. **Sanggahan.** Bila pemilik membalas dengan bukti lisensi atau izin
+   tertulis pemegang hak, periksa buktinya. Bila meyakinkan, tekan **"Buka
+   kunci"** di halaman yang sama (tercatat `invitation.music_unlock`) dan kabari
+   pemilik bahwa ia bisa mengunggah lagi. Berkas lama **tidak** bisa
+   dipulihkan; pemilik mengunggah ulang dan mencentang pernyataan baru. Kabari
+   juga pelapor bahwa sanggahan diterima beserta alasannya.
+7. **Pelanggar berulang.** Riwayatnya ada di `admin_logs` (`action =
+   'invitation.music_takedown'`, kolom `detail->>'owner_id'`). Pemilik yang
+   musiknya di-takedown lagi sesudah dibuka kuncinya, atau yang punya
+   takedown sah di lebih dari satu undangan, ditindak dengan alat yang ada:
+   suspend undangan (`/admin/undangan/<id>`) atau tangguhkan akun
+   (`/admin/pengguna`, DECISIONS #19). Tetap pakai dua isian alasan.
+
+**Yang tidak dihapus takedown:** salinan berkas di backup R2 harian (bertahan
+±30 hari sampai lifecycle, tidak tersaji ke publik) dan baris `music_uploads`
+(catatan tanpa isi berkas, bukti bahwa tindakan diambil).
+
+**Perintah Kementerian** (bukan aduan swasta) tunduk pada tenggat Permenkominfo
+5/2020: 1×24 jam, atau lebih singkat untuk konten mendesak. Tindak hari itu
+juga dengan langkah 3–4, termasuk purge Cloudflare.
+
+### Lagu pustaka yang dilaporkan
+
+Lagu pustaka (`songs/<sha256>.<ext>`) disajikan atas nama Merriva ke setiap
+undangan yang memilihnya, dengan cache `immutable` **setahun**, bukan 1 jam
+seperti `audio/`. Menonaktifkan trek hanya menyembunyikannya dari picker dan
+menghentikan pemutarannya saat halaman dirender ulang. Objeknya tetap bisa
+diunduh lewat URL langsung dan tetap disajikan dari cache edge Cloudflare.
+Standar SPEC §11 ("jangan biarkan tersaji") berlaku sama untuk lagu pustaka.
+
+1. **Catat dulu** undangan yang memakainya dan path objeknya. Sesudah lagu
+   dihapus, yang tersisa hanya `settings.songId` yang menunjuk id yang sudah
+   tiada:
+   `select id, slug, status from invitations where settings->>'songId' = '<id lagu>';`
+   `select id, title, storage_path from songs where storage_path = (select storage_path from songs where id = '<id lagu>');`
+   Lebih dari satu baris di kueri kedua berarti berkas identik diunggah dua
+   kali dan berbagi satu objek (path content-addressed).
+2. **Nonaktifkan** trek di `/admin/lagu`. Picker langsung berubah; halaman
+   undangan ber-ISR berhenti memutarnya paling lambat ±1 jam saat dirender
+   ulang.
+3. **Hapus** lagu di `/admin/lagu`, yaitu **setiap** baris dari langkah 1 yang
+   berbagi `storage_path` yang sama. `adminDeleteSongAction` menghapus barisnya
+   lalu objeknya, tetapi objek hanya dihapus bila tak ada baris `songs` lain
+   yang masih memakai path itu, dan kegagalan menghapus objek **ditelan tanpa
+   pesan**. Karena itu langkah 5 wajib.
+4. **Purge Cloudflare.** Cache-nya setahun, jadi tanpa purge edge terus
+   menyajikan salinan lama. Buka Caching → Configuration → Purge Cache →
+   *Custom Purge* → **URL** `https://merriva.id/media/songs/<sha256>.<ext>`
+   (atau **Prefix** `merriva.id/media/songs/<sha256>`). Salinan yang sudah
+   tersimpan di peramban tamu (`immutable`) tidak bisa ditarik dari server;
+   batas itu diterima.
+5. **Periksa** dengan `curl -sI https://merriva.id/media/songs/<sha256>.<ext>`:
+   harapannya 404, bukan `cf-cache-status: HIT`. Bila origin masih menjawab
+   200, objeknya gagal dihapus: hapus manual dari volume media, lalu purge
+   lagi.
+6. **Undangan yang memakainya jatuh ke tanpa musik** (`resolveMusic` → null)
+   saat dirender ulang. HTML ISR yang belum diperbarui menunjuk URL yang kini
+   404; pemutarnya diam, tidak error. Tak ada email otomatis, jadi kabari
+   pemilik undangan dari daftar langkah 1 agar memilih lagu lain.
+7. **Catat** laporan, tanggal, trek, dan tindakannya di catatan ops.
+   `admin_logs` `song.delete` hanya memuat id lagu. Salinan di backup R2
+   harian bertahan ±30 hari tanpa tersaji ke publik, sama seperti takedown.
 
 ## Rotasi & kebocoran kredensial — AUDIT-2026-10-01
 

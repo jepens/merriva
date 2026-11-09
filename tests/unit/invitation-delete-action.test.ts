@@ -45,9 +45,21 @@ const { reportHandledError } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/observability", () => ({ reportHandledError }));
 
-const { invRow, rpc } = vi.hoisted(() => ({
+const { invRow, rpc, draft } = vi.hoisted(() => ({
   invRow: { data: null as unknown },
   rpc: vi.fn(),
+  /** Jalur hapus draft: urutan kejadian + hasil bacaan/DELETE yang disetel. */
+  draft: {
+    urutan: [] as string[],
+    musikFilter: [] as [string, string, unknown][],
+    musik: { data: [] as { path: string }[] | null, error: null as unknown },
+    delError: null as unknown,
+    /** Baris yang DIKEMBALIKAN DELETE (`.select("id")`); [] = 0 baris kena. */
+    terhapus: [] as { id: string }[],
+    /** Kolom yang diminta kembali dari DELETE (null = tak meminta baris). */
+    delSelect: null as string | null,
+    media: [] as { storage_path: string }[],
+  },
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -56,23 +68,58 @@ vi.mock("@/lib/supabase/server", () => ({
       auth: { getUser: async () => ({ data: { user: { id: "u-1" } } }) },
       from: (table: string) => {
         const chain: Record<string, unknown> = {};
-        chain.select = () => chain;
+        let isDelete = false;
+        chain.select = (cols: string) => {
+          if (isDelete) draft.delSelect = cols;
+          return chain;
+        };
         chain.eq = () => chain;
         chain.maybeSingle = () => Promise.resolve(invRow);
-        chain.delete = () => chain;
-        // `media` dibaca sebagai list (tanpa maybeSingle).
+        chain.delete = () => {
+          isDelete = true;
+          draft.urutan.push(`delete:${table}`);
+          return chain;
+        };
+        // `media` dibaca sebagai list (tanpa maybeSingle). DELETE hanya
+        // mengembalikan baris bila diminta lewat `.select()` — seperti PostgREST.
         chain.then = (res: (v: unknown) => unknown) =>
           Promise.resolve(
-            table === "media" ? { data: [], error: null } : { error: null },
+            table === "media"
+              ? { data: draft.media, error: null }
+              : {
+                  data:
+                    draft.delError || draft.delSelect === null
+                      ? null
+                      : draft.terhapus,
+                  error: draft.delError,
+                },
           ).then(res);
         return chain;
       },
     }),
 }));
 vi.mock("@/lib/supabase/admin", () => ({
-  createSupabaseAdminClient: () => ({ rpc }),
+  createSupabaseAdminClient: () => ({
+    rpc,
+    // `music_uploads` hanya terbaca service_role (RLS tanpa policy).
+    from: (table: string) => {
+      const chain: Record<string, unknown> = {};
+      chain.select = () => chain;
+      chain.eq = (col: string, v: unknown) => {
+        draft.musikFilter.push(["eq", col, v]);
+        return chain;
+      };
+      chain.is = (col: string, v: unknown) => {
+        draft.musikFilter.push(["is", col, v]);
+        draft.urutan.push(`baca:${table}`);
+        return Promise.resolve(draft.musik);
+      };
+      return chain;
+    },
+  }),
 }));
 
+import { copy } from "@/lib/copy";
 import { deleteInvitationAction } from "@/server/actions/invitation";
 
 const INV = "44444444-4444-4444-8444-444444444444";
@@ -93,7 +140,16 @@ function purged() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  storage.delete.mockResolvedValue(undefined);
+  draft.urutan = [];
+  draft.musikFilter = [];
+  draft.musik = { data: [], error: null };
+  draft.delError = null;
+  draft.terhapus = [{ id: INV }];
+  draft.delSelect = null;
+  draft.media = [];
+  storage.delete.mockImplementation(async (p: string) => {
+    draft.urutan.push(`storage:${p}`);
+  });
   checkClientRateLimit.mockResolvedValue({
     ok: true,
     remaining: 19,
@@ -185,5 +241,101 @@ describe("deleteInvitationAction — purge expired", () => {
     expect((await deleteInvitationAction(INV)).status).toBe("success");
     expect(storage.delete).not.toHaveBeenCalled();
     expect(reportHandledError).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteInvitationAction — hapus draft + musik unggahan (DECISIONS #121)", () => {
+  const LAGU = (n: number) =>
+    `audio/${INV}/0000000${n}-0000-4000-8000-000000000000.mp3`;
+
+  beforeEach(() => {
+    invRow.data = { id: INV, status: "draft", slug: "draft-abc" };
+    draft.musik = { data: [{ path: LAGU(1) }, { path: LAGU(2) }], error: null };
+  });
+
+  it("path dibaca SEBELUM DELETE, objeknya dihapus SESUDAH DELETE sukses", async () => {
+    expect((await deleteInvitationAction(INV)).status).toBe("success");
+
+    // Baris ikut lenyap oleh FK cascade — dibaca sesudah DELETE, daftarnya
+    // kosong dan objeknya tersaji publik selamanya.
+    expect(draft.urutan).toEqual([
+      "baca:music_uploads",
+      "delete:invitations",
+      `storage:${LAGU(1)}`,
+      `storage:${LAGU(2)}`,
+    ]);
+    // Hanya objek milik undangan ini yang masih hidup.
+    expect(draft.musikFilter).toEqual([
+      ["eq", "invitation_id", INV],
+      ["is", "removed_at", null],
+    ]);
+    expect(reportHandledError).not.toHaveBeenCalled();
+  });
+
+  it('DELETE meminta barisnya kembali (`.select("id")`) — 0 baris harus terlihat', async () => {
+    await deleteInvitationAction(INV);
+    expect(draft.delSelect).toBe("id");
+  });
+
+  it("DELETE kena 0 baris (status berubah di sela) → TAK ada objek yang dihapus", async () => {
+    // Checkout menjadikannya pending/aktif sesudah bacaan status tetapi
+    // sebelum DELETE: guard `status = draft` menyaring barisnya. Undangan itu
+    // masih hidup — lagu & fotonya miliknya, bukan sampah draft.
+    draft.terhapus = [];
+    draft.media = [
+      { storage_path: `inv/${INV}/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa` },
+    ];
+
+    const res = await deleteInvitationAction(INV);
+
+    expect(res).toEqual({
+      status: "error",
+      reason: "not_deletable",
+      message: copy.dashboard.deleteNotAllowed,
+    });
+    expect(storage.delete).not.toHaveBeenCalled();
+    expect(reportHandledError).not.toHaveBeenCalled();
+  });
+
+  it("kontrol: DELETE yang kena barisnya ikut menghapus objek media galeri", async () => {
+    // Tanpa ini, test 0 baris di atas bisa lolos hanya karena media tiruan
+    // tak pernah dihapus sama sekali.
+    draft.media = [
+      { storage_path: `inv/${INV}/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa` },
+    ];
+
+    expect((await deleteInvitationAction(INV)).status).toBe("success");
+    const dihapus = storage.delete.mock.calls.map((c) => c[0]);
+    expect(
+      dihapus.filter((p) => p.startsWith(`inv/${INV}/`)).length,
+    ).toBeGreaterThan(0);
+    expect(dihapus).toContain(LAGU(1));
+  });
+
+  it("DELETE gagal → tak ada objek musik yang dihapus", async () => {
+    draft.delError = { message: "kedip" };
+
+    expect((await deleteInvitationAction(INV)).status).toBe("error");
+    expect(storage.delete).not.toHaveBeenCalled();
+  });
+
+  it("bacaan musik gagal → penghapusan DIBATALKAN (objek tak boleh jadi yatim)", async () => {
+    draft.musik = { data: null, error: { message: "kedip" } };
+
+    expect((await deleteInvitationAction(INV)).status).toBe("error");
+    expect(draft.urutan).not.toContain("delete:invitations");
+    expect(storage.delete).not.toHaveBeenCalled();
+  });
+
+  it("objek musik gagal dihapus → DILAPORKAN, aksi tetap sukses", async () => {
+    storage.delete.mockRejectedValue(new Error("403 AccessDenied"));
+
+    expect((await deleteInvitationAction(INV)).status).toBe("success");
+    expect(reportHandledError).toHaveBeenCalledTimes(1);
+    expect(reportHandledError.mock.calls[0][1]).toBe("invitation.delete.music");
+    expect(reportHandledError.mock.calls[0][2]).toMatchObject({
+      invitationId: INV,
+      failed: 2,
+    });
   });
 });

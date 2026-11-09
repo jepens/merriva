@@ -3,7 +3,7 @@ import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 
 import { getMediaRoot, getStorageDriver } from "@/lib/env";
-import { berkasObjek, tipeIsi } from "@/lib/storage/local-path";
+import { berkasObjek, segmenObjek, tipeIsi } from "@/lib/storage/local-path";
 import { parseRange } from "@/lib/storage/range";
 
 /**
@@ -16,7 +16,8 @@ import { parseRange } from "@/lib/storage/range";
  *
  * Path objek memakai nama immutable (UUID/hash) sehingga aman di-cache
  * selamanya; Cloudflare di depannya yang menanggung beban hari-H dan origin
- * hanya tersentuh sekali per objek.
+ * hanya tersentuh sekali per objek. Pengecualiannya musik unggahan klien
+ * (`audio/`), yang bisa di-takedown — lihat `CACHE_AUDIO_UNGGAHAN`.
  *
  * Isi berkas di-STREAM sebatas rentang yang diminta, bukan dibaca utuh ke
  * memori. Dulu dibaca utuh (foto ratusan KB, lagu ±3MB — murah); sejak video
@@ -31,6 +32,26 @@ export const dynamic = "force-dynamic";
 
 /** Nama berbasis hash/UUID → isinya tak pernah berubah. */
 const CACHE = "public, max-age=31536000, immutable";
+
+/**
+ * Musik unggahan klien (`audio/<undangan>/<uuid>.mp3`, DECISIONS #121): isinya
+ * juga tak berubah, tetapi objeknya bisa DIHAPUS admin karena laporan hak
+ * cipta. Dengan `immutable` setahun, Cloudflare dan peramban tamu tetap
+ * menyajikannya setelah takedown sampai cache-nya di-purge manual. Satu jam
+ * membuat takedown efektif ≤ 1 jam tanpa purge Cloudflare, dengan harga satu
+ * revalidasi per jam per lagu di origin — lagu pustaka (`songs/`) tak terkena.
+ */
+const CACHE_AUDIO_UNGGAHAN = "public, max-age=3600";
+
+/**
+ * Header cache untuk path objek. Ditentukan dari SEGMEN yang sudah dinormalkan
+ * (`segmenObjek`, yang sama dengan pembaca berkas), bukan dari teks URL — jadi
+ * `//audio/...` atau segmen kosong lain tak bisa menyajikan berkas audio
+ * unggahan dengan cache setahun.
+ */
+function cacheUntuk(rel: string): string {
+  return segmenObjek(rel)?.[0] === "audio" ? CACHE_AUDIO_UNGGAHAN : CACHE;
+}
 
 function tolak(status: number, headers?: HeadersInit): Response {
   return new Response(null, { status, headers });
@@ -64,7 +85,7 @@ export async function GET(
 
   const etag = `"${info.size.toString(16)}-${Math.trunc(info.mtimeMs).toString(16)}"`;
   const dasar = {
-    "Cache-Control": CACHE,
+    "Cache-Control": cacheUntuk(rel),
     ETag: etag,
     "Accept-Ranges": "bytes",
   };

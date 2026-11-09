@@ -242,7 +242,12 @@ describe("konstanta FIELD_LIMITS", () => {
       ewallet: { provider: 40, number: 40, holder: 120 },
       envelope: { banks: 6, ewallets: 6, giftAddress: 300 },
       storyEntry: { title: 120, date: 60, narrative: 2000 },
-      common: { greeting: 1000, youtubeUrl: 200, livestreamUrl: 500 },
+      common: {
+        greeting: 1000,
+        youtubeUrl: 200,
+        livestreamUrl: 500,
+        customMusicName: 120,
+      },
       wedding: { title: 160, story: 20 },
       corporate: {
         eventName: 160,

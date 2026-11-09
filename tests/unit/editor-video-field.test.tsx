@@ -97,7 +97,13 @@ function Induk({
   });
   onForm(form);
   return (
-    <SettingsStep form={form} invitationId={INV} songs={[]} video={slot} />
+    <SettingsStep
+      form={form}
+      invitationId={INV}
+      songs={[]}
+      music={{ allowed: false, lockedAt: null, path: null, url: null }}
+      video={slot}
+    />
   );
 }
 

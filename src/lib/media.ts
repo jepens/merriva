@@ -205,6 +205,32 @@ export function isVideoObjectPath(invitationId: string, path: string): boolean {
   ).test(path);
 }
 
+/**
+ * Musik unggahan klien (DECISIONS #121): satu objek MP3 per unggahan,
+ * `audio/{invitationId}/{musicId}.mp3`. `musicId` UUID BARU setiap unggah
+ * (bukan hash isi): unggah ulang berkas yang sama tak pernah menghidupkan lagi
+ * URL yang sudah di-takedown, dan menghapus objek saat unggah gagal tak bisa
+ * mengenai lagu yang sedang tayang.
+ *
+ * `invitationId` WAJIB id dari baris DB (bentuk kanonik huruf kecil), bukan
+ * param URL — `isUuid` menerima huruf besar, dan objek ber-UUID huruf besar
+ * tak akan pernah cocok dengan regex pengikat maupun regex purge.
+ */
+export function customMusicPath(invitationId: string, musicId: string): string {
+  return `audio/${invitationId}/${musicId}.mp3`;
+}
+
+/**
+ * Apakah `path` benar-benar objek musik unggahan milik `invitationId`? Dipakai
+ * perakit render (path di `content` ditulis klien) dan takedown. Cermin check
+ * constraint `music_uploads_path_format` dan regex di `purge_invitation_data`
+ * (migrasi 20261108120000) — ketiganya harus berubah bersama.
+ */
+export function isCustomMusicPath(invitationId: string, path: string): boolean {
+  if (!new RegExp(`^${UUID}$`).test(invitationId)) return false;
+  return new RegExp(`^audio/${invitationId}/${UUID}\\.mp3$`).test(path);
+}
+
 /** Baris `media` → view siap render (URL domain sendiri via `getUrl`). */
 export function toMediaView(
   row: {

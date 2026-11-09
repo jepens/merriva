@@ -86,6 +86,52 @@ describe("penyajian", () => {
   });
 });
 
+describe("cache musik unggahan (DECISIONS #121)", () => {
+  // Objek `audio/` bisa DIHAPUS admin karena laporan hak cipta. Cache
+  // `immutable` setahun di Cloudflare berarti lagu yang di-takedown tetap
+  // diputar ke tamu sampai purge manual — maka maks. 1 jam, di SEMUA jawaban.
+  const AUDIO = [
+    "audio",
+    "85d261d6-1c2b-4e3a-9f00-0a1b2c3d4e5f",
+    "0f1e2d3c-4b5a-4968-8776-655443322110.mp3",
+  ];
+  const SEJAM = "public, max-age=3600";
+
+  it("200, 206, dan 304 memakai max-age 1 jam, bukan immutable", async () => {
+    await taruh(AUDIO);
+    const utuh = await panggil(AUDIO);
+    expect(utuh.status).toBe(200);
+    expect(utuh.headers.get("Content-Type")).toBe("audio/mpeg");
+    expect(utuh.headers.get("Cache-Control")).toBe(SEJAM);
+
+    const potong = await panggil(AUDIO, { range: "bytes=2-5" });
+    expect(potong.status).toBe(206);
+    expect(potong.headers.get("Cache-Control")).toBe(SEJAM);
+
+    const etag = utuh.headers.get("ETag") as string;
+    const sama = await panggil(AUDIO, { "if-none-match": etag });
+    expect(sama.status).toBe(304);
+    expect(sama.headers.get("Cache-Control")).toBe(SEJAM);
+  });
+
+  it("segmen kosong di depan tak bisa memulihkan cache setahun", async () => {
+    // Keputusan dibuat dari segmen yang dinormalkan — sama dengan pembaca
+    // berkas — bukan dari teks URL.
+    await taruh(AUDIO);
+    const res = await panggil(["", ...AUDIO]);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe(SEJAM);
+  });
+
+  it("lagu pustaka `songs/` tetap immutable setahun", async () => {
+    await taruh(["songs", "abc.mp3"]);
+    const res = await panggil(["songs", "abc.mp3"]);
+    expect(res.headers.get("Cache-Control")).toBe(
+      "public, max-age=31536000, immutable",
+    );
+  });
+});
+
 describe("Range — pemutar musik undangan", () => {
   it("menjawab 206 dengan potongan dan Content-Range", async () => {
     await taruh(["songs", "abc.mp3"]);

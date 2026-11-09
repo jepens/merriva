@@ -102,6 +102,7 @@ export function parseContentForRender(
     quote: coerceQuote(d.quote),
     youtubeUrl: d.youtubeUrl,
     video: d.video,
+    customMusic: d.customMusic,
     livestreamUrl: d.livestreamUrl,
     envelope: coerceEnvelope(d.envelope),
   };

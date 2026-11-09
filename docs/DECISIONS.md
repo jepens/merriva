@@ -37,6 +37,7 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 
 ## #8 — 2026-07-24 · Musik: hanya library royalty-free bawaan platform
 **Alasan:** menghindari pelanggaran hak cipta (lagu populer di undangan = risiko takedown/klaim); upload MP3 bebas ditolak di MVP.
+**Dibalik #121 (9 Nov 2026):** undangan Premium boleh mengunggah satu MP3 sendiri dengan pengaman; pustaka tetap bawaan.
 
 ## #9 — 2026-07-24 · RSVP & ucapan digabung satu form; kiriman ulang tamu bertoken = update
 **Alasan:** UX tamu lebih sederhana (satu langkah); mencegah duplikasi data pax; ucapan tampil dari `rsvps.message`.
@@ -125,7 +126,7 @@ Format: setiap keputusan penting dicatat di sini dengan tanggal, keputusan, alas
 3. **Hardening**: `settings.songId` di-`preprocess` `""`→undefined (opsi "Tanpa musik" tak menggagalkan parse UUID saat autosave) + `setValueAs` di picker.
 4. **Bucket tunggal dipertahankan** (SPEC §6.4): bucket `media` diperluas menerima MIME audio + batas 8 MB (migrasi `20260804190000`); validasi per-tipe tetap di aplikasi (foto 2 MB `lib/media`, audio 8 MB `lib/audio`). Prefix path membedakan konten (`inv/…` vs `songs/…`).
 **Alasan:** unggah admin = mekanisme berkelanjutan & aman-lisensi tanpa menaruh audio di git; content-addressed = anti-duplikat; picker melengkapi rantai yang sudah ada (resolveMusic → halaman publik/preview) tanpa perubahan di sisi tema.
-**Ditolak:** seed berkas audio royalty-free di repo (git bukan tempat media + verifikasi lisensi tak bisa dijamin dari sini) · bucket `songs` terpisah (menyalahi desain bucket-tunggal + menyulitkan driver R2) · upload MP3 oleh klien (tetap ditolak per #8 — hanya admin).
+**Ditolak:** seed berkas audio royalty-free di repo (git bukan tempat media + verifikasi lisensi tak bisa dijamin dari sini) · bucket `songs` terpisah (menyalahi desain bucket-tunggal + menyulitkan driver R2) · upload MP3 oleh klien (tetap ditolak per #8 — hanya admin). **Dibalik #121 (9 Nov 2026)** untuk undangan Premium; pustaka tetap diisi admin.
 **Konsekuensi:** pustaka mulai KOSONG di production → pemilik wajib mengunggah trek berlisensi lebih dulu agar fitur musik terlihat (lihat `docs/MUSIC-LIBRARY.md`). Batas bucket naik ke 8 MB (backstop foto melonggar; batas ketat foto tetap di aplikasi).
 
 ## #19 — 2026-08-08 · Kelola user admin: suspend akun = ban GoTrue; safeguard anti-lockout
@@ -6818,6 +6819,282 @@ Picker API (eksperimental, Android Chrome saja); Web Share sebagai jalur utama
   (objek `copy` diimpor komponen klien publik) — ±1,1 KB gzip. Diterima demi
   konvensi "teks terpusat di copy.ts"; bila bundel publik mendekati anggaran,
   pecah `copy` per permukaan (dasbor vs publik) untuk SEMUA blok sekaligus.
+
+---
+
+## #121 — 2026-11-09 · Musik unggahan klien (Premium, MP3 saja): #8 dibalik, risiko hak cipta diterima dengan pengaman
+
+**Konteks:** pemilik meminta klien bisa memakai lagunya sendiri. Ini membalik
+#8 (24 Jul 2026: "hanya library royalty-free; upload MP3 bebas ditolak di MVP")
+dan butir "Ditolak: upload MP3 oleh klien (tetap ditolak per #8 — hanya admin)"
+di #18. Riset (empat laporan + satu putaran kritik adversarial, 8 Nov 2026)
+menemukan:
+- **Pasar:** Katsudoto, Wedew, dan Viding membolehkan lagu sendiri, biasanya
+  sebagai fitur berbayar atau add-on. Pengamannya hanya klausul jaminan
+  pengguna, dan tak satu pun mencantumkan prosedur laporan pelanggaran. Zola,
+  situs pernikahan besar AS, sama sekali tidak membolehkan musik.
+- **Hukum:** UU 28/2014 tidak mengenal safe harbor ala DMCA. Putusan MK
+  84/PUU-XXI/2023 memperluas Pasal 10 sehingga "Platform Layanan Digital
+  berbasis UGC" dilarang *membiarkan* penayangan atau penggandaan hasil
+  pelanggaran hak cipta. Begitu klien bisa mengunggah musik, Merriva masuk
+  kategori itu.
+- **Pembebasan bersyarat:** Pasal 11 Permenkominfo 5/2020 menyebut PSE UGC
+  "dapat dibebaskan" bila punya tata kelola, sarana pelaporan publik, dan
+  melakukan takedown. Frasa "dapat" tidak memberi kepastian, dan posisinya
+  lemah selama Merriva belum terdaftar sebagai PSE.
+- **Royalti:** PP 56/2021 tidak mencantumkan undangan dalam 14 bentuk layanan
+  publik komersial. Membayar royalti pun tidak melegalkan unggahan tanpa izin
+  (hak penggandaan dan penyediaan fonogram, Pasal 9 dan 24).
+
+**Keputusan produk (pemilik, 8–9 Nov 2026, dijawab per nomor):**
+1. **Premium saja.** Draft milik admin/Pro ikut paket teratas (#115).
+2. **MP3 saja.**
+3. **Berkas ≤ 8 MB, durasi 10 detik–7 menit, dihitung server.** Dengan 8 MB,
+   lagu 320 kbps hanya muat ±3,5 menit; teks galat ukuran menyarankan
+   128–192 kbps.
+4. **Paket pengaman lengkap:** pernyataan hak di setiap unggahan dengan versi
+   teksnya dicatat server · tabel catatan unggah `music_uploads` yang hanya
+   bisa disentuh `service_role` · kuota 5 unggahan per undangan per 24 jam ·
+   penyapu objek usang (langkah di cron `purge-expired`) · takedown admin untuk musiknya saja (undangan
+   tetap tayang) plus kunci unggah dan email ke pemilik · cache audio 1 jam ·
+   jalur laporan di `/syarat` lewat alamat dukungan · retensi yang ikut purge,
+   hapus akun, dan hapus draft. Versi tanpa tabel catatan sudah ditolak
+   kritik (lihat **Ditolak**).
+5. **Rilis sebelum PSE terdaftar.** Risikonya dicatat jujur di SPEC §13: risiko
+   diterima, bukan hilang.
+6. **Dokumen diubah:** SPEC §2/§4.4/§4.5/§4.8/§4.9/§5/§6.4/§11/§13, CLAUDE.md
+   (butir JANGAN PERNAH), DATA-MODEL, MUSIC-LIBRARY, LAUNCH-CHECKLIST, RUNBOOK
+   (prosedur takedown), serta FAQ, S&K, dan Kebijakan Privasi di `copy.ts`.
+   Larangan lama "menerima upload musik berhak-cipta" diganti standar
+   pengetahuan: **jangan pernah membiarkan musik yang dilaporkan atau diketahui
+   melanggar hak cipta tetap tersaji**, termasuk lewat URL langsung dan cache
+   edge, untuk musik unggahan maupun lagu pustaka. Aturan format sengaja tidak
+   masuk §11; ia ada di §4.4.
+
+**Keputusan teknis:**
+1. **Unggah = Route Handler `POST /api/invitations/[id]/music`**, dengan alasan
+   yang sama persis dengan #113: Server Action dibatasi `bodySizeLimit` 3 MB
+   global, dan body aksi editor dipotong diam-diam di 10 MB. Body berisi MP3
+   mentah, dan versi pernyataan dikirim di header `x-merriva-attest`. Asal
+   permintaan, pernyataan, `Content-Length`, sesi, kepemilikan, undangan yang
+   sudah di-purge, paket, kunci takedown, dan kuota diputuskan **sebelum** body
+   dibaca. Route menulis satu baris `music_uploads`, tidak menulis `content`
+   (pola video: autosave yang menyimpan rujukan). Kuota harian =
+   hitung-lalu-sisip **tanpa kunci**: unggahan serentak bisa sedikit
+   melampauinya. Lonjakan itu dibatasi rate limit 6/menit per jaringan + 15/jam
+   per akun, dan objek kelebihan yang tak dirujuk disapu cron; diterima sadar,
+   karena advisory lock atau hitungan di dalam INSERT menambah RPC hanya untuk
+   menutup selisih beberapa berkas.
+2. **Parser frame MP3 sendiri** (`src/lib/custom-music.ts`, tanpa dependensi,
+   isomorfik). Ia menelusuri rantai frame MPEG-1/2 Layer III dari awal sampai
+   akhir, menghitung durasi dari jumlah frame, dan **menormalisasi** byte: yang
+   disimpan hanya `bytes.subarray(start, end)`. Yang dibuang adalah semua data
+   **di luar** rantai frame: tag ID3v2/ID3v1/APE/Lyrics3 (gambar sampul,
+   sisipan GEOB), byte di depan frame pertama, dan ekor; MPEG-2.5 dan free
+   format ditolak. Tag ID3 bisa memuat apa saja (gambar, arsip, HTML), jadi
+   menyimpan berkas apa adanya berarti menyajikan muatan itu dari domain
+   sendiri. **Isi badan frame tidak diperiksa** (data audio terkompresi): byte
+   sembarang yang diselipkan di sana tetap tersimpan. Klaim "URL ini hanya
+   pernah menyajikan audio" karena itu tidak dibuat; yang dijamin adalah
+   objeknya selalu disajikan `audio/mpeg` + `nosniff`, terpotong header frame
+   setiap ratusan byte, sehingga tak terbaca sebagai berkas lain oleh alat
+   biasa.
+3. **Path `audio/<undangan>/<uuid>.mp3`, UUID baru di setiap unggahan, bukan
+   hash isi.** Unggah ulang berkas yang sama sesudah takedown tidak
+   menghidupkan lagi URL lama, dan menghapus objek saat unggah gagal tidak
+   mungkin mengenai lagu yang sedang tayang. Regex pengikatnya ada di tiga
+   tempat yang wajib berubah bersama: check constraint
+   `music_uploads_path_format`, `purge_invitation_data`, dan
+   `isCustomMusicPath()`.
+4. **Tabel `music_uploads`, RLS aktif tanpa policy, hanya `service_role`
+   (SELECT/INSERT/UPDATE).** Hanya tabel ini yang tahu **semua** objek audio
+   sebuah undangan, termasuk yang diunggah tapi tak pernah tersimpan dan yang
+   sudah diganti tapi belum disapu. `StorageDriver` tidak punya `list`, jadi
+   tanpa tabel ini objek itu tak bisa ditemukan lagi. Tabel ini dipakai untuk
+   kuota, penyapu, purge, takedown, gerbang render (baris hidup), dan sebagai
+   catatan pernyataan. Barisnya
+   tidak dihapus saat objeknya dihapus; `removed_reason`
+   (`replaced`/`purge`/`takedown`) mencatat sebabnya. `user_id` di-SET NULL
+   saat akun dihapus.
+5. **`content.customMusic = {path, name?}`, tanpa durasi dan tanpa pernyataan.**
+   `content` ditulis klien, bahkan bisa langsung lewat PostgREST, jadi klaim di
+   sana tak bisa dipercaya; catatan tepercaya ada di `music_uploads`. Perakit
+   render (halaman publik & pratinjau) mengikat path ke undangannya
+   (`isCustomMusicPath`) **dan** mensyaratkan barisnya masih hidup di
+   `music_uploads`, lalu menerjemahkannya ke `InvitationData.music {url,
+   title}`. Rujukan basi (objek disapu/di-takedown/di-purge, atau ditulis
+   ulang tab editor lama) jatuh ke lagu pustaka, bukan ke URL 404. `title`
+   yang sampai ke tamu adalah label generik, bukan `name`: nama berkas ditulis
+   klien, bisa memuat apa saja, dan tak perlu ada di HTML publik. **Kontrak
+   props tema tidak berubah.** Pilihan pustaka `settings.songId` tidak dihapus,
+   sehingga menghapus lagu unggahan, turun paket, atau takedown kembali ke
+   lagu pustaka. Undangan yang turun paket tak bisa mengunggah, tetapi
+   pemiliknya tetap bisa menghapus lagu tersimpan di editor.
+6. **Gerbang Premium = `!limits.watermark`**, konvensi yang sama dengan live
+   streaming (`src/server/invitation-data.ts`), tanpa migrasi paket. Kunci baru
+   di `packages.limits` akan hilang pada edit paket berikutnya, karena
+   `adminUpdatePackageAction` menyusun `limits` dari nol.
+7. **Tidak ada baris di tabel harga atau halaman Harga, dan tidak ada ajakan
+   membeli di editor** (teks terkunci netral). Tujuannya menghindari manfaat
+   finansial langsung dari lagu milik pihak lain, yang memperlemah argumen
+   itikad baik (analogi syarat DMCA §512).
+8. **Cache `audio/` maksimal 1 jam**, bukan `immutable` setahun seperti prefix
+   media lain. Repo tidak punya integrasi purge Cloudflare. Dengan cache
+   setahun, berkas yang di-takedown tetap tersaji dari edge sampai ada yang
+   ingat mem-purge-nya, dan itulah wujud "membiarkan". Biayanya hanya
+   revalidasi edge sekali per jam untuk lagu klien.
+9. **Takedown = RPC `admin_takedown_custom_music`, atomik** (pola
+   `admin_suspend_invitation` dan #68: catatan internal dan alasan publik
+   terpisah). Dalam satu transaksi RPC ini menandai semua baris hidup
+   `takedown`, menjalankan `content - 'customMusic'` (operasi JSONB di dalam
+   UPDATE, jadi tak ada lost update terhadap autosave), mengisi
+   `music_locked_at`, dan menulis `admin_logs` beserta sidik setiap berkas.
+   Sesudah itu pemanggil menghapus objek dan mengirim email. Buka kunci lewat
+   `admin_unlock_custom_music`, juga tercatat. `music_locked_at` tidak masuk
+   allowlist GRANT UPDATE pemilik. Kunci berlaku **sampai admin membukanya**,
+   tanpa batas waktu otomatis (S&K, email, SPEC sama bunyinya); selama
+   terkunci autosave membuang `customMusic` yang ditulis ulang tab editor
+   lama. Aksi admin memakai id **kanonik huruf kecil** (`toLowerCase()`
+   sesudah `isUuid`): `isUuid` dan Postgres menerima UUID huruf besar, tetapi
+   path objek selalu huruf kecil, sehingga takedown dari URL admin ber-UUID
+   huruf besar sempat menandai baris `takedown` sambil menolak setiap path di
+   `isCustomMusicPath` (tak satu objek pun terhapus). Revalidate memakai `slug`
+   kembalian RPC, bukan id.
+10. **Teks hukum:**
+    - Ganti rugi oleh pengguna dibatasi pada klaim yang timbul dari
+      pelanggarannya sendiri, ditambah frasa "tanpa mengurangi hak konsumen
+      yang dijamin peraturan perundang-undangan".
+    - Teks pernyataan hak di editor membatasi tanggung jawab pemilik pada
+      klaim pihak lain yang timbul karena pernyataannya tidak benar, selaras
+      klausul ganti rugi di atas, bukan pengalihan tanggung jawab tanpa batas.
+    - Lisensi ke Merriva dibatasi untuk menyimpan dan menayangkan di undangan
+      itu saja, lebih sempit dari pesaing yang meminta lisensi luas dan tak
+      dapat dicabut.
+    - **Tidak ada klausul "tanpa pengembalian dana".** UU 8/1999 (UUPK) Pasal
+      18 ayat (1) huruf c melarang klausula baku yang menyatakan pelaku usaha
+      berhak menolak penyerahan kembali uang yang dibayarkan, dan ayat (3)
+      menyatakan klausula seperti itu batal demi hukum. Klausul batal seperti
+      itu melemahkan seluruh dokumen; S&K cukup merujuk Kebijakan Refund yang
+      sudah ada.
+11. **Penyapu = fungsi SQL `music_uploads_usang(p_sebelum, p_batas)`** (hanya
+    `service_role`, bukan SECURITY DEFINER). Saringan "tak lagi dirujuk
+    `content.customMusic.path`" dijalankan di DB, karena pemindaian berhalaman
+    dengan plafon di aplikasi habis membaca rujukan yang sedang dipakai (yang
+    juga baris hidup > 24 jam) dan objek usang di belakangnya tak pernah
+    tersentuh. Baris hidup milik undangan yang **sudah di-purge** ikut menjadi
+    kandidat walau `content`-nya masih memuat rujukan: menutup jendela unggah
+    bersamaan dengan purge dan sisa jalur hapus akun yang menjawab
+    `already_purged`. Route unggah juga menolak undangan yang sudah di-purge.
+12. **Hapus draft** membaca path hidup dari `music_uploads` sebelum DELETE
+    (barisnya ikut cascade), lalu menghapus objek hanya bila DELETE benar-benar
+    mengenai baris; bacaan yang gagal membatalkan penghapusan.
+
+**Ditolak:**
+- **M4A di v1** (rekaman suara iPhone/Android). Butuh `music-metadata` atau
+  parser ISO-BMFF sendiri, plus Cache Rule Cloudflare karena `.m4a` tidak
+  di-cache secara bawaan. Bisa menyusul bila banyak diminta.
+- **`music-metadata`.** ±1,25 MB untuk satu format, dan ia hanya membaca, tidak
+  menormalisasi, jadi tag tetap tersimpan. Dependency besar juga termasuk
+  TANYA DULU.
+- **Validasi atau transkode di peramban** (`decodeAudioData`, ffmpeg.wasm).
+  Peramban bisa dilewati, dan ffmpeg.wasm berukuran puluhan MB di HP. Peramban
+  hanya memberi pesan cepat; penegaknya server.
+- **Header pernyataan sebagai "bukti".** Siapa pun yang memegang sesi bisa
+  mengirim header itu. Yang dicatat adalah fakta bahwa server menerima
+  unggahan berpernyataan versi N dari akun itu: bukti itikad baik, bukan bukti
+  kriptografis. SPEC §4.4 menyatakannya terang-terangan.
+- **Fingerprinting audio berbayar** (ACRCloud/AudD). Layanan berbayar baru
+  (TANYA DULU), dan rawan salah tangkap pada rekaman cover atau rekaman
+  sendiri. Ditunda.
+- **Tautan YouTube sebagai sumber musik.** Kebijakan API YouTube melarang
+  pemutar latar yang tidak ditampilkan dan memisahkan audionya.
+- **Form laporan publik + Turnstile + antrean admin.** Ditunda. Jalur v1 adalah
+  email ke alamat dukungan yang dicantumkan di bagian "Laporan pelanggaran hak
+  cipta" `/syarat`, bentuk minimal sarana pelaporan publik menurut
+  Permenkominfo 5/2020 Pasal 10 ayat (2).
+- **Versi tanpa tabel catatan** (rujukan dan pernyataan disimpan di
+  `content`). Ditolak kritik: unggahan yang tak pernah tersimpan menjadi
+  berkas publik permanen, dan pernyataan di `content` bisa ditulis atau
+  dipalsukan pemilik sendiri.
+- **Add-on berbayar per lagu** (pola Katsudoto). Itu manfaat finansial langsung
+  per trek.
+
+**Konsekuensi:**
+- **Migrasi `20261108120000_musik_unggahan.sql` WAJIB diterapkan pemilik di SQL
+  Editor SEBELUM kode di-deploy.** Route menulis `music_uploads`, editor dan
+  perakit render membaca `music_locked_at` serta baris `music_uploads`, purge
+  memakai definisi baru, dan cron penyapu memanggil fungsi
+  `music_uploads_usang` (ditambahkan ke migrasi yang sama; tanpa fungsi itu
+  langkah sapu gagal setiap jalankan, tercatat `musicSweepFailed`). Sesudah
+  menerapkannya, catat versinya di `schema_migrations` bila tidak lewat
+  `supabase db push`, dan bandingkan sidik fungsi tanpa `\r` (paste SQL
+  Editor ber-CRLF).
+- **Kuota 5/24 jam bisa terlampaui sedikit** oleh unggahan serentak (teknis
+  #1). Diterima sadar; beberapa baris lebih dari 5 dalam 24 jam pada satu
+  undangan bukan bug selama lonjakannya masih dalam rate limit.
+- **Standar "jangan biarkan tersaji" berlaku juga untuk lagu PUSTAKA** (SPEC
+  §11). Menonaktifkan trek tidak cukup: objek `songs/<sha256>.<ext>` tetap
+  tersaji lewat URL langsung dan di-cache `immutable` setahun. Prosedurnya
+  (nonaktifkan → hapus → purge URL di Cloudflare) ada di RUNBOOK.
+- **Risikonya diterima, bukan hilang** (SPEC §13). Sebagian unggahan
+  diperkirakan berupa lagu populer tanpa izin. Pernyataan hak hanya
+  memindahkan sebagian tanggung jawab, sementara standar Putusan MK
+  84/2023 adalah pengetahuan. Karena itu kotak masuk alamat dukungan yang
+  benar-benar terbaca, dan tindak lanjut segera (paling lambat 2 hari kerja),
+  menjadi bagian dari mitigasinya, bukan sekadar kenyamanan.
+- **Cloudflare: JANGAN pasang Edge TTL override atau "Cache Everything" dengan
+  TTL panjang untuk `/media/audio/*`.** Aturan seperti itu mengembalikan
+  masalah takedown. Bila sebuah berkas harus hilang segera, purge by prefix
+  `merriva.id/media/audio/<id undangan>/` (RUNBOOK).
+- Cache 1 jam itu dipasang route `/media`, artinya hanya untuk driver `local`
+  (produksi hari ini). Driver `supabase` memaku `cacheControl` setahun saat
+  unggah, dan driver `r2` tidak memberi `Cache-Control`. **Pindah ke R2 wajib
+  membawa header 1 jam untuk `audio/`**, karena tanpanya janji takedown ≤ 1
+  jam diam-diam patah (ARCHITECTURE §6).
+- Backup media harian (#117) ikut menyalin `audio/`. Berkas yang di-takedown
+  bertahan di snapshot R2 privat sampai lifecycle (±30 hari), tidak tersaji ke
+  publik.
+- Kuota tamu bertambah paling banyak sebesar berkasnya (≤ 8 MB). Audio
+  ber-`preload="none"` dan baru diambil setelah "Buka Undangan", jadi LCP tidak
+  terpengaruh.
+- Teks pernyataan di editor berubah → **naikkan `CUSTOM_MUSIC_ATTEST_VERSION`**
+  (angka itu yang tercatat di `music_uploads.attest_version`).
+- Teks S&K dan pernyataan baru sebaiknya ditinjau penasihat hukum
+  (LAUNCH-CHECKLIST Fase 8). Tinjauan itu sebaiknya mencakup juga kalimat lama
+  Kebijakan Refund "pada umumnya tidak dapat dikembalikan", yang tidak diubah
+  di sini.
+- **Temuan sampingan yang BELUM ditangani:**
+  - Unggah lagu admin di `/admin/lagu` di atas ±3 MB kemungkinan gagal:
+    Server Action dibatasi `bodySizeLimit` 3 MB, sedangkan `AUDIO_MAX_BYTES`
+    8 MB. Belum diuji.
+  - Pipa video (#113) punya celah yang ditutup di sini untuk musik: objek
+    yang diunggah tapi tak pernah tersimpan tidak pernah terhapus, dan tidak
+    ada kuota per pengguna.
+
+**Sumber:**
+- UU 28/2014 Pasal 9 (penggunaan secara komersial wajib izin):
+  https://pasal.id/peraturan/uu/uu-no-28-tahun-2014/pasal-9 · Pasal 24 (hak
+  produser fonogram): https://pasal.id/peraturan/uu/uu-no-28-tahun-2014/pasal-24
+  · Pasal 43 (penyebarluasan nonkomersial):
+  https://pasal.id/peraturan/uu/uu-no-28-tahun-2014/pasal-43 · Pasal 113
+  (pidana, unsur komersial):
+  https://pasal.id/peraturan/uu/uu-no-28-tahun-2014/pasal-113 · Pasal 120
+  (delik aduan): https://pasal.id/peraturan/uu/uu-no-28-tahun-2014/pasal-120
+- Ringkasan Putusan MK 84/PUU-XXI/2023 (platform UGC dilarang membiarkan):
+  https://pasal.id/en/peraturan/putusan-mk/puu-mk-84-2023
+- Permenkominfo 5/2020, PSE privat UGC, Pasal 10–11 (sumber sekunder; teks
+  resmi tidak terambil):
+  https://smartlegal.id/pse/2021/04/19/kenalan-dulu-sama-pse-privat-user-generated-content/
+- PP 56/2021, Pasal 3 ayat (2), undangan tidak tercantum:
+  https://peraturan.go.id/files/pp56-2021bt.pdf
+- Pesaing yang membolehkan lagu sendiri tanpa prosedur laporan: Katsudoto
+  https://panduan.katsudoto.id/undangan-website/smart-dashboard/informasi-tambahan.md
+  · Wedew https://panduan.wedew.id/fitur-premium/tampilan-website-premium ·
+  Viding https://viding.co/en/faq/undangan-digital
+- Zola tidak membolehkan musik:
+  https://www.zola.com/faq/115002259532-can-i-add-a-song-to-my-website-
+- Kebijakan API YouTube (III.I.7 dan III.I.9):
+  https://developers.google.com/youtube/terms/developer-policies
 
 ---
 

@@ -24,18 +24,21 @@ const { refs } = vi.hoisted(() => ({
     tables: {} as Record<string, Res>,
     themeProps: null as unknown,
     queries: 0,
+    /** `<klien>:<tabel>` setiap bacaan — klien mana yang membaca apa. */
+    reads: [] as string[],
   },
 }));
 
 /** Klien palsu: tiap tabel menjawab `refs.tables[table]` (maybeSingle & then). */
-function fakeClient() {
+function fakeClient(kind: "admin" | "server" = "admin") {
   return {
     auth: { getUser: async () => ({ data: { user: { id: "u-1" } } }) },
     from: (table: string) => {
       refs.queries += 1;
+      refs.reads.push(`${kind}:${table}`);
       const res = () => refs.tables[table] ?? { data: null, error: null };
       const chain: Record<string, unknown> = {};
-      for (const op of ["select", "eq", "order", "not", "limit", "lt"]) {
+      for (const op of ["select", "eq", "order", "not", "limit", "lt", "is"]) {
         chain[op] = () => chain;
       }
       chain.maybeSingle = () => Promise.resolve(res());
@@ -61,7 +64,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => fakeClient(),
 }));
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: async () => fakeClient(),
+  createSupabaseServerClient: async () => fakeClient("server"),
 }));
 vi.mock("@/server/guards/auth", () => ({
   requireUser: vi.fn(async () => ({ id: "u-1" })),
@@ -104,15 +107,18 @@ vi.mock("@/server/momen/photos", () => ({
 import PublicInvitationPage, { generateMetadata } from "@/app/[slug]/page";
 import MomenGuestPage from "@/app/[slug]/momen/page";
 import PreviewPage from "@/app/preview/[id]/page";
+import { copy } from "@/lib/copy";
 import { SupabaseReadError } from "@/lib/supabase/result";
 import type { InvitationData } from "@/types/invitation";
 import { DEFAULT_SETTINGS, emptyContent } from "@/lib/validation/content";
-import { resolveMusic } from "@/server/invitation-data";
+import { liveCustomMusicPaths, resolveMusic } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
 
 const INV_ID = "9a500f03-f12d-4d66-85fc-af8ebcedd350";
 const PKG = "pkg-premium";
 const SONG = "77777777-7777-4777-8777-777777777777"; // settingsSchema: UUID
+/** Objek musik unggahan undangan ini (bentuk `isCustomMusicPath`). */
+const LAGU_SENDIRI = `audio/${INV_ID}/12121212-3434-4565-8787-909090909090.mp3`;
 /** Bentuk galat postgrest-js sungguhan (objek polos, bukan Error). */
 const BOOM = {
   message: "TypeError: fetch failed",
@@ -149,6 +155,7 @@ function tablesOk(): Record<string, Res> {
         status: "active",
         purged_at: null,
         updated_at: "2026-09-20T00:00:00.000Z",
+        music_locked_at: null,
       },
       error: null,
     },
@@ -177,6 +184,16 @@ function tablesOk(): Record<string, Res> {
       data: { title: "Lagu", storage_path: "songs/a.mp3", is_active: true },
       error: null,
     },
+    music_uploads: { data: [], error: null },
+  };
+}
+
+/** Undangan merujuk `LAGU_SENDIRI` (bernama berkas asli) di `content`. */
+function pakaiLaguSendiri() {
+  const row = refs.tables.invitations.data as Record<string, unknown>;
+  row.content = {
+    ...emptyContent("wedding"),
+    customMusic: { path: LAGU_SENDIRI, name: "rekaman-pribadi.mp3" },
   };
 }
 
@@ -187,6 +204,7 @@ beforeEach(() => {
   refs.tables = tablesOk();
   refs.themeProps = null;
   refs.queries = 0;
+  refs.reads = [];
 });
 
 describe("/{slug} (ISR) — setiap bacaan wajib berhasil", () => {
@@ -210,6 +228,10 @@ describe("/{slug} (ISR) — setiap bacaan wajib berhasil", () => {
     ["momen_albums", "Album Momen (dulu → tombol Momen hilang)"],
     ["packages", "batas paket (dulu → Premium ter-cache ber-watermark)"],
     ["songs", "musik (dulu → undangan tanpa musik)"],
+    [
+      "music_uploads",
+      "musik unggahan hidup (tanpa ini → ter-cache memutar lagu pustaka)",
+    ],
   ])(
     "galat %s — %s → render MELEMPAR SupabaseReadError berlabel (tak pernah di-cache)",
     async (table) => {
@@ -228,6 +250,23 @@ describe("/{slug} (ISR) — setiap bacaan wajib berhasil", () => {
     expect(tema().data.watermark).toBe(true);
     expect(tema().data.music).toBeNull();
     expect(screen.queryByTestId("momen-fab")).toBeNull();
+  });
+
+  it("musik unggahan: diputar HANYA bila objeknya masih hidup di music_uploads", async () => {
+    pakaiLaguSendiri();
+    refs.tables.music_uploads = { data: [{ path: LAGU_SENDIRI }], error: null };
+    render(await buka());
+    expect(tema().data.music).toEqual({
+      url: `/media/${LAGU_SENDIRI}`,
+      title: copy.editor.customMusic.unnamed,
+    });
+
+    // Rujukan basi (objek disapu cron / takedown lalu kunci dibuka) → lagu
+    // pustaka, bukan URL 404 yang di-cache bagi semua tamu.
+    cleanup();
+    refs.tables.music_uploads = { data: [], error: null };
+    render(await buka());
+    expect(tema().data.music?.url).toBe("/media/songs/a.mp3");
   });
 
   it("tema yang memang tak ada (tanpa galat) → tetap notFound", async () => {
@@ -377,6 +416,7 @@ describe("/preview/{id} — pratinjau pemilik tak menampilkan isian palsu", () =
     "media",
     "packages",
     "songs",
+    "music_uploads",
   ])(
     "isi iframe: galat %s → MELEMPAR (dulu pratinjau tanpa jadwal/galeri membuat pemilik mengira isiannya hilang)",
     async (table) => {
@@ -388,6 +428,27 @@ describe("/preview/{id} — pratinjau pemilik tak menampilkan isian palsu", () =
   it("isi iframe: semua berhasil → tema dirender dengan jadwalnya", async () => {
     render(await buka("1"));
     expect(tema().data.events.map((e) => e.name)).toEqual(["Akad"]);
+  });
+
+  it("isi iframe: music_uploads dibaca lewat admin client SESUDAH undangan terbaca client pemilik", async () => {
+    // RLS menyembunyikan `music_uploads` dari client pemilik: dibaca lewat
+    // client itu, daftarnya selalu kosong dan lagu sendiri tak pernah diputar
+    // di pratinjau.
+    pakaiLaguSendiri();
+    refs.tables.music_uploads = { data: [{ path: LAGU_SENDIRI }], error: null };
+    render(await buka("1"));
+    expect(tema().data.music?.url).toBe(`/media/${LAGU_SENDIRI}`);
+    expect(refs.reads).toContain("admin:music_uploads");
+    expect(refs.reads).not.toContain("server:music_uploads");
+    expect(refs.reads.indexOf("server:invitations")).toBeLessThan(
+      refs.reads.indexOf("admin:music_uploads"),
+    );
+  });
+
+  it("isi iframe: undangan tak terlihat client pemilik → 404 TANPA membaca music_uploads", async () => {
+    refs.tables.invitations = { data: null, error: null };
+    await expect(buka("1")).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(refs.reads).not.toContain("admin:music_uploads");
   });
 });
 
@@ -449,5 +510,22 @@ describe("helper bersama", () => {
     };
     expect(await resolveMusic(client, SONG)).toBeNull();
     expect(await resolveMusic(client, undefined)).toBeNull();
+  });
+
+  it("liveCustomMusicPaths: galat DB dilempar; tanpa baris → []; baris → path-nya", async () => {
+    const client = fakeClient() as unknown as Parameters<
+      typeof liveCustomMusicPaths
+    >[0];
+    refs.tables.music_uploads = { data: null, error: BOOM };
+    await expect(liveCustomMusicPaths(client, INV_ID)).rejects.toSatisfy(
+      galatBacaan("music_uploads"),
+    );
+    refs.tables.music_uploads = { data: [], error: null };
+    expect(await liveCustomMusicPaths(client, INV_ID)).toEqual([]);
+    refs.tables.music_uploads = {
+      data: [{ path: LAGU_SENDIRI }],
+      error: null,
+    };
+    expect(await liveCustomMusicPaths(client, INV_ID)).toEqual([LAGU_SENDIRI]);
   });
 });

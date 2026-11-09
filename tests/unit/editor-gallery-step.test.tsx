@@ -71,6 +71,7 @@ function props(
     // Seperti halaman edit: slot sampul SELALU ada (rasio kanvas OG), apa pun
     // temanya.
     photoSlots: { cover: { aspect: OG_ASPECT, url: null } },
+    music: { allowed: false, lockedAt: null, path: null, url: null },
     video: { allowed: false, url: null, posterUrl: null },
     initialStep: "gallery",
   };

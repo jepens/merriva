@@ -265,6 +265,7 @@ export type Database = {
           created_at: string;
           event_date: string | null;
           id: string;
+          music_locked_at: string | null;
           package_id: string | null;
           published_at: string | null;
           purge_final_warned_at: string | null;
@@ -287,6 +288,7 @@ export type Database = {
           created_at?: string;
           event_date?: string | null;
           id?: string;
+          music_locked_at?: string | null;
           package_id?: string | null;
           published_at?: string | null;
           purge_final_warned_at?: string | null;
@@ -309,6 +311,7 @@ export type Database = {
           created_at?: string;
           event_date?: string | null;
           id?: string;
+          music_locked_at?: string | null;
           package_id?: string | null;
           published_at?: string | null;
           purge_final_warned_at?: string | null;
@@ -385,6 +388,63 @@ export type Database = {
             columns: ["invitation_id"];
             isOneToOne: false;
             referencedRelation: "invitations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      music_uploads: {
+        Row: {
+          attest_version: number;
+          bytes: number;
+          created_at: string;
+          duration_ms: number;
+          id: string;
+          invitation_id: string;
+          path: string;
+          removed_at: string | null;
+          removed_reason: string | null;
+          sha256: string;
+          user_id: string | null;
+        };
+        Insert: {
+          attest_version: number;
+          bytes: number;
+          created_at?: string;
+          duration_ms: number;
+          id?: string;
+          invitation_id: string;
+          path: string;
+          removed_at?: string | null;
+          removed_reason?: string | null;
+          sha256: string;
+          user_id?: string | null;
+        };
+        Update: {
+          attest_version?: number;
+          bytes?: number;
+          created_at?: string;
+          duration_ms?: number;
+          id?: string;
+          invitation_id?: string;
+          path?: string;
+          removed_at?: string | null;
+          removed_reason?: string | null;
+          sha256?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "music_uploads_invitation_id_fkey";
+            columns: ["invitation_id"];
+            isOneToOne: false;
+            referencedRelation: "invitations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "music_uploads_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -875,6 +935,30 @@ export type Database = {
           slug: string;
         }[];
       };
+      admin_takedown_custom_music: {
+        Args: {
+          p_admin_id: string;
+          p_invitation_id: string;
+          p_reason: string;
+          p_public_reason: string | null;
+        };
+        Returns: {
+          owner_id: string | null;
+          paths: string[] | null;
+          result: string;
+          slug: string | null;
+        }[];
+      };
+      admin_unlock_custom_music: {
+        Args: {
+          p_admin_id: string;
+          p_invitation_id: string;
+        };
+        Returns: {
+          result: string;
+          slug: string | null;
+        }[];
+      };
       create_momen_album: {
         Args: {
           p_default_filter?: string;
@@ -1003,6 +1087,13 @@ export type Database = {
         Returns: {
           remaining: number;
           result: string;
+        }[];
+      };
+      music_uploads_usang: {
+        Args: { p_batas: number; p_sebelum: string };
+        Returns: {
+          id: string;
+          path: string;
         }[];
       };
       normalize_package_limits: { Args: { raw: Json }; Returns: Json };

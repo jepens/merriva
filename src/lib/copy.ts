@@ -1052,6 +1052,70 @@ export const copy = {
         server: "Video gagal diunggah. Coba lagi.",
       },
     },
+    // Lagu MP3 unggahan pemilik (DECISIONS #121) — di bawah pilihan pustaka.
+    customMusic: {
+      legend: "Lagu sendiri (MP3)",
+      limits: "MP3 · maks. 8 MB · durasi 10 detik–7 menit",
+      priority:
+        "Lagu sendiri diputar menggantikan pilihan dari pustaka di atas. Bila dihapus, undangan kembali memakai lagu pustaka.",
+      // Versi teks ini = CUSTOM_MUSIC_ATTEST_VERSION (lib/custom-music.ts).
+      // Mengubah isinya WAJIB menaikkan angka itu. (Versi 1 belum pernah
+      // tampil ke pelanggan sebelum rilis 9 Nov 2026.) Tanggung jawab sengaja
+      // DIBATASI pada klaim akibat pelanggaran pernyataan ini — selaras dengan
+      // klausul ganti rugi S&K (DECISIONS #121), bukan pengalihan tanpa batas.
+      attest:
+        "Saya menyatakan rekaman ini milik saya, berlisensi untuk dipakai di undangan, atau sudah mendapat izin pemegang hak ciptanya. Saya paham lagu komersial tanpa izin (misalnya unduhan dari YouTube atau Spotify) dilarang. Bila pernyataan ini tidak benar, saya bertanggung jawab atas klaim pihak lain yang timbul karenanya, dan Merriva dapat menghapus musik ini bila ada laporan pelanggaran.",
+      attestNeeded: "Centang pernyataan di atas untuk mengunggah.",
+      // Diumumkan lewat aria-live (pembaca layar).
+      uploaded: "Lagu berhasil diunggah.",
+      removed: "Lagu dihapus.",
+      // Undangan turun paket: lagu tersimpan tak diputar, tetapi pemilik tetap
+      // bisa menghapusnya (berkasnya masih ada sampai disapu/purge).
+      // Rujukan tersimpan yang objeknya sudah tak hidup (perakit render
+      // memutar lagu pustaka sebagai gantinya).
+      notPlayed:
+        "Berkas lagu ini sudah tidak tersedia, jadi undangan memakai lagu pustaka. Hapus lalu unggah ulang bila perlu.",
+      lockedHasSong:
+        "Lagu ini tidak diputar karena undangan bukan Premium. Anda tetap bisa menghapusnya.",
+      add: "Pilih berkas MP3",
+      replace: "Ganti lagu",
+      remove: "Hapus lagu",
+      reading: "Memeriksa lagu…",
+      working: "Mengunggah lagu…",
+      current: "Lagu terpasang",
+      unnamed: "Lagu unggahan",
+      preview: "Dengarkan lagu",
+      // Netral, tanpa ajakan beli: musik sendiri sengaja tidak dijadikan
+      // nilai jual paket (DECISIONS #121).
+      locked: "Unggah lagu sendiri tersedia untuk undangan Premium.",
+      lockedByAdmin: (email: string) =>
+        `Musik unggahan di undangan ini dinonaktifkan tim Merriva karena laporan pelanggaran hak cipta. Hubungi ${email} bila Anda memegang izinnya.`,
+      errors: {
+        empty: "Berkas kosong. Pilih berkas MP3 lain.",
+        type: "Format tidak didukung. Pilih berkas MP3.",
+        size: "Ukuran berkas melebihi 8 MB. Pilih versi berkualitas lebih rendah (mis. 128 kbps) atau lagu yang lebih pendek.",
+        format:
+          "Berkas ini bukan MP3 yang bisa diputar. Pilih berkas MP3 lain.",
+        corrupt: "Berkas MP3 rusak atau tidak utuh. Pilih berkas lain.",
+        short: "Lagu terlalu pendek — minimal 10 detik.",
+        long: "Lagu terlalu panjang — maksimal 7 menit.",
+        unreadable: "Berkas tidak bisa dibaca. Coba pilih ulang.",
+        attest: "Centang pernyataan hak cipta lebih dulu.",
+        // Server menolak versi pernyataan (halaman dimuat sebelum teksnya
+        // diperbarui) — kotaknya SUDAH tercentang, jadi pesan `attest` keliru.
+        attestStale:
+          "Teks pernyataan hak cipta sudah diperbarui. Muat ulang halaman, lalu centang dan unggah lagi.",
+        plan: "Unggah lagu sendiri hanya tersedia untuk undangan Premium.",
+        locked:
+          "Unggah musik di undangan ini dikunci tim Merriva karena laporan pelanggaran hak cipta.",
+        quota:
+          "Batas unggah lagu untuk undangan ini (5 kali per 24 jam) sudah tercapai. Coba lagi besok.",
+        rate: "Terlalu banyak unggahan. Tunggu sebentar lalu coba lagi.",
+        auth: "Sesi berakhir. Muat ulang halaman lalu coba lagi.",
+        invalid: "Berkas ditolak server. Periksa format & ukurannya.",
+        server: "Lagu gagal diunggah. Coba lagi.",
+      },
+    },
     schedule: {
       // Sesi berisi yang jam mulainya belum lengkap (DECISIONS #42).
       startMissing:
@@ -1739,6 +1803,27 @@ export const copy = {
       ctaRenew: "Perpanjang undangan",
       outro: "Terima kasih atas kesabaran Anda.",
     },
+    // Takedown musik unggahan (DECISIONS #121). Sama seperti `suspended`:
+    // alasan dari kolom publik (catatan internal — yang bisa memuat identitas
+    // pelapor — tak pernah ikut), dan jalur sanggahan selalu disebut.
+    musicRemoved: {
+      subject: (slug: string) => `Musik unggahan di undangan ${slug} dihapus`,
+      preheader:
+        "Undangan Anda tetap tayang; hanya musik yang Anda unggah yang dihapus.",
+      heading: "Musik unggahan Anda dihapus",
+      greeting: (name: string | null) => (name ? `Halo ${name},` : "Halo,"),
+      intro: (slug: string) =>
+        `Kami menghapus musik yang Anda unggah di undangan /${slug} setelah menerima laporan pelanggaran hak cipta. Undangan Anda tetap dapat dibuka tamu seperti biasa; bila Anda memilih lagu dari pustaka, lagu itu yang kini diputar.`,
+      alasanJudul: "Alasan",
+      alasanKosong:
+        "Rincian laporannya akan kami sampaikan lewat email balasan. Silakan hubungi kami.",
+      kunci:
+        "Unggah musik di undangan ini kami kunci sampai kami membukanya kembali — misalnya setelah sanggahan Anda kami terima. Lagu dari pustaka Merriva tetap bisa Anda pilih kapan saja.",
+      sanggahJudul: "Anda memegang izinnya?",
+      sanggah: (email: string) =>
+        `Balas email ini atau kirim pesan ke ${email} dengan bukti lisensi atau izin pemegang hak cipta, beserta alamat undangan Anda. Kami tinjau ulang, dan bila laporannya keliru kami buka kembali kuncinya.`,
+      ctaDashboard: "Buka dashboard",
+    },
   },
   admin: {
     brand: "Merriva Admin",
@@ -1820,6 +1905,12 @@ export const copy = {
           warnFinal: "peringatan final",
           warnNoOwner: "peringatan: tanpa pemilik",
           warnFailed: "peringatan gagal",
+          // purge-expired: sapu musik unggahan usang (DECISIONS #121)
+          musicScanned: "musik: kandidat usang dibaca",
+          musicSwept: "musik usang dihapus",
+          musicFailed: "musik: objek gagal dihapus",
+          musicTruncated: "musik: terpotong batas",
+          musicSweepFailed: "musik: langkah sapu gagal",
           // backup-media (skrip host, DECISIONS #117)
           files: "berkas dicadangkan",
           bytes: "ukuran arsip (byte)",
@@ -1981,6 +2072,24 @@ export const copy = {
       ownerHint: "Pindahkan undangan (+ order) ke pengguna lain (isi User ID).",
       ownerNewId: "User ID pemilik baru",
       ownerCta: "Pindahkan",
+      // Takedown musik unggahan (DECISIONS #121) — lebih ringan dari suspend:
+      // undangan tetap tayang, hanya objek musiknya dihapus & unggah dikunci.
+      musicTitle: "Musik unggahan (laporan hak cipta)",
+      musicHint:
+        "Hapus SEMUA berkas musik yang pernah diunggah di undangan ini dan kunci unggah musik. Undangan tetap tayang (kembali ke lagu pustaka/tanpa musik). Berkas berhenti tersaji dari cache paling lambat ±1 jam.",
+      musicNone: "Tidak ada musik unggahan yang tersimpan.",
+      musicLive: (n: number) => `${n} berkas musik unggahan tersimpan.`,
+      musicCurrent: "Sedang dipakai:",
+      musicLockedSince: (when: string) => `Unggah musik dikunci sejak ${when}.`,
+      musicReason: "Catatan internal (boleh memuat identitas pelapor)",
+      musicPublicReason: "Alasan untuk pelanggan (dikirim via email)",
+      musicPublicHint:
+        "Jangan cantumkan data pribadi pelapor. Kosongkan bila belum ingin menjelaskan — emailnya tetap mengarahkan pelanggan untuk menghubungi kami.",
+      musicCta: "Hapus musik & kunci unggah",
+      musicUnlockTitle: "Buka kunci unggah musik",
+      musicUnlockHint:
+        "Izinkan pemilik mengunggah musik lagi (mis. sanggahannya diterima dengan bukti lisensi).",
+      musicUnlockCta: "Buka kunci",
     },
     packages: {
       title: "Paket",
@@ -2111,6 +2220,18 @@ export const copy = {
       owner_invalid: "User ID tidak valid.",
       owner_user_not_found: "Pengguna tujuan tidak ditemukan.",
       owner_failed: "Gagal mengganti pemilik.",
+      music_ok:
+        "Musik unggahan dihapus dan unggah musik dikunci. Email pemberitahuan terkirim.",
+      music_ok_no_email:
+        "Musik unggahan dihapus dan unggah musik dikunci, tetapi email pemberitahuan TIDAK terkirim. Kabari pemilik secara manual.",
+      music_ok_partial:
+        "Musik dinonaktifkan (tak lagi diputar) dan unggah dikunci, tetapi sebagian berkas gagal dihapus dari storage. Path-nya tercatat di Sentry — hapus manual.",
+      music_invalid: "Catatan internal wajib diisi.",
+      music_failed: "Gagal menghapus musik unggahan.",
+      music_unlock_ok: "Kunci unggah musik dibuka.",
+      music_unlock_not_locked:
+        "Unggah musik di undangan ini tidak sedang dikunci.",
+      music_unlock_failed: "Gagal membuka kunci unggah musik.",
     },
   },
   // Halaman marketing publik (SPEC §4.1): landing, katalog tema, harga, FAQ,
@@ -2262,7 +2383,9 @@ export const copy = {
         },
         {
           q: "Apakah bisa pakai lagu favorit saya?",
-          a: "Musik dipilih dari koleksi instrumental bebas royalti bawaan platform. Ini untuk menghindari masalah hak cipta agar undangan Anda aman disebar luas.",
+          // DECISIONS #121: dijawab tegas, tanpa nada jualan. Unggahan hanya
+          // sah bila pemiliknya memegang hak/izin; selebihnya dilarang.
+          a: "Semua paket dapat memilih lagu dari koleksi instrumental bebas royalti bawaan Merriva. Undangan Premium juga dapat mengunggah satu lagu MP3 sendiri, tetapi hanya bila Anda memegang haknya atau sudah mendapat izin pemegang hak cipta, misalnya rekaman Anda sendiri atau musik berlisensi. Lagu komersial dari Spotify, YouTube, atau unduhan lain tanpa izin tertulis pemegang haknya dilarang, dan musik yang dilaporkan melanggar dapat kami hapus.",
         },
         {
           q: "Perlu mengunduh aplikasi?",
@@ -2354,9 +2477,12 @@ export const copy = {
         // terbit sebagai baris "NPWP/NIB: -" yang tak memberi tahu apa pun.
         taxId: "",
       },
-      // Tanggalnya ikut berubah karena ISI ketiga halaman berubah hari ini:
-      // identitas pelaku usaha baru terbit sekarang.
-      updated: "Terakhir diperbarui 15 Oktober 2026",
+      // Tanggalnya ikut berubah setiap ISI halaman legal berubah. 15 Okt 2026:
+      // identitas pelaku usaha terbit. 9 Nov 2026: musik unggahan (DECISIONS
+      // #121) — klausul konten/lisensi/ganti rugi, takedown musik, bagian
+      // "Laporan pelanggaran hak cipta" di /syarat, dan catatan unggah musik +
+      // data pelapor di /privasi. (Satu tanggal untuk ketiga halaman.)
+      updated: "Terakhir diperbarui 9 November 2026",
       backHome: "Kembali ke beranda",
       contactHeading: "Hubungi kami",
       contactBody: "Ada pertanyaan tentang halaman ini? Email kami di",
@@ -2369,10 +2495,14 @@ export const copy = {
             heading: "Data yang kami kumpulkan",
             body: [
               "Data akun: nama, alamat email, dan nomor WhatsApp (opsional) yang Anda berikan saat mendaftar.",
-              "Konten undangan: teks, foto, jadwal acara, dan detail lain yang Anda masukkan.",
+              "Konten undangan: teks, foto, musik dan video yang Anda unggah, jadwal acara, dan detail lain yang Anda masukkan.",
               "Data tamu: nama, nomor WhatsApp, status kehadiran (RSVP), dan ucapan — baik yang Anda tambahkan maupun yang diisi tamu.",
               "Album Momen (bila diaktifkan): foto yang diunggah tamu dari kameranya, nama tampilan yang tamu isi sendiri, serta pengenal perangkat acak yang disimpan di peramban tamu untuk menghitung kuota peserta. Foto dapat memuat wajah tamu dan orang lain yang ada di acara.",
               "Data teknis: alamat IP, jenis perangkat, cookie sesi yang menjaga Anda tetap masuk, dan — khusus Album Momen — cookie sesi tamu bertanda tangan serta pengenal perangkat di penyimpanan lokal peramban (bukan cookie).",
+              // DECISIONS #121 — tabel `music_uploads` (akun, waktu, sha256,
+              // ukuran, durasi, attest_version) dan laporan yang masuk lewat email.
+              "Catatan unggah musik (bila Anda mengunggah lagu sendiri): akun pengunggah, waktu unggah, sidik digital berkas, ukuran, durasi, dan versi pernyataan hak yang Anda centang.",
+              "Laporan pelanggaran hak cipta: identitas dan kontak pelapor serta isi laporan yang dikirim ke alamat kontak kami.",
             ],
           },
           {
@@ -2382,6 +2512,7 @@ export const copy = {
               "Memproses pembayaran dan mengirim kuitansi.",
               "Mengirim notifikasi penting, seperti pengingat masa aktif undangan.",
               "Menjaga keamanan layanan dan mencegah penyalahgunaan.",
+              "Menangani laporan pelanggaran hak cipta atas konten yang diunggah, termasuk memberi tahu pengunggahnya.",
             ],
           },
           {
@@ -2419,6 +2550,11 @@ export const copy = {
               "Salinan cadangan foto & media kami simpan untuk pemulihan bencana dan terhapus otomatis sekitar 30 hari setelah dibuat, termasuk salinan data yang sudah dihapus.",
               "Anda dapat meminta penghapusan akun dan data kapan saja lewat alamat kontak di bawah. Permintaan diverifikasi ke alamat email akun Anda sendiri sebelum dijalankan.",
               "Pengecualian: catatan pesanan (nomor order, nominal, tanggal) tetap kami simpan untuk kewajiban pembukuan, tetapi sudah tidak lagi tertaut pada identitas Anda.",
+              // DECISIONS #121: baris `music_uploads` & `admin_logs` takedown
+              // bertahan selama kerangka undangan ada; FK user_id SET NULL saat
+              // hapus akun. Berkas musiknya sendiri ikut retensi undangan.
+              "Catatan unggah musik (akun pengunggah, waktu, sidik berkas, versi pernyataan hak) beserta catatan tindakan kami atas laporan pelanggaran kami simpan selama undangan yang bersangkutan masih tercatat di sistem kami, untuk menangani klaim hak cipta. Catatan ini tidak memuat isi berkasnya, dan sesudah akun Anda dihapus tidak lagi tertaut pada identitas Anda. Berkas musiknya sendiri ikut dihapus bersama data undangan lainnya.",
+              "Data pelapor pelanggaran hak cipta hanya kami pakai untuk menangani laporannya dan tidak kami teruskan kepada pengunggah tanpa izin pelapor, kecuali bila diwajibkan peraturan perundang-undangan atau diminta pihak berwenang.",
             ],
           },
           {
@@ -2432,6 +2568,7 @@ export const copy = {
             body: [
               "Data akun dan undangan kami proses untuk menjalankan layanan yang Anda beli — yaitu pelaksanaan perjanjian antara Anda dan Merriva.",
               "Catatan pembayaran kami simpan untuk memenuhi kewajiban hukum di bidang pembukuan dan perpajakan.",
+              "Catatan unggah musik dan laporan pelanggaran hak cipta kami proses untuk menangani klaim pihak lain atas konten yang diunggah, sebagai kepentingan yang sah.",
             ],
           },
           {
@@ -2513,7 +2650,15 @@ export const copy = {
             heading: "Konten Anda",
             body: [
               "Isi undangan tetap milik Anda. Kami hanya menyimpan dan menampilkannya untuk menjalankan layanan Anda, dan tidak memakainya untuk tujuan lain.",
-              "Anda menjamin berhak menggunakan setiap foto, musik, dan teks yang Anda unggah. Musik berhak cipta hanya boleh dipakai bila Anda memegang izinnya.",
+              // DECISIONS #121 (musik unggahan Premium). Lisensi SEMPIT, sengaja
+              // tak seluas pesaing ("tak dapat dicabut"); berakhir bersama
+              // kontennya — cocok dengan purge & takedown yang dijalankan kode.
+              "Atas setiap konten yang Anda unggah, Anda memberi Merriva izin terbatas untuk menyimpan dan menayangkannya di undangan Anda selama layanan berjalan, tidak untuk keperluan lain. Izin itu berakhir saat konten dihapus. Berkas video dan musik yang Anda unggah ikut terhapus bersama data undangan saat masa retensinya berakhir, jadi simpan berkas aslinya sendiri.",
+              "Anda menjamin berhak menggunakan setiap foto, video, musik, dan teks yang Anda unggah. Musik yang Anda unggah harus berupa rekaman milik Anda sendiri, musik berlisensi yang boleh dipakai untuk undangan, atau lagu yang izin pemegang hak ciptanya Anda pegang. Lagu komersial yang diambil dari Spotify, YouTube, atau unduhan lain tanpa izin tertulis pemegang haknya dilarang.",
+              // Ganti rugi DIBATASI pada pelanggaran pengguna sendiri, dan tak
+              // boleh dibaca sebagai pengalihan tanggung jawab Merriva (klausul
+              // baku terlarang, UUPK Pasal 18 — batal demi hukum).
+              "Bila pihak lain menuntut Merriva karena konten yang Anda unggah melanggar haknya, Anda bertanggung jawab atas klaim tersebut sebatas yang timbul dari pelanggaran Anda sendiri, tanpa mengurangi hak konsumen yang dijamin peraturan perundang-undangan.",
               "Dilarang mengunggah konten yang melanggar hukum Indonesia, menyinggung SARA, bermuatan pornografi, menipu, atau menyamar sebagai orang atau lembaga lain.",
             ],
           },
@@ -2529,7 +2674,29 @@ export const copy = {
             body: [
               "Kami dapat menangguhkan undangan yang dilaporkan atau kami temukan melanggar ketentuan konten di atas. Penangguhan membuat halaman berhenti tayang; isinya tidak dihapus.",
               "Sedapat mungkin kami memberi tahu Anda lebih dulu dan memberi kesempatan memperbaiki, kecuali bila konten tersebut melanggar hukum atau membahayakan pihak lain.",
+              // DECISIONS #121 — cermin `admin_takedown_custom_music`: objek musik
+              // dihapus, `music_locked_at` diisi, undangan TIDAK ditangguhkan,
+              // email `musicRemoved` dikirim. Kunci berlaku SAMPAI ADMIN
+              // MEMBUKANYA (`admin_unlock_custom_music`), bukan "selama
+              // ditinjau". Sengaja tanpa klausul penolakan refund (klausula
+              // baku terlarang, UUPK Pasal 18 ayat 3); refund mengikuti /refund.
+              "Atas laporan pelanggaran hak cipta, kami dapat menghapus musik yang Anda unggah tanpa menangguhkan undangan. Undangan tetap tayang dengan lagu pilihan Anda dari pustaka Merriva (atau tanpa musik), dan unggah musik di undangan itu kami kunci sampai kami membukanya kembali (misalnya setelah sanggahan Anda kami terima). Kami memberi tahu Anda lewat email beserta cara menyanggahnya. Penghapusan ini tidak mengubah masa aktif maupun fitur lain undangan Anda; pengembalian dana tetap mengikuti Kebijakan Refund.",
               "Anda dapat berhenti kapan saja dengan tidak memperpanjang, atau meminta penghapusan akun lewat alamat kontak kami.",
+            ],
+          },
+          // Sarana pelaporan publik (Permenkominfo 5/2020 Pasal 10 ayat 2;
+          // DECISIONS #121). Jalur v1 = email; form + Turnstile ditunda.
+          // Tenggat "paling lambat 2 hari kerja" = janji yang dijalankan
+          // prosedur `docs/RUNBOOK.md` — ubah keduanya bersamaan.
+          {
+            heading: "Laporan pelanggaran hak cipta",
+            id: "laporan-hak-cipta",
+            body: [
+              `Bila Anda pemegang hak cipta, atau kuasanya, dan menemukan musik atau konten lain di undangan Merriva yang memakai karya Anda tanpa izin, kirim laporan ke ${SUPPORT_EMAIL}.`,
+              "Sertakan identitas dan kontak Anda, karya yang Anda klaim beserta bukti hak atasnya, tautan undangan yang dimaksud, serta pernyataan bahwa laporan dibuat dengan itikad baik dan isinya benar.",
+              "Laporan yang lengkap kami tindak segera, paling lambat 2 hari kerja, misalnya dengan menghapus musik yang dilaporkan. Laporan yang belum lengkap kami balas untuk meminta kelengkapannya.",
+              "Pengunggah kami beri tahu dan dapat menyanggah dengan bukti lisensi atau izin pemegang hak. Bila sanggahannya terbukti, kami pulihkan kemampuan unggahnya. Data pribadi pelapor tidak kami teruskan kepada pengunggah tanpa izin pelapor.",
+              "Pengguna yang berulang kali melanggar dapat kami tangguhkan undangannya atau akunnya.",
             ],
           },
           {

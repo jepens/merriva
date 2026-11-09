@@ -114,7 +114,7 @@ export async function saveInvitationDraftAction(
   delete settingsSansCustom.custom;
   const { data: current } = await supabase
     .from("invitations")
-    .select("settings")
+    .select("settings, music_locked_at")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -122,11 +122,18 @@ export async function saveInvitationDraftAction(
   const settingsToWrite = serverCustom
     ? { ...settingsSansCustom, custom: serverCustom }
     : settingsSansCustom;
+  // Musik unggahan dikunci admin (takedown, DECISIONS #121): tab editor yang
+  // masih terbuka memegang rujukan lama dan akan menulisnya kembali di autosave
+  // berikutnya. Buang di sini supaya rujukan ke objek yang sudah dihapus tak
+  // hidup lagi saat kuncinya dibuka.
+  const contentToWrite = current?.music_locked_at
+    ? { ...content, customMusic: undefined }
+    : content;
 
   const { data: saved, error } = await supabase
     .from("invitations")
     .update({
-      content: toDbJson(content),
+      content: toDbJson(contentToWrite),
       settings: toDbJson(settingsToWrite),
       event_date: eventDate ? eventDate : null,
     })
@@ -346,7 +353,8 @@ export type DeleteInvitationResult =
  *    owner tak bisa hapus `rsvps`/`gift_notes` lewat RLS (delete = admin-only).
  *    Baris undangan tinggal sebagai kerangka + `orders` dipertahankan (retensi
  *    keuangan). `purged_at` menyembunyikannya dari daftar dashboard.
- * Objek storage media dibersihkan best-effort (orphan tak berbahaya).
+ * Objek storage media dibersihkan best-effort (orphan tak berbahaya). Musik
+ * unggahan draft: path dibaca dari `music_uploads` SEBELUM DELETE (cascade).
  * `active`/`pending_payment`/`suspended` ditolak (boundary: jangan hapus undangan
  * aktif; transaksi berjalan / kendali admin).
  */
@@ -392,19 +400,60 @@ export async function deleteInvitationAction(
       .select("storage_path")
       .eq("invitation_id", invitationId);
 
-    const { error: delErr } = await supabase
+    // Objek musik unggahan (DECISIONS #121), termasuk yang diganti atau tak
+    // pernah tersimpan. Barisnya hanya terlihat service_role (RLS tanpa
+    // policy) dan ikut terhapus FK cascade — sesudah DELETE, objeknya tak bisa
+    // ditemukan lagi tetapi tetap tersaji publik. Karena itu bacaan yang GAGAL
+    // membatalkan penghapusan (pemilik mencoba lagi), tidak seperti media di
+    // atas. Kepemilikan sudah diverifikasi lewat klien pemilik di atas.
+    const { data: musikRows, error: musikErr } =
+      await createSupabaseAdminClient()
+        .from("music_uploads")
+        .select("path")
+        .eq("invitation_id", invitationId)
+        .is("removed_at", null);
+    if (musikErr) return { status: "error", message: copy.common.error };
+
+    const { data: terhapus, error: delErr } = await supabase
       .from("invitations")
       .delete()
       .eq("id", invitationId)
       .eq("user_id", user.id)
-      .eq("status", "draft"); // guard eksplisit selain RLS
+      .eq("status", "draft") // guard eksplisit selain RLS
+      .select("id");
     if (delErr) return { status: "error", message: copy.common.error };
+    // Status berubah di sela bacaan di atas dan DELETE (mis. checkout membuatnya
+    // pending/aktif): guard menyaring barisnya, DELETE sukses dengan 0 baris.
+    // Undangan itu masih hidup — objek media & musik yang path-nya dibaca di
+    // atas MILIKNYA, jadi tak satu pun boleh dihapus.
+    if (!terhapus || terhapus.length === 0) {
+      return {
+        status: "error",
+        reason: "not_deletable",
+        message: copy.dashboard.deleteNotAllowed,
+      };
+    }
 
     await Promise.allSettled(
       (mediaRows ?? []).flatMap((m) =>
         mediaObjectPaths(m.storage_path).map((p) => storage.delete(p)),
       ),
     );
+    const hasilMusik = await Promise.allSettled(
+      (musikRows ?? []).map((m) => storage.delete(m.path)),
+    );
+    const gagalMusik = hasilMusik.filter((r) => r.status === "rejected").length;
+    if (gagalMusik > 0) {
+      // Barisnya sudah lenyap bersama undangan: tak ada penyapu yang akan
+      // menemukan objek ini lagi, jadi laporan ini satu-satunya jejaknya.
+      reportHandledError(
+        new Error(
+          `storage: ${gagalMusik} objek musik gagal dihapus saat hapus draft`,
+        ),
+        "invitation.delete.music",
+        { invitationId, failed: gagalMusik },
+      );
+    }
   } else {
     // expired → purge via RPC service_role (owner-scoped: sudah diverifikasi milik
     // pemanggil di atas). Idempoten; not_expired/already_purged → tetap sukses

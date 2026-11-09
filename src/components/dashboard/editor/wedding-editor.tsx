@@ -14,6 +14,7 @@ import { SettingsStep } from "./steps/settings-step";
 import { TimelineStep } from "./steps/timeline-step";
 import type {
   EditorValues,
+  MusicSlotView,
   PhotoSlots,
   SongOption,
   VideoSlotView,
@@ -105,6 +106,7 @@ const STEPS: EditorStep[] = [
         form={c.form}
         invitationId={c.invitationId}
         songs={c.songs}
+        music={c.music}
         video={c.video}
         timelineLabel={copy.editor.timeline.wedding.section}
       />
@@ -129,6 +131,7 @@ export function WeddingEditor({
   maxPhotos: number;
   songs: SongOption[];
   photoSlots: PhotoSlots;
+  music: MusicSlotView;
   video: VideoSlotView;
   initialStep?: string;
   /** `false` = tema aktif tak punya section galeri (dihitung di server). */

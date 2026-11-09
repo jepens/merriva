@@ -64,6 +64,7 @@ function renderWith(events: EventDraft[]) {
       maxPhotos={8}
       songs={[]}
       photoSlots={{}}
+      music={{ allowed: false, lockedAt: null, path: null, url: null }}
       video={{ allowed: false, url: null, posterUrl: null }}
     />,
   );

@@ -1,8 +1,11 @@
 # Pustaka Lagu (musik latar undangan)
 
 Musik latar diputar otomatis saat tamu membuka undangan (dapat dimatikan tamu).
-Pemilik undangan **memilih** lagu dari pustaka; mereka **tidak** mengunggah audio
-sendiri. Pustaka diisi oleh **admin**.
+Pemilik undangan **memilih** lagu dari pustaka, yang menjadi bawaan semua paket
+dan diisi oleh **admin**. Sejak 9 Nov 2026, undangan **Premium** juga boleh
+mengunggah **satu lagu MP3 sendiri** dengan pernyataan hak (DECISIONS #121;
+bagian "Musik unggahan klien" di bawah). Pustaka tetap ada, tetap bawaan, dan
+tetap hanya berisi trek berlisensi.
 
 ## Cara kerja (rantai teknis)
 
@@ -18,6 +21,12 @@ Lagu yang **dinonaktifkan** admin hilang dari picker & tak diputar. Menghapus
 lagu yang sudah dipilih sebuah undangan aman: `resolveMusic` mengembalikan null
 (undangan jadi senyap, tidak error).
 
+**Nonaktif ≠ tak tersaji.** Objek `songs/<sha256>.<ext>` tetap bisa diunduh
+lewat URL langsung dan di-cache `immutable` setahun di Cloudflare. Trek yang
+dilaporkan melanggar hak cipta harus dinonaktifkan, **dihapus** (objek ikut
+terhapus bila tak dipakai baris lain), lalu URL-nya di-purge di Cloudflare:
+`docs/RUNBOOK.md` → "Lagu pustaka yang dilaporkan".
+
 ## Menambah lagu (admin)
 
 1. Masuk sebagai admin → menu **Lagu** (`/admin/lagu`).
@@ -31,9 +40,10 @@ lagu yang sudah dipilih sebuah undangan aman: `resolveMusic` mengembalikan null
 
 Hanya unggah audio yang **bebas-royalti / berlisensi** dan boleh Anda pakai untuk
 undangan komersial. **Sistem tidak memverifikasi lisensi** — hak pakai tiap trek
-adalah tanggung jawab admin (lihat DECISIONS #8 & #18; boundary CLAUDE.md
-"jangan musik berhak-cipta"). **Jangan** unggah lagu populer berhak cipta
-(risiko takedown/klaim).
+adalah tanggung jawab admin (lihat DECISIONS #8 & #18). **Jangan** unggah lagu
+populer berhak cipta ke pustaka (risiko takedown/klaim). Pustaka disajikan ke
+undangan SEMUA pelanggan atas nama Merriva, jadi standarnya lebih ketat daripada
+musik unggahan klien: tidak ada pernyataan pengguna yang menanggungnya.
 
 Sumber instrumental bebas-royalti yang lazim (verifikasi sendiri syarat lisensi
 tiap trek sebelum dipakai):
@@ -45,6 +55,31 @@ tiap trek sebelum dipakai):
 
 Untuk trek CC-BY, isi kredit pada field **Artis** agar atribusi tersimpan &
 tampil. Simpan bukti lisensi tiap trek di luar aplikasi (mis. catatan ops).
+
+## Musik unggahan klien (Premium) — DECISIONS #121
+
+Aturan lengkap dan kriteria terimanya ada di SPEC §4.4 "Musik unggahan".
+Ringkasnya:
+
+- Hanya undangan Premium (draft milik admin/Pro ikut paket teratas). Formatnya
+  MP3 saja, berkas ≤ 8 MB, durasi 10 detik–7 menit yang dihitung server.
+- Pernyataan hak wajib dicentang di setiap unggahan. Server menyimpan HANYA
+  rantai frame audio (tag ID3, sampul, depan & ekor dibuang; isi badan frame
+  tidak diperiksa) ke `audio/<id undangan>/<uuid>.mp3` dan mencatat
+  unggahannya di tabel `music_uploads`.
+- Lagu unggahan menggantikan lagu pustaka **saat diputar**, hanya bila barisnya
+  masih hidup di `music_uploads`; pilihan pustaka (`settings.songId`) tidak
+  dihapus. Menghapus lagu unggahan, turun paket, takedown, atau rujukan basi
+  mengembalikan lagu pustaka. Judul yang tampil ke tamu generik, bukan nama
+  berkas.
+- Laporan pelanggaran ditangani lewat tombol admin "Hapus musik & kunci
+  unggah" di `/admin/undangan/<id>`. Undangannya tetap tayang, dan unggah
+  terkunci sampai admin membukanya. Prosedurnya:
+  `docs/RUNBOOK.md` bagian "Laporan pelanggaran hak cipta (musik unggahan)".
+
+Rantai teknis pustaka di atas tidak berubah. Musik unggahan dirakit di
+`buildInvitationData` menjadi `InvitationData.music {url, title}` yang sama,
+jadi `cover-gate` dan tema tidak membedakan keduanya.
 
 ## Catatan operasional
 
