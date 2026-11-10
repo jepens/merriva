@@ -116,9 +116,9 @@ Tiga hal yang berlaku untuk seluruh baris di atas: (1) **best-effort** — tak a
 
 ## 8. Deployment (VPS + Easypanel)
 
-`Dockerfile` multi-stage: `node:22-alpine` → install (pnpm, frozen lockfile) → build (`output: 'standalone'`) → runtime hanya `.next/standalone` + `public` + `.next/static`, user non-root, `EXPOSE 3000`, healthcheck LIVENESS `GET /api/health?probe=live` (tanpa probe DB, 10 dtk × 5; probe lengkap `/api/health` dengan cek DB untuk UptimeRobot/ops:verify — DECISIONS #110). Easypanel: app dari repo Git (push → auto build+deploy), domain `merriva.id` di-attach (SSL Let's Encrypt otomatis via Traefik), env vars di panel. DNS di Cloudflare (proxy oranye ON untuk cache statis + perlindungan).
+`Dockerfile` multi-stage: `node:22-alpine` → install (pnpm, frozen lockfile) → build (`output: 'standalone'`) → runtime hanya `.next/standalone` + `public` + `.next/static`, user non-root, `EXPOSE 3000`, healthcheck LIVENESS `GET /api/health?probe=live` (tanpa probe DB, 10 dtk × 5; probe lengkap `/api/health` dengan cek DB untuk UptimeRobot/ops:verify — DECISIONS #110). Easypanel: app dari repo Git, branch `production` (push `main` → CI hijau → job promote mem-fast-forward `production` → webhook Auto Deploy → build+deploy; DECISIONS #64), domain `merriva.id` di-attach (SSL Let's Encrypt otomatis via Traefik), env vars di panel. DNS di Cloudflare (proxy oranye ON untuk cache statis + perlindungan).
 
-**Dua project Supabase:** `merriva-staging` (development, gratis) dan `merriva-prod`. Alur migrasi: kembangkan & uji di staging → merge ke `main` → deploy → `supabase db push` ke prod secara sadar/manual. Jangan pernah mengarahkan dev ke DB prod.
+**Dua project Supabase:** `merriva-staging` (development, gratis) dan `merriva-prod`. Alur migrasi: kembangkan & uji di staging → `supabase db push` ke prod secara sadar/manual — migrasi yang dibutuhkan kode baru WAJIB lebih dulu (urutan khusus dicatat di ADR fiturnya) → merge ke `main` → CI hijau → promote `production` → Auto Deploy. Tak ada lagi jeda tombol Deploy untuk menyelipkan migrasi sesudah push. Jangan pernah mengarahkan dev ke DB prod.
 
 Env (nilai di Easypanel/`.env`, daftar di `.env.example`):
 

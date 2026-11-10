@@ -156,6 +156,9 @@ jobs:
   # terjangkau unit test, yang me-MOCK setiap RPC. Dipisah dari `verify` dan
   # TIDAK menahannya: stack lokal perlu ~2 menit untuk hidup, dan kegagalan
   # menyalakan Docker tak boleh menyamar jadi kode yang rusak.
+  # Tetapi `promote` butuh `db` hijau: sejak gerbang berlaku (10 Nov 2026)
+  # kegagalan job ini — termasuk Docker yang gagal menyala — MENAHAN DEPLOY.
+  # Kegagalan infrastruktur: `gh run rerun <id> --failed`, jangan diabaikan.
   #
   # Alasan jobnya ada: `admin_refund_order` sempat lolos review, typecheck, dan
   # seluruh unit test dengan bug yang membuat SETIAP refund add-on gagal
@@ -180,7 +183,7 @@ jobs:
 
   # Gerbang deploy (AUDIT-2026-10-01, gelombang C).
   #
-  # MASALAHNYA: Easypanel auto-build saat push ke `main` (DEPLOYMENT.md §Build),
+  # MASALAHNYA (sampai 10 Nov 2026): Easypanel auto-build saat push ke `main`,
   # dan webhook-nya berjalan PARALEL dengan CI — bukan sesudahnya. Commit yang
   # CI-nya merah karena itu sudah hidup di produksi beberapa menit kemudian, dan
   # satu-satunya yang mengetahuinya adalah orang yang mengecek `gh run list`
@@ -192,12 +195,15 @@ jobs:
   #
   # Karena itu PEMICUNYA yang dipindah, bukan gerbangnya yang ditambahkan:
   # Easypanel mengawasi branch `production`, dan HANYA job ini yang
-  # menggerakkannya — setelah `verify` DAN `db` hijau. CI merah = `production`
+  # menggerakkannya — setelah `verify` DAN `db` hijau (satu-satunya pengecualian:
+  # jalur darurat pemilik di RUNBOOK Skenario A2). CI merah = `production`
   # sekadar tak bergerak, dan produksi tetap pada versi hijau terakhir.
   #
-  # ⚠ Belum berlaku sampai pemilik mengubah branch yang diawasi Easypanel dari
-  # `main` ke `production` (LAUNCH-CHECKLIST Fase 1). Sebelum itu job ini hanya
-  # memelihara cermin yang tak dipakai siapa pun — aman, tetapi bukan gerbang.
+  # BERLAKU sejak 10 Nov 2026: Easypanel membangun `production` (Auto Deploy =
+  # webhook `push` GitHub; uji ujung-ke-ujung: LAUNCH-CHECKLIST Fase 1). Tombol
+  # Deploy manual pun membangun `production`, jadi commit yang belum lolos job di
+  # atas tak pernah ikut. Auto Deploy mati → tekan Deploy SESUDAH job ini hijau;
+  # menyala → tak perlu ditekan (hanya build + restart kedua).
   promote:
     name: Promosikan ke production
     needs: [verify, db]

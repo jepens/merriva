@@ -24,7 +24,7 @@
 - [x] **migrasi v1 seluruh skema `DATA-MODEL.md` + RLS + index** + seed packages (kode; terapkan ke cloud = ops)
 - [x] Client Supabase (server & browser) + helper auth
 - [x] `Dockerfile` multi-stage standalone + `/api/health` (cek DB) + `next.config.ts` `output:'standalone'`
-- [ ] App Easypanel dari repo (auto-deploy saat push `main`), domain `merriva.id` + SSL, env production **(ops → LAUNCH-CHECKLIST)**
+- [ ] App Easypanel dari repo (branch `production`, Auto Deploy setelah CI hijau — DECISIONS #64), domain `merriva.id` + SSL, env production **(ops → LAUNCH-CHECKLIST)**
 - [ ] DNS di Cloudflare (proxy ON), `www` redirect **(ops → LAUNCH-CHECKLIST)**
 - [x] CI (GitHub Actions): lint + typecheck + test di setiap push/PR
 - [x] Sentry terpasang (FE+BE) · UptimeRobot ke `/api/health` **(ops → LAUNCH-CHECKLIST)**

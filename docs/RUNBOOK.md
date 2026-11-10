@@ -15,7 +15,7 @@ Prosedur singkat pemulihan ketika VPS/aplikasi bermasalah. Prinsip inti: **aplik
 ## Skenario A — Aplikasi/kontainer rusak (VPS masih hidup)
 
 1. Easypanel → app `merriva` → **Logs** untuk diagnosa.
-2. **Redeploy** (atau restart) app. Easypanel membangun ulang dari `main`.
+2. **Redeploy** (atau restart) app. Easypanel membangun ulang dari `production` — commit terakhir yang lolos CI (DECISIONS #64), bukan `main`.
 3. Verifikasi: `curl -s https://merriva.id/api/health` → `{"status":"ok","db":"up"}`.
 
 ## Skenario A2 — Deploy terakhir merusak produksi (mundur ke versi sebelumnya)
@@ -41,9 +41,23 @@ lebih dulu dari backup (lihat bagian berikutnya).
    **Jangan `git reset --hard` + force-push**: branch `production`
    di-fast-forward CI tanpa `--force`, jadi `main` yang mundur membuat promosi
    berikutnya DITOLAK server dan Anda kehilangan gerbangnya.
-3. Easypanel membangun ulang dari `main` (lihat LAUNCH-CHECKLIST Fase 1 — ia
-   masih mengawasi `main`, bukan `production`). Tunggu, lalu verifikasi dengan
-   `uptime` di `/api/health` yang kembali kecil.
+3. Tunggu job **Promosikan ke production** hijau (bukan sekadar "Lint,
+   Typecheck, Test"): job itu mem-fast-forward `production` ke commit revert,
+   lalu webhook Auto Deploy memicu build (sejak 10 Nov 2026 Easypanel membangun
+   `production`, bukan `main`). Bila beberapa menit sesudahnya tak ada deploy
+   baru di tab Deployments Easypanel — atau Auto Deploy sedang dimatikan — tekan
+   **Deploy**. Sebelum job itu hijau, `production` masih menunjuk commit rusak.
+   - **CI merah karena sebab di LUAR revert** (Actions mati/tagihan seperti
+     17 Okt, job `db` gagal menyalakan Docker, test flaky): `gh run rerun <id> --failed`
+     dulu. Bila tetap buntu dan produksi harus pulih sekarang, pemilik boleh
+     memajukan `production` manual: pastikan
+     `git log --oneline origin/production..<sha-revert>` HANYA berisi revert itu
+     (commit lain di rentang itu ikut naik tanpa verifikasi), lalu
+     `git push origin <sha-revert>:refs/heads/production` — TANPA `--force`,
+     sehingga tetap fast-forward dan promosi CI berikutnya tidak ditolak.
+   - Verifikasi: gejala yang di-revert benar-benar HILANG. `uptime` kecil di
+     `/api/health` saja bukan bukti — responsnya tak memuat SHA, dan rebuild
+     commit rusak (Deploy yang ditekan terlalu cepat) juga me-reset-nya.
 4. `pnpm ops:verify` untuk memastikan tak ada butir yang ikut mundur.
 
 **Yang TIDAK bisa dimundurkan dengan revert kode — ketahui sebelum menekan:**
@@ -79,7 +93,7 @@ lebih dulu dari backup (lihat bagian berikutnya).
 
 
 1. Provision VPS baru, pasang **Easypanel**.
-2. Buat app dari repo Git (Dockerfile), port `3000` — lihat [`DEPLOYMENT.md`](DEPLOYMENT.md) §3–4.
+2. Buat app dari repo Git — branch **`production`**, Dockerfile, port `3000`, health check panel dibiarkan kosong, Auto Deploy nyala — lihat [`DEPLOYMENT.md`](DEPLOYMENT.md) §3–4. Lalu GitHub → Settings → Webhooks: **hapus webhook lama** yang masih menunjuk IP VPS mati (bila IP itu didaur ulang penyedia, payload push repo privat + token deploy terkirim ke pemilik barunya), dan pastikan webhook baru menjawab ping 200.
 3. Isi ulang **environment variables** di panel (dari password manager) — lihat [`../.env.example`](../.env.example). Bila whitelist IP proyek BinderPay sudah diisi, daftarkan IP VPS baru — kalau tidak, setiap panggilan BinderPay gagal dengan galat generik (DECISIONS #99).
 4. **Buat kembali volume media** `/app/data/media` (DEPLOYMENT §4a) lalu **restore isinya dari backup** (bagian "Backup & restore media" di bawah), dan pasang ulang backup-nya (`pasang-backup-media.sh`) — crontab VPS baru kosong. Lewati langkah ini dan hasilnya adalah kegagalan yang paling menyesatkan di dokumen ini: situs hidup, dasbor normal, setiap undangan merender — dengan semua fotonya 404, karena baris `media` menyimpan path relatif ke objek yang sudah tak ada salinannya.
 5. Attach domain `merriva.id` + SSL.
