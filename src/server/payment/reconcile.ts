@@ -64,8 +64,9 @@ export type ReconcileOutcome =
  * INTI verifikasi→aktivasi terverifikasi (dipakai webhook M3.2 & cek-status
  * M3.3 — SATU tempat untuk invarian keamanan "verifikasi dulu, baru aktivasi").
  *
- * Webhook Pakasir TANPA signature → payload = sinyal, bukan bukti. Langkah:
- *   1. Verifikasi OTORITATIF ke `transactiondetail` (`verifyTransaction`).
+ * Payload webhook = sinyal, bukan bukti (`X-Secret` Pakasir v2 / tanda tangan RSA
+ * BinderPay hanya lapis aditif). Langkah:
+ *   1. Verifikasi OTORITATIF ke status transaksi gateway (`verifyTransaction`).
  *   2. HANYA bila API konfirmasi `paid` DAN amount cocok → aktivasi ATOMIK via
  *      RPC service_role `activate_paid_order` (idempoten: kunci baris order).
  *
@@ -75,7 +76,7 @@ export type ReconcileOutcome =
  *
  * `rawOverride`: payload yang disimpan ke `orders.raw_notification` untuk
  * rekonsiliasi admin. Webhook memberi payload webhook; bila tak diberi (jalur
- * cek-status), disimpan respons OTORITATIF `transactiondetail`.
+ * cek-status), disimpan respons OTORITATIF status transaksi.
  */
 export async function verifyAndActivate(
   admin: SupabaseClient<Database>,
@@ -132,7 +133,7 @@ export async function verifyAndActivate(
   const { data, error } = await admin.rpc("activate_paid_order", {
     p_order_code: order.order_code,
     p_amount: verification.amountIdr,
-    // Metode & waktu bayar HANYA dari sumber OTORITATIF (transactiondetail).
+    // Metode & waktu bayar HANYA dari sumber OTORITATIF (status transaksi gateway).
     p_payment_method: verification.paymentMethod,
     p_paid_at: verification.paidAt,
     p_raw:

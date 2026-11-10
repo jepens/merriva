@@ -137,7 +137,7 @@ export async function createUpgradeCheckoutAction(
   }
 
   // Order hanya lewat service_role. TIDAK menyentuh undangan sama sekali:
-  // paketnya ditukar nanti oleh RPC, setelah `transactiondetail` mengonfirmasi.
+  // paketnya ditukar nanti oleh RPC, setelah status transaksi OTORITATIF mengonfirmasi.
   let orderCode = "";
   let created = false;
   for (let attempt = 0; attempt < ORDER_CODE_RETRIES; attempt += 1) {

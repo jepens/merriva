@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *  - selisih ≤ 0 (paket sama / penurunan) ditolak SEBELUM order dibuat;
  *  - order upgrade yang belum lunas tak boleh digandakan;
  *  - UNDANGAN TIDAK DISENTUH sama sekali di sini — paketnya ditukar nanti oleh
- *    RPC, setelah `transactiondetail` mengonfirmasi;
+ *    RPC, setelah status transaksi OTORITATIF mengonfirmasi;
  *  - harga paket SEKARANG dibaca tanpa filter `is_active` (paket yang
  *    dinonaktifkan mengembalikan NULL senyap → kredit hilang → selisih tampak
  *    sebesar harga penuh), paket TUJUAN dibaca dengan filter `is_active` +

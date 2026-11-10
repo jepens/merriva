@@ -14,7 +14,7 @@ export function formatIdr(amount: number): string {
  *
  * `labels` disuntik pemanggil (`copy.dashboard.orders.methodLabel`) agar modul
  * ini tetap murni tanpa impor. Dua sifat yang disengaja:
- *  - Kolomnya BOLEH null pada order LUNAS (`parseTransactionDetail`,
+ *  - Kolomnya BOLEH null pada order LUNAS (`parseTransactionStatus`,
  *    `src/lib/payment/pakasir.ts`) → `null` dikembalikan, bukan string "null".
  *  - Channel yang belum pernah kita lihat DITERUSKAN apa adanya. Pada dokumen
  *    bukti pembayaran, menampilkan kode vendor lebih jujur daripada mengarang

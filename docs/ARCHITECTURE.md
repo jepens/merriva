@@ -18,7 +18,8 @@
    Postgres + RLS,   QRIS (SNAP)           email            anti-spam
    Auth, Storage*    + callback
         │
-   *media pindah ke [Cloudflare R2 + cdn.merriva.id] menjelang launch (lihat §6)
+   *media kini di disk VPS (driver `local`, disajikan `/media`) sejak 14 Okt 2026;
+    pindah ke [Cloudflare R2 + cdn.merriva.id] menjelang launch (lihat §6)
   **pengganti Pakasir — aktif begitu BINDERPAY_PARTNER_ID terisi; sampai itu
     Pakasir (payment link QRIS/VA + webhook) tetap jalur bayarnya (lihat §4)
 ```
@@ -142,4 +143,4 @@ RLS di semua tabel (matrix di `DATA-MODEL.md`) · halaman publik dilayani server
 
 ## 10. Observability & pemulihan
 
-Sentry (error FE+BE) · UptimeRobot ke `/api/health` production · log via Easypanel. Backup: Supabase Pro harian (7 hari) — **latihan restore minimal 1× sebelum launch**. Skenario VPS mati: data aman di Supabase/R2; pemulihan = deploy ulang container di VPS/Easypanel baru + arahkan DNS — dokumentasikan langkahnya saat M0 selesai.
+Sentry (error FE+BE) · UptimeRobot ke `/api/health` production · log via Easypanel. Backup: Supabase Pro harian (7 hari) — **latihan restore minimal 1× sebelum launch**. Skenario VPS mati: database aman di Supabase, tetapi selama `STORAGE_DRIVER=local` media (foto & lagu) ikut hilang bersama disk VPS — salinannya hanya snapshot harian di bucket R2 `merriva-backup` (DECISIONS #117), yang baru ada bila backup media LAUNCH-CHECKLIST Fase 5 sudah terpasang. Langkah pemulihan lengkap (volume media, crontab host, DNS): `docs/RUNBOOK.md` Skenario B.

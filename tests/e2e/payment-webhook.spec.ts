@@ -5,11 +5,11 @@ import { PakasirGateway } from "../../src/lib/payment/pakasir";
 
 /**
  * E2E pembayaran via JALUR WEBHOOK (SPEC §4.8 / M3.2) — pelengkap
- * `payment-simulation.spec.ts` (yang menempuh jalur POLL `transactiondetail`).
+ * `payment-simulation.spec.ts` (yang menempuh jalur POLL `transaction-status`).
  * Di sini kita men-POST payload webhook Pakasir ke endpoint publik kita
  * `/api/webhooks/pakasir` dan memverifikasi verifikasi-berlapis + aktivasi
  * ATOMIK + IDEMPOTENSI benar-benar dieksekusi (payload = sinyal; bukti lunas
- * tetap dari `transactiondetail` di dalam handler).
+ * tetap dari `transaction-status` di dalam handler).
  *
  * GATED: butuh env sandbox + akun uji + undangan uji TERPISAH (agar tak bentrok
  * dengan test poll yang mengaktifkan `E2E_INVITATION_ID`). Runbook:
@@ -134,7 +134,7 @@ test.describe("Pembayaran end-to-end (jalur webhook)", () => {
     await gateway.simulatePayment(orderId!, amount);
 
     // 5) POST webhook ke endpoint kita. Payload = SINYAL; handler memverifikasi
-    //    ulang lewat `transactiondetail`. `transactiondetail` bisa telat merefleksi
+    //    ulang lewat `transaction-status`. `transaction-status` bisa telat merefleksi
     //    lunas → retry (meniru perilaku retry Pakasir) sampai activated:true.
     const payload = {
       amount,

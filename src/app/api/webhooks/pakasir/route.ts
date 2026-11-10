@@ -42,7 +42,7 @@ function json(body: unknown, status: number): Response {
 }
 
 export async function POST(req: Request) {
-  // Rate limit endpoint publik (backstop flood; jalur mahal `transactiondetail`
+  // Rate limit endpoint publik (backstop flood; jalur mahal `transaction-status`
   // sudah tergerbang oleh kecocokan order di DB).
   const rl = await checkClientRateLimit("pakasir-webhook", WEBHOOK_LIMIT);
   if (!rl.ok) {
@@ -156,7 +156,7 @@ export async function POST(req: Request) {
     return json({ ok: true, activated: false }, 200);
   }
 
-  // Lapisan 2 + aktivasi: verifikasi OTORITATIF ke transactiondetail lalu
+  // Lapisan 2 + aktivasi: verifikasi OTORITATIF ke `transaction-status` (v2) lalu
   // aktivasi ATOMIK (RPC service_role) — inti bersama `verifyAndActivate`
   // (dipakai juga halaman cek-status M3.3). `raw_notification` menyimpan payload
   // webhook mentah (untuk rekonsiliasi admin). Kode HTTP dipetakan ke perilaku

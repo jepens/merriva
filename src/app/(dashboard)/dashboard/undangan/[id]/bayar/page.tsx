@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: copy.paymentStatus.title };
 /**
  * Halaman cek status pembayaran (SPEC §4.8 / M3.3). Klien di-redirect ke sini
  * dari Pakasir setelah bayar; komponen poller memverifikasi lewat
- * `transactiondetail` (jalur aktivasi OTORITATIF kedua, pendamping webhook)
+ * status transaksi OTORITATIF (jalur aktivasi kedua, pendamping webhook)
  * hingga undangan aktif. Dinamis (auth); undangan harus milik pemanggil (RLS).
  * Status awal dihitung di server agar tak ada flash sebelum poll pertama.
  */

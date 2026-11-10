@@ -85,7 +85,7 @@ jadi `cover-gate` dan tema tidak membedakan keduanya.
 
 - Pustaka **mulai kosong** di production — picker menampilkan "Pustaka lagu belum
   tersedia" sampai admin menambah minimal satu lagu.
-- Penyimpanan mengikuti `STORAGE_DRIVER` (supabase | r2). Bucket `media` menerima
+- Penyimpanan mengikuti `STORAGE_DRIVER` (supabase | local | r2). Bucket `media` menerima
   audio (migrasi `20260804190000_widen_media_bucket_audio`, batas 8 MB); untuk R2
   set `NEXT_PUBLIC_MEDIA_URL` = `https://cdn.merriva.id` — **dengan skema**.
   Tanpa `https://`, peramban menyelesaikannya relatif terhadap halaman undangan

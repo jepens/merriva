@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *
  * Invarian yang dijaga:
  *  - poll SAJA tak pernah cukup: aktivasi hanya terjadi lewat inti bersama
- *    `verifyAndActivate` (yang memanggil `transactiondetail` OTORITATIF);
+ *    `verifyAndActivate` (yang memanggil status transaksi OTORITATIF);
  *  - hasil verifikasi "belum lunas" / transien TIDAK PERNAH mengaktifkan;
  *  - album yang sudah ada = kondisi berhenti (tak memanggil Pakasir lagi);
  *  - bukan pemilik → tak ada rekonsiliasi sama sekali;

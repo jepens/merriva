@@ -21,7 +21,7 @@ import type { QrisSiapBayar } from "@/server/payment/qris";
  * Poller status pembayaran add-on Album Momen (AUDIT-2026-09-04 KUA-2b / UXA-7).
  *
  * Menggantikan kartu statis "menunggu pembayaran": tanpa ini, aktivasi add-on
- * bergantung PENUH pada webhook Pakasir (tanpa signature, bisa hilang) dengan
+ * bergantung PENUH pada webhook Pakasir (bisa hilang) dengan
  * backstop cron baru 24 jam kemudian — sementara pemilik yang baru saja membayar
  * hanya melihat halaman diam.
  *

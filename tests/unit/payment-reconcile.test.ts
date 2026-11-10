@@ -109,7 +109,7 @@ describe("verifyAndActivate — aktivasi terverifikasi", () => {
     });
   });
 
-  it("tanpa rawOverride → p_raw menyimpan respons transactiondetail (source status_poll)", async () => {
+  it("tanpa rawOverride → p_raw menyimpan respons status transaksi OTORITATIF (source status_poll)", async () => {
     verifyTransaction.mockResolvedValue(paid);
     const { admin, rpc } = fakeAdmin({
       data: [{ result: "activated", slug: "x" }],

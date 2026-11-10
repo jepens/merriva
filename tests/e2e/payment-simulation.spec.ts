@@ -5,8 +5,8 @@ import { PakasirGateway } from "../../src/lib/payment/pakasir";
 
 /**
  * E2E pembayaran (SPEC §4.8 / M3.6): checkout → **paymentsimulation** (sandbox
- * Pakasir, bukan uang asli) → halaman cek-status mem-poll `transactiondetail` →
- * undangan AKTIF. Jalur poll memakai `transactiondetail` OUTBOUND dari server
+ * Pakasir, bukan uang asli) → halaman cek-status mem-poll `transaction-status` →
+ * undangan AKTIF. Jalur poll memakai `transaction-status` (v2) OUTBOUND dari server
  * kita, jadi test ini TAK butuh URL webhook publik — cukup kredensial sandbox.
  *
  * GATED: hanya jalan bila env sandbox + akun uji + undangan uji tersedia; jika
@@ -92,7 +92,7 @@ test.describe("Pembayaran end-to-end (paymentsimulation)", () => {
   test("checkout Basic → simulasi bayar → undangan aktif + kuitansi", async ({
     page,
   }) => {
-    // Poll `transactiondetail` bisa perlu beberapa siklus → longgarkan timeout.
+    // Poll `transaction-status` bisa perlu beberapa siklus → longgarkan timeout.
     test.setTimeout(120_000);
     const invitationId = process.env.E2E_INVITATION_ID!;
 
@@ -135,7 +135,7 @@ test.describe("Pembayaran end-to-end (paymentsimulation)", () => {
     );
     await gateway.simulatePayment(orderId!, amount);
 
-    // 5) Halaman cek-status → poll `transactiondetail` mengaktifkan → sukses.
+    // 5) Halaman cek-status → poll `transaction-status` mengaktifkan → sukses.
     await page.goto(`/dashboard/undangan/${invitationId}/bayar`);
     await expect(page.getByText("Pembayaran berhasil!")).toBeVisible({
       timeout: 60_000,

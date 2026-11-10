@@ -761,7 +761,7 @@ export const copy = {
       order: "Kode order",
     },
   },
-  // Halaman cek status pembayaran (M3.3) — poll `transactiondetail`.
+  // Halaman cek status pembayaran (M3.3) — poll status transaksi OTORITATIF.
   paymentStatus: {
     title: "Status Pembayaran",
     order: "Kode order",

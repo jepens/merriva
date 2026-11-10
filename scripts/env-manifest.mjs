@@ -114,7 +114,7 @@ export const MANIFEST = [
     kapan: "prod",
     rahasia: true,
     rusak:
-      "verifikasi otoritatif `transactiondetail` mati → webhook & cron TAK PERNAH bisa mengaktifkan order lunas",
+      "tombol bayar/checkout mati (v2 `create-transaction` pun menuntut header `X-Api-Key`) DAN verifikasi otoritatif `transaction-status` mati → order lunas yang sudah ada TAK PERNAH bisa diaktifkan webhook & cron",
   },
   {
     key: "PAKASIR_WEBHOOK_SECRET",

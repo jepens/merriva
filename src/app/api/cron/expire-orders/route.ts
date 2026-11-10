@@ -23,7 +23,7 @@ import { verifyAndActivate } from "@/server/payment/reconcile";
  *
  * **Pass 2 — kedaluwarsakan yang > 24 jam.**
  * REKONSILIASI DULU, baru batalkan (menutup celah "webhook hilang" M3.3): tiap
- * order diverifikasi OTORITATIF via `transactiondetail` (`verifyAndActivate`) —
+ * order diverifikasi OTORITATIF ke gateway (`verifyAndActivate`) —
  * bila ternyata LUNAS, diaktifkan (atau `held` utk suspended, pembayaran tetap
  * tercatat), BUKAN dibatalkan. Hanya order yang API pastikan BELUM lunas yang
  * di-`expired` lalu dibatalkan ke gateway (best-effort; BinderPay:

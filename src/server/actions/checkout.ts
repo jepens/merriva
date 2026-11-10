@@ -286,7 +286,7 @@ export async function createCheckoutAction(
   revalidatePath("/dashboard");
 
   // Pakasir mengembalikan klien ke halaman "cek status pembayaran" (M3.3): bila
-  // ia kembali sebelum webhook tiba, poller mem-verifikasi via `transactiondetail`
+  // ia kembali sebelum webhook tiba, poller mem-verifikasi status transaksi OTORITATIF
   // dan mengaktifkan (jalur OTORITATIF kedua, pendamping webhook M3.2).
   const url = await terbitkanLink(admin, {
     orderCode,

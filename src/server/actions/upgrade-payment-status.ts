@@ -17,13 +17,13 @@ import { findLatestUpgradeOrder } from "@/server/upgrade/orders";
  * status UNDANGAN dan early-return `active` sebelum merekonsiliasi apa pun.
  * Pembeli upgrade undangannya SELALU `active` — itu syarat checkout-nya —
  * sehingga order upgrade TAK PERNAH direkonsiliasi di sana, dan aktivasinya akan
- * bergantung penuh pada webhook Pakasir yang tanpa signature dan bisa hilang,
+ * bergantung penuh pada webhook Pakasir yang bisa hilang,
  * dengan backstop cron baru 24 jam kemudian. Jebakan yang sama persis sudah
  * pernah ditemukan pada add-on Album Momen (AUDIT-2026-09-04 KUA-2b); berkas ini
  * mengikuti pola yang sudah ada, bukan membuat pola ketiga.
  *
  * Inti verifikasinya `verifyAndActivate` yang SAMA — verifikasi dua lapis
- * (`transactiondetail` OTORITATIF sebelum aktivasi) tak berubah sedikit pun.
+ * (status transaksi OTORITATIF sebelum aktivasi) tak berubah sedikit pun.
  *
  * Pola: auth → cek kepemilikan (RLS) → rekonsiliasi (service_role) → revalidate.
  */
@@ -48,7 +48,7 @@ export type UpgradePaymentState =
   | { status: "error" };
 
 // Sejalan dengan dua poll yang sudah ada: klien mem-poll ~4 dtk sekali. Jalur
-// mahal (`transactiondetail`) hanya tersentuh saat order masih `pending`.
+// mahal (status transaksi OTORITATIF) hanya tersentuh saat order masih `pending`.
 const POLL_LIMIT = { max: 30, windowMs: 60_000 };
 
 export async function checkUpgradePaymentStatusAction(

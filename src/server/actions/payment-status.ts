@@ -28,7 +28,7 @@ export type PaymentStatusState =
   | { status: "error" };
 
 // Poll klien ~4 dtk sekali (lihat PaymentStatusPoller). 30/menit menyisakan
-// margin untuk cek manual; jalur mahal `transactiondetail` hanya dipanggil saat
+// margin untuk cek manual; jalur mahal (status transaksi OTORITATIF) hanya dipanggil saat
 // order masih `pending`.
 const POLL_LIMIT = { max: 30, windowMs: 60_000 };
 
@@ -36,8 +36,8 @@ const POLL_LIMIT = { max: 30, windowMs: 60_000 };
  * Cek & rekonsiliasi status pembayaran sebuah undangan milik pemanggil. Ini
  * adalah jalur aktivasi OTORITATIF KEDUA (pendamping webhook M3.2): bila klien
  * kembali dari Pakasir sebelum webhook tiba, poll ini memverifikasi lewat
- * `transactiondetail` dan mengaktifkan via RPC idempoten yang sama. AMAN: hanya
- * order MILIK pemanggil (RLS) yang bisa dicek, dan hanya `transactiondetail`
+ * status transaksi OTORITATIF dan mengaktifkan via RPC idempoten yang sama. AMAN:
+ * hanya order MILIK pemanggil (RLS) yang bisa dicek, dan hanya status transaksi
  * OTORITATIF yang boleh mengaktifkan — poll saja tak pernah cukup.
  *
  * Pola: auth → cek kepemilikan (RLS) → (rekonsiliasi service_role) → revalidate.
@@ -70,7 +70,7 @@ export async function checkPaymentStatusAction(
   // lalu tautan Pakasir yang masih valid dibayar DAN webhook hilang permanen, poll
   // tak mencatat pembayaran (order tetap `pending`). Aman: undangan tak dipublikasi
   // ulang (RPC kembalikan `held`). Backstop pencatatan = cron rekonsiliasi M3.4
-  // (verifikasi `transactiondetail` sebelum expire) + rekonsiliasi admin.
+  // (verifikasi status transaksi OTORITATIF sebelum expire) + rekonsiliasi admin.
   if (inv.status === "suspended") return { status: "review" };
 
   // Order terbaru untuk undangan ini (RLS: `orders_select` mengizinkan pemilik).
@@ -88,7 +88,7 @@ export async function checkPaymentStatusAction(
   // Order kedaluwarsa/gagal/refund → tak ada yang bisa di-poll.
   if (order.status !== "pending") return { status: "expired" };
 
-  // Rekonsiliasi OTORITATIF (verifikasi transactiondetail → aktivasi RPC idempoten).
+  // Rekonsiliasi OTORITATIF (verifikasi status transaksi → aktivasi RPC idempoten).
   const admin = createSupabaseAdminClient();
   const outcome = await verifyAndActivate(admin, {
     order_code: order.order_code,

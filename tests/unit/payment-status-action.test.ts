@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *
  * Invarian terpenting: **poll saja tak pernah cukup untuk mengaktifkan**.
  * Aktivasi hanya lewat inti bersama `verifyAndActivate` yang memanggil
- * `transactiondetail` OTORITATIF; "belum lunas", amount tak cocok, dan kegagalan
+ * status transaksi OTORITATIF; "belum lunas", amount tak cocok, dan kegagalan
  * transien TIDAK BOLEH mengaktifkan apa pun. Rate limit sengaja bersifat
  * transien-lembut (`pending`) agar klien terus poll, bukan gagal keras.
  */

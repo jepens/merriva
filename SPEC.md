@@ -18,7 +18,7 @@
 | Editor | **Form isian terstruktur** per bagian, bukan drag-and-drop |
 | Stack | **Next.js + Supabase cloud (supabase.com)**, deploy di **VPS sendiri via Easypanel** (build Dockerfile) |
 | Nama & domain | **Merriva — merriva.id** (dikunci 24 Jul 2026) |
-| Storage media | **Bertahap:** Supabase Storage free tier (development & klien awal) → **Cloudflare R2** menjelang launch komersial; lihat §6.4 |
+| Storage media | **Bertahap:** Supabase Storage free tier (development & klien awal) → `local` disk VPS (jembatan sejak 14 Okt 2026) → **Cloudflare R2** menjelang launch komersial; lihat §6.4 |
 
 ---
 
@@ -360,7 +360,7 @@ Halaman undangan publik dilayani dengan **ISR** (cache di server, di-revalidate 
 | Framework | Next.js (App Router, versi stabil terbaru) + TypeScript strict | Server Components default |
 | Styling & motion | Tailwind CSS + shadcn/ui (dashboard); tema: sistem motion 3 tingkat — Framer Motion (Craft), GSAP ScrollTrigger/SplitText + Lenis (Story/Signature), aksen WebGL via Paper Shaders (Signature) | Panduan lengkap: `docs/THEME-DESIGN.md` |
 | Database/Auth | Supabase cloud (supabase.com) | Mulai free tier; **upgrade Pro (±$25/bln) saat launch** — free tier bisa auto-pause & tanpa backup harian |
-| Storage media | Fase dev: Supabase Storage (free, 1GB) → menjelang launch: **Cloudflare R2** (free 10GB, **egress Rp0**) | Abstraksi `lib/storage/`; media selalu disajikan via URL sendiri, bukan URL vendor — detail §6.4 |
+| Storage media | Fase dev: Supabase Storage (free, 1GB) → jembatan sejak 14 Okt 2026: `local` (disk VPS, disajikan `/media`) → menjelang launch: **Cloudflare R2** (free 10GB, **egress Rp0**) | Abstraksi `lib/storage/`; media selalu disajikan via URL sendiri, bukan URL vendor — detail §6.4 |
 | Validasi | Zod (skema tunggal dipakai form & server) | |
 | Pembayaran | BinderPay (API SNAP — QRIS saja, DECISIONS #99); Pakasir (app.pakasir.com — QRIS + VA) tetap dipakai sampai `BINDERPAY_PARTNER_ID` diisi (DECISIONS #102) | Abstraksi `lib/payment/` agar mudah pindah gateway (Midtrans/Xendit) bila kelak diperlukan |
 | Email | Resend | Fallback SMTP |
@@ -374,11 +374,11 @@ App dibuat di Easypanel dari repo Git, branch **`production`**: push ke `main` �
 
 ```
 NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
-SUPABASE_SERVICE_ROLE_KEY, PAKASIR_PROJECT_SLUG, PAKASIR_API_KEY,  # PAKASIR_* hanya sampai peralihan
+SUPABASE_SERVICE_ROLE_KEY, PAKASIR_PROJECT_SLUG, PAKASIR_API_KEY, PAKASIR_WEBHOOK_SECRET,  # PAKASIR_* hanya sampai peralihan
 BINDERPAY_PARTNER_ID, BINDERPAY_BASE_URL,             # PARTNER_ID terisi → gateway = BinderPay
 BINDERPAY_PRIVATE_KEY_B64, BINDERPAY_PUBLIC_KEY_B64,  # PEM ter-base64: privat KITA, publik BinderPay
-RESEND_API_KEY, TURNSTILE_SECRET_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-CRON_SECRET, STORAGE_DRIVER (supabase|r2), NEXT_PUBLIC_MEDIA_URL,
+RESEND_API_KEY, EMAIL_FROM, TURNSTILE_SECRET_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+CRON_SECRET, STORAGE_DRIVER (supabase|local|r2), MEDIA_ROOT (saat driver=local), NEXT_PUBLIC_MEDIA_URL,
 R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET  # R2_* diisi saat pindah driver
 ```
 
@@ -428,7 +428,7 @@ saas-undangan/
 │  │  ├─ registry.ts
 │  │  └─ eternal-rose/  index.tsx · theme.json · demo-data.ts
 │  ├─ components/  ui/ · dashboard/ · invitation/   # section dipakai lintas tema
-│  ├─ lib/         supabase/ · payment/ · storage/ (driver supabase|r2) · email/ · validation/ (skema Zod) · utils/
+│  ├─ lib/         supabase/ · payment/ · storage/ (driver supabase|local|r2) · email/ · validation/ (skema Zod) · utils/
 │  ├─ server/      actions/ · services/ · guards/  # semua mutasi lewat sini
 │  └─ types/
 ├─ supabase/       migrations/ · seed.sql          # dikelola Supabase CLI
@@ -497,7 +497,7 @@ Definisi selesai per fitur: kriteria terima §4 terpenuhi + test terkait hijau +
 | **M0 — Fondasi** | Repo, Next.js skeleton, Supabase (staging+prod), skema DB + RLS, Dockerfile, pipeline Easypanel, domain + SSL, halaman health | ~1 minggu | Deploy otomatis jalan; `/api/health` hijau di domain production |
 | **M1 — Buat undangan** | Auth, dashboard klien, form multi-step 3 kategori, upload foto, autosave, 1 tema pertama + preview | 2–3 minggu | Klien bisa membuat & mem-preview undangan lengkap |
 | **M2 — Halaman publik & tamu** | Halaman undangan ISR, RSVP+ucapan+amplop, anti-spam, manajemen tamu, impor Excel, generator WA, OG image | ~2 minggu | Alur tamu end-to-end jalan di WebView WA |
-| **M3 — Monetisasi** | Paket & limit, integrasi Pakasir (payment link + webhook + verifikasi `transactiondetail`), aktivasi otomatis, email transaksional, cron expiry | 1–2 minggu | Pembayaran simulasi end-to-end; aktivasi & kuitansi otomatis |
+| **M3 — Monetisasi** | Paket & limit, integrasi Pakasir (payment link + webhook + verifikasi `transactiondetail` — kini v2 `transaction-status`, DECISIONS #72), aktivasi otomatis, email transaksional, cron expiry | 1–2 minggu | Pembayaran simulasi end-to-end; aktivasi & kuitansi otomatis |
 | **M4 — Launch** | Panel admin, 5 tema tambahan, landing page final, testing penuh, checklist pra-launch, pembayaran production diuji, **aktivasi R2 + migrasi media dari Supabase (§6.4)** | ~2 minggu | 10 undangan uji dari 3 kategori; go-live |
 
 Total gambaran: **8–10 minggu** pengerjaan tunggal berbantuan AI; bisa terkompresi signifikan bila dikerjakan intensif. Urutan M1 sebelum M3 disengaja: undangan gratis-dulu-bayar-belakangan berarti funnel pembuatan harus matang sebelum pembayaran.

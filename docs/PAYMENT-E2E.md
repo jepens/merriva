@@ -10,7 +10,7 @@ Gateway yang teruji ditentukan `BINDERPAY_PARTNER_ID` di `.env.local` (DECISIONS
 - **Akun uji** terverifikasi di DB target (email + kata sandi), ber-peran `client` — admin/Pro tak pernah ditagih sehingga tak pernah melihat pemilih paket berbayar (DECISIONS #100) → `E2E_EMAIL`, `E2E_PASSWORD`.
 - **Undangan uji** milik akun itu, status `draft`/`expired`, dengan **slug asli** (bukan `draft-…`) dan **minimal satu sesi jadwal yang tanggal & jam mulainya lengkap** → `E2E_INVITATION_ID`. Checkout MENOLAK slug `draft-…` (alamat terkunci setelah aktif → wajib diatur dulu) dan undangan tanpa sesi berjam (tamu tak tahu kapan acaranya — DECISIONS #44); halaman aktivasi lalu menampilkan daftar syarat, bukan pemilih paket. Reset undangan ke `draft` sebelum menjalankan ulang.
 - DB target (Supabase staging/lokal) sudah dimigrasi (`supabase db push`) — termasuk `20261031100000_orders_qr_content.sql`: checkout & `/bayar` membaca `orders.qr_content` di KEDUA gateway. Tanpa kolom itu kegagalannya senyap: checkout menolak dengan galat umum (terlapor `checkout.pending-lookup`) dan `/bayar` memantulkan ke `/aktifkan` — cek `select qr_content from public.orders limit 0;`.
-- Untuk uji **webhook** sungguhan (Pakasir → kita), app harus punya **URL publik** (staging) yang di-set sebagai webhook di dashboard Pakasir. Uji **jalur poll** (`/bayar`) tak butuh URL publik — `transactiondetail` dipanggil OUTBOUND dari server kita.
+- Untuk uji **webhook** sungguhan (Pakasir → kita), app harus punya **URL publik** (staging) yang di-set sebagai webhook di dashboard Pakasir. Uji **jalur poll** (`/bayar`) tak butuh URL publik — `transaction-status` (v2) dipanggil OUTBOUND dari server kita.
 
 ```bash
 # .env.local (dipakai `pnpm dev` yang dijalankan Playwright) + environment shell:
@@ -36,7 +36,7 @@ pnpm test:e2e                  # menjalankan spec bila env sandbox tersedia
 
 Alur test: login → `/aktifkan/{E2E_INVITATION_ID}` → checkout Basic →
 `simulatePayment` (sandbox) → buka `/bayar` → poller mem-verifikasi
-`transactiondetail` → assert **"Pembayaran berhasil!"** + tautan "Lihat undangan"
+`transaction-status` (v2) → assert **"Pembayaran berhasil!"** + tautan "Lihat undangan"
 mengarah ke slug asli (bukan `draft-…`).
 
 ## B. Manual — Pakasir (cakup metode QRIS + VA — jalur lama)
@@ -54,9 +54,9 @@ cakupan QRIS + VA jalur Pakasir (SPEC §4.8 kini QRIS saja — #99), bayar lewat
 Butir di bawah ditulis untuk Pakasir; padanan BinderPay-nya di §D.
 
 - [ ] Simulasi/bayar QRIS + ≥1 VA → undangan `active`, `active_until` terhitung.
-- [ ] **Webhook palsu tak mengaktifkan**: order tak ada / amount beda / `transactiondetail` tak konfirmasi → TIDAK aktif (sudah terverifikasi lokal M3.2; ulangi di sandbox).
+- [ ] **Webhook palsu tak mengaktifkan**: order tak ada / amount beda / `transaction-status` tak konfirmasi → TIDAK aktif (sudah terverifikasi lokal M3.2; ulangi di sandbox).
 - [ ] **Idempoten**: kirim ulang webhook / poll berkali-kali → tak menggandakan aktivasi (order tetap `paid`, satu kuitansi — `idempotencyKey`).
-- [ ] Order `pending` >24 jam → cron `expire-orders` → `expired` + `transactioncancel` (jalankan cron manual: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" .../api/cron/expire-orders`).
+- [ ] Order `pending` >24 jam → cron `expire-orders` → `expired` + `cancel-transaction` (v2) (jalankan cron manual: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" .../api/cron/expire-orders`).
 - [ ] `api_key` tak pernah muncul di browser/log.
 - [ ] **Limit paket** ditegakkan: beli Premium → 20 foto / tamu tanpa batas / **tanpa watermark**; Basic → 8 foto / 500 tamu / watermark (penegakan foto & tamu OTORITATIF di DB `invitation_effective_limits` — sudah terverifikasi lokal).
 
@@ -86,11 +86,11 @@ Tutup dulu order `pending` era Pakasir milik undangan uji (`select * from public
 - [ ] Rincian transaksi di dashboard sandbox: Jumlah = **pokok**, Total = **harga katalog** (Basic: 98.312 + biaya 688 = 99.000) — pelanggan tak pernah ditagih di atas harga; fee ditanggung merchant (SPEC §4.8).
 - [ ] QRIS saja (SPEC §4.8, keputusan pemilik #99) — tak ada VA di jalur ini.
 - [ ] **Webhook palsu tak mengaktifkan** — dikunci `tests/unit/binderpay-webhook.test.ts` (tanda tangan/stempel waktu salah → 401 sebelum menyentuh DB; order tak dikenal → 200 tanpa aktivasi; `X-PARTNER-ID` lain → dilaporkan, query tetap yang memutuskan). Callback sungguhan tak teruji dari lokal (langkah 3); bentuk & header aslinya BELUM terukur.
-- [ ] Order `pending` > 24 jam → cron → `expired` + **`qr-mpm-cancel`** (bukan `transactioncancel`); query sesudahnya `05 Canceled`.
+- [ ] Order `pending` > 24 jam → cron → `expired` + **`qr-mpm-cancel`** (bukan `cancel-transaction` Pakasir); query sesudahnya `05 Canceled`.
 - [ ] `BINDERPAY_PRIVATE_KEY_B64` (padanan `api_key`) tak pernah muncul di browser/log.
 
 ## Catatan
 
 - `simulatePayment` (`PakasirGateway`) **melempar di `NODE_ENV=production`** — tak bisa dipakai menandai lunas gratis di produksi.
 - Jalur **poll** (`/bayar`) adalah aktivator kedua yang setara webhook; keduanya lewat `verifyAndActivate` yang sama (fail-closed).
-- Cron `expire-orders` **merekonsiliasi dulu** (`transactiondetail`; BinderPay: `qr-mpm-query`) sebelum membatalkan → order lunas-tapi-webhook-hilang tetap diaktifkan, bukan dibatalkan.
+- Cron `expire-orders` **merekonsiliasi dulu** (Pakasir: `transaction-status`; BinderPay: `qr-mpm-query`) sebelum membatalkan → order lunas-tapi-webhook-hilang tetap diaktifkan, bukan dibatalkan.

@@ -18,12 +18,12 @@ import { verifyAndActivate } from "@/server/payment/reconcile";
  * status UNDANGAN dan early-return `active` sebelum merekonsiliasi. Pembeli
  * add-on undangannya SELALU `active` (syarat checkout), sehingga order add-on
  * TAK PERNAH direkonsiliasi di sana — aktivasi bergantung penuh pada webhook
- * Pakasir yang tanpa signature dan bisa hilang, dengan backstop cron baru
+ * Pakasir yang bisa hilang, dengan backstop cron baru
  * setelah 24 jam.
  *
  * Aksi ini berkunci pada status ORDER dan keberadaan ALBUM, lalu memakai inti
  * `verifyAndActivate` yang SAMA — tidak ada alur bayar/verifikasi kedua, dan
- * verifikasi 2-lapis (`transactiondetail` OTORITATIF sebelum aktivasi) tak
+ * verifikasi 2-lapis (status transaksi OTORITATIF sebelum aktivasi) tak
  * berubah sedikit pun.
  *
  * Pola: auth → cek kepemilikan (RLS) → rekonsiliasi (service_role) → revalidate.
@@ -49,7 +49,7 @@ export type MomenPaymentState =
   | { status: "error" };
 
 // Sejalan dengan poll undangan: klien mem-poll ~4 dtk sekali. Jalur mahal
-// (`transactiondetail`) hanya tersentuh saat order masih `pending`.
+// (status transaksi OTORITATIF) hanya tersentuh saat order masih `pending`.
 const POLL_LIMIT = { max: 30, windowMs: 60_000 };
 
 export async function checkMomenPaymentStatusAction(

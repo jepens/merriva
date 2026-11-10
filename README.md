@@ -1,13 +1,13 @@
 # Merriva
 
 Platform SaaS **undangan digital + digital guestbook** untuk pasar Indonesia — merriva.id.
-Fase saat ini: **MVP Fase 1 — undangan digital self-service**. Status: **Milestone M0 (Fondasi)**.
+Fase saat ini: **MVP Fase 1 — undangan digital self-service**. Status: **M0–M4 selesai; produksi hidup di merriva.id** — sisa pekerjaan bersifat operasional, lihat [`docs/LAUNCH-CHECKLIST.md`](docs/LAUNCH-CHECKLIST.md).
 
 Dokumen sumber kebenaran ada di [`SPEC.md`](SPEC.md) dan folder [`docs/`](docs/). Instruksi agen coding: [`CLAUDE.md`](CLAUDE.md).
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript strict · Tailwind CSS v4 + shadcn/ui · Supabase cloud (Postgres + RLS + Auth + Storage) · media via `lib/storage/` (driver `supabase` | `r2`) · pembayaran Pakasir → BinderPay QRIS (beralih saat `BINDERPAY_PARTNER_ID` diisi — DECISIONS #102) · email Resend · anti-spam Turnstile · Sentry · deploy Dockerfile (Next standalone) → Easypanel di VPS.
+Next.js 16 (App Router) · TypeScript strict · Tailwind CSS v4 + shadcn/ui · Supabase cloud (Postgres + RLS + Auth + Storage) · media via `lib/storage/` (driver `local` | `r2` | `supabase`) · pembayaran Pakasir → BinderPay QRIS (beralih saat `BINDERPAY_PARTNER_ID` diisi — DECISIONS #102) · email Resend · anti-spam Turnstile · Sentry · deploy Dockerfile (Next standalone) → Easypanel di VPS.
 
 ## Prasyarat
 

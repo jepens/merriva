@@ -5,11 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *
  * Ia harus ada karena `checkPaymentStatusAction` berhenti di status UNDANGAN
  * `active` — dan undangan pembeli upgrade SELALU `active`. Tanpa poll ini,
- * aktivasi upgrade bergantung penuh pada webhook Pakasir yang tanpa signature.
+ * aktivasi upgrade bergantung penuh pada webhook Pakasir yang bisa hilang.
  *
  * Invarian yang dijaga:
  *  - poll SAJA tak pernah cukup: aktivasi hanya lewat `verifyAndActivate`
- *    (yang memanggil `transactiondetail` OTORITATIF);
+ *    (yang memanggil status transaksi OTORITATIF);
  *  - kondisi berhenti = paket undangan SUDAH sama dengan paket tujuan DAN
  *    order-nya lunas — bukan salah satunya saja;
  *  - `held` (paket tak ditukar) → `review`, bukan `active`: uang sudah masuk;
