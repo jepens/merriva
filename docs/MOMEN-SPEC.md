@@ -8,18 +8,18 @@
 
 ## 1. Konsep & keputusan produk
 
-Tamu memotret momen acara lewat **kamera di browser** (tanpa install aplikasi): scan QR di meja / tap menu di undangan → tulis nama → dapat **jatah jepretan terbatas** (ala kamera film sekali pakai) dengan **filter film** → foto **tersembunyi sampai waktu reveal** → semua tamu membukanya bersama-sama → album bisa diunduh. Nostalgia "nunggu cuci film" adalah gimmick-nya; kelangkaan jatah membuat tamu memotret dengan niat.
+Tamu memotret momen acara lewat **kamera di browser** (tanpa install aplikasi): scan QR yang dicetak & dipajang di venue (satu-satunya pintu masuk; tak ada menu di halaman undangan — DECISIONS #125) → tulis nama → dapat **jatah jepretan terbatas** (ala kamera film sekali pakai) dengan **filter film** → foto **tersembunyi sampai waktu reveal** → semua tamu membukanya bersama-sama → album bisa diunduh. Nostalgia "nunggu cuci film" adalah gimmick-nya; kelangkaan jatah membuat tamu memotret dengan niat.
 
 Keputusan (26 Agu 2026):
 
-1. **Posisi: add-on undangan** — bukan produk standalone. Menempel pada undangan aktif; dibeli dari dashboard. Sinergi: tamu sudah memegang link undangan (menu "Momen" muncul di undangan + QR cetak per meja), funnel & pembayaran Pakasir sudah ada. Diferensiasi vs satualbum: mereka jual kamera saja — Merriva menjual **satu QR untuk seluruh acara** (undangan → RSVP → ucapan → momen).
+1. **Posisi: add-on undangan** — bukan produk standalone. Menempel pada undangan aktif; dibeli dari dashboard. Sinergi: funnel & pembayaran undangan sudah ada; tamu masuk lewat QR cetak yang dipajang di venue (menu "Momen" di halaman undangan DIHAPUS 10 Nov 2026 — DECISIONS #125: akses dibuat fisik di lokasi acara). Diferensiasi vs satualbum: mereka jual kamera saja — Merriva menjual **satu QR untuk seluruh acara** (undangan → RSVP → ucapan → momen).
 2. **Mekanik penuh**: filter film + jatah per tamu + hidden-until-reveal (paritas satualbum), plus atribusi nama di tiap foto.
 3. **Media: foto saja** di versi pertama. Video = biaya storage/transcoding besar → backlog.
 4. **Timing**: spec + prototipe + modul inti sekarang; implementasi FASE H setelah Fase G (Fase G terverifikasi selesai per survei kode 26 Agu 2026).
 
 ## 2. Alur pengguna
 
-**Tamu:** buka `merriva.id/{slug}/momen` (dari QR meja atau tombol "Album Momen" di undangan) → isi nama (sekali; Turnstile) → layar kamera: live preview + pilih filter + sisa jatah → jepret (atau pilih dari galeri, bila host mengizinkan) → foto dibake filter + dikompres **di HP tamu**, diunggah, lalu berstatus *tersembunyi* → setelah jatah habis: layar "terima kasih" + hitung mundur reveal → saat reveal: galeri terbuka untuk semua, foto ber-atribusi nama, unduh per foto.
+**Tamu:** buka `merriva.id/{slug}/momen` (dari QR cetak di venue; halaman undangan tak menautkannya — DECISIONS #125) → isi nama (sekali; Turnstile) → layar kamera: live preview + pilih filter + sisa jatah → jepret (atau pilih dari galeri, bila host mengizinkan) → foto dibake filter + dikompres **di HP tamu**, diunggah, lalu berstatus *tersembunyi* → setelah jatah habis: layar "terima kasih" + hitung mundur reveal → saat reveal: galeri terbuka untuk semua, foto ber-atribusi nama, unduh per foto.
 
 **Host (pembeli):** dashboard undangan → beli add-on Momen (alur order & gateway yang sama dengan aktivasi undangan) → atur: jatah/tamu, mode reveal, filter default, izinkan-upload-galeri → unduh/cetak QR (halaman cetak A6 per meja) → selama acara: pantau jumlah foto & **moderasi** (host selalu bisa melihat semua foto sebelum reveal; sembunyikan/hapus yang tak pantas) → setelah reveal: unduh **ZIP** seluruh album.
 

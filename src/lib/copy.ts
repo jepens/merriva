@@ -1461,11 +1461,6 @@ export const copy = {
   // via WebView WhatsApp; teks pendek & jelas untuk layar HP.
   momen: {
     brand: "Merriva Momen",
-    // Tombol masuk melayang di halaman undangan (muncul bila album aktif).
-    fab: {
-      label: "Album Momen",
-      aria: "Buka Album Momen — kamera bersama untuk tamu",
-    },
     notActive: {
       title: "Album Momen belum aktif",
       body: "Undangan ini belum mengaktifkan kamera bersama. Hubungi tuan rumah bila kamu ingin ikut memotret momen acara.",

@@ -243,7 +243,7 @@ export async function activateFreeMomenAction(
 
   revalidatePath("/dashboard");
   revalidatePath(momenManagePath(invitationId));
-  // Halaman undangan publik (ISR) → agar tombol "Album Momen" muncul.
-  revalidatePath(`/${inv.slug}`);
+  // Halaman undangan publik TIDAK di-revalidasi: Album Momen tak lagi punya
+  // tombol di sana (DECISIONS #125) — revalidasi hanya mengosongkan cache ISR.
   return { status: "ok" };
 }

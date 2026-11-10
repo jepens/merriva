@@ -85,9 +85,6 @@ vi.mock("@/components/public/guest-personalization", () => ({
   GuestPersonalizationProvider: ({ children }: { children: unknown }) =>
     children,
 }));
-vi.mock("@/components/public/momen/momen-fab", () => ({
-  MomenFab: () => <div data-testid="momen-fab" />,
-}));
 vi.mock("@/components/public/momen/momen-camera", () => ({
   MomenCamera: () => <div data-testid="momen-camera" />,
 }));
@@ -214,7 +211,10 @@ describe("/{slug} (ISR) — setiap bacaan wajib berhasil", () => {
   it("semua bacaan berhasil → tema menerima jadwal, galeri, musik, dan batas paket yang benar", async () => {
     render(await buka());
     expect(screen.getByTestId("tema")).toBeInTheDocument();
-    expect(screen.getByTestId("momen-fab")).toBeInTheDocument();
+    // Album Momen AKTIF (tablesOk) tetap TANPA pintu masuk di halaman undangan —
+    // tamu masuk lewat QR cetak di venue (DECISIONS #125); albumnya pun tak dibaca.
+    expect(document.querySelector('a[href$="/momen"]')).toBeNull();
+    expect(refs.reads).not.toContain("admin:momen_albums");
     expect(tema().data.events.map((e) => e.name)).toEqual(["Akad"]);
     expect(tema().data.watermark).toBe(false);
     expect(tema().data.music?.url).toBe("/media/songs/a.mp3");
@@ -225,7 +225,6 @@ describe("/{slug} (ISR) — setiap bacaan wajib berhasil", () => {
     ["themes", "tema (dulu → notFound = 404 ter-cache)"],
     ["invitation_events", "jadwal (dulu → undangan tanpa jadwal)"],
     ["media", "galeri (dulu → galeri kosong)"],
-    ["momen_albums", "Album Momen (dulu → tombol Momen hilang)"],
     ["packages", "batas paket (dulu → Premium ter-cache ber-watermark)"],
     ["songs", "musik (dulu → undangan tanpa musik)"],
     [
@@ -242,14 +241,12 @@ describe("/{slug} (ISR) — setiap bacaan wajib berhasil", () => {
 
   it("TANPA galat, data yang memang tak ada tetap diperlakukan seperti dulu", async () => {
     refs.tables.invitation_events = { data: [], error: null };
-    refs.tables.momen_albums = { data: null, error: null };
     refs.tables.packages = { data: null, error: null }; // paket tak terlihat → Basic
     refs.tables.songs = { data: null, error: null };
     render(await buka());
     expect(tema().data.events).toEqual([]);
     expect(tema().data.watermark).toBe(true);
     expect(tema().data.music).toBeNull();
-    expect(screen.queryByTestId("momen-fab")).toBeNull();
   });
 
   it("musik unggahan: diputar HANYA bila objeknya masih hidup di music_uploads", async () => {

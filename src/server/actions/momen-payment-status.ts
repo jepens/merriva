@@ -107,9 +107,8 @@ export async function checkMomenPaymentStatusAction(
         }
         revalidatePath(`/dashboard/undangan/${invitationId}/momen`);
         revalidatePath("/dashboard");
-        // Halaman undangan publik (ISR) → agar FAB "Album Momen" muncul
-        // (DECISIONS #24/#25).
-        revalidatePath(`/${inv.slug}`);
+        // Halaman undangan publik TIDAK di-revalidasi: Album Momen tak lagi
+        // punya tombol di sana (DECISIONS #125).
         // `already_paid` tanpa album = anomali yang sama dengan cabang di atas.
         return outcome.result === "activated"
           ? { status: "active" }

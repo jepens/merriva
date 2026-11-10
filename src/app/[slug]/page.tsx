@@ -4,7 +4,6 @@ import { cache } from "react";
 
 import { ExpiredNotice } from "@/components/public/expired-notice";
 import { GuestPersonalizationProvider } from "@/components/public/guest-personalization";
-import { MomenFab } from "@/components/public/momen/momen-fab";
 import { copy } from "@/lib/copy";
 import { eventDateLabel } from "@/lib/event-date-label";
 import { parseContentForRender } from "@/lib/invitation-content";
@@ -200,7 +199,9 @@ export default async function PublicInvitationPage({
   if (inv.status !== "active") notFound(); // draft/pending/suspended = tak publik
 
   const admin = createSupabaseAdminClient();
-  const [themeRes, eventsRes, mediaRes, momenRes] = await Promise.all([
+  // Album Momen TIDAK punya pintu masuk di halaman undangan (DECISIONS #125):
+  // tamu masuk lewat QR cetak di venue (`/dashboard/undangan/{id}/momen/qr`).
+  const [themeRes, eventsRes, mediaRes] = await Promise.all([
     admin.from("themes").select("slug").eq("id", inv.theme_id).maybeSingle(),
     getEventRows(inv.id),
     admin
@@ -209,25 +210,17 @@ export default async function PublicInvitationPage({
       .eq("invitation_id", inv.id)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
-    // Add-on Album Momen aktif → tampilkan tombol masuk melayang (di luar tema).
-    admin
-      .from("momen_albums")
-      .select("id")
-      .eq("invitation_id", inv.id)
-      .eq("status", "active")
-      .maybeSingle(),
   ]);
   // Setiap bacaan WAJIB berhasil (DECISIONS #45) — prinsip yang sama dengan
   // `getInvitationBySlug` di atas. Dulu galat di sini ditelan: kedipan DB saat
-  // revalidasi meng-cache undangan TANPA jadwal/galeri/tombol Momen, atau 404
-  // (tema null → notFound), bagi SEMUA tamu sampai simpanan berikutnya. Kini
-  // render melempar dan tak pernah di-cache (lihat `getInvitationBySlug`); batas
-  // paket & musik (`getEffectiveLimits`, `resolveMusic`,
-  // `liveCustomMusicPaths`) melempar dengan cara sama.
+  // revalidasi meng-cache undangan TANPA jadwal/galeri, atau 404 (tema null →
+  // notFound), bagi SEMUA tamu sampai simpanan berikutnya. Kini render melempar
+  // dan tak pernah di-cache (lihat `getInvitationBySlug`); batas paket & musik
+  // (`getEffectiveLimits`, `resolveMusic`, `liveCustomMusicPaths`) melempar
+  // dengan cara sama.
   const theme = dataOrThrow(themeRes, "themes");
   const eventRows = dataOrThrow(eventsRes, "invitation_events");
   const mediaRows = dataOrThrow(mediaRes, "media");
-  const momenAlbum = dataOrThrow(momenRes, "momen_albums");
 
   const limits = await getEffectiveLimits(admin, inv.package_id);
   const songId = settingsSchema.safeParse(inv.settings).data?.songId;
@@ -270,7 +263,6 @@ export default async function PublicInvitationPage({
     <GuestPersonalizationProvider slug={data.slug}>
       <ThemeStyles slug={themeSlug} />
       <Theme data={data} />
-      {momenAlbum ? <MomenFab slug={data.slug} /> : null}
     </GuestPersonalizationProvider>
   );
 }

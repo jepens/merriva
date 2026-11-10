@@ -7422,6 +7422,30 @@ tak dikenal tema baru.
 
 ---
 
+## #125 — 2026-11-10 · Album Momen tanpa tombol di halaman undangan — akses lewat QR cetak di venue
+
+**Keputusan (pemilik, 10 Nov 2026):** tombol melayang "Album Momen" di halaman
+undangan publik dihapus. Pintu masuk tamu ke kamera (`/{slug}/momen`) adalah QR
+yang dicetak dan dipajang di venue (halaman cetak QR sudah ada di
+`/dashboard/undangan/{id}/momen/qr`). Mengubah SPEC §4.11 dan MOMEN-SPEC §1
+(dulu: "QR meja / tombol di undangan").
+
+**Alasan:** Album Momen adalah kamera untuk tamu yang HADIR. Tombol di undangan
+mengundang jepretan dari tamu yang belum/tidak di lokasi, sedangkan QR fisik
+mengikat akses ke venue — pemilik merencanakan strategi cetak barcode fisik.
+
+**Yang berubah:** `src/app/[slug]/page.tsx` tak lagi membaca `momen_albums`
+(satu kueri lebih sedikit per render ISR) dan tak merender `MomenFab`; komponen
+`momen-fab.tsx`/`.css` dan teks `copy.momen.fab` dibuang. Aksi checkout &
+status bayar add-on tak lagi me-revalidasi `/{slug}` — gunanya hanya untuk
+memunculkan tombol itu, dan setiap revalidasi mengosongkan cache ISR undangan.
+
+**Tidak berubah:** `/{slug}/momen` tetap publik (siapa pun yang memegang
+tautannya bisa membuka — QR hanyalah tautan itu); gerbang kuota, Turnstile, dan
+reveal tetap sama. Tak ada migrasi data.
+
+---
+
 ## Template entri baru
 
 ```

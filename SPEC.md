@@ -259,7 +259,7 @@ Via Resend (atau SMTP VPS sebagai fallback): verifikasi akun, kuitansi pembayara
 
 ### 4.11 Album Momen (add-on berbayar — FASE H)
 
-Kamera sekali-pakai berbasis browser untuk tamu di lokasi acara. Tamu memindai QR meja / membuka tombol melayang di undangan → memasukkan nama (Turnstile) → memotret dengan jatah jepretan terbatas + 6 filter film → foto **tersembunyi sampai waktu reveal**, lalu terbuka serentak sebagai galeri bersama. Host memoderasi (sembunyikan/hapus), mencetak QR meja A6, dan mengunduh album sebagai ZIP.
+Kamera sekali-pakai berbasis browser untuk tamu di lokasi acara. Tamu memindai **QR yang dicetak dan dipajang di venue** — pintu masuk utama; halaman undangan TIDAK menampilkan tombol Album Momen (keputusan pemilik 10 Nov 2026, DECISIONS #125) → memasukkan nama (Turnstile) → memotret dengan jatah jepretan terbatas + 6 filter film → foto **tersembunyi sampai waktu reveal**, lalu terbuka serentak sebagai galeri bersama. Host memoderasi (sembunyikan/hapus), mencetak QR meja A6, dan mengunduh album sebagai ZIP.
 
 **Dijual per JUMLAH PESERTA** (peserta = `device_id` unik yang pernah memotret), bukan per foto: `momen_5` gratis · `momen_50` Rp199.000 · `momen_100` Rp349.000 · `momen_200` Rp649.000 · `momen_unlimited` Rp1.099.000 (ber-`photo_ceiling` 8.000 sebagai rem biaya storage). Admin & Pro mendapat tier teratas tanpa bayar untuk undangan miliknya (§4.8). Add-on dibeli untuk undangan yang **sudah aktif** dan TIDAK mengubah status/masa-aktif undangan; album mengikuti retensi undangan induknya, bukan `duration_months` paket. Upgrade tier belum tersedia.
 
