@@ -6679,6 +6679,13 @@ exit 1 tak pernah jalan; ditemukan tinjauan adversarial).
 - Pindah ke `STORAGE_DRIVER=r2` kelak mengubah sumbernya; skrip ini hanya untuk
   driver `local`.
 
+**Status 10 Nov 2026 — TERPASANG.** Pemilik mengerjakan langkah 1–4 LAUNCH-CHECKLIST
+Fase 5 (bucket `merriva-backup`, lifecycle 30 hari, bucket lock 7 hari, token Object
+Read & Write khusus bucket itu) lalu menjalankan `pasang-backup-media.sh`. Snapshot
+pertama `media/merriva-media-20261110T110051Z.tar.zst` (61 berkas, 26,8 MB) terbukti
+ukuran + MD5, dan laporannya tercatat di `cron_runs` (`ops:verify`: `cron backup-media`
+ok).
+
 ---
 
 ## #118 — 2026-11-08 · Teks undangan seluruhnya Bahasa Indonesia; identitas daerah lewat visual
