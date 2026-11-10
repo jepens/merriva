@@ -177,13 +177,12 @@ export default async function EditInvitationPage({
     return undefined;
   };
   // Foto SAMPUL adalah pengecualian yang disengaja dari aturan "dirakit dari
-  // tema": ia tak dirender tema mana pun, melainkan oleh `/api/og` sebagai
-  // gambar pratinjau tautan WhatsApp. Karena itu slotnya selalu ada, dan
-  // rasionya rasio KANVAS OG — bukan rasio sebuah tema. Dengan begitu bingkai
-  // penyesuaian di editor memperlihatkan persis potongan yang akan dikirim ke
-  // WhatsApp; memakai rasio tema akan membuat pemilik membingkai sesuatu yang
-  // bukan yang dilihat penerima. Tema BOLEH menimpanya bila kelak ada yang
-  // benar-benar merender sampul (slot temanya menang, lihat urutan di bawah).
+  // tema": ia selalu dirender `/api/og` sebagai gambar pratinjau tautan
+  // WhatsApp, jadi slotnya selalu ada, dan bawaannya memakai rasio KANVAS OG —
+  // bingkai penyesuaian di editor = potongan yang dikirim ke WhatsApp. Tema yang
+  // JUGA merender sampul di halamannya (`warta`: halaman muka koran) menimpanya
+  // lewat `media.slots` — slot temanya menang (urutan di bawah) dan ditandai
+  // `inTheme`, supaya editor tak lagi menyebutnya "bukan di halaman undangan".
   const slotSampul = { id: "cover", aspect: OG_ASPECT } as const;
   const photoSlots: PhotoSlots = Object.fromEntries(
     [slotSampul, ...(slotTema ?? [])].map((slot) => {
@@ -193,6 +192,7 @@ export default async function EditInvitationPage({
         {
           aspect: slot.aspect,
           url: p ? storage.getPublicUrl(displayPath(p)) : null,
+          ...(slot === slotSampul ? {} : { inTheme: true }),
         },
       ];
     }),

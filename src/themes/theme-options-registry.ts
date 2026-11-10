@@ -10,6 +10,7 @@ import { meridianOptions } from "./meridian/options";
 import { noirOptions } from "./noir/options";
 import { prismaOptions } from "./prisma/options";
 import { verdantOptions } from "./verdant/options";
+import { wartaOptions } from "./warta/options";
 import { meihuaOptions } from "./meihua/options";
 import { sakinahOptions } from "./sakinah/options";
 import { marawaOptions } from "./marawa/options";
@@ -37,6 +38,7 @@ export const themeOptionsRegistry: Record<string, ThemeOptions> = {
   marawa: marawaOptions,
   sakinah: sakinahOptions,
   meihua: meihuaOptions,
+  warta: wartaOptions,
 };
 
 export function getThemeOptions(slug: string): ThemeOptions | null {

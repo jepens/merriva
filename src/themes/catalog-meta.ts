@@ -151,6 +151,13 @@ export const themeCatalogMeta: Record<string, ThemeCatalogMeta> = {
     ornament: "❀",
     dark: true,
   },
+  warta: {
+    bg: "#efece4",
+    ink: "#191715",
+    accent: "#191715",
+    line: "rgba(25,23,21,0.2)",
+    ornament: "\u2605",
+  },
 };
 
 export function getThemeCatalogMeta(slug: string): ThemeCatalogMeta {

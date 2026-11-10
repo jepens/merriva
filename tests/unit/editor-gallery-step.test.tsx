@@ -137,3 +137,24 @@ describe("tanpa showGallery: perilaku lama", () => {
     expect(tombolGaleri()).toHaveTextContent("✓");
   });
 });
+
+describe("tema yang merender sampul di halamannya (slot cover `inTheme`)", () => {
+  // `warta` (halaman muka koran): petunjuk "bukan di halaman undangannya"
+  // akan membuat pemilik tak mengunggah — halaman muka lalu tampil monogram.
+  it("label & petunjuk menyebut halaman undangan, bukan hanya WhatsApp", () => {
+    render(
+      <WeddingEditor
+        {...props("wedding")}
+        photoSlots={{ cover: { aspect: 4 / 3, url: null, inTheme: true } }}
+      />,
+    );
+
+    expect(
+      screen.getByLabelText(copy.editor.photo.coverLabelInTheme),
+    ).toHaveAttribute("type", "file");
+    expect(
+      screen.getByText(copy.editor.photo.coverHintInTheme),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(copy.editor.photo.coverHint)).toBeNull();
+  });
+});

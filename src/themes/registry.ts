@@ -38,6 +38,7 @@ export const themeRegistry: Record<string, () => Promise<ThemeModule>> = {
   marawa: () => import("./marawa"),
   sakinah: () => import("./sakinah"),
   meihua: () => import("./meihua"),
+  warta: () => import("./warta"),
 };
 
 export function getThemeLoader(

@@ -127,14 +127,23 @@ export function GalleryStep({
   }
 
   // Foto sampul: satu foto bernama, DI LUAR batas foto paket (batas itu
-  // tentang galeri). Ia dirender `/api/og` sebagai pratinjau tautan WhatsApp,
-  // bukan oleh tema — jadi tetap ada walau tema tak punya galeri.
+  // tentang galeri). Ia selalu dirender `/api/og` sebagai pratinjau tautan
+  // WhatsApp — jadi tetap ada walau tema tak punya galeri — dan tema yang
+  // mendeklarasikan slot `cover` (`inTheme`) juga memajangnya di halamannya.
   const sampul = coverSlot ? (
     <>
       <PhotoField
         invitationId={invitationId}
-        label={copy.editor.photo.coverLabel}
-        hint={copy.editor.photo.coverHint}
+        label={
+          coverSlot.inTheme
+            ? copy.editor.photo.coverLabelInTheme
+            : copy.editor.photo.coverLabel
+        }
+        hint={
+          coverSlot.inTheme
+            ? copy.editor.photo.coverHintInTheme
+            : copy.editor.photo.coverHint
+        }
         aspect={coverSlot.aspect}
         value={cover}
         initialUrl={coverSlot.url}

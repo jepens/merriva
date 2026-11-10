@@ -23,6 +23,7 @@ export const demoDataRegistry: Record<
   marawa: () => import("./marawa/demo-data"),
   sakinah: () => import("./sakinah/demo-data"),
   meihua: () => import("./meihua/demo-data"),
+  warta: () => import("./warta/demo-data"),
 };
 
 export function getThemeDemoLoader(

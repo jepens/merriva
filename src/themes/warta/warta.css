@@ -1,0 +1,1548 @@
+/* ============================================================================
+   WARTA — undangan berwujud koran retro "The Wedding Post" (tier Craft).
+   CSS ini SUMBER KEBENARAN; `scripts/build-theme-css.mjs` menyalinnya ke
+   `public/themes/warta.{hash}.css`. JANGAN di-import dari index.tsx
+   (DECISIONS #31) — ia dikirim lewat <ThemeStyles slug="warta" />.
+
+   Kontrak kelas: akar `.wt` · `.wt-stage` konten · `.wt-cover` halaman muka
+   (terangkat ke atas via `.is-open`) · `.wt-music` tombol musik · reveal via
+   `.reveal/.is-visible` (primitif bersama) digerbangi `.is-js.is-motion` —
+   tanpa JS / reduced-motion / motion "calm", konten tetap terbaca utuh.
+   TANPA gsap/canvas. Semua selektor di-scope `.wt`.
+   ========================================================================== */
+
+.wt {
+  /* Token — dioverride customizer via appearanceStyle (preview.vars). */
+  --wt-acc: #191715;
+  --wt-acc-text: #191715;
+  --wt-on-acc: #f4f1e9;
+  --wt-paper: #fcfbf8;
+  --wt-ink: #191715;
+  --wt-disp: var(--wt-disp-a);
+  --wt-body: var(--wt-body-a);
+
+  /* Turunan — ikut varian. Muted ≥ 4,5:1 di --wt-paper ketiga varian
+     (terukur Sepia ±4,9); di permukaan --wt-paper-2 yang lebih gelap muted
+     diturunkan ulang dari paper-2 (lihat `.wt-cover`, `.wt-watermark`). */
+  --wt-text: color-mix(in srgb, var(--wt-ink) 88%, var(--wt-paper));
+  --wt-muted: color-mix(in srgb, var(--wt-ink) 70%, var(--wt-paper));
+  --wt-line: color-mix(in srgb, var(--wt-ink) 32%, transparent);
+  --wt-hair: color-mix(in srgb, var(--wt-ink) 16%, transparent);
+  /* Kertas koran krem (halaman muka, latar foto, pita watermark): kertas
+     isi + sedikit cokelat newsprint — terukur ±#efece4 di varian bawaan. */
+  --wt-paper-2: color-mix(in srgb, var(--wt-paper) 89%, #a8915c);
+  --wt-card: color-mix(in srgb, #ffffff 72%, var(--wt-paper));
+  --wt-light: #f4f1e9;
+  --wt-gut: 24px;
+
+  background: var(--wt-paper);
+  color: var(--wt-text);
+  font-family: var(--wt-body), Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.wt-stage {
+  position: relative;
+  min-height: 100svh;
+  overflow-x: clip;
+  background: var(--wt-paper);
+  /* Nomor halaman koran: sampul = 1, folio pertama = 2 (lihat .wt-folio). */
+  counter-reset: wt-page 1;
+}
+
+/* Fallback Anton selebar Anton (index.tsx `adjustFontFallback:false`): Arial
+   (iOS/desktop) atau Roboto (Android/WebView WA) diperkecil — tanpa ini judul
+   kapital membungkus 2 baris lalu kembali 1 baris saat font tiba (CLS). */
+@font-face {
+  font-family: wtAntonFallback;
+  src:
+    local("Arial"), local("Helvetica"), local("Roboto"),
+    local("Roboto Regular"), local("Roboto-Regular");
+  size-adjust: 72%;
+}
+.wt-stage:focus {
+  outline: none;
+}
+/* Selama halaman muka menutup (JS jalan), isi di baliknya tak terlihat — ia
+   sudah `inert` (cover-gate). Tanpa ini, reflow isi saat font tiba (PT Serif,
+   Playfair) tercatat sebagai layout shift walau tertutup sampul (CLS terukur
+   0,02 dengan font lambat). Tetap di DOM: SEO/SSR & pengukuran tata letak
+   (Reveal, pengepas nama) tak berubah. Butir kertas tetap tampil di sampul. */
+.wt.is-js:not(.is-open) .wt-stage {
+  visibility: hidden;
+}
+.wt.is-js:not(.is-open) .wt-grain {
+  visibility: visible;
+}
+
+/* Desktop: satu lembar koran di atas meja (konten tetap kolom ponsel). */
+@media (min-width: 640px) {
+  .wt {
+    background: color-mix(in srgb, var(--wt-paper) 82%, var(--wt-ink));
+  }
+  .wt-stage {
+    max-width: 560px;
+    margin-inline: auto;
+    box-shadow:
+      0 0 0 1px var(--wt-hair),
+      0 30px 80px -30px rgba(25, 23, 21, 0.45);
+  }
+}
+
+/* Butir kertas koran — tanpa blend mode (lapisan fixed ber-blend memaksa
+   komposisi ulang tiap frame gulir di Android kelas menengah). */
+.wt-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.09 0 0 0 0 0.08 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------------------------------------------------------- kerangka ----- */
+.wt-page {
+  position: relative;
+  padding: 0 0 52px;
+}
+.wt-page--insert {
+  padding-top: 8px;
+}
+.wt-inner {
+  width: min(100% - 2 * var(--wt-gut), 440px);
+  margin-inline: auto;
+}
+.wt-center {
+  text-align: center;
+}
+.wt-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Kepala halaman: "PAGE 3 · COUPLE ………… THE WEDDING POST". */
+.wt-folio {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 46px 40px 22px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--wt-line);
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+  white-space: nowrap;
+  /* CSS counter, bukan angka dari server: ikut urutan DOM & melewati section
+     ber-display:none (pratinjau langsung editor Tampilan). */
+  counter-increment: wt-page;
+}
+.wt-folio__n::before {
+  content: "Page " counter(wt-page);
+}
+@media (max-width: 359px) {
+  .wt-folio {
+    padding-inline: var(--wt-gut);
+  }
+}
+
+.wt-kicker {
+  margin: 0;
+  font-family: var(--wt-sub), serif;
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt-h2 {
+  margin: 0;
+  font-family: var(--wt-disp), Impact, "Arial Narrow", sans-serif;
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+  overflow-wrap: anywhere;
+}
+.wt-h2--sm {
+  font-size: 26px;
+}
+.wt-h2--md {
+  font-size: 27px;
+}
+.wt-h2--lg {
+  font-size: 34px;
+}
+.wt-h2--xl {
+  font-size: clamp(38px, 11.2vw, 46px);
+}
+.wt-reply .wt-h2--xl {
+  font-size: 40px;
+}
+.wt-h3 {
+  margin: 0;
+  font-family: var(--wt-sub), serif;
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt-eyebrow {
+  margin: 6px 0 0;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 9.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+.wt-eyebrow--start {
+  text-align: left;
+}
+.wt-eyebrow--light {
+  margin: 0;
+  letter-spacing: 0.38em;
+  color: var(--wt-light);
+}
+.wt-sub {
+  margin: 6px 0 0;
+  font-family: var(--wt-sub), serif;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt-lead {
+  margin: 12px auto 0;
+  max-width: 34em;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--wt-text);
+}
+
+/* Isi berita: dua kolom rata kiri-kanan + huruf awal besar. */
+.wt-cols {
+  margin: 20px 0 0;
+  column-count: 2;
+  column-gap: 18px;
+  font-size: 12.5px;
+  line-height: 1.72;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  color: var(--wt-text);
+}
+.wt-dropcap::first-letter {
+  float: left;
+  font-family: var(--wt-sub), serif;
+  font-weight: 700;
+  font-size: 58px;
+  line-height: 0.76;
+  padding: 6px 8px 0 0;
+  color: var(--wt-ink);
+}
+.wt-byline {
+  margin: 14px 0 0;
+  font-family: var(--wt-type), "Courier New", monospace;
+  font-size: 11.5px;
+  color: var(--wt-muted);
+}
+/* Em dash Special Elite bergelombang ("⁓-") — pakai font isi. */
+.wt-byline__dash {
+  font-family: var(--wt-body), serif;
+}
+
+.wt-caption {
+  margin: 8px 0 0;
+  font-style: italic;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--wt-muted);
+}
+
+hr.wt-rule {
+  margin: 36px 0;
+  border: 0;
+  border-top: 1px solid var(--wt-line);
+}
+
+/* --------------------------------------------------------------- foto ---- */
+/* Cetakan koran: hitam-putih + raster titik halftone di atasnya. */
+.wt-photo {
+  position: relative;
+  overflow: hidden;
+  background: var(--wt-paper-2);
+}
+.wt-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.06);
+}
+.wt-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.42;
+  background-image: radial-gradient(
+    circle,
+    rgba(25, 23, 21, 0.7) 0.9px,
+    transparent 1.2px
+  );
+  background-size: 3.2px 3.2px;
+}
+.wt-photo__mono {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--wt-sub), serif;
+  font-size: 64px;
+  font-style: italic;
+  color: var(--wt-muted);
+}
+.wt-photo--bleed {
+  width: 100%;
+  height: clamp(190px, 34svh, 330px);
+}
+.wt-photo--portrait {
+  aspect-ratio: 4 / 5;
+}
+/* Bayangan tipis guntingan koran — sengaja ringan: bayangan yang lebih pekat
+   menggelapkan latar keterangan foto di bawahnya (kontras Sepia). */
+.wt-photo--lift {
+  box-shadow: 0 6px 16px rgba(25, 23, 21, 0.14);
+}
+/* Foto mempelai sedikit miring seperti guntingan yang ditempel. */
+.wt-profile--left .wt-photo--portrait {
+  transform: rotate(-1.2deg);
+}
+.wt-profile--right .wt-photo--portrait {
+  transform: rotate(1.2deg);
+}
+.wt-photo--wide {
+  aspect-ratio: 4 / 3;
+}
+.wt-photo--tall {
+  aspect-ratio: 3 / 4;
+}
+.wt-photo--lead {
+  aspect-ratio: 4 / 5;
+}
+.wt-photo--sq {
+  aspect-ratio: 1;
+}
+.wt-photo .lb-thumb {
+  cursor: zoom-in;
+}
+.wt-photo .lb-thumb:focus-visible {
+  outline: 2px solid var(--wt-ink);
+  outline-offset: -4px;
+}
+.wt-fig {
+  margin: 10px 0 0;
+}
+
+/* ------------------------------------------------------------- reveal ---- */
+/* Primitif bersama `Reveal` (motion.tsx). State tersembunyi HANYA di bawah
+   `.is-js.is-motion` → tanpa JS, reduced-motion, atau motion "calm": tampil. */
+.wt.is-js.is-motion .reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.9s ease,
+    transform 0.9s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+.wt.is-js.is-motion .reveal.wt-from-left {
+  transform: translateX(-32px);
+}
+.wt.is-js.is-motion .reveal.wt-from-right {
+  transform: translateX(32px);
+}
+.wt.is-js.is-motion .reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ------------------------------------------------------------- cover ----- */
+/* Tanpa JS: halaman muka disembunyikan → isi langsung terbaca (pola semua
+   tema produksi). Tombol "Baca Selengkapnya" hanya hidup lewat React. */
+.wt-cover {
+  display: none;
+}
+.wt.is-js .wt-cover {
+  /* Muted diturunkan dari kertas krem halaman muka (≥ 4,5:1 juga di Sepia). */
+  --wt-muted: color-mix(in srgb, var(--wt-ink) 72%, var(--wt-paper-2));
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: block;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--wt-paper-2);
+  transition:
+    transform 0.95s cubic-bezier(0.7, 0, 0.2, 1),
+    visibility 0.95s;
+}
+.wt.is-js.is-open .wt-cover {
+  transform: translateY(-100%);
+  visibility: hidden;
+  pointer-events: none;
+}
+.wt-cover__inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 560px;
+  min-height: 100%;
+  margin-inline: auto;
+  padding: 28px 0 30px;
+}
+
+.wt-mast {
+  text-align: center;
+}
+.wt-mast__title {
+  margin: 0 16px;
+  font-family: var(--wt-mast), "Old English Text MT", serif;
+  font-weight: 400;
+  font-size: clamp(32px, 10vw, 46px);
+  line-height: 1.12;
+  color: var(--wt-ink);
+}
+.wt-mast__rule {
+  height: 3px;
+  margin: 12px 16px 0;
+  background: var(--wt-ink);
+}
+.wt-mast__dateline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px 9px;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--wt-muted);
+}
+/* 320 px: label tanggal terpanjang ("Minggu, 28 November 2027", 25 huruf)
+   mendorong "Free Copy" keluar layar pada spasi .16em. */
+@media (max-width: 359px) {
+  .wt-mast__dateline {
+    letter-spacing: 0.08em;
+  }
+}
+.wt-mast__dateline > span:nth-child(2):not(:last-child) {
+  position: relative;
+  top: 3px;
+}
+
+.wt-ticker {
+  border-top: 1px solid var(--wt-ink);
+  padding-top: 3px;
+  overflow: hidden;
+}
+.wt-ticker__track {
+  display: flex;
+  width: max-content;
+  padding: 10px 0;
+  background: var(--wt-acc);
+  color: var(--wt-on-acc);
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.wt-ticker__run {
+  display: inline-flex;
+  padding-left: 0.6em;
+}
+.wt-ticker__run i {
+  font-style: normal;
+}
+.wt-ticker__run > span {
+  padding-right: 0.6em;
+}
+.wt.is-js.is-motion .wt-ticker__track {
+  animation: wt-ticker 26s linear infinite;
+  will-change: transform;
+}
+@keyframes wt-ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+/* Pita selalu selebar layar walau isinya pendek. */
+.wt-ticker {
+  background: var(--wt-paper-2);
+}
+.wt-ticker__track {
+  min-width: 200%;
+}
+.wt-ticker__run {
+  flex: 1 0 auto;
+}
+
+.wt-cover__headline {
+  margin: 18px 16px 16px;
+  font-family: var(--wt-disp), Impact, sans-serif;
+  font-weight: 400;
+  font-size: clamp(18px, 5.1vw, 26px);
+  line-height: 1.08;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt-cover__photo {
+  margin: 0;
+}
+.wt-cover__caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px 0;
+}
+.wt-cover__caption em {
+  font-size: 12px;
+  color: var(--wt-muted);
+}
+.wt-cover__caption span {
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--wt-muted);
+}
+.wt-guest {
+  margin: 18px 16px 0;
+  text-align: center;
+}
+.wt-guest small {
+  display: block;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+.wt-guest strong {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--wt-sub), serif;
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--wt-ink);
+  overflow-wrap: anywhere;
+}
+.wt-open {
+  align-self: center;
+  margin-top: 18px;
+  min-height: 50px;
+  padding: 0 42px;
+  border: 1px solid var(--wt-acc);
+  border-radius: 0;
+  background: var(--wt-acc);
+  color: var(--wt-on-acc);
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.wt-open:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px -12px rgba(25, 23, 21, 0.7);
+}
+.wt-open:focus-visible {
+  outline: 2px solid var(--wt-ink);
+  outline-offset: 3px;
+}
+
+/* Entrance halaman muka (hanya saat motion). */
+.wt.is-js.is-motion .wt-cover__inner > * {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: wt-in 0.9s cubic-bezier(0.22, 0.8, 0.3, 1) forwards;
+}
+.wt.is-js.is-motion .wt-cover__inner > *:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.wt.is-js.is-motion .wt-cover__inner > *:nth-child(3) {
+  animation-delay: 0.24s;
+}
+.wt.is-js.is-motion .wt-cover__inner > *:nth-child(4) {
+  animation-delay: 0.36s;
+}
+.wt.is-js.is-motion .wt-cover__inner > *:nth-child(5) {
+  animation-delay: 0.48s;
+}
+.wt.is-js.is-motion .wt-cover__inner > *:nth-child(6) {
+  animation-delay: 0.6s;
+}
+@keyframes wt-in {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* -------------------------------------------------------------- news ----- */
+.wt-news .wt-h2 {
+  margin-top: 2px;
+}
+.wt-news .wt-cols {
+  margin-top: 14px;
+}
+/* Kutipan tepat sesudah berita = kotak di halaman yang sama (rujukan): rapatkan
+   jaraknya. Pembungkus section `display:contents` ber-data-section-id adalah
+   saudara DOM, jadi selektor ini hanya berlaku pada urutan bawaan. */
+[data-section-id="hero"] + [data-section-id="quote"] > .wt-page--insert {
+  margin-top: -16px;
+}
+.wt-quote {
+  position: relative;
+  margin: 0 -4px;
+  padding: 10px 26px 20px;
+  border: 1px solid color-mix(in srgb, var(--wt-ink) 75%, transparent);
+  text-align: center;
+}
+.wt-quote__mark {
+  display: block;
+  height: 38px;
+  font-family: var(--wt-sub), serif;
+  font-size: 64px;
+  line-height: 1;
+  color: var(--wt-ink);
+}
+.wt-quote p {
+  margin: 4px 0 0;
+  font-family: var(--wt-sub), serif;
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.72;
+  color: var(--wt-ink);
+}
+.wt-quote cite {
+  display: block;
+  margin-top: 14px;
+  font-family: var(--wt-caps), sans-serif;
+  font-style: normal;
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+
+/* ------------------------------------------------------------ couple ----- */
+.wt-profile--right {
+  text-align: right;
+}
+.wt-profile__name {
+  margin: 10px 0 0;
+  font-family: var(--wt-sub), serif;
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.25;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt-profile__of {
+  margin: 8px 0 0;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+.wt-profile__parents {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--wt-text);
+}
+
+/* ------------------------------------------------------------- story ----- */
+.wt-story {
+  margin-top: 28px;
+}
+.wt-story:first-of-type {
+  margin-top: 18px;
+}
+.wt-story .wt-cols {
+  margin-top: 10px;
+}
+.wt-story--right .wt-h3,
+.wt-story--right .wt-caption {
+  text-align: right;
+}
+
+/* ------------------------------------------------------------- diary ----- */
+.wt-diary {
+  /* Pita hitung mundur menutup halaman; selembar kertas tetap memisahkannya
+     dari pita penutup/sisipan bila urutannya diubah. */
+  padding-bottom: 12px;
+}
+.wt-diary .wt-h2 {
+  margin-top: 4px;
+}
+.wt-cal {
+  margin-top: 24px;
+  padding: 12px 26px 20px;
+  border-top: 3px solid var(--wt-ink);
+  border-bottom: 1px solid var(--wt-line);
+}
+.wt-cal__title {
+  margin: 0 0 12px;
+  text-align: center;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  row-gap: 0;
+  max-width: 440px;
+  margin-inline: auto;
+  text-align: center;
+}
+.wt-cal__head {
+  padding-bottom: 8px;
+  font-family: var(--wt-sub), serif;
+  font-size: clamp(12.5px, 3.8vw, 15.6px);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+.wt-cal__day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 43px;
+  font-family: var(--wt-sub), serif;
+  font-size: clamp(18px, 5.5vw, 22.7px);
+  color: var(--wt-text);
+}
+.wt-cal__day b {
+  position: relative;
+  font-weight: 400;
+}
+/* Tanggal di luar bulan = hiasan (pseudo-konten, bukan teks). */
+.wt-cal__day.is-out::before {
+  content: attr(data-n);
+  color: var(--wt-ink);
+  opacity: 0.22;
+}
+.wt-cal__day.is-mark svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* Ikut ukuran angka (rujukan: hati ±1,5em diputar) — besar di 412 px, tak
+     menyentuh tanggal tetangga di 320 px. */
+  width: 3.1em;
+  height: 2.75em;
+  transform: translate(-50%, -50%);
+  fill: var(--wt-acc);
+}
+.wt-cal__day.is-mark b {
+  color: var(--wt-on-acc);
+  font-weight: 400;
+}
+.wt-stamp {
+  display: inline-block;
+  margin: 34px auto 40px;
+  padding: 7px 14px;
+  transform: rotate(-6deg);
+  border: 2px solid color-mix(in srgb, var(--wt-ink) 55%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wt-ink) 28%, transparent);
+  font-family: var(--wt-type), "Courier New", monospace;
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+
+/* Pita gelap berfoto: hitung mundur & penutup. */
+.wt-band {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  overflow: hidden;
+  background: #191715;
+  color: var(--wt-light);
+  text-align: center;
+}
+.wt-band__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.05);
+}
+.wt-band::before,
+.wt-band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.wt-band::before {
+  z-index: 1;
+  background: rgba(25, 23, 21, 0.66);
+}
+.wt-band::after {
+  z-index: 1;
+  opacity: 0.4;
+  background-image: radial-gradient(
+    circle,
+    rgba(10, 9, 8, 0.8) 1px,
+    transparent 1.3px
+  );
+  background-size: 3.6px 3.6px;
+}
+.wt-band__body {
+  position: relative;
+  z-index: 2;
+  width: min(100% - 2 * var(--wt-gut), 440px);
+  padding: 44px 0;
+}
+.wt-cd {
+  margin-top: 18px;
+}
+.wt .countdown {
+  display: flex;
+  justify-content: space-between;
+}
+.wt .count-box {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.wt .count-num {
+  display: block;
+  font-family: var(--wt-sub), serif;
+  font-size: 34px;
+  line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--wt-light);
+}
+.wt .count-label {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 8.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(244, 241, 233, 0.86);
+}
+.wt .countdown-done {
+  margin: 0;
+  font-family: var(--wt-sub), serif;
+  font-style: italic;
+  font-size: 20px;
+  color: var(--wt-light);
+}
+
+/* ---------------------------------------------------------- classified --- */
+.wt-events {
+  display: grid;
+  gap: 14px;
+  margin-top: 26px;
+}
+.wt-event {
+  padding: 22px 18px 24px;
+  border: 1px solid color-mix(in srgb, var(--wt-ink) 65%, transparent);
+  text-align: center;
+  background: var(--wt-paper);
+}
+.wt-event__name {
+  margin: 0;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt-event__date {
+  margin: 10px 0 0;
+  font-family: var(--wt-sub), serif;
+  font-size: 21px;
+  line-height: 1.3;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt-event__time {
+  margin: 4px 0 0;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 11px;
+  color: var(--wt-muted);
+}
+.wt-event__venue {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--wt-text);
+}
+.wt-event__venue strong {
+  font-weight: 700;
+  color: var(--wt-ink);
+}
+.wt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+.wt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--wt-acc);
+  border-radius: 0;
+  background: var(--wt-acc);
+  color: var(--wt-on-acc);
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.wt-btn--ghost {
+  background: transparent;
+  color: var(--wt-ink);
+  border-color: var(--wt-ink);
+}
+.wt-btn:focus-visible {
+  outline: 2px solid var(--wt-ink);
+  outline-offset: 2px;
+}
+.wt-live {
+  margin-top: 22px;
+}
+.wt-cal-menu {
+  position: relative;
+}
+.wt-cal-menu > summary {
+  list-style: none;
+}
+.wt-cal-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.wt-cal-menu__list {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 190px;
+  border: 1px solid var(--wt-ink);
+  background: var(--wt-paper);
+  box-shadow: 0 14px 30px -18px rgba(25, 23, 21, 0.6);
+}
+.wt-cal-menu__list a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--wt-ink);
+  text-decoration: none;
+}
+.wt-cal-menu__list a + a {
+  border-top: 1px solid var(--wt-hair);
+}
+
+/* -------------------------------------------------------------- video ---- */
+.wt-video {
+  margin-top: 22px;
+}
+.wt .video-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #191715;
+  border: 1px solid var(--wt-ink);
+}
+.wt .video-frame--yt {
+  aspect-ratio: 16 / 9;
+}
+.wt .video-el {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+.wt .video-mute,
+.wt .video-play {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--wt-paper);
+  color: var(--wt-ink);
+}
+.wt .video-mute {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--wt-line);
+  cursor: pointer;
+}
+.wt .video-lite {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background-color: #191715;
+  background-size: cover;
+  background-position: center;
+  filter: grayscale(1);
+}
+.wt .video-lite::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(25, 23, 21, 0.3);
+}
+.wt .video-play {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
+}
+.wt .video-play svg {
+  margin-left: 3px;
+}
+.wt .video-mute:focus-visible {
+  outline: 2px solid var(--wt-light);
+  outline-offset: 2px;
+}
+.wt .video-lite:focus-visible {
+  outline: 2px solid var(--wt-light);
+  outline-offset: -5px;
+}
+
+/* ------------------------------------------------------------- reply ----- */
+/* Form & dinding ucapan BERSAMA (guestbook.css) ditata ulang ala koran:
+   judul bawaannya diganti judul halaman tema. */
+.wt .gb {
+  max-width: none;
+  margin-top: 26px;
+}
+.wt .gb-eyebrow,
+.wt .gb-heading,
+.wt .gb-sub {
+  display: none;
+}
+.wt .gb-field > span,
+.wt .gb-attend legend {
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+.wt .gb-attend legend {
+  margin-bottom: 4px;
+}
+.wt .gb-field input,
+.wt .gb-field textarea {
+  padding: 10px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--wt-ink);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--wt-body), serif;
+  font-size: 15px;
+  color: var(--wt-ink);
+}
+.wt .gb-field input:focus,
+.wt .gb-field textarea:focus {
+  border-color: var(--wt-ink);
+  box-shadow: 0 2px 0 var(--wt-ink);
+}
+.wt .gb-field input::placeholder,
+.wt .gb-field textarea::placeholder {
+  color: var(--wt-muted);
+}
+.wt .gb-radio {
+  font-size: 14px;
+  color: var(--wt-ink);
+}
+.wt .gb-radio input {
+  accent-color: var(--wt-ink);
+}
+.wt .gb-submit {
+  min-height: 46px;
+  border: 1px solid var(--wt-acc);
+  border-radius: 0;
+  background: var(--wt-acc);
+  color: var(--wt-on-acc);
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.wt .gb-submit:hover:not(:disabled),
+.wt .gb-submit:focus-visible:not(:disabled) {
+  background: var(--wt-acc);
+  filter: brightness(1.15);
+}
+.wt .gb-done {
+  border-radius: 0;
+  border: 1px solid var(--wt-ink);
+  background: var(--wt-card);
+  color: var(--wt-ink);
+}
+.wt .gb-privacy {
+  color: var(--wt-muted);
+}
+/* Dinding ucapan = "Letters to the Editor". */
+.wt .gb-wall {
+  margin-top: 46px;
+  padding-top: 26px;
+  border-top: 1px solid var(--wt-line);
+}
+.wt .gb-wall__title {
+  text-align: center;
+  font-family: var(--wt-disp), Impact, sans-serif;
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt .gb-wall__title::before {
+  content: "Letters to the editor";
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 0.3em;
+  color: var(--wt-muted);
+}
+.wt .gb-wall__empty {
+  color: var(--wt-muted);
+  font-style: italic;
+}
+.wt .gb-note {
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid var(--wt-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.wt .gb-note__name {
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt .gb-note__msg {
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--wt-text);
+}
+.wt .gb-more,
+.wt .gb-retry,
+.wt .gb-gift-trigger {
+  min-height: 44px;
+  border: 1px solid var(--wt-ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--wt-ink);
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.wt .gb-gift-form {
+  border-radius: 0;
+  border: 1px solid var(--wt-line);
+  background: var(--wt-card);
+}
+
+/* ----------------------------------------------------------- archive ----- */
+.wt-archive {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 18px;
+}
+/* Jumlah ganjil: foto terakhir selebar kolom (tak menyisakan petak kosong). */
+.wt-archive > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+.wt-archive > :last-child:nth-child(odd) .wt-photo--sq {
+  aspect-ratio: 16 / 9;
+}
+
+/* ------------------------------------------------------------ kupon ------ */
+.wt-coupon {
+  margin: 0 -6px;
+  padding: 5px;
+  border: 2px solid var(--wt-ink);
+  background: var(--wt-paper);
+}
+.wt-coupon__in {
+  padding: 24px 16px 22px;
+  border: 1px dashed color-mix(in srgb, var(--wt-ink) 60%, transparent);
+  text-align: center;
+}
+.wt-coupon .wt-eyebrow {
+  margin: 0;
+}
+.wt-coupon__title {
+  margin: 8px 0 0;
+  font-family: var(--wt-sub), serif;
+  font-weight: 400;
+  font-size: 27px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--wt-ink);
+}
+.wt-coupon .wt-lead {
+  font-size: 12.5px;
+}
+.wt-gift {
+  position: relative;
+  margin-top: 20px;
+}
+.wt-gift__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.wt-gift__tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.wt-gift__tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--wt-ink) 30%, transparent);
+  border-radius: 12px;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 12.5px;
+  color: var(--wt-text);
+  cursor: pointer;
+}
+#wt-gift-transfer:checked ~ .wt-gift__tabs [for="wt-gift-transfer"],
+#wt-gift-kado:checked ~ .wt-gift__tabs [for="wt-gift-kado"] {
+  border: 1.5px solid var(--wt-ink);
+  background: var(--wt-card);
+  font-weight: 600;
+  color: var(--wt-ink);
+  box-shadow: 0 6px 16px -10px rgba(25, 23, 21, 0.45);
+}
+#wt-gift-transfer:focus-visible ~ .wt-gift__tabs [for="wt-gift-transfer"],
+#wt-gift-kado:focus-visible ~ .wt-gift__tabs [for="wt-gift-kado"] {
+  outline: 2px solid var(--wt-ink);
+  outline-offset: 2px;
+}
+#wt-gift-transfer:checked ~ .wt-gift__pane--kado,
+#wt-gift-kado:checked ~ .wt-gift__pane--transfer {
+  display: none;
+}
+.wt-accts {
+  margin-top: 16px;
+}
+.wt-gift__lead {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: var(--wt-text);
+}
+.wt-acct {
+  margin-top: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--wt-hair);
+  border-radius: 14px;
+  background: var(--wt-card);
+  text-align: left;
+  box-shadow: 0 8px 22px -18px rgba(25, 23, 21, 0.5);
+}
+.wt-acct__bank {
+  margin: 0;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wt-ink);
+}
+.wt-acct__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 6px;
+}
+.wt-acct__num {
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--wt-ink);
+  overflow-wrap: anywhere;
+}
+.wt-acct__holder {
+  margin: 6px 0 0;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 12.5px;
+  color: var(--wt-muted);
+}
+.wt-acct__addr {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--wt-ink);
+}
+.wt-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--wt-line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--wt-ink) 5%, transparent);
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--wt-ink);
+  cursor: pointer;
+}
+.wt-copy--addr {
+  margin-top: 12px;
+}
+.wt-copy:focus-visible {
+  outline: 2px solid var(--wt-ink);
+  outline-offset: 2px;
+}
+.wt-gift-confirm {
+  margin-top: 18px;
+}
+.wt-barcode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 26px;
+}
+/* Barcode cetak: 15 batang tebal-tipis tak beraturan (bukan arsiran). */
+.wt-barcode__bars {
+  width: 166px;
+  height: 26px;
+  background-image: linear-gradient(
+    90deg,
+    var(--wt-ink) 0 4px,
+    transparent 4px 10px,
+    var(--wt-ink) 10px 16px,
+    transparent 16px 22px,
+    var(--wt-ink) 22px 24px,
+    transparent 24px 32px,
+    var(--wt-ink) 32px 39px,
+    transparent 39px 45px,
+    var(--wt-ink) 45px 49px,
+    transparent 49px 55px,
+    var(--wt-ink) 55px 61px,
+    transparent 61px 69px,
+    var(--wt-ink) 69px 71px,
+    transparent 71px 77px,
+    var(--wt-ink) 77px 85px,
+    transparent 85px 93px,
+    var(--wt-ink) 93px 95px,
+    transparent 95px 105px,
+    var(--wt-ink) 105px 107px,
+    transparent 107px 115px,
+    var(--wt-ink) 115px 119px,
+    transparent 119px 125px,
+    var(--wt-ink) 125px 130px,
+    transparent 130px 136px,
+    var(--wt-ink) 136px 138px,
+    transparent 138px 150px,
+    var(--wt-ink) 150px 152px,
+    transparent 152px 160px,
+    var(--wt-ink) 160px 166px
+  );
+}
+.wt-barcode__num {
+  margin-top: 4px;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 8.5px;
+  letter-spacing: 0.24em;
+  color: var(--wt-muted);
+}
+
+/* ------------------------------------------------------------ footer ----- */
+.wt-band--footer {
+  min-height: 340px;
+}
+.wt-band--footer .wt-band__body {
+  padding: 74px 0 26px;
+}
+.wt-footer__thanks {
+  margin: 16px auto 0;
+  max-width: 30em;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--wt-light);
+}
+.wt-footer__names {
+  margin: 16px 0 0;
+  font-family: var(--wt-sign), "Brush Script MT", cursive;
+  font-size: 34px;
+  line-height: 1.2;
+  color: var(--wt-light);
+}
+.wt-footer__rule {
+  height: 1px;
+  margin: 30px 0 11px;
+  background: rgba(244, 241, 233, 0.38);
+}
+.wt-footer__mast {
+  margin: 0;
+  font-family: var(--wt-mast), serif;
+  font-size: 17px;
+  color: var(--wt-light);
+}
+.wt-footer__motto,
+.wt-footer__printed {
+  margin: 6px 0 0;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--wt-light);
+}
+.wt-footer__printed {
+  font-size: 8.5px;
+  color: rgba(244, 241, 233, 0.86);
+}
+.wt-watermark {
+  /* Muted diturunkan dari kertas krem ini sendiri (≥ 4,5:1 juga di Sepia). */
+  --wt-muted: color-mix(in srgb, var(--wt-ink) 72%, var(--wt-paper-2));
+  padding: 22px 16px 26px;
+  background: var(--wt-paper-2);
+  text-align: center;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+.wt-watermark a {
+  font-weight: 600;
+  color: var(--wt-ink);
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------- musik ----- */
+.wt-music {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 46;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(25, 23, 21, 0.6);
+  color: var(--wt-light);
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(25, 23, 21, 0.28);
+}
+.wt.is-open .wt-music {
+  display: flex;
+}
+.wt-music:focus-visible {
+  outline: 2px solid var(--wt-ink);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------- reduced motion ----- */
+@media (prefers-reduced-motion: reduce) {
+  .wt.is-js .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .wt.is-js .wt-cover,
+  .wt.is-js .wt-cover__inner > * {
+    transition: none !important;
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  /* `is-motion` dideteksi sekali saat mount; ini menangkap preferensi yang
+     berubah sesudahnya. */
+  .wt.is-js .wt-ticker__track {
+    animation: none !important;
+  }
+}

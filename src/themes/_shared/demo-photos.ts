@@ -9,6 +9,22 @@ import {
 export type { DemoPhotoCredit };
 
 /**
+ * Tema yang MEMINJAM set foto demo tema lain alih-alih mengunduh set Pexels
+ * baru: foto DAN kredit fotografernya ikut set sumber (lisensi Pexels — kredit
+ * tampil di mana fotonya tampil). `warta` mencetak foto hitam-putih halftone,
+ * jadi set mana pun tampil sebagai foto koran.
+ */
+const DEMO_PHOTO_SOURCE: Record<string, string> = { warta: "eternal-rose" };
+
+/** Slug pemilik set foto demo untuk `slug` (dirinya sendiri bila tak meminjam). */
+function sumberFoto(slug: string): string {
+  // `hasOwn`: slug bisa datang dari URL — `constructor` dsb. bukan kunci sah.
+  return Object.hasOwn(DEMO_PHOTO_SOURCE, slug)
+    ? DEMO_PHOTO_SOURCE[slug]
+    : slug;
+}
+
+/**
  * Foto demo Pexels (aset lokal `/demo/<slug>/`) untuk sebuah tema, atau `null`
  * bila skrip `pnpm demo:photos` belum dijalankan → pemanggil memakai fallback
  * swatch SVG-nya sendiri. Akses map di-cast eksplisit karena
@@ -17,15 +33,16 @@ export type { DemoPhotoCredit };
 export function demoPhotosFor(slug: string): InvitationMediaView[] | null {
   const list = (
     demoPhotos as Record<string, InvitationMediaView[] | undefined>
-  )[slug];
+  )[sumberFoto(slug)];
   return list && list.length > 0 ? list : null;
 }
 
 /** Kredit fotografer Pexels satu tema (footer preview) — kosong bila belum ada. */
 export function demoPhotoCreditsFor(slug: string): DemoPhotoCredit[] {
   return (
-    (demoPhotoCredits as Record<string, DemoPhotoCredit[] | undefined>)[slug] ??
-    []
+    (demoPhotoCredits as Record<string, DemoPhotoCredit[] | undefined>)[
+      sumberFoto(slug)
+    ] ?? []
   );
 }
 

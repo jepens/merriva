@@ -38,7 +38,16 @@ export type SongOption = {
  * pernah menebak rasio. Slot yang tak ada di sini berarti tema aktif memang tak
  * merendernya, jadi editor tak menampilkan bidangnya (THEME-CONTRACT §2).
  */
-export type PhotoSlotView = { aspect: number; url: string | null };
+export type PhotoSlotView = {
+  aspect: number;
+  url: string | null;
+  /**
+   * Slot dideklarasikan TEMA (bukan bawaan editor). Hanya bermakna untuk
+   * `cover`: sampul bawaan hanya dirender `/api/og`, sampul tema juga tampil
+   * di halaman undangan — label & petunjuk bidangnya berbeda.
+   */
+  inTheme?: boolean;
+};
 
 export type PhotoSlots = Readonly<Partial<Record<string, PhotoSlotView>>>;
 

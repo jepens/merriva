@@ -187,10 +187,18 @@ export function LightboxThumb({
   m,
   index,
   eager = false,
+  sizes,
 }: {
   m: InvitationMediaView;
   index: number;
   eager?: boolean;
+  /**
+   * Opsional: untuk ubin selebar kolom. Bila diisi, kedua varian (400 & 1600
+   * px) ditawarkan lewat `srcSet` dan browser memilih sesuai layar — thumb
+   * 400 px saja pecah di ubin ±360 CSS px pada DPR 2–3. Tanpa `sizes` (ubin
+   * kecil, bawaan semua tema): hanya thumb, seperti sebelumnya.
+   */
+  sizes?: string;
 }) {
   const open = useContext(LightboxCtx);
   return (
@@ -198,6 +206,8 @@ export function LightboxThumb({
     <img
       className="lb-thumb"
       src={m.thumbUrl}
+      srcSet={sizes ? `${m.thumbUrl} 400w, ${m.url} 1600w` : undefined}
+      sizes={sizes}
       alt=""
       loading={eager ? "eager" : "lazy"}
       width={m.width ?? undefined}

@@ -1026,6 +1026,11 @@ export const copy = {
       // rasio kanvas OG, jadi yang dibingkai di sini = yang dikirim WhatsApp.
       coverHint:
         "Tampil saat tautan undangan dibagikan di WhatsApp — bukan di halaman undangannya.",
+      // Tema yang JUGA merender sampul di halamannya (slot `cover` di
+      // `media.slots`, mis. halaman muka koran `warta`).
+      coverLabelInTheme: "Foto sampul",
+      coverHintInTheme:
+        "Tampil di halaman pembuka undangan, juga saat tautan undangan dibagikan di WhatsApp.",
       groomLabel: "Foto mempelai pria",
       brideLabel: "Foto mempelai wanita",
       personHint: "Bila kosong, undangan menampilkan monogram inisial.",

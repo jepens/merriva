@@ -7257,6 +7257,106 @@ bergambar, kirim ke nomor sendiri.
 
 ---
 
+## #123 — 2026-11-10 · Tema baru `warta` (koran retro "The Wedding Post"); judul dekoratif berbahasa Inggris
+
+**Keputusan (pemilik, 10 Nov 2026):** tema pernikahan baru `warta`, tier
+Craft (tanpa gsap/lenis/canvas — `Reveal` + CSS), paket **standard**, dibuat
+semirip mungkin dengan desain "Retro Newspaper" our-wedding.link atas
+permintaan pemilik. Susunannya halaman koran bernomor: halaman muka (kop
+blackletter, baris edisi, pita ticker, judul Anton, foto halftone) → News
+(berita 2 kolom + huruf awal besar) → kutipan berbingkai → Couple → Feature
+(kisah, foto dari galeri berurutan) → Diary (kalender berhati + stempel mesin
+ketik + hitung mundur di pita foto gelap) → Classified (kartu acara) → Reply
+(RSVP + "Letters to the editor") → Archive (galeri) → kupon amplop berbarcode
+(tab Transfer/Kado tanpa JS) → penutup gelap bertanda tangan. Nomor halaman
+dihitung dari urutan & visibilitas section pilihan pemilik, jadi tak pernah
+melompat.
+
+**Bahasa — pengecualian sempit atas #118:** kop dan judul DEKORATIF berbahasa
+Inggris ("The Wedding Post", "Hot News!", "Meet the Bride", "Save the Date",
+folio "Page 3 · Couple") karena itulah rupa temanya. Semua yang INFORMATIF tetap
+Bahasa Indonesia: tanggal & hari, jam, label hitung mundur, nama acara, tombol
+("Baca Selengkapnya", "Petunjuk Lokasi"), instruksi, kalimat pengantar, dan
+fallback. Alasan #118 (tamu harus memahami isi) tetap terjaga: tak ada
+informasi yang hanya tersampaikan dalam bahasa Inggris.
+
+**Yang diambil dari rujukan vs yang tidak:** tata letak, tipografi (UnifrakturMaguntia,
+Anton, Playfair Display, PT Serif, Montserrat, Special Elite, Great Vibes — semua
+OFL), warna terukur (kertas muka ±`#efece4`, kertas isi ±`#fafaf9`, tinta
+`#191715`), dan teknik cetak (raster titik halftone di atas foto hitam-putih,
+butir kertas) dibuat ulang dengan kode sendiri. Foto, teks demo, dan merek
+rujukan TIDAK disalin.
+
+**Rincian:**
+- Font baru (subset Latin, `preload:false`, hanya terunduh bila glyph-nya
+  tampil): anton 18 KB, pt-serif 400/400i/700 95 KB, unifrakturmaguntia 26 KB,
+  special-elite 52 KB, great-vibes 42 KB. Playfair & Montserrat memakai berkas
+  yang sudah ada. Satu pasangan font pilihan (Anton + PT Serif); lima keluarga
+  lain identitas tema.
+- Tiga varian = warna tinta: Koran Hitam (bawaan), Sepia Lawas, Tinta Merah.
+  `customAccent:false`.
+- Foto demo meminjam set `eternal-rose` lewat alias di
+  `src/themes/_shared/demo-photos.ts` — kredit fotografer Pexels ikut set
+  sumber (lisensi). Tanpa unduhan Pexels baru: foto apa pun tercetak
+  hitam-putih halftone.
+- Peta: tombol "Petunjuk Lokasi" per acara, bukan iframe Google Maps seperti
+  rujukan (pihak ketiga berat di halaman publik — target Lighthouse ≥ 90).
+- RSVP & ucapan tetap satu `GuestbookSection` bersama; judul bawaannya diganti
+  judul halaman tema lewat CSS, dinding ucapan ditata sebagai "Letters to the
+  editor".
+- Seed `themes` berstatus `is_active = true` — pemilik meminta tema tampil di
+  pemilih tema `/dashboard/undangan/baru` (10 Nov 2026, sesudah tinjauan DoD).
+  `ON CONFLICT` tak menimpa `is_active` yang sudah diatur admin. Thumbnail
+  kartu dibuat (`pnpm thumbs --only=warta`). Produksi baru menerimanya lewat
+  `supabase db push`.
+- Nomor halaman = CSS counter (`.wt-folio`), bukan angka dari server: editor
+  Tampilan mengurutkan/menyembunyikan section langsung di iframe tanpa render
+  ulang, dan angka server di sana melompat (3 → 6 → 5).
+- Kota untuk dateline (`src/themes/warta/kota.ts`, diuji unit) sengaja
+  konservatif: alamat tanpa koma, segmen berangka, atau berawalan Jl/Lt/Blok/
+  Gedung/… → tanpa kota. Lebih baik tak menyebut kota daripada "Reported from
+  Lt.".
+- Isi di balik halaman muka `visibility:hidden` sampai dibuka (sudah `inert`):
+  reflow saat font tiba di baliknya tak lagi tercatat sebagai CLS. Fallback
+  Anton = Arial/Roboto lokal `size-adjust: 72%` (`adjustFontFallback:false`),
+  karena fallback otomatis next/font (Arial ±92%) membuat judul kapital
+  membungkus 2 baris lalu kembali 1. CLS dengan semua font ditunda 2,5 dtk:
+  0,055 → 0,002.
+
+**Perubahan bersama yang ikut (aditif, tema lain tak berubah):**
+- Editor: slot `cover` yang dideklarasikan TEMA ditandai `inTheme`, dan
+  bidangnya berlabel "Foto sampul" + "Tampil di halaman pembuka undangan, juga
+  saat tautan undangan dibagikan di WhatsApp". `warta` tema pertama yang
+  merender sampul di halamannya; label lama ("bukan di halaman undangannya")
+  membuat pemilik tak mengunggah, dan halaman muka tampil monogram.
+- `LightboxThumb` menerima `sizes` opsional → `srcSet` 400w/1600w untuk ubin
+  selebar kolom (foto utama arsip). Tanpa `sizes` perilakunya sama seperti
+  sebelumnya (thumb saja).
+
+**Tinjauan (10 Nov 2026):** 4 peninjau independen (kode/kontrak, kasus tepi di
+browser, kemiripan visual terukur vs rujukan, performa & a11y) + verifikator
+skeptis per dimensi: 23 temuan terbukti dan diperbaiki, 7 dibantah. Termasuk:
+kontras muted Sepia di kertas krem 4,38 → 5,44:1; luapan dateline & folio di
+320 px; blok terakhir penutup tak pernah tampil di layar tinggi tanpa
+watermark (kelas bug #112); foto pita mengabaikan titik fokus pemilik; selisih
+ukuran/jarak terukur terhadap rujukan (hati kalender, foto mempelai miring
+±1,2°, jarak vertikal, barcode).
+
+**Ditolak:**
+- Iframe peta Google (lihat di atas).
+- Menerjemahkan kop ke Bahasa Indonesia ("Warta Bahagia"): pemilik memilih
+  judul Inggris demi kemiripan dengan rujukan.
+- Lapisan butir & halftone ber-`mix-blend-mode: multiply` seperti rujukan:
+  lapisan fixed ber-blend memaksa komposisi ulang tiap frame gulir di Android
+  kelas menengah; alpha biasa memberi rupa hampir sama.
+- Unduh set foto Pexels khusus: tak perlu, dan hasil pencarian Pexels berubah
+  dari waktu ke waktu.
+
+**Konsekuensi:** kini 15 tema. Tema yang meminjam foto demo lain didaftarkan di
+`DEMO_PHOTO_SOURCE`, bukan dengan menyalin berkas `public/demo/`.
+
+---
+
 ## Template entri baru
 
 ```

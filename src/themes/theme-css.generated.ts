@@ -18,4 +18,5 @@ export const themeCssHrefs: Record<string, string> = {
   "prisma": "/themes/prisma.dc23f3e444.css",
   "sakinah": "/themes/sakinah.862d09ccd4.css",
   "verdant": "/themes/verdant.b287649871.css",
+  "warta": "/themes/warta.3961199863.css",
 };
