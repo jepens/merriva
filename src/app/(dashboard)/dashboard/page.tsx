@@ -196,6 +196,19 @@ export default async function DashboardPage() {
                     >
                       {copy.dashboard.cardEdit}
                     </Link>
+                    {/* Ganti tema (SPEC §4.4) — daftar ini sudah menyaring
+                        undangan ber-`purged_at`; suspended tak bisa. */}
+                    {inv.status !== "suspended" ? (
+                      <Link
+                        href={`/dashboard/undangan/${inv.id}/tema`}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
+                      >
+                        {copy.dashboard.cardTheme}
+                      </Link>
+                    ) : null}
                     <Link
                       href={`/dashboard/undangan/${inv.id}/tamu`}
                       className={buttonVariants({

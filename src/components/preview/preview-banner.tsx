@@ -16,18 +16,38 @@ export interface PreviewActivateCta {
  * kompilasi, bukan bug yang menunggu ketahuan di produksi.
  */
 export type PreviewChrome =
-  | { demo: true; editHref?: never; activate?: never }
-  | { demo?: false; editHref?: string; activate?: PreviewActivateCta };
+  | {
+      demo: true;
+      editHref?: never;
+      backLabel?: never;
+      note?: never;
+      activate?: never;
+    }
+  | {
+      demo?: false;
+      editHref?: string;
+      /** Label tautan kembali (bawaan "Edit"). */
+      backLabel?: string;
+      /**
+       * Catatan pratinjau yang WAJIB terbaca juga di ponsel (mis. "belum
+       * disimpan" pada pratinjau ganti tema). Bawaannya catatan umum yang
+       * disembunyikan di layar sempit.
+       */
+      note?: string;
+      activate?: PreviewActivateCta;
+    };
 
 /** Bar tetap penanda mode pratinjau (di atas render tema full-screen). */
 export function PreviewBanner({
   demo = false,
   editHref,
+  backLabel,
+  note,
   activate,
 }: PreviewChrome) {
   return (
     <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-between gap-3 bg-neutral-900/85 px-3 py-2 text-xs text-white backdrop-blur-sm">
-      <span className="flex items-center gap-2">
+      <span className="flex min-w-0 items-center gap-2">
         {demo ? (
           <Link
             href="/tema"
@@ -36,10 +56,12 @@ export function PreviewBanner({
             <ArrowLeft size={14} /> {copy.preview.allThemes}
           </Link>
         ) : null}
-        <span className="rounded-full bg-white/15 px-2 py-0.5 font-medium">
+        <span className="shrink-0 rounded-full bg-white/15 px-2 py-0.5 font-medium">
           {demo ? copy.preview.demoBadge : copy.preview.badge}
         </span>
-        {!demo ? (
+        {!demo && note ? (
+          <span className="min-w-0 truncate text-white/80">{note}</span>
+        ) : !demo ? (
           <span className="hidden text-white/70 sm:inline">
             {copy.preview.note}
           </span>
@@ -51,7 +73,7 @@ export function PreviewBanner({
             href={editHref}
             className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 transition-colors hover:bg-white/25"
           >
-            <ArrowLeft size={14} /> {copy.preview.backToEditor}
+            <ArrowLeft size={14} /> {backLabel ?? copy.preview.backToEditor}
           </Link>
         ) : demo ? (
           <Link

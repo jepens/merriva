@@ -463,6 +463,7 @@ export const copy = {
     cardShare: "Sebar",
     cardMomen: "Album Momen",
     cardUpgrade: "Upgrade paket",
+    cardTheme: "Tema",
     // Sebar Undangan (SPEC §4.7).
     // Sebar Undangan (SPEC §4.7, DECISIONS #120). Template bawaan memuat tanggal
     // dan kalimat "tanpa aplikasi": penipuan undangan pernikahan di Indonesia
@@ -1225,6 +1226,43 @@ export const copy = {
     otherThemes: "Tema lainnya",
     prevTheme: "Sebelumnya",
     nextTheme: "Berikutnya",
+    // Pratinjau tema kandidat dengan data pemilik (`/preview/{id}?tema=`).
+    // Inti pesan DI DEPAN: bar memotong ujungnya di ponsel (360–430 px).
+    themeTrialNote: (name: string) => `Belum disimpan · Tema ${name}`,
+    backToThemes: "Pilih tema",
+  },
+
+  // Ganti tema undangan (SPEC §4.4 "Ganti tema", DECISIONS #124).
+  themeSwitch: {
+    title: "Ganti Tema",
+    button: "Ganti Tema",
+    subtitle:
+      "Pilih tema baru. Isi, foto, tamu, dan ucapan Anda tidak berubah.",
+    back: "Kembali ke editor",
+    resetNote:
+      "Kustomisasi tampilan (warna, font, urutan bagian) kembali ke bawaan tema baru.",
+    liveNote:
+      "Undangan ini sudah aktif — tamu langsung melihat tema baru begitu Anda menerapkannya.",
+    current: "Dipakai sekarang",
+    preview: "Pratinjau",
+    use: "Pakai Tema Ini",
+    applying: "Menerapkan…",
+    confirm: (name: string, live: boolean) =>
+      live
+        ? `Pakai tema ${name}? Tamu langsung melihat tema baru, dan kustomisasi tampilan kembali ke bawaan tema ini.`
+        : `Pakai tema ${name}? Kustomisasi tampilan kembali ke bawaan tema ini.`,
+    locked: "Perlu paket Premium",
+    upgrade: "Upgrade ke Premium",
+    noTheme: "Belum ada tema lain untuk kategori undangan ini.",
+    notAllowed:
+      "Tema undangan ini tidak bisa diganti (undangan ditangguhkan atau datanya sudah dihapus).",
+    unavailable: "Tema ini tidak tersedia untuk undangan Anda.",
+    needsPremium:
+      "Tema premium hanya untuk paket Premium. Upgrade paket undangan ini untuk memakainya.",
+    pendingOrder:
+      "Masih ada tagihan paket Basic yang menunggu pembayaran. Tema premium bisa dipilih setelah tagihan itu kedaluwarsa (paling lama ±24 jam).",
+    error: "Tema belum berhasil diganti. Coba lagi sebentar lagi.",
+    saved: "Tema berhasil diganti.",
   },
 
   // Kustomisasi tampilan oleh pembeli (Fase G / CUSTOMIZER-SPEC).

@@ -1,4 +1,4 @@
-import { Palette } from "lucide-react";
+import { LayoutTemplate, Palette } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -26,6 +26,7 @@ import {
   editableContent,
   settingsSchema,
 } from "@/lib/validation/content";
+import { bolehGantiTema } from "@/lib/theme-switch";
 import { requireUser } from "@/server/guards/auth";
 import { liveCustomMusicPaths } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
@@ -55,7 +56,7 @@ export default async function EditInvitationPage({
   const { data: inv } = await supabase
     .from("invitations")
     .select(
-      "id, slug, category, status, content, settings, event_date, package_id, theme_id, user_id, music_locked_at",
+      "id, slug, category, status, content, settings, event_date, package_id, theme_id, user_id, music_locked_at, purged_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -214,17 +215,29 @@ export default async function EditInvitationPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">
           {copy.editor.title}
         </h1>
-        <Link
-          href={`/dashboard/undangan/${inv.id}/tampilan`}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          <Palette className="size-4" />
-          {copy.appearance.title}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {/* Ganti tema (SPEC §4.4) — undangan suspended/purged tak bisa. */}
+          {bolehGantiTema(inv) ? (
+            <Link
+              href={`/dashboard/undangan/${inv.id}/tema`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <LayoutTemplate className="size-4" />
+              {copy.themeSwitch.button}
+            </Link>
+          ) : null}
+          <Link
+            href={`/dashboard/undangan/${inv.id}/tampilan`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            <Palette className="size-4" />
+            {copy.appearance.title}
+          </Link>
+        </div>
       </div>
 
       {content.category === "wedding" ? (

@@ -1,5 +1,6 @@
 -- Test DB (pgTAP) — tema premium mengikuti paket & baris tak bisa dipindah
--- antar-undangan (migrasi 20261106100000, DECISIONS #116).
+-- antar-undangan (migrasi 20261106100000, DECISIONS #116), plus ganti tema
+-- untuk undangan yang belum pernah dibayar (migrasi 20261110150000, #124).
 -- Jalankan: `pnpm test:db` (butuh stack Supabase lokal: `supabase start`).
 -- Mandiri: fixture dibuat di dalam transaksi ini dan di-ROLLBACK di akhir.
 --
@@ -7,7 +8,7 @@
 -- dipakai serangan: PATCH/UPDATE langsung lewat PostgREST.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(25);
 
 insert into auth.users (id, email) values
   ('0d860000-0000-4000-8000-00000000000a', 'pgtap-tema@merriva.test'),
@@ -26,6 +27,10 @@ insert into public.themes (id, slug, name, categories, tier, is_active) values
 -- b1: draft milik akun Pro (tanpa paket)
 -- a5: Premium KEDALUWARSA dengan order perpanjangan Basic yang masih pending
 -- a6: Premium kedaluwarsa dengan order perpanjangan PREMIUM pending (pembanding)
+-- a7: draft BELUM DIBAYAR dengan order Basic pending (jalan pintas #124)
+-- a8: pending_payment tanpa paket & tanpa order (belum pernah dibayar)
+-- a9: ACTIVE tanpa paket · a10: EXPIRED tanpa paket (bukan "belum pernah dibayar")
+-- a11: Premium AKTIF dengan order Basic pending yang basi (tak bisa mengaktifkan apa pun)
 insert into public.invitations (id, user_id, theme_id, slug, category, status, content, package_id) values
   ('0d860000-0000-4000-8000-0000000000a1', '0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000e1',
    'pgtap-tema-a1', 'wedding', 'active', '{}', (select id from public.packages where code = 'basic')),
@@ -40,13 +45,27 @@ insert into public.invitations (id, user_id, theme_id, slug, category, status, c
   ('0d860000-0000-4000-8000-0000000000a5', '0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000e1',
    'pgtap-tema-a5', 'wedding', 'expired', '{}', (select id from public.packages where code = 'premium')),
   ('0d860000-0000-4000-8000-0000000000a6', '0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000e1',
-   'pgtap-tema-a6', 'wedding', 'expired', '{}', (select id from public.packages where code = 'premium'));
+   'pgtap-tema-a6', 'wedding', 'expired', '{}', (select id from public.packages where code = 'premium')),
+  ('0d860000-0000-4000-8000-0000000000a7', '0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000e1',
+   'pgtap-tema-a7', 'wedding', 'draft', '{}', null),
+  ('0d860000-0000-4000-8000-0000000000a8', '0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000e1',
+   'pgtap-tema-a8', 'wedding', 'pending_payment', '{}', null),
+  ('0d860000-0000-4000-8000-0000000000a9', '0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000e1',
+   'pgtap-tema-a9', 'wedding', 'active', '{}', null),
+  ('0d860000-0000-4000-8000-0000000000aa', '0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000e1',
+   'pgtap-tema-a10', 'wedding', 'expired', '{}', null),
+  ('0d860000-0000-4000-8000-0000000000ab', '0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000e1',
+   'pgtap-tema-a11', 'wedding', 'active', '{}', (select id from public.packages where code = 'premium'));
 
 insert into public.orders (user_id, invitation_id, package_id, amount_idr, status, order_code, purpose) values
   ('0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000a5',
    (select id from public.packages where code = 'basic'), 99000, 'pending', 'MRV-PGTTEMA5', 'purchase'),
   ('0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000a6',
-   (select id from public.packages where code = 'premium'), 199000, 'pending', 'MRV-PGTTEMA6', 'purchase');
+   (select id from public.packages where code = 'premium'), 199000, 'pending', 'MRV-PGTTEMA6', 'purchase'),
+  ('0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000a7',
+   (select id from public.packages where code = 'basic'), 99000, 'pending', 'MRV-PGTTEMA7', 'purchase'),
+  ('0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000ab',
+   (select id from public.packages where code = 'basic'), 99000, 'pending', 'MRV-PGTTEMAB', 'purchase');
 
 insert into public.guests (id, invitation_id, name, token) values
   ('0d860000-0000-4000-8000-0000000000c1', '0d860000-0000-4000-8000-0000000000a4', 'Tamu X', 'pgtaptemax000001');
@@ -94,11 +113,37 @@ select lives_ok(
   $$update public.invitations set theme_id = '0d860000-0000-4000-8000-0000000000e2'
     where id = '0d860000-0000-4000-8000-0000000000a6'$$,
   'Premium kedaluwarsa + order PREMIUM pending → boleh tema premium');
-select throws_ok(
+-- Ganti tema #124: undangan yang BELUM PERNAH dibayar boleh mencoba tema
+-- premium (rasakan dulu) — checkout tetap mewajibkan Premium.
+select lives_ok(
   $$update public.invitations set theme_id = '0d860000-0000-4000-8000-0000000000e2'
     where id = '0d860000-0000-4000-8000-0000000000a4'$$,
+  'draft PELANGGAN yang belum dibayar boleh berganti ke tema premium (#124)');
+select lives_ok(
+  $$update public.invitations set theme_id = '0d860000-0000-4000-8000-0000000000e2'
+    where id = '0d860000-0000-4000-8000-0000000000a8'$$,
+  'pending_payment tanpa paket & tanpa order boleh berganti ke tema premium');
+select throws_ok(
+  $$update public.invitations set theme_id = '0d860000-0000-4000-8000-0000000000e2'
+    where id = '0d860000-0000-4000-8000-0000000000a7'$$,
   '23514', 'Tema premium hanya untuk paket Premium.',
-  'draft PELANGGAN (tanpa paket = lantai Basic) tak bisa berganti ke tema premium');
+  'draft belum dibayar + order BASIC pending → tetap tak bisa (jalan pintas bayar Basic)');
+-- Pengecualian #124 HANYA untuk draft/pending_payment tanpa paket: status lain
+-- tanpa paket tetap dinilai lewat invitation_effective_limits (lantai Basic).
+select throws_ok(
+  $$update public.invitations set theme_id = '0d860000-0000-4000-8000-0000000000e2'
+    where id = '0d860000-0000-4000-8000-0000000000a9'$$,
+  '23514', 'Tema premium hanya untuk paket Premium.',
+  'ACTIVE tanpa paket tak termasuk "belum pernah dibayar"');
+select throws_ok(
+  $$update public.invitations set theme_id = '0d860000-0000-4000-8000-0000000000e2'
+    where id = '0d860000-0000-4000-8000-0000000000aa'$$,
+  '23514', 'Tema premium hanya untuk paket Premium.',
+  'EXPIRED tanpa paket tak termasuk "belum pernah dibayar"');
+select lives_ok(
+  $$update public.invitations set theme_id = '0d860000-0000-4000-8000-0000000000e2'
+    where id = '0d860000-0000-4000-8000-0000000000ab'$$,
+  'Premium AKTIF + order Basic pending basi → tetap boleh tema premium (order itu tak bisa mengaktifkan)');
 
 -- Pindah baris ----------------------------------------------------------------
 select throws_ok(
@@ -130,6 +175,33 @@ select is((select invitation_id from public.guests where id = '0d860000-0000-400
   '0d860000-0000-4000-8000-0000000000a4'::uuid, 'tamu tetap di undangan asalnya');
 select is((select theme_id from public.invitations where id = '0d860000-0000-4000-8000-0000000000b1'),
   '0d860000-0000-4000-8000-0000000000e2'::uuid, 'draft Pro BENAR-BENAR berganti tema (bukan 0 baris karena RLS)');
+select is((select theme_id from public.invitations where id = '0d860000-0000-4000-8000-0000000000a4'),
+  '0d860000-0000-4000-8000-0000000000e2'::uuid, 'draft pelanggan BENAR-BENAR berganti ke tema premium (#124)');
+
+-- Sisi INSERT order (enforce_order_theme): balapan checkout ↔ ganti tema.
+-- a3 = draft bertema PREMIUM. Jalur checkout/aktivasi gratis memakai service
+-- role; di sini sebagai pemilik DB (trigger tetap berlaku).
+select throws_ok(
+  $$insert into public.orders (user_id, invitation_id, package_id, amount_idr, status, order_code, purpose)
+    values ('0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000a3',
+      (select id from public.packages where code = 'basic'), 99000, 'pending', 'MRV-PGTORD01', 'purchase')$$,
+  '23514', 'Tema premium hanya untuk paket Premium.',
+  'order BASIC pending untuk undangan bertema premium ditolak di INSERT (atomik)');
+select lives_ok(
+  $$insert into public.orders (user_id, invitation_id, package_id, amount_idr, status, order_code, purpose, payment_method)
+    values ('0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000a3',
+      (select id from public.packages where code = 'basic'), 99000, 'pending', 'MRV-PGTORD02', 'purchase', 'manual')$$,
+  'aktivasi MANUAL admin (payment_method manual) tak diperiksa — SPEC §4.8');
+select lives_ok(
+  $$insert into public.orders (user_id, invitation_id, package_id, amount_idr, status, order_code, purpose)
+    values ('0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000a3',
+      (select id from public.packages where code = 'premium'), 199000, 'pending', 'MRV-PGTORD03', 'purchase')$$,
+  'order PREMIUM pending untuk undangan bertema premium boleh');
+select lives_ok(
+  $$insert into public.orders (user_id, invitation_id, package_id, amount_idr, status, order_code, purpose)
+    values ('0d860000-0000-4000-8000-00000000000a', '0d860000-0000-4000-8000-0000000000a1',
+      (select id from public.packages where code = 'basic'), 99000, 'pending', 'MRV-PGTORD04', 'purchase')$$,
+  'order BASIC pending untuk undangan bertema standar boleh');
 
 select * from finish();
 rollback;

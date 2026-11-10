@@ -270,6 +270,11 @@ export async function createCheckoutAction(
       created = true;
       break;
     }
+    // 23514 = trigger `enforce_order_theme` (DECISIONS #124): tema undangan
+    // diganti ke premium SESUDAH gerbang tema di atas membacanya (balapan) —
+    // DB menolak order paket non-Premium secara atomik.
+    if (error.code === "23514")
+      return { status: "error", message: copy.checkout.premiumThemeRequired };
     if (error.code !== "23505")
       return { status: "error", message: copy.common.error };
     // 23505 pada order_code → kode bentrok, coba lagi dengan kode baru.

@@ -21,6 +21,7 @@ import {
 } from "@/server/invitation-data";
 import { getEffectiveLimits } from "@/server/limits";
 import { requireUser } from "@/server/guards/auth";
+import { THEME_SLUG_RE, settingsTanpaKustom } from "@/lib/theme-switch";
 import { settingsSchema } from "@/lib/validation/content";
 import { getThemeLoader } from "@/themes/registry";
 import { getThemeOptions } from "@/themes/theme-options-registry";
@@ -29,19 +30,51 @@ import { ThemeStyles } from "@/themes/theme-styles";
 export const metadata: Metadata = { title: copy.preview.badge };
 
 /**
+ * Tema kandidat `?tema=` (SPEC §4.4 "Ganti tema"): hanya tema AKTIF, sekategori,
+ * dan kodenya terpasang — selain itu `null` dan pratinjau memakai tema
+ * sekarang. Tak menulis apa pun.
+ */
+async function temaKandidat(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  raw: unknown,
+  category: string,
+): Promise<{ slug: string; name: string } | null> {
+  if (typeof raw !== "string" || !THEME_SLUG_RE.test(raw)) return null;
+  const row = dataOrThrow(
+    await supabase
+      .from("themes")
+      .select("slug, name, categories, is_active")
+      .eq("slug", raw)
+      .maybeSingle(),
+    "themes (pratinjau ganti tema)",
+  );
+  if (
+    !row ||
+    !row.is_active ||
+    !(row.categories as string[]).includes(category) ||
+    !getThemeLoader(row.slug)
+  ) {
+    return null;
+  }
+  return { slug: row.slug, name: row.name };
+}
+
+/**
  * Pratinjau draft (M1.5) — HANYA pemilik (RLS membatasi baris ke pemilik). Merakit
  * `InvitationData` di server lalu merender komponen tema dari registry. Selalu
  * dinamis (memakai cookie auth) → tak ter-cache; draft tampil apa adanya.
+ * `?tema={slug}` = undangan pemilik dalam tema KANDIDAT dengan kustomisasi
+ * bawaan tema itu — persis hasil "Pakai Tema Ini" (SPEC §4.4), tanpa menyimpan.
  */
 export default async function PreviewPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ embed?: string }>;
+  searchParams: Promise<{ embed?: string; tema?: string }>;
 }) {
   const { id } = await params;
-  const { embed } = await searchParams;
+  const { embed, tema } = await searchParams;
   await requireUser();
   if (!isUuid(id)) notFound();
 
@@ -59,12 +92,25 @@ export default async function PreviewPage({
     const shellInv = dataOrThrow(
       await supabaseShell
         .from("invitations")
-        .select("status, purged_at")
+        .select("status, purged_at, category")
         .eq("id", id)
         .maybeSingle(),
       "invitations (bingkai)",
     );
     if (!shellInv) notFound();
+    const kandidat = await temaKandidat(supabaseShell, tema, shellInv.category);
+    // Pratinjau ganti tema: kembali ke pemilih tema, catatan "belum disimpan"
+    // terbaca juga di ponsel, tanpa ajakan aktivasi (fokus pada memilih).
+    if (kandidat) {
+      return (
+        <PreviewFrame
+          embedSrc={`/preview/${id}?embed=1&tema=${kandidat.slug}`}
+          editHref={`/dashboard/undangan/${id}/tema`}
+          backLabel={copy.preview.backToThemes}
+          note={copy.preview.themeTrialNote(kandidat.name)}
+        />
+      );
+    }
     const cta = activationCtaFor(shellInv.status, shellInv.purged_at);
     return (
       <PreviewFrame
@@ -113,9 +159,16 @@ export default async function PreviewPage({
   // Setiap bacaan WAJIB berhasil (DECISIONS #45): pratinjau tanpa jadwal/galeri
   // karena kedipan DB membuat pemilik mengira isiannya hilang — lalu mengetik
   // ulang, atau lebih buruk, membayar undangan yang dikiranya kosong.
-  const theme = dataOrThrow(themeRes, "themes");
+  const currentTheme = dataOrThrow(themeRes, "themes");
   const eventRows = dataOrThrow(eventsRes, "invitation_events");
   const mediaRows = dataOrThrow(mediaRes, "media");
+  // `?tema=` sah → render tema kandidat dengan `settings` TANPA kustomisasi
+  // tema lama (persis yang ditulis aksi ganti tema); selain itu tema sekarang.
+  const kandidat = await temaKandidat(supabase, tema, inv.category);
+  const theme = kandidat ? { slug: kandidat.slug } : currentTheme;
+  const renderSettings = kandidat
+    ? settingsTanpaKustom(inv.settings)
+    : inv.settings;
 
   // Batas paket efektif (satu sumber kebenaran) → watermark & video. Draft →
   // Basic.
@@ -139,7 +192,7 @@ export default async function PreviewPage({
     slug: inv.slug,
     category: inv.category,
     content: inv.content,
-    settings: inv.settings,
+    settings: renderSettings,
     eventDate: inv.event_date,
     eventRows: eventRows ?? [],
     mediaRows: mediaRows ?? [],

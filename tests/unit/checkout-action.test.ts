@@ -699,6 +699,21 @@ describe("createCheckoutAction — ketahanan pembuatan order", () => {
     expect(terbitkanLink).not.toHaveBeenCalled();
   });
 
+  it("tolakan trigger tema (23514, balapan ganti tema #124) → pesan tema premium, tanpa link bayar", async () => {
+    setup({ id: INV, status: "draft", slug: "andi-sinta" }, PKG, {
+      insertErrors: [{ code: "23514" }],
+    });
+
+    const res = await createCheckoutAction(INV, "premium");
+
+    expect(res).toEqual({
+      status: "error",
+      message: copy.checkout.premiumThemeRequired,
+    });
+    expect(orders()).toHaveLength(1); // tidak mencoba ulang
+    expect(terbitkanLink).not.toHaveBeenCalled();
+  });
+
   it("seluruh percobaan bentrok → menyerah tanpa link bayar", async () => {
     setup({ id: INV, status: "draft", slug: "andi-sinta" }, PKG, {
       insertErrors: Array.from({ length: 5 }, () => ({ code: "23505" })),

@@ -7357,6 +7357,71 @@ ukuran/jarak terukur terhadap rujukan (hati kalender, foto mempelai miring
 
 ---
 
+## #124 — 2026-11-10 · Ganti tema undangan yang sudah ada
+
+**Keputusan (pemilik, 10 Nov 2026):** pemilik bisa mengganti tema undangannya
+kapan saja, tanpa batas jumlah (SPEC §4.4 "Ganti tema"). Sebelumnya `theme_id`
+hanya ditulis saat undangan DIBUAT, padahal SPEC §4.4 langkah 7 sudah menyebut
+"pilih tema" — celah spesifikasi yang tak pernah dibangun.
+
+- **Pintu masuk:** tombol "Ganti Tema" di kepala halaman Edit dan tombol "Tema"
+  di kartu dashboard → `/dashboard/undangan/{id}/tema` (kartu yang sama dengan
+  pemilih saat membuat undangan, kini satu komponen `ThemeCard`).
+- **Pratinjau dengan data sendiri** `/preview/{id}?tema={slug}`: undangan pemilik
+  dalam tema kandidat, persis hasil bila dipakai, tanpa menyimpan. Slug yang tak
+  sah/nonaktif/beda kategori diabaikan.
+- **Kustomisasi direset** (pilihan pemilik, bukan rekomendasi "bawa urutan &
+  bagian"): `settings.custom` dibuang; tema baru tampil dengan bawaannya.
+  Isian `settings` lain disalin apa adanya TANPA di-parse — menulis ulang hasil
+  parse yang gagal akan menghapus lagu, zona waktu, dan toggle.
+- **Tema premium:** undangan yang BELUM PERNAH dibayar (`package_id` null,
+  `draft`/`pending_payment`) boleh pindah ke tema premium — konsisten dengan
+  saat membuat undangan (INSERT tak pernah diperiksa) — dan checkout tetap
+  mewajibkan Premium. Undangan berpaket tanpa `all_themes` melihat kartu
+  terkunci + tombol upgrade (bila aktif). Trigger `enforce_theme_change`
+  (migrasi `20261110150000`) membalik satu cabang #116; pemeriksaan order
+  undangan `pending` berpaket non-Premium tetap berlaku untuk SEMUA undangan —
+  tanpa itu draft bisa membuat order Basic dengan tema standar, berganti ke tema
+  premium, lalu membayar Basic (`activate_paid_order` tak memeriksa tema).
+- **Satu UPDATE** `theme_id` + `settings` lewat client sesi (RLS), lalu
+  revalidasi `/{slug}`, dashboard, edit, tema, tampilan. Galat 23514 dari
+  trigger diterjemahkan ke pesan Indonesia ("tagihan Basic masih menunggu",
+  bukan ajakan upgrade yang tak tersedia untuk draft).
+- **Balapan checkout ↔ ganti tema (ditemukan tinjauan, dibuktikan di DB
+  lokal):** checkout membaca tema, memeriksa tier, lalu baru meng-INSERT order
+  — beberapa round-trip tanpa kunci. Sesudah pelonggaran di atas, ganti tema ke
+  premium yang tiba di antaranya lolos (order belum ada), lalu order Basic masuk
+  dan dibayar → aktif Basic dengan tema premium. Ditutup di DB: trigger
+  `enforce_order_theme` (BEFORE INSERT `orders`, order undangan `pending`
+  berpaket non-`all_themes`, kecuali `payment_method = 'manual'` admin)
+  mengunci baris undangan `FOR NO KEY UPDATE` di pernyataan TERSENDIRI, lalu
+  membaca temanya. Satu SELECT join `FOR UPDATE OF i` TIDAK menutupnya
+  (EvalPlanQual memakai baris tema lama → tier NULL → lolos; terbukti uji dua
+  sesi oleh verifikator). Uji dua sesi serentak kedua arah: keduanya ditolak.
+  Checkout menerjemahkan 23514 dari INSERT ke pesan tema premium.
+- Pemeriksaan order `pending` di `enforce_theme_change` dipersempit ke status
+  `draft`/`pending_payment`/`expired` — pada undangan `active`, order purchase
+  basi hanya berakhir `held`, jadi tak boleh memblokir tema premium milik
+  undangan yang sudah membayar Premium.
+- Tema sekarang yang sudah dinonaktifkan disembunyikan RLS dari pelanggan;
+  halaman tema membacanya lewat service-role sesudah kepemilikan terverifikasi.
+
+**Ditolak:**
+- Membawa urutan & bagian tersembunyi ke tema baru (rekomendasi awal): pemilik
+  memilih reset penuh — tema baru tampil persis seperti contohnya.
+- Batas jumlah ganti / kunci sesudah aktif: foto non-destruktif (#86) dan
+  kosakata section kanonik (#85) membuat ganti tema tanpa risiko data.
+- Dialog konfirmasi kustom: proyek memakai `window.confirm` untuk aksi serupa
+  (hapus undangan).
+
+**Konsekuensi:** autosave editor membaca `custom` dari server sebelum menulis,
+jadi tab editor yang terbuka tak menghidupkan kembali kustomisasi lama — kecuali
+pada jendela balapan sempit (baca sebelum, tulis sesudah ganti tema); hasilnya
+tetap aman dirender karena resolver jatuh ke bawaan untuk varian/urutan yang
+tak dikenal tema baru.
+
+---
+
 ## Template entri baru
 
 ```
