@@ -1,9 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
 
 /**
- * Otorisasi endpoint cron (`/api/cron/*`, ARCHITECTURE §7). Scheduled job
- * (Easypanel) mengirim header `Authorization: Bearer <CRON_SECRET>`. Perbandingan
- * timing-safe agar tak membocorkan panjang/isi via waktu respons.
+ * Otorisasi endpoint cron (`/api/cron/*`, ARCHITECTURE §7). Crontab root di host
+ * VPS — keempat cron (LAUNCH-CHECKLIST Fase 3) plus laporan `scripts/backup-media.sh`
+ * (Fase 5) — mengirim header `Authorization: Bearer <CRON_SECRET>`.
+ * Perbandingan timing-safe agar tak membocorkan panjang/isi via waktu respons.
  *
  * FAIL-CLOSED: `CRON_SECRET` tak di-set → tolak (endpoint mutasi tak boleh
  * terbuka tanpa rahasia). Modul ini server-only secara implisit (`node:crypto`).

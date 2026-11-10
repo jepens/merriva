@@ -11,7 +11,7 @@ import type { CronJobName } from "./record";
  *
  * Yang dijawab di sini bukan "apakah job gagal" — itu bagian yang mudah —
  * melainkan **"apakah job ini masih jalan sama sekali"**. Job yang dihapus dari
- * panel Easypanel, salah ketik perintahnya, atau mati setelah redeploy tidak
+ * crontab host, salah ketik perintahnya, atau hilang saat VPS dibangun ulang tidak
  * meninggalkan galat apa pun; ia hanya BERHENTI. Satu-satunya jejaknya adalah
  * `last_run_at` yang membasi.
  */
@@ -46,9 +46,11 @@ export interface CronStatus {
 }
 
 /**
- * Jadwal yang diharapkan, dalam jam. Nilai ini HARUS cocok dengan perintah cron
- * di panel Easypanel (`docs/LAUNCH-CHECKLIST.md` Fase 3) — bila jadwalnya kelak
- * diubah di sana tanpa diubah di sini, panel akan menuduh job yang sehat.
+ * Jadwal yang diharapkan, dalam jam. Nilai ini HARUS cocok dengan crontab host VPS:
+ * `scripts/pasang-cron-host.sh` (`docs/LAUNCH-CHECKLIST.md` Fase 3) untuk keempat
+ * cron, `scripts/pasang-backup-media.sh` (Fase 5) untuk `backup-media` — bila
+ * jadwalnya kelak diubah di sana tanpa diubah di sini, panel akan menuduh job yang
+ * sehat.
  */
 const JADWAL_JAM: Record<CronJobName, number> = {
   "expire-orders": 1,

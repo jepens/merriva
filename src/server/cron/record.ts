@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
  *
  * Empat cron memegang kewajiban hukum (retensi UU PDP), komersial (aktivasi
  * order lunas), dan kontraktual (pengingat H-14) — tetapi kegagalannya hanya
- * jadi exit code curl di panel Easypanel, dan NON-EKSEKUSI tak meninggalkan
+ * jadi exit code curl di log cron host, dan NON-EKSEKUSI tak meninggalkan
  * sinyal apa pun. Baris ini yang dibaca `/admin` untuk menandai job yang
  * berhenti jalan.
  *

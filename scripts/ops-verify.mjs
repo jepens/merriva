@@ -174,7 +174,7 @@ async function periksaSitus(app) {
         "CRON_SECRET terpasang",
         j.cronSecret,
         j.cronSecret,
-        "true — tanpa ini keempat cron dijawab 401 selamanya",
+        "true — tanpa ini keempat cron + laporan backup-media dijawab 401 selamanya",
       );
     } else {
       lewat("CRON_SECRET", "tak dilaporkan health (image lama?)");

@@ -1688,6 +1688,8 @@ sesungguhnya. Mutan M2 (membuang cek basi) dan M6 (`ok` lama tampak hijau) mengu
 - `JADWAL_JAM` di `status.ts` HARUS cocok dengan perintah cron di panel Easypanel
   (LAUNCH-CHECKLIST Fase 3). Bila jadwalnya kelak diubah di sana tanpa diubah di sini,
   panel akan menuduh job yang sehat — kebalikan dari masalah yang hendak diselesaikan.
+  _(Catatan 10 Nov 2026: sejak 21 Okt 2026 perintah cron ada di crontab root host VPS —
+  Easypanel tak punya penjadwal — dipasang `scripts/pasang-cron-host.sh`; aturannya tetap.)_
 - `cron_runs` ber-RLS aktif TANPA policy sama sekali: hanya service_role yang
   menyentuhnya. anon & authenticated tak melihat nama job maupun pesan galat.
 - Pesan galat dipotong 300 karakter dan sengaja tanpa detail baris — cron ini menyentuh

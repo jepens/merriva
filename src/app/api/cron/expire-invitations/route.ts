@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     .lt("active_until", nowIso)
     .select("id, slug, user_id, active_until");
   if (error) {
-    // Dulu 503 ini hanya jadi exit code curl di panel Easypanel — tak masuk
+    // Dulu 503 ini hanya jadi exit code curl di log cron — tak masuk
     // Sentry, tak terlihat di mana pun (AUDIT-2026-10-01).
     reportHandledError(error, "cron.expire-invitations");
     await recordCronRun("expire-invitations", false, {}, error);

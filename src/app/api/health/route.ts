@@ -24,9 +24,10 @@ async function checkDatabase(): Promise<DbStatus> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   // WAJIB service_role: Supabase membatasi `GET /rest/v1/` (spec OpenAPI) hanya
   // untuk service_role — anon dijawab 401 "Only the `service_role` API key can
-  // be used for this endpoint". Dengan anon, health SELALU 503, `HEALTHCHECK`
-  // Docker menandai container unhealthy, Swarm membunuhnya (exit 143), dan
-  // deployment terjebak restart loop tanpa satu pun galat di log aplikasi.
+  // be used for this endpoint". Dengan anon, probe LENGKAP selalu 503 — UptimeRobot
+  // dan `ops:verify` merah tanpa sebab yang jelas. (Sebelum DECISIONS #110 ini juga
+  // menggagalkan `HEALTHCHECK` → Swarm membunuh kontainer → restart loop; kini
+  // HEALTHCHECK memakai `?probe=live`, yang melewati probe ini.)
   // Route ini server-only (`runtime = "nodejs"`), jadi kunci tak pernah ke klien.
   // `||`, bukan `??`: di panel deployment variabel kerap ADA tetapi bernilai
   // kosong — `??` akan meneruskan string kosong itu sebagai kunci dan probe
@@ -131,8 +132,8 @@ function driverAktif(): string {
  *
  * BATASNYA, dan ini harus dibaca bersama nilainya: `true` membuktikan
  * variabelnya tak kosong di container — BUKAN bahwa nilainya sama dengan yang
- * ditempel di perintah cron Easypanel. Untuk itu tetap perlu memanggil satu
- * endpoint cron dan melihat 200, bukan 401.
+ * tersimpan di `/etc/merriva-cron.conf` (crontab host). Untuk itu tetap perlu
+ * memanggil satu endpoint cron dan melihat 200, bukan 401.
  */
 function adaCronSecret(): boolean {
   return (process.env.CRON_SECRET ?? "").trim().length > 0;

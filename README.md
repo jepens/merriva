@@ -53,4 +53,4 @@ Lihat [`SPEC.md` §7](SPEC.md). Ringkas: `src/app/` (route groups + `api/*`), `s
 
 ## Deploy
 
-Lihat [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (Easypanel + DNS + env) dan [`docs/RUNBOOK.md`](docs/RUNBOOK.md) (pemulihan). Health check: `GET /api/health`.
+Lihat [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (Easypanel + DNS + env) dan [`docs/RUNBOOK.md`](docs/RUNBOOK.md) (pemulihan). Deploy = push `main` → CI hijau → job promote memajukan branch `production` → Easypanel Auto Deploy (DECISIONS #64). Health check: `GET /api/health` (probe lengkap ber-DB, untuk UptimeRobot/`ops:verify`); `HEALTHCHECK` kontainer memakai liveness `GET /api/health?probe=live` — jangan isi health check di panel Easypanel.

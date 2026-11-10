@@ -1,15 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * `/api/health` adalah gerbang hidup-mati deployment: `HEALTHCHECK` di Dockerfile
- * memanggilnya, dan status non-2xx membuat Docker menandai container unhealthy →
- * Swarm membunuhnya (exit 143) → restart loop, layanan kuning di Easypanel,
- * domain "Service is not reachable". Semua itu TANPA satu pun galat di log
- * aplikasi, karena servernya sendiri sehat.
+ * `/api/health?probe=live` adalah gerbang hidup-mati deployment: `HEALTHCHECK`
+ * di Dockerfile memanggilnya (tanpa probe DB — DECISIONS #110), dan status
+ * non-2xx membuat Docker menandai container unhealthy → Swarm membunuhnya
+ * (exit 143) → restart loop, layanan kuning di Easypanel, domain "Service is
+ * not reachable" — TANPA satu pun galat di log aplikasi. Probe lengkap tanpa
+ * parameter (dengan DB) melayani UptimeRobot/`ops:verify`; 503-nya tak lagi
+ * membunuh kontainer.
  *
- * Pernah terjadi sungguhan: probe memakai anon key, sedangkan Supabase
- * membatasi `GET /rest/v1/` hanya untuk `service_role` ("Only the `service_role`
- * API key can be used for this endpoint") → 401 → `db: "down"` → 503 selamanya.
+ * Pernah terjadi sungguhan (30 Sep 2026, ketika HEALTHCHECK masih memakai probe
+ * lengkap): probe memakai anon key, sedangkan Supabase membatasi
+ * `GET /rest/v1/` hanya untuk `service_role` ("Only the `service_role` API key
+ * can be used for this endpoint") → 401 → `db: "down"` → 503 selamanya.
  * Route ini sebelumnya tak punya test sama sekali.
  */
 

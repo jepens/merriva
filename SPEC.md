@@ -370,7 +370,7 @@ Halaman undangan publik dilayani dengan **ISR** (cache di server, di-revalidate 
 
 ### 6.3 Deploy via Easypanel
 
-App dibuat di Easypanel dari repo Git, branch **`production`**: push ke `main` → CI (`verify` + `db`) hijau → job `promote` mem-fast-forward `production` → webhook Auto Deploy → build & deploy (DECISIONS #64; Easypanel hanya membangun saat `production` maju, jadi commit ber-CI-merah tak pernah ter-deploy). `Dockerfile` multi-stage: `node:22-alpine` → install deps → build (`output: 'standalone'`) → runtime image hanya berisi `.next/standalone` (+ public & static), berjalan sebagai user non-root, `EXPOSE 3000`, `HEALTHCHECK` liveness `/api/health?probe=live` (tanpa probe DB; probe lengkap `/api/health` untuk UptimeRobot/`ops:verify` — DECISIONS #110; health check di panel Easypanel dibiarkan kosong). Domain di-attach di Easypanel (SSL Let's Encrypt otomatis via Traefik). Environment variables di-set di panel — tidak pernah di repo:
+App dibuat di Easypanel dari repo Git, branch **`production`**: push ke `main` → CI (`verify` + `db`) hijau → job `promote` mem-fast-forward `production` → webhook Auto Deploy → build & deploy (DECISIONS #64; webhook Auto Deploy hanya memicu build saat `production` maju — push ke `main` sendiri tak memicu apa pun — sedangkan tombol Deploy membangun ulang tip `production` yang ada; jadi commit ber-CI-merah tak ter-deploy, kecuali lewat jalur darurat pemilik di `docs/RUNBOOK.md` Skenario A2). `Dockerfile` multi-stage: `node:22-alpine` → install deps → build (`output: 'standalone'`) → runtime image hanya berisi `.next/standalone` (+ public & static), berjalan sebagai user non-root, `EXPOSE 3000`, `HEALTHCHECK` liveness `/api/health?probe=live` (tanpa probe DB; probe lengkap `/api/health` untuk UptimeRobot/`ops:verify` — DECISIONS #110; health check di panel Easypanel dibiarkan kosong). Domain di-attach di Easypanel (SSL Let's Encrypt otomatis via Traefik). Environment variables di-set di panel — tidak pernah di repo:
 
 ```
 NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -382,7 +382,7 @@ CRON_SECRET, STORAGE_DRIVER (supabase|r2), NEXT_PUBLIC_MEDIA_URL,
 R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET  # R2_* diisi saat pindah driver
 ```
 
-Cron (scheduled job di Easypanel atau `pg_cron` Supabase): expire order pending > 24 jam · tandai undangan lewat `active_until` → `expired` · kirim email pengingat H-14.
+Cron (crontab root di host VPS memanggil `/api/cron/*` dengan `CRON_SECRET` — Easypanel tak punya penjadwal; `docs/LAUNCH-CHECKLIST.md` Fase 3): expire order pending > 24 jam · tandai undangan lewat `active_until` → `expired` · kirim email pengingat H-14.
 
 ### 6.4 Strategi Storage Media (bertahap — biaya Rp0 sampai skala besar)
 

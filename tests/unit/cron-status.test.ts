@@ -6,8 +6,8 @@ import { CRON_JOBS, hitungHealth } from "@/server/cron/status";
  * Kesehatan scheduled job (AUDIT-2026-10-01).
  *
  * Yang dijaga di sini bukan "job gagal terdeteksi" — itu bagian mudah — tetapi
- * **job yang BERHENTI JALAN sama sekali**. Cron yang dihapus dari panel
- * Easypanel, salah ketik perintahnya, atau mati setelah redeploy tidak mengirim
+ * **job yang BERHENTI JALAN sama sekali**. Cron yang dihapus dari crontab
+ * host, salah ketik perintahnya, atau hilang saat VPS dibangun ulang tidak mengirim
  * galat apa pun; ia hanya diam. Sebelum ini tak ada satu pun cara mengetahuinya,
  * padahal `purge-expired` memegang retensi UU PDP dan `expire-orders` memegang
  * rekonsiliasi pembayaran.
@@ -23,7 +23,7 @@ const baris = (umurJam: number, ok = true) => ({
 
 describe("hitungHealth", () => {
   it("tak ada barisnya → BELUM PERNAH jalan, bukan dianggap sehat", () => {
-    // Job yang belum pernah dipasang di panel Easypanel sama berbahayanya
+    // Job yang belum pernah dipasang di crontab host sama berbahayanya
     // dengan job yang mati — dan inilah keadaan setiap job hari pertama.
     expect(hitungHealth(undefined, "purge-expired", NOW)).toBe("belum-pernah");
   });
@@ -80,7 +80,7 @@ describe("hitungHealth", () => {
     // Job ini kini mengirim peringatan pra-purge (B7), dan `idempotencyKey`
     // Resend hanya berlaku 24 jam: kadens di bawah itu mencegah peringatan
     // ganda bila penandaan gagal setelah email terkirim. Angka ini HARUS sama
-    // dengan perintah cron di panel Easypanel (LAUNCH-CHECKLIST Fase 3) —
+    // dengan perintah cron di crontab host (LAUNCH-CHECKLIST Fase 3) —
     // kalau tidak, panel admin menuduh job yang sehat.
     expect(hitungHealth(baris(20), "purge-expired", NOW)).toBe("ok");
     expect(hitungHealth(baris(25), "purge-expired", NOW)).toBe("basi");

@@ -34,7 +34,7 @@ export const MANIFEST = [
     kapan: "always",
     rahasia: true,
     rusak:
-      "SETIAP halaman undangan /[slug] → 500 untuk SEMUA tamu; webhook, cron, panel admin mati; /api/health 503 → container restart loop",
+      "SETIAP halaman undangan /[slug] → 500 untuk SEMUA tamu; webhook, cron, panel admin mati; probe lengkap /api/health 503, tetapi kontainer TETAP sehat (HEALTHCHECK = liveness tanpa DB) dan Easypanel hijau — terlihat hanya di UptimeRobot/ops:verify, monitor keyword /{slug}, dan Sentry (hanya bila NEXT_PUBLIC_SENTRY_DSN ter-inline di bundel)",
   },
   // --- Aplikasi -------------------------------------------------------------
   {
@@ -49,7 +49,7 @@ export const MANIFEST = [
     kapan: "prod",
     buildArg: true,
     rusak:
-      "GAGAL-KERAS runtime: setiap undangan berfoto/bermusik → 500. Sengaja TIDAK dicek saat build, jadi CI tetap hijau",
+      "kontainer tak pernah sehat: liveness /api/health?probe=live → 503 media-env-invalid → HEALTHCHECK gagal → Swarm membunuh kontainer (DECISIONS #110). Sengaja TIDAK dicek saat build, jadi CI tetap hijau — gagalnya baru terlihat saat deploy",
   },
   {
     key: "STORAGE_DRIVER",
@@ -159,7 +159,7 @@ export const MANIFEST = [
     rahasia: true,
     gen: "openssl rand -hex 32",
     rusak:
-      "keempat endpoint cron dijawab 401 tanpa galat terlihat → rekonsiliasi pembayaran DAN retensi UU PDP berhenti diam-diam",
+      "keempat endpoint cron DAN laporan backup-media dijawab 401 tanpa galat terlihat → rekonsiliasi pembayaran DAN retensi UU PDP berhenti diam-diam, backup media tampil “Tidak jalan” di panel",
   },
   // --- Monitoring -----------------------------------------------------------
   {
