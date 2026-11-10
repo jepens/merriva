@@ -2071,7 +2071,11 @@ jadi push ke branch lain tak me-restart produksi. Setiap deploy mengganti kontai
 image-nya identik (LAUNCH-CHECKLIST Fase 1). Tombol Deploy manual juga membangun `production`, jadi menekannya sebelum job
 promote selesai membangun ulang commit hijau SEBELUMNYA, bukan yang baru di-push. Webhook
 itu menembak panel di `http://<IP VPS>:3000` (HTTP polos): menutup port panel mematikan
-Auto Deploy.
+Auto Deploy. Atas persetujuan pemilik (10 Nov 2026), SPEC §11 dan CLAUDE.md kini memuat
+**JANGAN PERNAH push manual ke `production`** (satu-satunya pengecualian: jalur darurat
+pemilik di RUNBOOK Skenario A2), dan aturan hari acara klien berubah dari "deploy
+perubahan besar" menjadi "push ke `main`" — dengan Auto Deploy, setiap push yang lolos CI
+adalah redeploy.
 
 ---
 
