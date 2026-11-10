@@ -2063,11 +2063,12 @@ diasumsikan selesai.
 `production` (tangkapan layar) lalu men-deploy ulang. Auto Deploy menyala: Easypanel
 memasang webhook `push` di repo pukul 06:50 UTC (ping GitHub → 200). Rancangannya: commit
 `main` yang lolos `verify` + `db` → job promote mem-fast-forward `production` → webhook
-→ build. Saat catatan ini ditulis belum teramati: (a) delivery `push` dari promote yang
-benar-benar memicu deploy; (b) apakah push ke branch lain (`main`, `dependabot/*`) ikut
-memicu deploy — webhook menerima push SEMUA branch, dan bila Easypanel tak menyaring ref,
-setiap push me-restart produksi pada commit `production` yang sama (uji: LAUNCH-CHECKLIST
-Fase 1). Tombol Deploy manual juga membangun `production`, jadi menekannya sebelum job
+→ build. Terbukti ujung-ke-ujung pada push `ce39fab` (10 Nov 2026): delivery
+`refs/heads/production` dari job promote memicu build (3,4 dtk, dari cache) dan kontainer
+baru 12 dtk kemudian; delivery `refs/heads/main` dan ping dijawab "Deploying…" yang sama
+tetapi tak memicu build apa pun (`docker buildx history ls`) — Easypanel menyaring branch,
+jadi push ke branch lain tak me-restart produksi. Setiap deploy mengganti kontainer walau
+image-nya identik (LAUNCH-CHECKLIST Fase 1). Tombol Deploy manual juga membangun `production`, jadi menekannya sebelum job
 promote selesai membangun ulang commit hijau SEBELUMNYA, bukan yang baru di-push. Webhook
 itu menembak panel di `http://<IP VPS>:3000` (HTTP polos): menutup port panel mematikan
 Auto Deploy.
