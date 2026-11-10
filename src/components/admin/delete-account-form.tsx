@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
+import { useConfirm } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy";
@@ -28,6 +29,9 @@ export function DeleteAccountForm({
   email: string;
 }) {
   const [buka, setBuka] = useState(false);
+  const confirm = useConfirm();
+  const formRef = useRef<HTMLFormElement>(null);
+  const dikonfirmasi = useRef(false);
 
   if (!buka) {
     return (
@@ -45,8 +49,24 @@ export function DeleteAccountForm({
   return (
     <form
       action={adminDeleteAccountAction.bind(null, userId)}
+      ref={formRef}
       onSubmit={(e) => {
-        if (!window.confirm(d.confirm)) e.preventDefault();
+        // Submit ulang sesudah dialog disetujui → biarkan server action jalan.
+        if (dikonfirmasi.current) {
+          dikonfirmasi.current = false;
+          return;
+        }
+        e.preventDefault();
+        void confirm({
+          title: d.confirmTitle,
+          description: d.confirm,
+          confirmLabel: d.submit,
+          destructive: true,
+        }).then((ok) => {
+          if (!ok) return;
+          dikonfirmasi.current = true;
+          formRef.current?.requestSubmit();
+        });
       }}
       className="flex min-w-64 flex-col gap-2"
     >

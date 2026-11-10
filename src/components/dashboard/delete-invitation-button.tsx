@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
+import { useConfirm } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { deleteInvitationAction } from "@/server/actions/invitation";
@@ -20,16 +22,24 @@ export function DeleteInvitationButton({
   invitationId: string;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleDelete() {
     if (busy) return;
-    if (!window.confirm(copy.dashboard.deleteConfirm)) return;
+    const ok = await confirm({
+      title: copy.dashboard.deleteConfirmTitle,
+      description: copy.dashboard.deleteConfirm,
+      confirmLabel: copy.dashboard.deleteConfirmCta,
+      destructive: true,
+    });
+    if (!ok) return;
     setBusy(true);
     setError(null);
     const res = await deleteInvitationAction(invitationId);
     if (res.status === "success") {
+      toast.success(copy.dashboard.deleted);
       router.refresh();
     } else {
       setError(res.message ?? copy.dashboard.deleteError);

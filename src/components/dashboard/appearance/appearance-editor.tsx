@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { useConfirm } from "@/components/confirm-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { appearanceStyle } from "@/lib/customizer/appearance-style";
@@ -57,6 +58,7 @@ export function AppearanceEditor({
   const [saved, setSaved] = useState<CustomSettings>(initialCustom);
   const [tab, setTab] = useState<Tab>("color");
   const [expanded, setExpanded] = useState(true);
+  const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(
     null,
@@ -164,8 +166,13 @@ export function AppearanceEditor({
       }
     });
 
-  const reset = () => {
-    if (!window.confirm(L.resetConfirm)) return;
+  const reset = async () => {
+    const ok = await confirm({
+      title: L.resetConfirm,
+      description: L.resetConfirmBody,
+      confirmLabel: L.resetConfirmCta,
+    });
+    if (!ok) return;
     startTransition(async () => {
       const res = await resetInvitationAppearanceAction(invitationId);
       if (res.status === "success") {

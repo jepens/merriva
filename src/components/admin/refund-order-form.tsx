@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
+import { useConfirm } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy";
@@ -14,11 +15,14 @@ const r = copy.admin.refund;
  *
  * Form dibuka lewat tombol agar alasan WAJIB diketik — ia masuk `admin_logs`
  * dan menjadi satu-satunya penjelasan kenapa uang bergerak di luar sistem.
- * Konfirmasi `window.confirm` dipakai karena tindakan ini mencabut layanan yang
- * sudah berjalan dan tak ada jalur membatalkannya kembali.
+ * Konfirmasi (dialog `useConfirm`) wajib karena tindakan ini mencabut layanan
+ * yang sudah berjalan dan tak ada jalur membatalkannya kembali.
  */
 export function RefundOrderForm({ orderCode }: { orderCode: string }) {
   const [buka, setBuka] = useState(false);
+  const confirm = useConfirm();
+  const formRef = useRef<HTMLFormElement>(null);
+  const dikonfirmasi = useRef(false);
 
   if (!buka) {
     return (
@@ -36,8 +40,24 @@ export function RefundOrderForm({ orderCode }: { orderCode: string }) {
   return (
     <form
       action={adminRefundOrderAction.bind(null, orderCode)}
+      ref={formRef}
       onSubmit={(e) => {
-        if (!window.confirm(r.confirm)) e.preventDefault();
+        // Submit ulang sesudah dialog disetujui → biarkan server action jalan.
+        if (dikonfirmasi.current) {
+          dikonfirmasi.current = false;
+          return;
+        }
+        e.preventDefault();
+        void confirm({
+          title: r.confirmTitle,
+          description: r.confirm,
+          confirmLabel: r.cta,
+          destructive: true,
+        }).then((ok) => {
+          if (!ok) return;
+          dikonfirmasi.current = true;
+          formRef.current?.requestSubmit();
+        });
       }}
       className="flex min-w-56 flex-col gap-2"
     >

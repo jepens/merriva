@@ -4,7 +4,9 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
+import { useConfirm } from "@/components/confirm-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
@@ -76,6 +78,7 @@ function isoToWibLocal(iso: string | null): string {
 export function MomenManager(props: MomenManagerProps) {
   const { invitationId, guestUrl, quotaPeserta, settings, photos } = props;
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [quotaPerGuest, setQuotaPerGuest] = useState(settings.quotaPerGuest);
   const [revealMode, setRevealMode] = useState<"instant" | "schedule">(
@@ -146,7 +149,13 @@ export function MomenManager(props: MomenManagerProps) {
   }
 
   async function revealNow() {
-    if (!window.confirm(m.revealNowConfirm)) return;
+    const ok = await confirm({
+      title: m.revealNowConfirm,
+      description: m.revealNowConfirmBody,
+      confirmLabel: m.revealNowConfirmCta,
+      destructive: true,
+    });
+    if (!ok) return;
     setError(null);
     setRevealing(true);
     try {
@@ -156,6 +165,7 @@ export function MomenManager(props: MomenManagerProps) {
         setRevealLocal("");
         setRevealErr(null);
         setRevealPast(false);
+        toast.success(m.revealNowDone);
         router.refresh();
       } else {
         setError(res.message ?? m.error);
@@ -166,15 +176,26 @@ export function MomenManager(props: MomenManagerProps) {
   }
 
   async function moderate(photoId: string, action: "hide" | "show" | "delete") {
-    if (action === "delete" && !window.confirm(m.delConfirm)) return;
+    if (action === "delete") {
+      const ok = await confirm({
+        title: m.delConfirm,
+        description: m.delConfirmBody,
+        confirmLabel: m.delConfirmCta,
+        destructive: true,
+      });
+      if (!ok) return;
+    }
     // Pasca-reveal, "Sembunyikan" IKUT menghapus berkas agar tautan yang sudah
     // tersebar ke tamu benar-benar mati (KEA-3) — permanen, jadi konfirmasi dulu.
-    if (
-      action === "hide" &&
-      revealed &&
-      !window.confirm(m.hidePermanentConfirm)
-    )
-      return;
+    if (action === "hide" && revealed) {
+      const ok = await confirm({
+        title: m.hidePermanentConfirmTitle,
+        description: m.hidePermanentConfirm,
+        confirmLabel: m.hidePermanentConfirmCta,
+        destructive: true,
+      });
+      if (!ok) return;
+    }
     setError(null);
     setBusyPhoto(photoId);
     try {
@@ -182,8 +203,10 @@ export function MomenManager(props: MomenManagerProps) {
         photoId,
         action,
       });
-      if (res.status === "success") router.refresh();
-      else setError(res.message ?? m.error);
+      if (res.status === "success") {
+        if (action === "delete") toast.success(m.deleted);
+        router.refresh();
+      } else setError(res.message ?? m.error);
     } finally {
       setBusyPhoto(null);
     }

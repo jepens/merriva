@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 
+import { useConfirm } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -74,6 +76,7 @@ export function GuestManager({
   initial: GuestView[];
   maxGuests: number | null;
 }) {
+  const confirm = useConfirm();
   const t = copy.dashboard.guests;
   const [guests, setGuests] = useState<GuestView[]>(initial);
   const [addForm, setAddForm] = useState<FormValues>(EMPTY);
@@ -124,13 +127,20 @@ export function GuestManager({
 
   async function remove(id: string) {
     if (busyId) return;
-    if (!window.confirm(t.confirmRemove)) return;
+    const ok = await confirm({
+      title: t.confirmRemoveTitle,
+      description: t.confirmRemove,
+      confirmLabel: t.confirmRemoveCta,
+      destructive: true,
+    });
+    if (!ok) return;
     setBusyId(id);
     setRowError(null);
     const res = await deleteGuestAction(invitationId, id);
     if (res.status === "success") {
       setGuests((prev) => prev.filter((g) => g.id !== id));
       if (editingId === id) setEditingId(null);
+      toast.success(t.removed);
     } else {
       setRowError(res.message ?? t.actionError);
     }

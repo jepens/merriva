@@ -4,9 +4,10 @@ import { Check, Eye, Lock, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
+import { useConfirm } from "@/components/confirm-dialog";
 import { ThemeCard } from "@/components/dashboard/theme-card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { cn } from "@/lib/utils";
@@ -44,42 +45,43 @@ export function ThemeSwitcher({
   upgradeHref: string | null;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   async function pakai(t: SwitchThemeOption) {
     if (busy) return;
-    if (!window.confirm(copy.themeSwitch.confirm(t.name, live))) return;
+    const ok = await confirm({
+      title: copy.themeSwitch.confirmTitle(t.name),
+      description: copy.themeSwitch.confirmBody(live),
+      confirmLabel: copy.themeSwitch.confirmCta,
+    });
+    if (!ok) return;
     setBusy(t.slug);
-    setError(null);
+    // Galat percobaan sebelumnya (menetap) jangan ikut tampil di samping hasil
+    // percobaan ini.
+    toast.dismiss();
     const res = await changeInvitationThemeAction(invitationId, t.slug);
     if (res.status === "success") {
-      // Tetap nonaktif sampai editor termuat — cegah klik ganda.
+      // Toast hidup di layout → tetap tampil sesudah pindah ke editor. Tombol
+      // tetap nonaktif sampai editor termuat — cegah klik ganda.
+      toast.success(copy.themeSwitch.savedTo(t.name));
       router.push(`/dashboard/undangan/${invitationId}/edit`);
       return;
     }
-    setError(
+    // Toast, bukan Alert di atas kisi: kartu yang ditekan bisa jauh di bawah
+    // (12 tema bertumpuk di ponsel) — toast selalu terlihat. MENETAP sampai
+    // ditutup: sebagian pesan berisi instruksi (mis. tagihan Basic menunggu),
+    // dan di ponsel tak ada hover yang menjeda hitungan mundur 5 detik.
+    toast.error(
       (res.status === "error" ? res.message : undefined) ??
         copy.themeSwitch.error,
+      { duration: Infinity },
     );
     setBusy(null);
   }
 
   return (
     <div className="space-y-4">
-      {error ? (
-        <div
-          // Kartu yang ditekan bisa jauh di bawah (12 tema bertumpuk di
-          // ponsel) — bawa galatnya ke layar (pola package-chooser).
-          ref={(el) => {
-            el?.scrollIntoView({ block: "nearest" });
-          }}
-        >
-          <Alert variant="destructive" role="alert">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </div>
-      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         {themes.map((t) => (
           <ThemeCard

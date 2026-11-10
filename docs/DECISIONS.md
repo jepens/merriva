@@ -7446,6 +7446,51 @@ reveal tetap sama. Tak ada migrasi data.
 
 ---
 
+## #126 — 2026-11-11 · Dialog konfirmasi sendiri + toast (sonner) di dashboard & admin
+
+**Masalah (pemilik, 10 Nov 2026):** konfirmasi memakai `window.confirm` bawaan
+peramban di 8 tempat (Ganti Tema, hapus undangan, hapus tamu, reset Tampilan,
+3 aksi moderasi Album Momen, refund & hapus akun di admin): berjudul
+"merriva.id says", tombol OK/Cancel berbahasa Inggris di UI yang seluruhnya
+Indonesia, tak bisa diberi gaya, dan bisa dibisukan pengguna ("cegah dialog
+tambahan") sehingga `confirm()` langsung bernilai false tanpa tampil — tombol
+terasa mati. Dashboard juga tak punya toast: sesudah "Pakai Tema Ini" pemilik
+dipindah ke editor tanpa kabar berhasil.
+
+**Keputusan (pemilik):**
+- `ConfirmProvider` + `useConfirm()` (`src/components/confirm-dialog.tsx`) —
+  SATU `<dialog>` HTML per layout, `showModal()` memberi lapisan atas, latar,
+  penjebakan fokus, dan Esc dari peramban sendiri; tanpa dependency. Judul +
+  penjelasan + label tombol yang menyebut aksinya ("Ya, hapus permanen");
+  aksi permanen bertombol merah dengan fokus awal di "Batal". Peramban tanpa
+  `showModal` (iOS < 15.4) jatuh ke `window.confirm`. Kedelapan titik diganti;
+  form admin ber-server-action menahan submit, menunggu dialog, lalu
+  `requestSubmit()` dengan penanda. Penjaga hasil tinjauan: klik pointer
+  < 500 ms sesudah dialog terbuka diabaikan (klik KEDUA dari klik/ketuk-ganda
+  pada pemicu mendarat di dialog — terbukti menyetujui hapus/ganti tema tanpa
+  dibaca; `window.confirm` menelannya), dialog batal saat rute berubah
+  (provider di layout tak dilepas saat Back), klik latar hanya menutup bila
+  tekanannya dimulai di latar (memblok teks), dan warna latar literal
+  (`var(--color-black)` baru diwarisi `::backdrop` sejak Chrome 122/Safari 17.4).
+- Toast: **sonner 2.0.8** (dependency baru — kecil, dipakai shadcn/ui),
+  `<Toaster>` HANYA di layout dashboard & admin: terbukti tak ada kode sonner
+  maupun dialog di bundel `/[slug]` dan `/[slug]/momen`. Atas-tengah, tetap
+  tampil melewati `router.push`. Dipakai untuk hasil yang sebelumnya tanpa
+  kabar: ganti tema sukses, hapus undangan, hapus tamu, buka album, hapus foto
+  Momen. Galat Ganti Tema pindah dari Alert inline ke toast yang MENETAP sampai
+  ditutup (kartu yang ditekan bisa jauh di bawah Alert; di ponsel tak ada hover
+  yang menjeda hitungan mundur). Pesan galat inline di tempat lain dipertahankan.
+
+**Ditolak:** komponen toast buatan sendiri (antrian, timer, aria-live, usap di
+ponsel — lebih banyak kode dirawat); varian shadcn `sonner` yang menarik
+`next-themes` (dashboard tak punya mode gelap).
+
+**Konsekuensi:** bundel dashboard & admin +±13 KB gz, dalam anggaran
+`bundle:report --check`. Komponen yang memakai `useConfirm` wajib di bawah
+`ConfirmProvider` (galat jelas bila tidak).
+
+---
+
 ## Template entri baru
 
 ```

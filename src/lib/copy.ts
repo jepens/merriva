@@ -42,6 +42,11 @@ export const copy = {
     },
     save: "Simpan",
     cancel: "Batal",
+    // Toast (sonner) di dashboard & admin — label untuk pembaca layar.
+    toast: {
+      region: "Notifikasi",
+      close: "Tutup notifikasi",
+    },
     // Badan respons 503 route unduhan ZIP (galeri & Album Momen). Teks POLOS,
     // bukan JSX: unduhannya gagal, jadi inilah yang dirender peramban di tab.
     //
@@ -219,8 +224,11 @@ export const copy = {
     cardGuestbook: "Ucapan & amplop",
     // Hapus undangan (self-service, hanya draf/kedaluwarsa — DATA-MODEL §5).
     cardDelete: "Hapus",
+    deleteConfirmTitle: "Hapus undangan ini secara permanen?",
     deleteConfirm:
-      "Hapus undangan ini secara permanen? Semua data tamu, RSVP, ucapan, dan foto akan dihapus dan tidak bisa dikembalikan.",
+      "Semua data tamu, RSVP, ucapan, dan foto akan dihapus dan tidak bisa dikembalikan.",
+    deleteConfirmCta: "Ya, hapus permanen",
+    deleted: "Undangan dihapus.",
     deleting: "Menghapus…",
     deleteError: "Gagal menghapus undangan. Coba lagi.",
     deleteNotAllowed:
@@ -406,7 +414,10 @@ export const copy = {
       cancel: "Batal",
       remove: "Hapus",
       removing: "Menghapus…",
-      confirmRemove: "Hapus tamu ini? Tindakan ini tidak dapat dibatalkan.",
+      confirmRemoveTitle: "Hapus tamu ini?",
+      confirmRemove: "Tindakan ini tidak dapat dibatalkan.",
+      confirmRemoveCta: "Ya, hapus",
+      removed: "Tamu dihapus.",
       copyLink: "Salin link",
       copied: "Tersalin",
       opened: "Sudah dibuka",
@@ -1247,10 +1258,13 @@ export const copy = {
     preview: "Pratinjau",
     use: "Pakai Tema Ini",
     applying: "Menerapkan…",
-    confirm: (name: string, live: boolean) =>
+    confirmTitle: (name: string) => `Pakai tema ${name}?`,
+    confirmBody: (live: boolean) =>
       live
-        ? `Pakai tema ${name}? Tamu langsung melihat tema baru, dan kustomisasi tampilan kembali ke bawaan tema ini.`
-        : `Pakai tema ${name}? Kustomisasi tampilan kembali ke bawaan tema ini.`,
+        ? "Tamu langsung melihat tema baru. Kustomisasi tampilan (warna, font, urutan bagian) kembali ke bawaan tema ini."
+        : "Kustomisasi tampilan (warna, font, urutan bagian) kembali ke bawaan tema ini. Isi, foto, tamu, dan ucapan tidak berubah.",
+    confirmCta: "Ya, pakai tema ini",
+    savedTo: (name: string) => `Tema berhasil diganti ke ${name}.`,
     locked: "Perlu paket Premium",
     upgrade: "Upgrade ke Premium",
     noTheme: "Belum ada tema lain untuk kategori undangan ini.",
@@ -1275,6 +1289,9 @@ export const copy = {
     saved: "Tampilan tersimpan.",
     reset: "Reset ke bawaan",
     resetConfirm: "Kembalikan tampilan ke bawaan tema?",
+    resetConfirmBody:
+      "Warna, font, dan urutan bagian yang sudah Anda atur diganti dengan bawaan tema.",
+    resetConfirmCta: "Ya, kembalikan",
     dirty: "Ada perubahan belum disimpan.",
     error: "Gagal menyimpan tampilan. Coba lagi.",
     invalid: "Ada pilihan yang tidak valid.",
@@ -1623,8 +1640,9 @@ export const copy = {
       saving: "Menyimpan…",
       saved: "Tersimpan ✓",
       revealNow: "Reveal sekarang",
-      revealNowConfirm:
-        "Buka semua foto untuk tamu sekarang? Tindakan ini tak bisa dibatalkan.",
+      revealNowConfirm: "Buka semua foto untuk tamu sekarang?",
+      revealNowConfirmBody: "Tindakan ini tak bisa dibatalkan.",
+      revealNowConfirmCta: "Ya, buka sekarang",
       revealNowDone: "Album dibuka untuk semua 🎉",
       revealedNote: "Album sudah terbuka untuk tamu.",
       moderationTitle: "Moderasi foto",
@@ -1636,13 +1654,18 @@ export const copy = {
       show: "Tampilkan",
       // Pasca-reveal, menyembunyikan IKUT menghapus berkas (KEA-3) — host wajib
       // tahu sebelum menekan, karena tindakannya permanen.
+      hidePermanentConfirmTitle: "Sembunyikan sekaligus hapus foto ini?",
       hidePermanentConfirm:
-        "Album sudah terbuka untuk tamu, jadi menyembunyikan foto ini sekaligus MENGHAPUS berkasnya agar tautannya tak bisa dibuka lagi. Tindakan ini permanen — foto tak bisa ditampilkan kembali. Lanjutkan?",
+        "Album sudah terbuka untuk tamu, jadi menyembunyikan foto ini sekaligus MENGHAPUS berkasnya agar tautannya tak bisa dibuka lagi. Tindakan ini permanen — foto tak bisa ditampilkan kembali.",
+      hidePermanentConfirmCta: "Ya, sembunyikan & hapus",
       purgedBadge: "Berkas dihapus",
       showPurged:
         "Berkas foto ini sudah dihapus saat disembunyikan, jadi tak bisa ditampilkan lagi.",
       del: "Hapus",
       delConfirm: "Hapus foto ini permanen?",
+      delConfirmBody: "Foto tak bisa dikembalikan.",
+      delConfirmCta: "Ya, hapus",
+      deleted: "Foto dihapus.",
       hiddenBadge: "Disembunyikan",
       guestLinkTitle: "Link kamera tamu",
       guestLinkHint: "Bagikan / tempel di QR meja.",
@@ -2017,8 +2040,9 @@ export const copy = {
       reasonPlaceholder: "mis. permintaan pelanggan via email 3 Okt",
       confirmLabel: "Ketik ulang email akun ini untuk konfirmasi",
       submit: "Hapus permanen",
+      confirmTitle: "Hapus akun ini permanen?",
       confirm:
-        "Hapus akun ini permanen? Data tamu, RSVP, ucapan, dan foto akan hilang dan tidak bisa dikembalikan.",
+        "Data tamu, RSVP, ucapan, dan foto akan hilang dan tidak bisa dikembalikan.",
       note: "Riwayat pesanan DIPERTAHANKAN ter-anonimisasi untuk pembukuan. Akun dengan undangan yang masih aktif akan ditolak.",
     },
     // Refund (AUDIT-2026-10-01 A3). Uangnya digerakkan di dashboard gateway
@@ -2028,8 +2052,9 @@ export const copy = {
       cta: "Tandai refund",
       reasonLabel: "Alasan refund",
       reasonPlaceholder: "mis. pembayaran ganda, order MRV-XXXXXX",
+      confirmTitle: "Tandai order ini sebagai refund dan cabut layanannya?",
       confirm:
-        "Tandai order ini sebagai refund dan cabut layanannya? Uangnya tetap harus Anda kembalikan sendiri lewat dashboard gateway yang memprosesnya — BinderPay, atau Pakasir untuk order yang dibayar lewat Pakasir.",
+        "Uangnya tetap harus Anda kembalikan sendiri lewat dashboard gateway yang memprosesnya — BinderPay, atau Pakasir untuk order yang dibayar lewat Pakasir.",
       note: "Mencatat refund di sini TIDAK mengembalikan uang. Lakukan pengembaliannya di dashboard gateway yang memprosesnya (BinderPay, atau Pakasir untuk order yang dibayar lewat Pakasir), lalu tandai di sini agar laporan dan layanan ikut menyesuaikan.",
       okRevoked: "Order ditandai refund. Undangan dicabut (kedaluwarsa).",
       okStillPaid:
