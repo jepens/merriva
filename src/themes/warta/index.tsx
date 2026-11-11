@@ -20,6 +20,7 @@ import type { InvitationMediaView, PhotoView } from "@/types/invitation";
 // `<ThemeStyles slug="warta" />` supaya undangan tak mengunduh stylesheet
 // semua tema (DECISIONS #31). Sumbernya tetap ./warta.css
 import { WartaCover } from "./cover";
+import { fotoCerita } from "./foto-cerita";
 import { WartaFx } from "./fx";
 import { kotaDari } from "./kota";
 import { L } from "./labels";
@@ -309,7 +310,11 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
         <Story
           rubric={L.folio.story}
           items={content.story}
-          photos={content.story.map((_, i) => data.media[i] ?? null)}
+          photos={fotoCerita(
+            content.story.length,
+            data.storyPhotos,
+            data.media,
+          )}
         />
       ) : null,
     countdown: countdownTarget ? (

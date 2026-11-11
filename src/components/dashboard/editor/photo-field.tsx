@@ -20,6 +20,15 @@ import {
 import { fotoStyle } from "@/themes/_shared/foto";
 
 /**
+ * URL varian display foto yang diunggah SESI INI, per path. Langkah editor
+ * di-unmount saat pindah langkah, dan `initialUrl` dirakit server saat halaman
+ * dimuat — tanpa peta ini foto yang baru diunggah hilang dari bingkai sesudah
+ * pemilik kembali ke langkahnya (sebelum autosave + refresh tiba, atau bila
+ * autosave ditolak), walau fotonya ada di form. Pola `urlUnggahan` MusicField.
+ */
+const urlUnggahan = new Map<string, string>();
+
+/**
  * Satu foto BERNAMA di editor — sampul, mempelai, atau logo (SPEC §4.4
  * langkah 2). Kompresi 2 varian WebP di klien, sama seperti galeri.
  *
@@ -63,7 +72,8 @@ export function PhotoField({
   const imgRef = useRef<HTMLImageElement>(null);
   const seretRef = useRef<{ x: number; y: number } | null>(null);
 
-  const [url, setUrl] = useState<string | null>(initialUrl);
+  // Turunan, bukan state: URL selalu milik foto yang SEDANG di form.
+  const url = value ? (urlUnggahan.get(value.path) ?? initialUrl) : null;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,10 +119,10 @@ export function PhotoField({
         return;
       }
       const lama = value?.path;
+      urlUnggahan.set(res.path, res.url);
       // Foto baru selalu mulai dari titik tengah tanpa perbesaran — penyesuaian
       // foto LAMA tak boleh ikut menempel ke foto yang baru saja dipilih.
       onChange({ path: res.path, x: 0.5, y: 0.5, zoom: 1 });
-      setUrl(res.url);
       buangObjek(lama);
     } catch {
       setError(copy.editor.gallery.error);
@@ -126,7 +136,6 @@ export function PhotoField({
     const lama = value?.path;
     setError(null);
     onChange(undefined);
-    setUrl(null);
     buangObjek(lama);
   }
 

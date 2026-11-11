@@ -103,6 +103,32 @@ export interface MediaSlot {
  */
 export interface ThemeMedia {
   slots: readonly MediaSlot[];
+  /**
+   * Tema merender foto per entri love story (`data.storyPhotos`, DECISIONS
+   * #127) — tanpa ini bidang unggah foto di langkah Cerita tak muncul. Bukan
+   * slot: slot = satu foto berpath tetap, cerita = satu foto PER ENTRI.
+   * `aspect` = lebar/tinggi wadahnya untuk bingkai penyesuaian editor; array =
+   * bergiliran per indeks entri (warta: lanskap, potret, lanskap, …).
+   */
+  story?: {
+    aspect: number | readonly number[];
+    /**
+     * Selama tak ada satu pun foto cerita, tema memakai foto galeri berurutan
+     * (warta, `fotoCerita`). Editor lalu menjelaskannya — tanpa itu, unggahan
+     * pertama "menghapus" foto entri lain tanpa penjelasan.
+     */
+    galleryFallback?: boolean;
+  };
+}
+
+/** Rasio wadah foto cerita entri ke-`i` (`ThemeMedia.story`, bergiliran). */
+export function storyPhotoAspect(
+  story: NonNullable<ThemeMedia["story"]>,
+  i: number,
+): number {
+  const a = story.aspect;
+  if (typeof a === "number") return a;
+  return a[i % a.length] ?? 1;
 }
 
 export interface ThemeOptions {

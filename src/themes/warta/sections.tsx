@@ -24,6 +24,7 @@ import type {
   PhotoView,
 } from "@/types/invitation";
 
+import type { FotoCerita } from "./foto-cerita";
 import { L } from "./labels";
 
 /**
@@ -275,8 +276,8 @@ export function Story({
   /** Rubrik halaman koran ("News", "Couple", …). */
   rubric: string;
   items: StoryEntry[];
-  /** Foto pendamping per entri (dari galeri, urut) — `null` = tanpa foto. */
-  photos: Array<InvitationMediaView | null>;
+  /** Foto pendamping per entri (`fotoCerita`) — `null` = tanpa foto. */
+  photos: FotoCerita[];
 }) {
   return (
     <section className="wt-page">
@@ -302,10 +303,19 @@ export function Story({
               {ph ? (
                 <Reveal>
                   <figure className="wt-fig">
-                    <MediaPhoto
-                      m={ph}
-                      className={right ? "wt-photo--tall" : "wt-photo--wide"}
-                    />
+                    {"unggah" in ph ? (
+                      // Unggahan pemilik: titik fokus & perbesarannya dipakai.
+                      <NamedPhoto
+                        photo={ph.unggah}
+                        initial=""
+                        className={right ? "wt-photo--tall" : "wt-photo--wide"}
+                      />
+                    ) : (
+                      <MediaPhoto
+                        m={ph.galeri}
+                        className={right ? "wt-photo--tall" : "wt-photo--wide"}
+                      />
+                    )}
                     {s.date ? (
                       <figcaption className="wt-caption">{s.date}</figcaption>
                     ) : null}

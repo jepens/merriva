@@ -67,6 +67,16 @@ export interface InvitationData {
   groomPhoto?: PhotoView | null;
   bridePhoto?: PhotoView | null;
   /**
+   * Foto per entri love story (DECISIONS #127), sejajar INDEKS dengan
+   * `content.story` (hasil parse — entri yang gugur saat parse tak punya slot
+   * di sini). `null` = entri itu tanpa foto. Hanya kategori wedding; hanya foto
+   * milik undangan ini sendiri. Tema yang merendernya wajib mendeklarasikan
+   * `media.story` di `options.ts` (THEME-CONTRACT §2) — tanpa itu bidang
+   * unggahnya tak pernah muncul di editor. Opsional supaya demo-data tema tak
+   * perlu menyebutnya.
+   */
+  storyPhotos?: (PhotoView | null)[];
+  /**
    * Video unggahan (FASE J) sudah di-resolve ke URL domain sendiri, atau `null`.
    * Bersama `content.youtubeUrl` ia sudah DISARING paket di server
    * (`limits.youtube`): paket tanpa fitur video menerima `null` DAN

@@ -6,6 +6,7 @@ import {
   commonContentFields,
   optionalFormat,
   personSchema,
+  loveStoryEntrySchema,
   photoSchema,
   storyEntrySchema,
 } from "./shared";
@@ -22,7 +23,7 @@ export const weddingContentSchema = z.object({
   title: z.string().trim().max(L.wedding.title).optional(),
   groom: personSchema,
   bride: personSchema,
-  story: z.array(storyEntrySchema).max(L.wedding.story).default([]),
+  story: z.array(loveStoryEntrySchema).max(L.wedding.story).default([]),
   ...commonContentFields,
 });
 

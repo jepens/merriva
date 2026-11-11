@@ -8,7 +8,7 @@ import { localToStoredUtc } from "@/lib/datetime";
 import { isBlankEventDraft, isCompleteLocalDateTime } from "@/lib/event-draft";
 import { draftSlug, isUuid } from "@/lib/id";
 import { toDbJson } from "@/lib/json";
-import { mediaObjectPaths } from "@/lib/media";
+import { mediaObjectPaths, namedPhotoPathsFromContent } from "@/lib/media";
 import { reportHandledError } from "@/lib/observability";
 import { checkClientRateLimit } from "@/lib/request-ip";
 import { slugSchema } from "@/lib/slug";
@@ -355,6 +355,8 @@ export type DeleteInvitationResult =
  *    keuangan). `purged_at` menyembunyikannya dari daftar dashboard.
  * Objek storage media dibersihkan best-effort (orphan tak berbahaya). Musik
  * unggahan draft: path dibaca dari `music_uploads` SEBELUM DELETE (cascade).
+ * Foto bernama draft (sampul/mempelai/logo/foto cerita) dipanen dari `content`
+ * — kunci yang sama dengan `purge_invitation_data` (DECISIONS #127).
  * `active`/`pending_payment`/`suspended` ditolak (boundary: jangan hapus undangan
  * aktif; transaksi berjalan / kendali admin).
  */
@@ -420,7 +422,9 @@ export async function deleteInvitationAction(
       .eq("id", invitationId)
       .eq("user_id", user.id)
       .eq("status", "draft") // guard eksplisit selain RLS
-      .select("id");
+      // `content` dari RETURNING = isinya SAAT dihapus: autosave tab editor lain
+      // di sela bacaan awal dan DELETE ini tetap terpanen.
+      .select("id, content");
     if (delErr) return { status: "error", message: copy.common.error };
     // Status berubah di sela bacaan di atas dan DELETE (mis. checkout membuatnya
     // pending/aktif): guard menyaring barisnya, DELETE sukses dengan 0 baris.
@@ -434,11 +438,32 @@ export async function deleteInvitationAction(
       };
     }
 
-    await Promise.allSettled(
-      (mediaRows ?? []).flatMap((m) =>
-        mediaObjectPaths(m.storage_path).map((p) => storage.delete(p)),
+    // Foto bernama (sampul/mempelai/logo + foto cerita, DECISIONS #127) tak
+    // punya baris tabel — rujukannya hanya di `content` baris yang baru saja
+    // dihapus, jadi inilah satu-satunya kesempatan menghapus objeknya. Disaring
+    // terhadap `inv.id` (bentuk kanonik DB): path di `content` ditulis klien.
+    const prefixes = [
+      ...(mediaRows ?? []).map((m) => m.storage_path),
+      ...namedPhotoPathsFromContent(terhapus[0].content, inv.id),
+    ];
+    const hasilMedia = await Promise.allSettled(
+      prefixes.flatMap((prefix) =>
+        mediaObjectPaths(prefix).map((p) => storage.delete(p)),
       ),
     );
+    const gagalMedia = hasilMedia.filter((r) => r.status === "rejected").length;
+    if (gagalMedia > 0) {
+      // Sama dengan musik di bawah: baris undangan sudah lenyap dan tak ada
+      // penyapu foto bernama, jadi laporan ini satu-satunya jejak objek yang
+      // masih tersaji publik.
+      reportHandledError(
+        new Error(
+          `storage: ${gagalMedia} objek foto gagal dihapus saat hapus draft`,
+        ),
+        "invitation.delete.media",
+        { invitationId, failed: gagalMedia },
+      );
+    }
     const hasilMusik = await Promise.allSettled(
       (musikRows ?? []).map((m) => storage.delete(m.path)),
     );

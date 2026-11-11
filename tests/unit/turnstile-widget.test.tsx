@@ -11,9 +11,14 @@ import { TurnstileWidget } from "@/components/public/guestbook/turnstile-widget"
  */
 
 const api = {
-  render: vi.fn(() => "widget-1"),
-  reset: vi.fn(),
+  render: vi.fn(
+    (_el: HTMLElement, _opts: Record<string, unknown>) => "widget-1",
+  ),
+  reset: vi.fn((_id: string) => {}),
 };
+
+/** Opsi yang diterima `turnstile.render` pada pemasangan pertama. */
+const renderOpts = () => api.render.mock.calls[0]![1];
 
 beforeEach(() => {
   api.render.mockClear().mockReturnValue("widget-1");
@@ -58,6 +63,33 @@ describe("TurnstileWidget — reset tantangan", () => {
     expect(onToken).not.toHaveBeenCalled();
   });
 
+  it("reset mencabut penanda interaksi — tantangan baru bisa kembali tak terlihat", () => {
+    const onToken = vi.fn();
+    const { container, rerender } = render(
+      <TurnstileWidget
+        siteKey="kunci"
+        onToken={onToken}
+        resetKey={0}
+        appearance="interaction-only"
+      />,
+    );
+    const box = container.querySelector(".gb-turnstile")!;
+    (renderOpts()["before-interactive-callback"] as () => void)();
+    expect(box.hasAttribute("data-interactive")).toBe(true);
+
+    rerender(
+      <TurnstileWidget
+        siteKey="kunci"
+        onToken={onToken}
+        resetKey={1}
+        appearance="interaction-only"
+      />,
+    );
+
+    expect(api.reset).toHaveBeenCalledWith("widget-1");
+    expect(box.hasAttribute("data-interactive")).toBe(false);
+  });
+
   it("skrip Turnstile belum termuat → permintaan reset tak melempar", () => {
     delete (window as unknown as { turnstile?: unknown }).turnstile;
     const onToken = vi.fn();
@@ -70,5 +102,62 @@ describe("TurnstileWidget — reset tantangan", () => {
         <TurnstileWidget siteKey="kunci" onToken={onToken} resetKey={1} />,
       ),
     ).not.toThrow();
+  });
+});
+
+/**
+ * Form tamu memakai Turnstile tak terlihat (SPEC §4.6, DECISIONS #128); daftar
+ * akun, reset sandi, dan Album Momen sengaja tetap menampilkan widget — opsi
+ * render mereka tak boleh berubah sedikit pun.
+ */
+describe("TurnstileWidget — appearance", () => {
+  it("appearance diberikan → diteruskan ke turnstile.render", () => {
+    const { container } = render(
+      <TurnstileWidget
+        siteKey="kunci"
+        onToken={vi.fn()}
+        appearance="interaction-only"
+      />,
+    );
+
+    expect(renderOpts()).toMatchObject({
+      sitekey: "kunci",
+      appearance: "interaction-only",
+    });
+    expect(
+      container.querySelector(".gb-turnstile")?.getAttribute("data-appearance"),
+    ).toBe("interaction-only");
+  });
+
+  it("tanpa prop → opsi render persis seperti dulu (tanpa kunci appearance)", () => {
+    const { container } = render(
+      <TurnstileWidget siteKey="kunci" onToken={vi.fn()} />,
+    );
+
+    expect(Object.keys(renderOpts()).sort()).toEqual(
+      ["callback", "error-callback", "expired-callback", "sitekey"].sort(),
+    );
+    expect(
+      container.querySelector(".gb-turnstile")?.hasAttribute("data-appearance"),
+    ).toBe(false);
+  });
+
+  it("Cloudflare meminta interaksi → wadah ditandai, token tetap lewat onToken", () => {
+    const onToken = vi.fn();
+    const { container } = render(
+      <TurnstileWidget
+        siteKey="kunci"
+        onToken={onToken}
+        appearance="interaction-only"
+      />,
+    );
+    const box = container.querySelector(".gb-turnstile")!;
+    expect(box.hasAttribute("data-interactive")).toBe(false);
+
+    (renderOpts()["before-interactive-callback"] as () => void)();
+    expect(box.hasAttribute("data-interactive")).toBe(true);
+
+    (renderOpts().callback as (t: string) => void)("tok-1");
+    expect(onToken).toHaveBeenCalledWith("tok-1");
   });
 });

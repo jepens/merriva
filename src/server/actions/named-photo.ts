@@ -109,7 +109,10 @@ export async function uploadNamedPhotoAction(
     .maybeSingle();
   if (!own) return { status: "error", reason: "auth" };
 
-  const prefix = namedPhotoPrefix(invitationId, crypto.randomUUID());
+  // `own.id` = bentuk kanonik dari DB (huruf kecil), bukan parameter: `isUuid`
+  // menerima huruf besar, dan prefix ber-UUID huruf besar tak pernah cocok
+  // dengan regex purge retensi maupun `isNamedPhotoPath` — fotonya tertinggal.
+  const prefix = namedPhotoPrefix(own.id, crypto.randomUUID());
   const storage = getStorage();
   try {
     await storage.upload({

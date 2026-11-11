@@ -6,7 +6,12 @@ import { copy } from "@/lib/copy";
 import { sesuaikanKePaket } from "@/lib/customizer/resolve";
 import type { ThemeOptions } from "@/lib/customizer/theme-options";
 import { parseContentForRender } from "@/lib/invitation-content";
-import { displayPath, isCustomMusicPath, toMediaView } from "@/lib/media";
+import {
+  displayPath,
+  isCustomMusicPath,
+  isNamedPhotoPath,
+  toMediaView,
+} from "@/lib/media";
 import { scheduledEvents } from "@/lib/schedule";
 import { getStorage } from "@/lib/storage";
 import { dataOrThrow } from "@/lib/supabase/result";
@@ -224,6 +229,18 @@ export function buildInvitationData(args: {
     content.category === "wedding" ? resolve(content.groom.photo) : null;
   const bridePhoto =
     content.category === "wedding" ? resolve(content.bride.photo) : null;
+  // Foto per entri cerita (#127), sejajar indeks `content.story` HASIL PARSE.
+  // Path di `content` ditulis klien, jadi hanya foto bernama milik undangan
+  // INI yang di-resolve — path undangan lain (menumpang objek publik orang
+  // lain) diperlakukan seperti entri tanpa foto.
+  const storyPhotos =
+    content.category === "wedding"
+      ? content.story.map((s) =>
+          s.photo && isNamedPhotoPath(args.invitationId, s.photo.path)
+            ? resolve(s.photo)
+            : null,
+        )
+      : undefined;
 
   // Video unggahan → URL domain sendiri (path objek penuh, bukan prefix).
   const v = content.video;
@@ -277,6 +294,7 @@ export function buildInvitationData(args: {
     coverPhoto,
     groomPhoto,
     bridePhoto,
+    ...(storyPhotos ? { storyPhotos } : {}),
     video,
     music,
     watermark: args.watermark,

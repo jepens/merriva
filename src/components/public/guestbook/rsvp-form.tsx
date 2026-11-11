@@ -102,6 +102,16 @@ export function RsvpForm({
       setFeedback(t.paxMax(RSVP_PAX_TANPA_TOKEN));
       return;
     }
+    // Turnstile tak terlihat (DECISIONS #128): tamu tak melihat spinner, jadi
+    // bisa menekan Kirim sebelum token tiba. Jangan panggil server (jatah rate
+    // limit tak terbuang) dan JANGAN reset — tantangannya sedang berjalan.
+    // Tombol sengaja tak dinonaktifkan menunggu token: bila skrip diblokir,
+    // tombol mati tanpa pesan.
+    if (siteKey && !token) {
+      setStatus("error");
+      setFeedback(t.verifying);
+      return;
+    }
     setStatus("sending");
     setFeedback("");
     try {
@@ -219,6 +229,7 @@ export function RsvpForm({
           siteKey={siteKey}
           onToken={onToken}
           resetKey={tsReset}
+          appearance="interaction-only"
         />
       ) : null}
 

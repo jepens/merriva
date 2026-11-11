@@ -261,6 +261,51 @@ describe.each(themes)("slot media tema '%s'", (slug, opt) => {
   });
 });
 
+/**
+ * Foto per entri cerita (`media.story`, DECISIONS #127). Kegagalannya senyap
+ * dengan cara yang sama dengan slot: deklarasi tanpa render → pemilik
+ * mengunggah foto cerita yang tak pernah tampil; render tanpa deklarasi →
+ * bidang unggahnya tak pernah muncul di editor.
+ */
+describe.each(themes)("foto cerita tema '%s'", (slug, opt) => {
+  const story = opt.media?.story;
+
+  it("rasio wadah masuk akal, dan tak ada daftar kosong", () => {
+    if (!story) return;
+    const aspects =
+      typeof story.aspect === "number" ? [story.aspect] : [...story.aspect];
+    expect(
+      aspects.length,
+      `${slug}: media.story.aspect kosong`,
+    ).toBeGreaterThan(0);
+    for (const a of aspects) {
+      expect(a, `${slug}: aspect foto cerita`).toBeGreaterThan(0.4);
+      expect(a, `${slug}: aspect foto cerita`).toBeLessThan(2.5);
+    }
+  });
+
+  it("hanya tema bersection `story` yang boleh mendeklarasikannya", () => {
+    if (!story) return;
+    expect(
+      opt.sections.some((s) => s.id === "story"),
+      `${slug}: media.story tanpa section story — janji palsu di editor`,
+    ).toBe(true);
+  });
+
+  it("deklarasi dan render foto cerita berjalan bersama", () => {
+    const dir = join(process.cwd(), "src", "themes", slug);
+    const merender = readdirSync(dir)
+      .filter((f) => f.endsWith(".tsx"))
+      .some((f) => readFileSync(join(dir, f), "utf8").includes("storyPhotos"));
+    expect(
+      Boolean(story),
+      merender
+        ? `${slug}: membaca storyPhotos tetapi tak mendeklarasikan media.story — bidang unggahnya tak akan pernah muncul`
+        : `${slug}: mendeklarasikan media.story tetapi tak membaca storyPhotos — foto cerita pemilik tak akan pernah tampil`,
+    ).toBe(merender);
+  });
+});
+
 describe("seed katalog", () => {
   it("setiap tema di registry punya baris seed `themes`", () => {
     // Tema yang kodenya ada tetapi barisnya tak pernah di-seed TIDAK akan

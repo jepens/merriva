@@ -63,6 +63,13 @@ export function GiftConfirm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (status === "sending") return;
+    // Token belum tiba (Turnstile tak terlihat) → tanpa server, tanpa reset
+    // (lihat RsvpForm, DECISIONS #128).
+    if (siteKey && !token) {
+      setStatus("error");
+      setFeedback(copy.guestbook.form.verifying);
+      return;
+    }
     setStatus("sending");
     setFeedback("");
     try {
@@ -187,6 +194,7 @@ export function GiftConfirm({
           siteKey={siteKey}
           onToken={onToken}
           resetKey={tsReset}
+          appearance="interaction-only"
         />
       ) : null}
 

@@ -196,6 +196,17 @@ export default async function DashboardPage() {
                     >
                       {copy.dashboard.cardEdit}
                     </Link>
+                    {/* Pratinjau pemilik di SEMUA status, tab yang sama
+                        (DECISIONS #129). */}
+                    <Link
+                      href={`/preview/${inv.id}`}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                      })}
+                    >
+                      {copy.dashboard.cardPreview}
+                    </Link>
                     {/* Ganti tema (SPEC §4.4) — daftar ini sudah menyaring
                         undangan ber-`purged_at`; suspended tak bisa. */}
                     {inv.status !== "suspended" ? (

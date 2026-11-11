@@ -54,8 +54,11 @@ const { invRow, rpc, draft } = vi.hoisted(() => ({
     musikFilter: [] as [string, string, unknown][],
     musik: { data: [] as { path: string }[] | null, error: null as unknown },
     delError: null as unknown,
-    /** Baris yang DIKEMBALIKAN DELETE (`.select("id")`); [] = 0 baris kena. */
-    terhapus: [] as { id: string }[],
+    /**
+     * Baris yang DIKEMBALIKAN DELETE (`.select("id, content")`); [] = 0 baris
+     * kena. `content` tak disetel → ikut `invRow` (isi tak berubah di sela).
+     */
+    terhapus: [] as { id: string; content?: unknown }[],
     /** Kolom yang diminta kembali dari DELETE (null = tak meminta baris). */
     delSelect: null as string | null,
     media: [] as { storage_path: string }[],
@@ -90,7 +93,11 @@ vi.mock("@/lib/supabase/server", () => ({
                   data:
                     draft.delError || draft.delSelect === null
                       ? null
-                      : draft.terhapus,
+                      : draft.terhapus.map((r) => ({
+                          content: (invRow.data as { content?: unknown } | null)
+                            ?.content,
+                          ...r,
+                        })),
                   error: draft.delError,
                 },
           ).then(res);
@@ -272,9 +279,9 @@ describe("deleteInvitationAction — hapus draft + musik unggahan (DECISIONS #12
     expect(reportHandledError).not.toHaveBeenCalled();
   });
 
-  it('DELETE meminta barisnya kembali (`.select("id")`) — 0 baris harus terlihat', async () => {
+  it('DELETE meminta barisnya kembali (`.select("id, content")`) — 0 baris harus terlihat', async () => {
     await deleteInvitationAction(INV);
-    expect(draft.delSelect).toBe("id");
+    expect(draft.delSelect).toBe("id, content");
   });
 
   it("DELETE kena 0 baris (status berubah di sela) → TAK ada objek yang dihapus", async () => {
@@ -337,5 +344,150 @@ describe("deleteInvitationAction — hapus draft + musik unggahan (DECISIONS #12
       invitationId: INV,
       failed: 2,
     });
+  });
+});
+
+/**
+ * Foto bernama draft (DECISIONS #127). Sampul, mempelai, logo, dan foto per
+ * entri cerita tak punya baris tabel — rujukannya hanya di `content` baris
+ * undangan. Sebelum ini hapus draft hanya membersihkan galeri & musik, jadi
+ * wajah mempelai tertinggal di storage tanpa rujukan apa pun. Kuncinya sama
+ * dengan pemanenan `purge_invitation_data` (migrasi 20261111090000).
+ */
+describe("deleteInvitationAction — hapus draft + foto bernama & foto cerita (DECISIONS #127)", () => {
+  const INV_LAIN = "55555555-5555-4555-8555-555555555555";
+  const foto = (n: number, inv = INV) =>
+    `inv/${inv}/foto/0000000${n}-0000-4000-8000-000000000000`;
+  const varian = (prefix: string) => [
+    `${prefix}/1600.webp`,
+    `${prefix}/400.webp`,
+    `${prefix}/og.jpg`,
+  ];
+  /** Bentuk yang ditulis editor (`photoSchema` → objek) + string lama. */
+  const content = (inv = INV) => ({
+    coverPhoto: { path: foto(1, inv), x: 0.5, y: 0.5, zoom: 1 },
+    groom: {
+      name: "Andi",
+      photo: { path: foto(2, inv), x: 0.3, y: 0.7, zoom: 1.4 },
+    },
+    bride: { name: "Sinta", photo: foto(3, inv) },
+    story: [
+      {
+        title: "Pertama bertemu",
+        date: "Maret 2019",
+        narrative: "Di kampus.",
+        photo: { path: foto(4, inv), x: 0.5, y: 0.4, zoom: 1.2 },
+      },
+      { title: "Lamaran", date: "Juni 2025", narrative: "Bersama keluarga." },
+      { title: "Menikah", date: "Januari 2026", photo: foto(5, inv) },
+      {
+        title: "Asing",
+        photo: { path: foto(6, INV_LAIN), x: 0.5, y: 0.5, zoom: 1 },
+      },
+    ],
+  });
+
+  beforeEach(() => {
+    invRow.data = {
+      id: INV,
+      status: "draft",
+      slug: "draft-abc",
+      content: content(),
+    };
+  });
+
+  it("semua varian sampul, mempelai, & foto cerita dihapus SESUDAH DELETE", async () => {
+    expect((await deleteInvitationAction(INV)).status).toBe("success");
+
+    const iDelete = draft.urutan.indexOf("delete:invitations");
+    expect(iDelete).toBeGreaterThanOrEqual(0);
+    // Tak satu objek pun disentuh sebelum barisnya benar-benar terhapus.
+    expect(
+      draft.urutan.slice(0, iDelete).filter((s) => s.startsWith("storage:")),
+    ).toEqual([]);
+    const sesudah = draft.urutan.slice(iDelete + 1);
+    const harapan = [1, 2, 3, 4, 5].flatMap((n) => varian(foto(n)));
+    for (const p of harapan) expect(sesudah).toContain(`storage:${p}`);
+    // Tepat 5 foto × 3 varian: entri tanpa foto tak menambah apa pun.
+    expect(storage.delete).toHaveBeenCalledTimes(harapan.length);
+  });
+
+  it("foto cerita yang merujuk undangan LAIN tak pernah dihapus", async () => {
+    // `content` ditulis klien: pemilik draft bisa menaruh path undangan orang
+    // lain di sana, lalu menghapus draftnya untuk menghapus foto itu.
+    await deleteInvitationAction(INV);
+
+    const dihapus = storage.delete.mock.calls.map((c) => c[0]);
+    expect(dihapus.some((p) => p.includes(INV_LAIN))).toBe(false);
+  });
+
+  it("disaring terhadap id DB, bukan param — param huruf besar tetap membersihkan", async () => {
+    // `isUuid` menerima huruf besar dan PostgREST mencocokkan uuid tanpa
+    // peduli huruf, tetapi path di storage selalu huruf kecil (id dari DB).
+    const ID = "abcdef12-3456-4abc-8def-abcdef123456";
+    invRow.data = {
+      id: ID,
+      status: "draft",
+      slug: "draft-abc",
+      content: content(ID),
+    };
+
+    expect((await deleteInvitationAction(ID.toUpperCase())).status).toBe(
+      "success",
+    );
+    const dihapus = storage.delete.mock.calls.map((c) => c[0]);
+    for (const p of varian(foto(1, ID))) expect(dihapus).toContain(p);
+  });
+
+  it("DELETE kena 0 baris → foto bernama TAK dihapus (undangannya masih hidup)", async () => {
+    draft.terhapus = [];
+
+    expect((await deleteInvitationAction(INV)).status).toBe("error");
+    expect(storage.delete).not.toHaveBeenCalled();
+  });
+
+  it("DELETE gagal → foto bernama TAK dihapus", async () => {
+    draft.delError = { message: "kedip" };
+
+    expect((await deleteInvitationAction(INV)).status).toBe("error");
+    expect(storage.delete).not.toHaveBeenCalled();
+  });
+
+  it("dipanen dari content SAAT DELETE (RETURNING), bukan bacaan awal yang basi", async () => {
+    // Autosave tab editor lain menyimpan foto cerita baru di sela bacaan awal
+    // dan DELETE: bacaan awal tak melihatnya, baris yang terhapus memuatnya.
+    invRow.data = { id: INV, status: "draft", slug: "draft-abc", content: {} };
+    draft.terhapus = [{ id: INV, content: { story: [{ photo: foto(7) }] } }];
+
+    expect((await deleteInvitationAction(INV)).status).toBe("success");
+    const dihapus = storage.delete.mock.calls.map((c) => c[0]);
+    expect(dihapus).toEqual(varian(foto(7)));
+  });
+
+  it("objek foto gagal dihapus → dilaporkan (satu-satunya jejaknya)", async () => {
+    storage.delete.mockImplementation((p: string) =>
+      p.endsWith("400.webp")
+        ? Promise.reject(new Error("r2"))
+        : Promise.resolve(),
+    );
+
+    expect((await deleteInvitationAction(INV)).status).toBe("success");
+    expect(reportHandledError).toHaveBeenCalledWith(
+      expect.any(Error),
+      "invitation.delete.media",
+      { invitationId: INV, failed: 5 },
+    );
+  });
+
+  it("content kosong / rusak → hapus draft tetap sukses tanpa menyentuh storage", async () => {
+    invRow.data = {
+      id: INV,
+      status: "draft",
+      slug: "draft-abc",
+      content: { story: "bukan array", coverPhoto: 42 },
+    };
+
+    expect((await deleteInvitationAction(INV)).status).toBe("success");
+    expect(storage.delete).not.toHaveBeenCalled();
   });
 });

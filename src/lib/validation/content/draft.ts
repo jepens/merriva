@@ -8,6 +8,7 @@ import {
 import { FIELD_LIMITS as L } from "./field-limits";
 import {
   envelopeSchema,
+  loveStoryEntrySchema,
   noDangerousUrlScheme,
   personSchema,
   storyEntrySchema,
@@ -28,6 +29,11 @@ const personDraftSchema = personSchema.extend({
 const storyDraftSchema = storyEntrySchema.extend({
   title: z.string().trim().max(L.storyEntry.title).optional(),
   narrative: z.string().trim().max(L.storyEntry.narrative).optional(),
+});
+
+/** Love story draft = entri draft + foto opsional (#127, `loveStoryEntrySchema`). */
+const loveStoryDraftSchema = storyDraftSchema.extend({
+  photo: loveStoryEntrySchema.shape.photo,
 });
 
 /**
@@ -106,7 +112,7 @@ const draftCommonFields = {
 export const weddingDraftSchema = weddingContentSchema.extend({
   groom: personDraftSchema,
   bride: personDraftSchema,
-  story: z.array(storyDraftSchema).max(L.wedding.story).default([]),
+  story: z.array(loveStoryDraftSchema).max(L.wedding.story).default([]),
   ...draftCommonFields,
 });
 

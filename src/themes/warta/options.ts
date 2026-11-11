@@ -66,6 +66,10 @@ export const wartaOptions: ThemeOptions = {
       { id: "bride", aspect: 4 / 5 },
       { id: "groom", aspect: 4 / 5 },
     ],
+    // Feature: entri genap lanskap (`wt-photo--wide`), ganjil potret
+    // (`wt-photo--tall`) — warta.css.
+    // `galleryFallback`: tanpa foto cerita, galeri berurutan (`fotoCerita`).
+    story: { aspect: [4 / 3, 3 / 4], galleryFallback: true },
   },
   preview: {
     root: "wt",

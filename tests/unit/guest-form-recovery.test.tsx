@@ -31,19 +31,25 @@ vi.mock("@/server/actions/guestbook", () => ({
   getGuestbookAction,
 }));
 
-/** Widget palsu: memaparkan `resetKey` agar permintaan reset bisa di-assert. */
+/**
+ * Widget palsu: memaparkan `resetKey` & `appearance` agar permintaan reset dan
+ * mode tak terlihat bisa di-assert; klik = token tiba.
+ */
 vi.mock("@/components/public/guestbook/turnstile-widget", () => ({
   TurnstileWidget: ({
     onToken,
     resetKey = 0,
+    appearance,
   }: {
     onToken: (t: string) => void;
     resetKey?: number;
+    appearance?: string;
   }) => (
     <button
       type="button"
       data-testid="turnstile"
       data-reset={String(resetKey)}
+      data-appearance={appearance}
       onClick={() => onToken("token-baru")}
     >
       turnstile
@@ -182,6 +188,8 @@ describe("GiftConfirm — pulih dari penolakan", () => {
         target: { value: "Sasa" },
       },
     );
+    // Token tiba dulu — tanpanya kiriman berhenti di "memverifikasi" (#128).
+    fireEvent.click(screen.getByTestId("turnstile"));
 
     fireEvent.click(
       screen.getByRole("button", { name: copy.guestbook.gift.submit }),
@@ -189,6 +197,105 @@ describe("GiftConfirm — pulih dari penolakan", () => {
 
     await screen.findByText(copy.common.error);
     expect(resetCount()).toBe("1");
+  });
+});
+
+/**
+ * Turnstile tak terlihat di form tamu (SPEC §4.6, DECISIONS #128): tamu tak
+ * melihat spinner, jadi bisa menekan Kirim sebelum token tiba. Dulu kiriman
+ * tanpa token sampai ke server → jatah rate limit terbuang, tantangan yang
+ * sedang berjalan di-reset, dan tamu membaca "Verifikasi anti-bot gagal".
+ */
+describe("Form tamu — Kirim sebelum token Turnstile tiba", () => {
+  const alertText = () => screen.getByRole("alert").textContent;
+
+  it("RSVP: widget tak terlihat; tanpa token → tanpa server & tanpa reset, lalu terkirim dengan token", async () => {
+    render(<RsvpForm slug={SLUG} />);
+    expect(
+      screen.getByTestId("turnstile").getAttribute("data-appearance"),
+    ).toBe("interaction-only");
+    fireEvent.change(screen.getByRole("textbox", { name: t.name }), {
+      target: { value: "Sasa" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: t.submit }));
+
+    await screen.findByText(t.verifying);
+    expect(submitRsvpAction).not.toHaveBeenCalled();
+    expect(resetCount()).toBe("0");
+    // Tombol tak dimatikan menunggu token (skrip diblokir = tombol mati diam).
+    expect(screen.getByRole("button", { name: t.submit })).not.toBeDisabled();
+
+    let selesai: (v: unknown) => void = () => {};
+    submitRsvpAction.mockReturnValueOnce(
+      new Promise((r) => {
+        selesai = r;
+      }),
+    );
+    fireEvent.click(screen.getByTestId("turnstile")); // token tiba
+    fireEvent.click(screen.getByRole("button", { name: t.submit }));
+
+    // Pesan "memverifikasi" hilang begitu kiriman berikutnya berjalan.
+    await screen.findByRole("button", { name: t.submitting });
+    expect(screen.queryByText(t.verifying)).toBeNull();
+    expect(submitRsvpAction).toHaveBeenCalledTimes(1);
+    expect(submitRsvpAction).toHaveBeenCalledWith(
+      expect.objectContaining({ turnstileToken: "token-baru" }),
+    );
+
+    selesai({ status: "success", moderated: false });
+    await screen.findByText(t.success);
+  });
+
+  it("RSVP tanpa site key (dev) → tak menunggu token, langsung ke server", async () => {
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "");
+    submitRsvpAction.mockResolvedValue({ status: "success", moderated: false });
+    render(<RsvpForm slug={SLUG} />);
+    fireEvent.change(screen.getByRole("textbox", { name: t.name }), {
+      target: { value: "Sasa" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: t.submit }));
+
+    await screen.findByText(t.success);
+    expect(submitRsvpAction).toHaveBeenCalledWith(
+      expect.objectContaining({ turnstileToken: "" }),
+    );
+  });
+
+  it("amplop: widget tak terlihat; tanpa token → tanpa server & tanpa reset, lalu terkirim dengan token", async () => {
+    const g = copy.guestbook.gift;
+    render(<GiftConfirm slug={SLUG} />);
+    fireEvent.click(screen.getByRole("button", { name: g.trigger }));
+    expect(
+      (await screen.findByTestId("turnstile")).getAttribute("data-appearance"),
+    ).toBe("interaction-only");
+    fireEvent.change(screen.getByRole("textbox", { name: g.name }), {
+      target: { value: "Sasa" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: g.submit }));
+
+    await screen.findByText(t.verifying);
+    expect(submitGiftNoteAction).not.toHaveBeenCalled();
+    expect(resetCount()).toBe("0");
+    expect(screen.getByRole("button", { name: g.submit })).not.toBeDisabled();
+
+    // Token tiba → kiriman sampai ke server; galatnya MENGGANTI pesan tadi.
+    submitGiftNoteAction.mockResolvedValueOnce({
+      status: "error",
+      reason: "captcha",
+      message: t.captchaFailed,
+    });
+    fireEvent.click(screen.getByTestId("turnstile"));
+    fireEvent.click(screen.getByRole("button", { name: g.submit }));
+
+    await screen.findByText(t.captchaFailed);
+    expect(alertText()).toBe(t.captchaFailed);
+    expect(submitGiftNoteAction).toHaveBeenCalledTimes(1);
+    expect(submitGiftNoteAction).toHaveBeenCalledWith(
+      expect.objectContaining({ turnstileToken: "token-baru" }),
+    );
   });
 });
 

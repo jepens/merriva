@@ -108,6 +108,13 @@
 .gb-turnstile {
   margin: 0.25rem 0;
 }
+/* Turnstile `interaction-only` (DECISIONS #128): selama tak terlihat wadahnya
+   0px tetapi tetap item flex — dua `gap` .gb-form + margin = celah kosong
+   ±24px di atas tombol. Margin bawah negatif (= gap .gb-form) membatalkan satu
+   gap; begitu Cloudflare meminta interaksi (`data-interactive`) jarak normal. */
+.gb-turnstile[data-appearance="interaction-only"]:not([data-interactive]) {
+  margin: 0 0 -1rem;
+}
 .gb-error {
   color: #b3261e;
   font-size: 0.85rem;

@@ -4,7 +4,9 @@ import {
   invitationContentSchema,
   type Envelope,
   type InvitationContent,
+  type LoveStoryEntry,
   type Person,
+  type Photo,
   type Quote,
   type StoryEntry,
 } from "@/lib/validation/content";
@@ -45,6 +47,45 @@ function coerceStories(arr: unknown): StoryEntry[] {
             title: String(s.title),
             date: s.date ? String(s.date) : undefined,
             narrative: String(s.narrative),
+          },
+        ]
+      : [],
+  );
+}
+
+/**
+ * Love story (wedding) — sama dengan `coerceStories`, plus foto opsional
+ * (#127). `photo` sudah divalidasi skema draft (`loveStoryDraftSchema`), jadi
+ * cukup diteruskan; tanpa ini foto cerita draft yang belum lengkap hilang dari
+ * pratinjau.
+ */
+/**
+ * Entri cerita yang DIRENDER tema: judul DAN narasi terisi (sesudah trim).
+ * Satu aturan untuk jalur render draft (`coerceLoveStories`) dan bingkai foto
+ * cerita di editor (#127) — keduanya harus sepakat soal indeks entri.
+ */
+export function ceritaTampil(
+  s: { title?: string | null; narrative?: string | null } | null | undefined,
+): boolean {
+  return Boolean(s?.title?.trim() && s?.narrative?.trim());
+}
+
+function coerceLoveStories(
+  arr: ReadonlyArray<{
+    title?: string;
+    date?: string;
+    narrative?: string;
+    photo?: Photo;
+  }>,
+): LoveStoryEntry[] {
+  return arr.flatMap((s) =>
+    s.title && s.narrative && ceritaTampil(s)
+      ? [
+          {
+            title: s.title,
+            date: s.date || undefined,
+            narrative: s.narrative,
+            ...(s.photo ? { photo: s.photo } : {}),
           },
         ]
       : [],
@@ -113,7 +154,7 @@ export function parseContentForRender(
       title: d.title,
       groom: coercePerson(d.groom as RawPerson),
       bride: coercePerson(d.bride as RawPerson),
-      story: coerceStories(d.story),
+      story: coerceLoveStories(d.story),
       ...common,
     };
   }

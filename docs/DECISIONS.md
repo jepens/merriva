@@ -7462,8 +7462,8 @@ dipindah ke editor tanpa kabar berhasil.
   SATU `<dialog>` HTML per layout, `showModal()` memberi lapisan atas, latar,
   penjebakan fokus, dan Esc dari peramban sendiri; tanpa dependency. Judul +
   penjelasan + label tombol yang menyebut aksinya ("Ya, hapus permanen");
-  aksi permanen bertombol merah dengan fokus awal di "Batal". Peramban tanpa
-  `showModal` (iOS < 15.4) jatuh ke `window.confirm`. Kedelapan titik diganti;
+  aksi permanen bertombol merah dengan fokus awal di "Batal". Jaring pengaman:
+  peramban tanpa `showModal` (di luar baseline Next 16) jatuh ke `window.confirm`. Kedelapan titik diganti;
   form admin ber-server-action menahan submit, menunggu dialog, lalu
   `requestSubmit()` dengan penanda. Penjaga hasil tinjauan: klik pointer
   < 500 ms sesudah dialog terbuka diabaikan (klik KEDUA dari klik/ketuk-ganda
@@ -7488,6 +7488,111 @@ ponsel — lebih banyak kode dirawat); varian shadcn `sonner` yang menarik
 **Konsekuensi:** bundel dashboard & admin +±13 KB gz, dalam anggaran
 `bundle:report --check`. Komponen yang memakai `useConfirm` wajib di bawah
 `ConfirmProvider` (galat jelas bila tidak).
+
+---
+
+## #127 — 2026-11-11 · Foto per entri cerita (love story) — Warta dulu, tak dihitung kuota galeri
+
+**Permintaan (pemilik, 11 Nov 2026):** langkah Cerita di editor bisa mengunggah
+foto per entri, agar tampil seperti "OUR LOVE STORY" Warta. Sebelumnya Warta
+memasangkan cerita ke-i dengan foto galeri ke-i — pemilik tak bisa memilih.
+
+**Keputusan (pemilik):**
+- **Tak dihitung batas galeri** (8/20), seperti foto sampul & mempelai: janji
+  "Galeri foto: N" di halaman Harga tetap benar. Batasnya alami: satu foto per
+  entri, maks 20 entri. SPEC §2 diberi catatan "Foto di luar galeri".
+- **Warta dulu.** Kontrak tema: `ThemeMedia.story?: { aspect }` (rasio wadah
+  untuk bingkai editor; array = bergiliran per indeks, Warta `[4/3, 3/4]`).
+  Bidang unggah per entri hanya muncul bila tema mendeklarasikannya (prinsip
+  THEME-CONTRACT §2). Tema lain bisa menyusul satu per satu.
+- **Galeri sebagai cadangan di Warta:** selama tak ada satu pun entri berfoto,
+  urutan galeri tetap dipakai (tampilan Warta yang sudah live tak berubah);
+  begitu satu entri berfoto, hanya foto unggahan yang dipakai.
+
+**Bentuk:** `content.story[i].photo` = `photoSchema` (`{path,x,y,zoom}`, jalur
+foto bernama `inv/<id>/foto/<uuid>`, aksi unggah/hapus foto bernama dipakai
+ulang). Hanya skema love story (wedding) yang mendapat bidang ini — agenda &
+doa/harapan berbagi `storyEntrySchema` dan sengaja tidak ikut. Kontrak props:
+`InvitationData.storyPhotos?: (PhotoView | null)[]` — opsional dan sejajar
+indeks `content.story` hasil parse, di-resolve server HANYA bila path milik
+undangan itu sendiri (path di `content` ditulis klien). Perubahan kontrak props
+ini disetujui pemilik bersama fiturnya.
+
+**Retensi (UU PDP):** `purge_invitation_data` memanen `story[].photo` (migrasi
+baru + pgTAP); hapus draft kini juga menghapus berkas foto bernama & foto
+cerita — sebelumnya foto bernama draft tertinggal (celah lama, #83); menghapus
+entri di editor menghapus berkas fotonya.
+
+**Penjaga hasil tinjauan:** (1) unggahan foto cerita bisa selesai SESUDAH
+entri lain dihapus — closure-nya memegang indeks lama, sehingga foto mendarat di
+entri lain, foto entri itu terhapus padahal masih dirujuk, dan foto ketiga jadi
+yatim (direproduksi). Foto kini diikat ke `field.id` entri; entri yang sudah
+tiada membuang unggahan barunya. (2) Rasio bingkai editor mengikuti indeks
+entri SEBAGAIMANA DIRENDER (`ceritaTampil`, aturan yang sama dengan jalur render
+draft) — entri setengah jadi di depan dulu membalik lanskap/potret Warta.
+(3) `PhotoField` mengingat URL unggahan sesi ini per path (pola MusicField):
+foto yang baru diunggah tak lagi hilang dari bingkai sesudah pindah langkah.
+(4) Tema bercadangan galeri (`media.story.galleryFallback`) menampilkan satu
+catatan di langkah Cerita — tanpa itu unggahan pertama "menghapus" foto entri
+lain tanpa penjelasan. (5) Hapus draft memanen dari `content` hasil RETURNING
+DELETE (bukan bacaan awal yang bisa basi) dan melaporkan objek yang gagal
+dihapus. **Diterima sadar:** objek foto dihapus begitu entri/fotonya dibuang,
+sebelum autosave menyimpan `content` tanpa rujukannya — autosave yang ditolak
+menyisakan rujukan menggantung yang terlihat dan bisa diperbaiki; menunda
+penghapusan sampai simpan sukses menukarnya dengan objek yatim tak terlihat
+(tak ada penyapu foto bernama). Pola yang sama dengan sampul/mempelai.
+
+**Ditolak:** memasukkan foto cerita ke kuota galeri (Basic dengan galeri penuh
+tak bisa berfoto cerita; dua sumber yang harus dihitung bersama); Premium saja
+(gerbang di editor, server, render — tambahan besar untuk fitur kecil); memilih
+foto dari galeri (bukan "unggah" seperti diminta, foto tampil dobel, rujukan
+menggantung saat foto galeri dihapus); memasukkan `story` ke `MEDIA_SLOT_IDS`
+(slot = satu foto berpath tetap, cerita = array per entri).
+
+---
+
+## #128 — 2026-11-11 · Turnstile tak terlihat di form tamu (`interaction-only`)
+
+**Masalah (pemilik):** kotak "Success! / CLOUDFLARE" tampil di form RSVP,
+padahal SPEC §4.6 sejak awal menuntut Turnstile "invisible" — kode merender
+widget bawaan (`appearance: always`).
+
+**Keputusan:** `TurnstileWidget` menerima `appearance`; RSVP dan konfirmasi
+amplop (keduanya di halaman tamu) memakai `"interaction-only"` — tak terlihat
+bagi hampir semua tamu, kotak centang hanya muncul bila Cloudflare meminta
+interaksi. Mode widget di dasbor Cloudflare tetap Managed: tak ada aksi
+pemilik. Karena tamu tak lagi melihat spinner, menekan Kirim sebelum token tiba
+menampilkan "sedang memverifikasi" TANPA memanggil server: jatah rate limit tak
+terbuang dan tantangan yang berjalan tak di-reset (dulu berujung "Verifikasi
+anti-bot gagal. Muat ulang halaman" yang menyesatkan). Pesannya satu kalimat
+untuk tiga keadaan yang tak bisa dibedakan form — token belum tiba, Cloudflare
+meminta centang (kotaknya muncul di atas pesan), atau tantangan gagal. Galat
+TIDAK diterjemahkan jadi "muat ulang": Turnstile mencoba ulang sendiri (±8
+dtk), dan muat ulang membuang isian tamu.
+
+**Ditolak:** mode widget Invisible di dasbor — berlaku untuk SEMUA form
+(satu site key), mewajibkan tautan Turnstile Privacy Addendum di kebijakan
+privasi, dan menghapus kotak centang cadangan bagi pengunjung yang dicurigai
+(mereka hanya mendapat galat); `execution: "execute"` — tantangan baru jalan
+saat Kirim, tombol terasa lambat. Daftar akun, reset sandi, dan Album Momen
+tetap menampilkan widget (Momen sengaja menampilkan teks "dilindungi").
+
+---
+
+## #129 — 2026-11-11 · Tombol Pratinjau di kartu dashboard
+
+**Keputusan:** setiap kartu undangan punya tombol "Pratinjau" tepat sesudah
+"Edit", di semua status, membuka `/preview/{id}` di tab yang sama. Sebelumnya
+pratinjau hanya tercapai lewat "Selesai" di langkah terakhir editor (#40) atau
+kartu tema sekarang di halaman Ganti Tema (#124) — tak langsung dari kartu.
+
+**Alasan:** `/preview/{id}` selalu segar (dinamis, tak menyentuh cache ISR),
+berlaku untuk draft maupun aktif, menampilkan bingkai ponsel, dan sudah
+membawa ajakan Aktifkan/Bayar/Perpanjang sesuai status. `<Link>` aman di sini —
+alasan #40 menolaknya (menunggu simpanan editor) tak berlaku di dashboard.
+
+**Ditolak:** `/{slug}` untuk undangan aktif (hanya berguna untuk `active`, dua
+perilaku untuk satu tombol); tab baru (menumpuk tab di ponsel).
 
 ---
 

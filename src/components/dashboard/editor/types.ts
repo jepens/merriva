@@ -52,6 +52,21 @@ export type PhotoSlotView = {
 export type PhotoSlots = Readonly<Partial<Record<string, PhotoSlotView>>>;
 
 /**
+ * Foto per entri cerita (DECISIONS #127) — hanya ada bila TEMA AKTIF
+ * mendeklarasikan `media.story` (THEME-CONTRACT §2); `null` = bidang unggahnya
+ * tak ditampilkan. Dirakit di server seperti slot foto: rasio wadah milik tema,
+ * dan URL foto TERSIMPAN per path (klien tak merakit URL media sendiri).
+ * Per path, bukan per indeks: entri bisa dihapus dari tengah daftar.
+ */
+export type StoryPhotoSlot = {
+  /** Rasio wadah; array = bergiliran per indeks entri (`storyPhotoAspect`). */
+  aspect: number | readonly number[];
+  urls: Readonly<Record<string, string>>;
+  /** Tema memakai galeri berurutan selama tak ada foto cerita (catatan editor). */
+  galleryFallback?: boolean;
+};
+
+/**
  * Bidang video (FASE J): `allowed` = `limits.youtube` paket undangan ini, plus
  * URL video & poster tersimpan. Dirakit di server — sama seperti slot foto,
  * klien tak pernah merakit URL media sendiri.

@@ -17,6 +17,7 @@ import type {
   MusicSlotView,
   PhotoSlots,
   SongOption,
+  StoryPhotoSlot,
   VideoSlotView,
 } from "./types";
 
@@ -87,6 +88,8 @@ const STEPS: EditorStep[] = [
         form={c.form}
         name="content.story"
         labels={copy.editor.timeline.wedding}
+        invitationId={c.invitationId}
+        photo={c.storyPhoto}
       />
     ),
     complete: (v) =>
@@ -133,6 +136,8 @@ export function WeddingEditor({
   photoSlots: PhotoSlots;
   music: MusicSlotView;
   video: VideoSlotView;
+  /** Foto per entri cerita bila tema aktif merendernya (#127); else null. */
+  storyPhoto?: StoryPhotoSlot | null;
   initialStep?: string;
   /** `false` = tema aktif tak punya section galeri (dihitung di server). */
   showGallery?: boolean;

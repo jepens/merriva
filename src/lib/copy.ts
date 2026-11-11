@@ -218,6 +218,8 @@ export const copy = {
       "Pembuat undangan multi-langkah sedang disiapkan dan hadir pada tahap M1 berikutnya.",
     backToList: "Kembali ke daftar undangan",
     cardEdit: "Edit",
+    // Pratinjau pemilik `/preview/{id}`, semua status (DECISIONS #129).
+    cardPreview: "Pratinjau",
     cardActivate: "Aktifkan",
     cardPay: "Lanjutkan pembayaran",
     cardRenew: "Perpanjang",
@@ -1056,6 +1058,14 @@ export const copy = {
       // boleh menjanjikan kemiripan — dan penyesuaiannya bisa diubah kapan saja
       // karena yang disimpan hanya angka, bukan foto yang sudah terpangkas.
       adjustHint: "Seret fotonya untuk menggeser. Bingkai ini mengikuti tema.",
+      // Foto per entri cerita (DECISIONS #127) — bidangnya hanya muncul bila
+      // tema aktif menampilkannya, jadi petunjuknya boleh menjanjikan tampil.
+      storyLabel: "Foto cerita",
+      storyHint:
+        "Opsional. Tampil bersama cerita ini. Tidak mengurangi kuota galeri.",
+      // Tema dengan `media.story.galleryFallback` (warta, `fotoCerita`).
+      storyFallbackNote:
+        "Selama belum ada foto cerita yang diunggah, tema ini memakai foto galeri secara berurutan. Begitu satu foto cerita diunggah, hanya foto cerita yang tampil — cerita tanpa foto tampil tanpa foto.",
     },
     // Blok "Video" langkah Pengaturan (FASE J) — unggah berkas + tautan YouTube.
     video: {
@@ -1436,6 +1446,14 @@ export const copy = {
       rateLimited: "Terlalu banyak percobaan. Coba lagi beberapa saat.",
       captchaFailed:
         "Verifikasi anti-bot gagal. Muat ulang halaman lalu coba lagi.",
+      // Turnstile tak terlihat (DECISIONS #128): Kirim ditekan sebelum token
+      // tiba → server tak dipanggil. Dipakai juga oleh konfirmasi amplop.
+      // Satu kalimat untuk tiga keadaan yang tak bisa dibedakan form: token
+      // belum tiba, Cloudflare meminta centang (kotaknya muncul DI ATAS pesan
+      // ini), atau tantangan gagal — Turnstile mencoba ulang sendiri, jadi
+      // menyuruh muat ulang (dan kehilangan isian) di galat pertama keliru.
+      verifying:
+        "Verifikasi keamanan belum selesai. Bila ada kotak centang di atas, centang dulu; bila tidak, tunggu sebentar lalu kirim lagi. Bila pesan ini terus muncul, muat ulang halaman.",
       closed: "Undangan ini sedang tidak menerima konfirmasi.",
       // Link umum (tanpa token, DECISIONS #120): ditolak di form dengan pesan
       // jelas — dulu angka di atas batas dipotong diam-diam oleh server.

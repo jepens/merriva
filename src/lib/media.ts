@@ -160,6 +160,48 @@ export function isNamedPhotoPath(invitationId: string, path: string): boolean {
   );
 }
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Prefix SEMUA foto bernama yang dirujuk `content`: sampul, mempelai, logo, dan
+ * foto per entri cerita `story[].photo` (DECISIONS #127). Dipakai hapus draft,
+ * yang tak melewati purge — tanpa ini objeknya tertinggal tanpa rujukan.
+ *
+ * Cermin pemanenan `purge_invitation_data` (migrasi 20261111090000) — kunci,
+ * bentuk, dan saringannya harus berubah bersama: foto boleh OBJEK `{path,…}`
+ * (`photoSchema` hari ini) atau STRING lama; `story` hanya dibaca bila array;
+ * bentuk lain tersaring. `content` ditulis klien, jadi hanya path yang lolos
+ * `isNamedPhotoPath` untuk undangan INI yang dikembalikan. Tanpa duplikat.
+ */
+export function namedPhotoPathsFromContent(
+  content: unknown,
+  invitationId: string,
+): string[] {
+  if (!isRecord(content)) return [];
+  const photoOf = (v: unknown) => (isRecord(v) ? v.photo : undefined);
+  const story = Array.isArray(content.story) ? content.story : [];
+  const kandidat: unknown[] = [
+    content.coverPhoto,
+    photoOf(content.groom),
+    photoOf(content.bride),
+    content.logo,
+    ...story.map(photoOf),
+  ];
+  const paths = new Set<string>();
+  for (const nilai of kandidat) {
+    const path =
+      typeof nilai === "string"
+        ? nilai
+        : isRecord(nilai) && typeof nilai.path === "string"
+          ? nilai.path
+          : null;
+    if (path !== null && isNamedPhotoPath(invitationId, path)) paths.add(path);
+  }
+  return [...paths];
+}
+
 /**
  * Video undangan (FASE J). Seperti foto bernama, rujukannya hidup di `content`
  * (`content.video`) dan disimpan AUTOSAVE — tak ada baris tabel. Bedanya, yang

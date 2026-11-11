@@ -107,6 +107,17 @@ media: {
   bingkai pratinjau penyesuaian** — bukan untuk memangkas berkas (§3).
 - Tema yang tak menyebut `groom`/`bride` → bidangnya **tidak muncul** di editor
   untuk tema itu.
+- **`story`** (opsional, DECISIONS #127) — tema merender **foto per entri love
+  story** dari `data.storyPhotos` (`(PhotoView | null)[]`, sejajar indeks
+  `content.story`; terapkan dengan `fotoStyle`). Bentuknya
+  `story: { aspect: number | number[] }` — array = rasio wadah bergiliran per
+  indeks entri (`warta`: `[4/3, 3/4]`). Bukan slot: slot = satu foto berpath
+  tetap, cerita = satu foto per entri. Tanpa deklarasi ini bidang unggah foto di
+  langkah Cerita tidak muncul. Test konformansi menjaga simetrinya (deklarasi ⇔
+  tema membaca `storyPhotos`) dan hanya mengizinkannya pada tema bersection
+  `story`. `galleryFallback: true` menyatakan tema memakai foto galeri
+  berurutan selama tak ada satu pun foto cerita (`warta`) — editor lalu
+  menjelaskannya di langkah Cerita.
 
 Konsekuensi langsung: `cover` dan `logo` yang hari ini bisa diunggah tetapi tak
 dirender tema mana pun akan **hilang dari editor** sampai ada tema yang

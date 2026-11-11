@@ -221,6 +221,23 @@ describe("uploadNamedPhotoAction — hasil", () => {
     );
   });
 
+  it("prefix memakai id KANONIK dari DB, bukan param huruf besar", async () => {
+    // `isUuid` menerima huruf besar dan RLS mencocokkan uuid tanpa peduli
+    // huruf, tetapi regex purge retensi & `isNamedPhotoPath` hanya mengenal
+    // huruf kecil: foto di bawah prefix huruf besar tak pernah ikut terhapus.
+    const ID = "abcdef12-3456-4abc-8def-abcdef123456";
+    serverRef.current = makeClient({ invitation: { id: ID } }) as never;
+
+    const res = await uploadNamedPhotoAction(ID.toUpperCase(), form());
+
+    expect(res.status).toBe("success");
+    if (res.status !== "success") return;
+    expect(res.path.startsWith(`inv/${ID}/foto/`)).toBe(true);
+    for (const c of storage.upload.mock.calls) {
+      expect(c[0].path.startsWith(`inv/${ID}/foto/`)).toBe(true);
+    }
+  });
+
   it("TIDAK menulis apa pun ke database", async () => {
     // Kalau aksi ini ikut menulis `content`, autosave berikutnya menimpanya
     // kembali jadi kosong — fotonya hilang tanpa galat.

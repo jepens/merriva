@@ -240,6 +240,20 @@ export const storyEntrySchema = z.object({
 });
 
 /**
+ * Entri LOVE STORY (wedding) = entri cerita + satu foto opsional (DECISIONS
+ * #127). Hanya love story: agenda (korporat) & doa/harapan (keluarga) berbagi
+ * `storyEntrySchema` dan sengaja tanpa foto.
+ *
+ * Bentuk foto = foto bernama (`photoSchema`, jalur `inv/<id>/foto/<uuid>`).
+ * `.catch(undefined)`: path di `content` ditulis klien, dan satu foto rusak dari
+ * 20 entri tak boleh menggagalkan parse SELURUH konten (tema lalu jatuh ke
+ * kerangka kosong) — fotonya saja yang gugur.
+ */
+export const loveStoryEntrySchema = storyEntrySchema.extend({
+  photo: photoSchema.optional().catch(undefined),
+});
+
+/**
  * Field display yang sama di semua kategori. Di UI muncul di step "Pengaturan"
  * (SPEC §4.4 step 7) tetapi secara data adalah KONTEN (ditampilkan di undangan),
  * bukan `settings` (perilaku/tampilan).
@@ -284,4 +298,5 @@ export type BankAccount = z.infer<typeof bankAccountSchema>;
 export type Ewallet = z.infer<typeof ewalletSchema>;
 export type Envelope = z.infer<typeof envelopeSchema>;
 export type StoryEntry = z.infer<typeof storyEntrySchema>;
+export type LoveStoryEntry = z.infer<typeof loveStoryEntrySchema>;
 export type Quote = z.infer<typeof quoteSchema>;

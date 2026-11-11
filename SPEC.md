@@ -69,6 +69,8 @@ QR check-in di lokasi & layar sapa (Fase 2) · denah meja, souvenir, doorprize (
 
 **Penegakan paket (keputusan pemilik 6 Nov 2026, DECISIONS #116):** batas paket ditegakkan saat MENYIMPAN/MENAMBAH (foto, tamu, kustomisasi, unggah video, unggah musik) DAN saat MENAMPILKAN. Halaman tamu & pratinjau hanya menampilkan apa yang dicakup paket yang berlaku sekarang — bila paket undangan lebih rendah dari isinya (refund upgrade, perpanjangan dengan paket lebih rendah, alih kepemilikan, peran Pro dicabut, atau data ditulis di luar aplikasi), font/gaya/aksen kembali ke bawaan tema, galeri menampilkan N foto pertama sesuai batas, video & live streaming tidak tampil, dan musik unggahan tidak diputar (lagu pustaka pilihan pemilik yang diputar). Data TIDAK dihapus: naik paket mengembalikan semuanya. Tema bertier premium wajib paket Premium saat dibayar (§4.8 langkah 0).
 
+**Foto di luar galeri (keputusan pemilik 11 Nov 2026, DECISIONS #127):** batas "Galeri foto" hanya menghitung galeri. Foto sampul, foto mempelai, dan foto per entri cerita (§4.4 "Foto cerita") tidak dihitung dan boleh diunggah di semua paket.
+
 **Musik latar (DECISIONS #121):** semua paket memilih lagu dari pustaka bebas royalti bawaan platform. Undangan **Premium** — dan draft milik admin/Pro, yang memakai paket teratas (§4.8) — juga boleh mengunggah **satu lagu MP3 sendiri** (aturan & kriteria terima: §4.4 "Musik unggahan"). Fitur ini sengaja **tidak** dijadikan baris di tabel di atas maupun di halaman Harga, dan editor tidak memakainya sebagai ajakan membeli: musik milik pihak lain tidak dijadikan nilai jual paket. Undangan yang turun paket tidak memutar musik unggahannya, tetapi rujukan dan berkasnya tetap tersimpan dan diputar lagi saat naik paket. Undangan yang musiknya di-takedown admin kehilangan berkasnya dan tidak bisa mengunggah lagi sampai admin membuka kuncinya.
 
 Posisi harga: di atas pemain perang-harga (Rp39–49rb) karena target kualitas premium, masih jauh di bawah tier Gold–Platinum pasar (Rp150–400rb+). Undangan **gratis dibuat dan di-preview** — pembayaran baru diminta saat klien ingin mengaktifkan/menyebarkan (freemium funnel: rasakan dulu, bayar belakangan). Add-on menyusul setelah launch: perpanjangan masa aktif, custom domain (proses manual), undangan video.
@@ -122,9 +124,9 @@ Supabase Auth: email+password (dengan verifikasi email) dan Google OAuth. Reset 
 
 ### 4.3 Dashboard klien
 
-Daftar undangan milik user dengan status berwarna (`draft` / `pending_payment` / `active` / `expired`) dan aksi lanjutan yang relevan per status (Lanjutkan mengisi / Bayar / Kelola tamu / Perpanjang / **Tema** — ganti tema, §4.4 "Ganti tema"). Ringkasan per undangan aktif: jumlah tamu, RSVP hadir/tidak, total pax, jumlah ucapan.
+Daftar undangan milik user dengan status berwarna (`draft` / `pending_payment` / `active` / `expired`) dan aksi lanjutan yang relevan per status (Lanjutkan mengisi / Bayar / Kelola tamu / Perpanjang / **Tema** — ganti tema, §4.4 "Ganti tema" / **Pratinjau** — membuka pratinjau pemilik `/preview/{id}` di semua status, DECISIONS #129). Ringkasan per undangan aktif: jumlah tamu, RSVP hadir/tidak, total pax, jumlah ucapan.
 
-**Kriteria terima:** klien baru diarahkan langsung ke pembuatan undangan pertama → statistik RSVP akurat dan diperbarui saat halaman dimuat → semua halaman dashboard nyaman dipakai di layar 360px.
+**Kriteria terima:** klien baru diarahkan langsung ke pembuatan undangan pertama → statistik RSVP akurat dan diperbarui saat halaman dimuat → semua halaman dashboard nyaman dipakai di layar 360px → setiap kartu undangan punya tombol Pratinjau yang membuka pratinjau pemilik undangan itu.
 
 ### 4.4 Pembuat undangan (form multi-step)
 
@@ -136,7 +138,7 @@ Form terstruktur per bagian; skema field **berbeda per kategori acara** namun di
 | 2. Detail pihak | Mempelai pria & wanita + nama orang tua, urutan anak, foto masing-masing | Deskripsi acara, logo perusahaan, kontak PIC | Nama lengkap anak, orang tua |
 | 3. Jadwal | Akad, resepsi (multi-sesi) — masing-masing: nama, tanggal-jam mulai/selesai, nama gedung, alamat, link Google Maps | Sesi/rundown (multi) | Sesi acara |
 | 4. Galeri & media | Upload foto (limit per paket), video — unggah klip atau embed YouTube (Premium; klip menang bila keduanya diisi), musik latar — pilih dari pustaka, atau unggah satu MP3 sendiri (Premium; lagu unggahan menang saat diputar) | Sama | Sama |
-| 5. Cerita | Love story timeline (judul-tanggal-narasi, multi-entri) | Agenda/sambutan | Doa/harapan |
+| 5. Cerita | Love story timeline (judul-tanggal-narasi, multi-entri; foto opsional per entri bila tema menampilkannya — "Foto cerita" di bawah) | Agenda/sambutan | Doa/harapan |
 | 6. Amplop digital | Multi-rekening (bank, no., a.n.) + e-wallet + alamat kirim kado — toggle on/off | Opsional (mis. donasi) | Sama dengan pernikahan |
 | 7. Pengaturan | Ucapan pembuka/penutup, kutipan ayat/quote, toggle tampil/sembunyi per section, moderasi ucapan on/off. Tema diganti lewat tombol "Ganti Tema" (lihat "Ganti tema" di bawah); varian warna, font & urutan bagian lewat "Kustomisasi Tampilan" | Sama | Sama |
 
@@ -167,6 +169,17 @@ Perilaku form: autosave per step (debounce) · indikator step selesai · upload 
 - **Tema premium:** undangan yang belum pernah dibayar boleh memilihnya (rasakan dulu — saat bayar wajib paket Premium, §4.8). Undangan berpaket tanpa `all_themes` melihat kartu premium terkunci ("Perlu paket Premium") dengan tombol upgrade bila undangannya aktif dan bisa di-upgrade; server dan DB menolaknya juga.
 - **Sesudah ganti:** halaman publik `/{slug}` diperbarui saat itu juga (revalidasi ISR), gambar pratinjau tautan ikut versi baru (`updated_at`), lalu pemilik kembali ke halaman Edit.
 
+**Foto cerita (keputusan pemilik 11 Nov 2026, DECISIONS #127):**
+
+- Setiap entri love story boleh punya **satu foto**, diunggah lewat jalur foto mempelai (kompres 2 varian WebP di klien, `lib/storage/`, titik fokus non-destruktif). Foto ini tidak dihitung batas galeri (§2).
+- Bidang unggahnya hanya muncul di editor bila tema yang dipakai menampilkan foto cerita (`media.story` di `options.ts`, THEME-CONTRACT §2). Saat ini hanya **Warta**. Foto tetap tersimpan saat ganti tema dan tampil lagi di tema yang memakainya.
+- **Warta:** selama belum ada satu pun entri berfoto, foto cerita diambil dari galeri secara berurutan (perilaku sebelumnya). Begitu satu entri diberi foto, hanya foto unggahan yang dipakai dan entri tanpa foto tampil tanpa foto.
+- Mengganti foto atau menghapus entri menghapus berkas lamanya. Foto cerita ikut dibersihkan saat draft dihapus, saat purge retensi, dan saat hapus akun.
+- Halaman tamu hanya menampilkan foto milik undangan itu sendiri (`inv/<id>/foto/<uuid>`).
+- Agenda (korporat) dan doa/harapan (keluarga) tidak punya foto.
+
+**Kriteria terima:** unggah foto di entri cerita → foto tampil di pratinjau & halaman tamu Warta dengan titik fokusnya → muat ulang editor, foto tetap ada → hapus entri → berkasnya terhapus → tema tanpa foto cerita tidak menampilkan bidang unggahnya → purge undangan memanen foto cerita (pgTAP).
+
 **Kriteria terima ganti tema:** pemilik undangan aktif bisa mengganti tema dari Edit maupun dashboard, dan tamu yang membuka `/{slug}` sesudahnya langsung melihat tema baru → pratinjau `?tema=` menampilkan data pemilik dalam tema kandidat tanpa mengubah DB; slug liar diabaikan; bukan pemilik → 404 → hanya tema aktif & sekategori yang ditawarkan, dan server menolak tema nonaktif, berkategori lain, atau tanpa kode walau dikirim langsung → draft pelanggan bisa pindah ke tema premium lalu hanya bisa membayar paket Premium; undangan aktif Basic tidak bisa (kartu terkunci, server & DB menolak dengan pesan bahasa Indonesia); draft dengan order Basic `pending` tidak bisa → sesudah ganti, tampilan kembali ke bawaan tema baru dan "Kustomisasi Tampilan" bisa langsung disimpan; isi, foto, tamu, dan ucapan utuh; ganti balik ke tema lama aman → undangan `suspended` atau sudah di-purge tidak bisa ganti tema → semua nyaman dipakai di layar 360px.
 
 ### 4.5 Halaman undangan publik (produk yang dilihat tamu — kualitas tertinggi)
@@ -181,9 +194,9 @@ Ketentuan teknis: render **SSR + cache ISR** (di-revalidate saat pemilik menyimp
 
 Satu form gabungan: kehadiran (hadir / tidak hadir), jumlah pax (maks. sesuai alokasi tamu; maks. 4 untuk tamu tanpa token — link umum, DECISIONS #120), dan ucapan/doa. Ucapan tampil di dinding (terbaru di atas, paginasi). Pemilik bisa menyembunyikan ucapan tertentu; bila moderasi diaktifkan, ucapan baru tampil setelah disetujui. Konfirmasi amplop (transfer/kado + nominal opsional) bersifat **privat** — hanya terlihat pemilik di dashboard.
 
-**Anti-spam:** Cloudflare Turnstile (invisible) + rate limit per IP + honeypot field. Tanpa CAPTCHA gambar yang mengganggu tamu.
+**Anti-spam:** Cloudflare Turnstile (invisible) + rate limit per IP + honeypot field. Tanpa CAPTCHA gambar yang mengganggu tamu. Di form RSVP dan konfirmasi amplop, widget memakai `appearance: "interaction-only"`: tak terlihat bagi hampir semua tamu, dan kotak centang hanya muncul bila Cloudflare meminta interaksi (DECISIONS #128). Bila tamu menekan Kirim sebelum verifikasi selesai, form menampilkan "sedang memverifikasi" tanpa mengirim ke server — jatah rate limit tidak terpakai dan tantangan tidak diulang. Form daftar akun, reset sandi, dan Album Momen tetap menampilkan widget.
 
-**Kriteria terima:** RSVP tamu bertoken meng-update statistik dashboard secara akurat (termasuk kiriman ulang = update, bukan duplikat) → tamu tanpa token tidak bisa membanjiri (rate limit terbukti dengan test) → ucapan tersembunyi tidak muncul di publik → data amplop tidak pernah terekspos di API publik.
+**Kriteria terima:** RSVP tamu bertoken meng-update statistik dashboard secara akurat (termasuk kiriman ulang = update, bukan duplikat) → tamu tanpa token tidak bisa membanjiri (rate limit terbukti dengan test) → ucapan tersembunyi tidak muncul di publik → data amplop tidak pernah terekspos di API publik → widget Turnstile tidak terlihat di form RSVP & amplop kecuali Cloudflare meminta interaksi.
 
 ### 4.7 Manajemen tamu & distribusi WA
 

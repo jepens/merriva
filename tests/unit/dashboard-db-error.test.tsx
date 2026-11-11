@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -59,6 +59,11 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => klien(),
+}));
+// Tombol hapus (draf/kedaluwarsa) butuh `useRouter` + `<ConfirmProvider>` dan
+// menarik server action — bukan yang diuji di sini, jadi diganti tiruan.
+vi.mock("@/components/dashboard/delete-invitation-button", () => ({
+  DeleteInvitationButton: () => null,
 }));
 
 import { copy } from "@/lib/copy";
@@ -188,5 +193,80 @@ describe("tanggal di kartu dashboard", () => {
     render(await DashboardPage());
 
     expect(screen.getByText("Tanggal belum diatur")).toBeTruthy();
+  });
+});
+
+/**
+ * Tombol Pratinjau (SPEC §4.3, DECISIONS #129): setiap kartu, di SEMUA status,
+ * membuka pratinjau pemilik `/preview/{id}` di tab yang sama, tepat sesudah
+ * "Edit". Sebelumnya pratinjau hanya tercapai lewat "Selesai" di langkah
+ * terakhir editor atau halaman Ganti Tema — tak langsung dari kartu.
+ */
+describe("tombol Pratinjau di kartu dashboard", () => {
+  const kasus = [
+    ["draft", "8f0c1a52-0000-4000-8000-000000000001"],
+    ["pending_payment", "8f0c1a52-0000-4000-8000-000000000002"],
+    ["active", "8f0c1a52-0000-4000-8000-000000000003"],
+    ["expired", "8f0c1a52-0000-4000-8000-000000000004"],
+    ["suspended", "8f0c1a52-0000-4000-8000-000000000005"],
+  ] as const;
+
+  it.each(kasus)(
+    "%s → tautan ke /preview/{id}, tepat sesudah Edit, tab yang sama",
+    async (status, id) => {
+      refs.data.invitations = {
+        data: [
+          {
+            id,
+            slug: `uji-${status}`,
+            category: "wedding",
+            status,
+            event_date: "2026-12-20",
+            settings: {},
+            package_id: null,
+          },
+        ],
+        error: null,
+      };
+
+      render(await DashboardPage());
+
+      const kartu = screen.getByRole("listitem");
+      const pratinjau = within(kartu).getByRole("link", {
+        name: copy.dashboard.cardPreview,
+      });
+      expect(pratinjau.getAttribute("href")).toBe(`/preview/${id}`);
+      expect(pratinjau.getAttribute("target")).toBeNull();
+      const edit = within(kartu).getByRole("link", {
+        name: copy.dashboard.cardEdit,
+      });
+      expect(edit.nextElementSibling).toBe(pratinjau);
+    },
+  );
+
+  it("beberapa kartu → masing-masing menunjuk undangannya sendiri", async () => {
+    refs.data.invitations = {
+      data: kasus.map(([status, id]) => ({
+        id,
+        slug: `uji-${status}`,
+        category: "wedding",
+        status,
+        event_date: "2026-12-20",
+        settings: {},
+        package_id: null,
+      })),
+      error: null,
+    };
+
+    render(await DashboardPage());
+
+    const hrefs = screen
+      .getAllByRole("listitem")
+      .map((li) =>
+        within(li)
+          .getByRole("link", { name: copy.dashboard.cardPreview })
+          .getAttribute("href"),
+      );
+    expect(hrefs).toEqual(kasus.map(([, id]) => `/preview/${id}`));
   });
 });

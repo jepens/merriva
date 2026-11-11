@@ -13,6 +13,7 @@ import { isUuid } from "@/lib/id";
 import {
   displayPath,
   isCustomMusicPath,
+  isNamedPhotoPath,
   OG_ASPECT,
   toMediaView,
 } from "@/lib/media";
@@ -33,6 +34,7 @@ import { getEffectiveLimits } from "@/server/limits";
 import type {
   MusicSlotView,
   PhotoSlots,
+  StoryPhotoSlot,
 } from "@/components/dashboard/editor/types";
 
 export const metadata: Metadata = { title: copy.editor.title };
@@ -199,6 +201,25 @@ export default async function EditInvitationPage({
     }),
   );
 
+  // Foto per entri cerita (#127): bidangnya hanya bila tema aktif merendernya
+  // (`media.story`). URL foto tersimpan dirakit di sini per path — hanya foto
+  // bernama milik undangan INI (path di `content` ditulis klien).
+  const storyPhoto: StoryPhotoSlot | null =
+    opsiTema?.media?.story && content.category === "wedding"
+      ? {
+          aspect: opsiTema.media.story.aspect,
+          galleryFallback: Boolean(opsiTema.media.story.galleryFallback),
+          urls: Object.fromEntries(
+            (content.story ?? []).flatMap((s) => {
+              const p = s.photo?.path;
+              return p && isNamedPhotoPath(inv.id, p)
+                ? [[p, storage.getPublicUrl(displayPath(p))]]
+                : [];
+            }),
+          ),
+        }
+      : null;
+
   // Pustaka lagu aktif untuk picker musik (RLS `songs_select_public`: is_active).
   // URL dirakit ke domain sendiri di server → tema/pratinjau tak lihat URL vendor.
   const { data: songRows } = await supabase
@@ -249,6 +270,7 @@ export default async function EditInvitationPage({
           maxPhotos={maxPhotos}
           songs={songs}
           photoSlots={photoSlots}
+          storyPhoto={storyPhoto}
           music={music}
           video={video}
           initialStep={initialStep}

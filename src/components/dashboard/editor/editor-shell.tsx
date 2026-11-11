@@ -29,6 +29,7 @@ import type {
   MusicSlotView,
   PhotoSlots,
   SongOption,
+  StoryPhotoSlot,
   VideoSlotView,
 } from "./types";
 import {
@@ -68,6 +69,8 @@ export interface EditorStepContext {
   music: MusicSlotView;
   /** Gerbang paket + URL video tersimpan (dari server). */
   video: VideoSlotView;
+  /** Foto per entri cerita bila tema aktif merendernya (#127), else `null`. */
+  storyPhoto: StoryPhotoSlot | null;
 }
 
 /** Definisi satu langkah editor (dipakai lintas kategori via konfigurasi). */
@@ -112,6 +115,7 @@ export function EditorShell({
   photoSlots,
   music,
   video,
+  storyPhoto = null,
   steps,
   initialStep,
 }: {
@@ -124,6 +128,8 @@ export function EditorShell({
   photoSlots: PhotoSlots;
   music: MusicSlotView;
   video: VideoSlotView;
+  /** Hanya editor wedding yang mengirimnya (love story). */
+  storyPhoto?: StoryPhotoSlot | null;
   steps: EditorStep[];
   /** Kunci langkah yang dibuka pertama (`?langkah=`, #44); tak dikenal → 0. */
   initialStep?: string;
@@ -206,6 +212,7 @@ export function EditorShell({
     photoSlots,
     music,
     video,
+    storyPhoto,
   };
 
   return (

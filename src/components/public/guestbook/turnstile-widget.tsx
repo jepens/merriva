@@ -25,9 +25,17 @@ export function TurnstileWidget({
   siteKey,
   onToken,
   resetKey = 0,
+  appearance,
 }: {
   siteKey: string;
   onToken: (token: string) => void;
+  /**
+   * `"interaction-only"`: widget tak terlihat kecuali Cloudflare meminta
+   * interaksi; token tetap tiba lewat `onToken` (DECISIONS #128 — form tamu).
+   * Tanpa prop = tampilan bawaan, persis seperti sebelumnya (daftar akun,
+   * reset sandi, Album Momen). Mode widget di dasbor Cloudflare tetap Managed.
+   */
+  appearance?: "always" | "interaction-only";
   /**
    * Naikkan angkanya untuk MEMINTA tantangan baru. Token Turnstile sekali
    * pakai: sesudah server menolak kiriman (mis. gangguan DB — DECISIONS #46),
@@ -54,6 +62,18 @@ export function TurnstileWidget({
         callback: (token: string) => onTokenRef.current(token),
         "error-callback": () => onTokenRef.current(""),
         "expired-callback": () => onTokenRef.current(""),
+        // Hanya bila diminta: tanpa prop, opsi render sama persis seperti dulu.
+        ...(appearance ? { appearance } : {}),
+        // Tak terlihat → wadahnya 0px tetapi tetap item flex; CSS menutup
+        // celahnya sampai Cloudflare meminta interaksi. Atribut TIDAK dicabut
+        // di `after-interactive-callback`: diukur di Chromium, kotak "Success!"
+        // tetap tampil sesudahnya (dicabut saat reset).
+        ...(appearance === "interaction-only"
+          ? {
+              "before-interactive-callback": () =>
+                ref.current?.setAttribute("data-interactive", ""),
+            }
+          : {}),
       });
     }
 
@@ -86,7 +106,7 @@ export function TurnstileWidget({
       clearInterval(interval);
       script?.removeEventListener("load", render);
     };
-  }, [siteKey]);
+  }, [siteKey, appearance]);
 
   // Reset hanya saat DIMINTA (bukan saat pasang pertama).
   const lastReset = useRef(resetKey);
@@ -94,9 +114,14 @@ export function TurnstileWidget({
     if (resetKey === lastReset.current) return;
     lastReset.current = resetKey;
     if (!widgetId.current) return;
+    // Tantangan baru bisa kembali tak terlihat; bila perlu interaksi lagi,
+    // `before-interactive-callback` memasangnya ulang.
+    ref.current?.removeAttribute("data-interactive");
     window.turnstile?.reset?.(widgetId.current);
     onTokenRef.current("");
   }, [resetKey]);
 
-  return <div ref={ref} className="gb-turnstile" />;
+  return (
+    <div ref={ref} className="gb-turnstile" data-appearance={appearance} />
+  );
 }
