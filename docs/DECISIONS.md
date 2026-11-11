@@ -7596,6 +7596,91 @@ perilaku untuk satu tombol); tab baru (menumpuk tab di ponsel).
 
 ---
 
+## #130 — 2026-11-11 · Warta "Edisi Indonesia" — varian keempat, judul Indonesia, font Dhaksinarga
+
+**Permintaan (pemilik, 11 Nov 2026):** tiga halaman acuan berbahasa Indonesia —
+"BERITA UTAMA !" (dengan foto lebar), "KISAH CINTA KAMI / AWAL MULA", "LAMARAN" —
+latar abu-abu, foto hitam-putih polos, font dekoratif bernuansa aksara Jawa.
+Halaman cerita sudah bisa dibuat lewat langkah Cerita (#127); yang berbeda
+adalah rupanya.
+
+**Keputusan (pemilik):** jadi PILIHAN di Warta, bukan mengganti Warta dan bukan
+tema baru. Mekanisme: **varian keempat** `indonesia` ("Edisi Indonesia") di
+`options.ts`. Varian terbuka untuk semua paket (CUSTOMIZER-SPEC §6), tak butuh
+perubahan `CustomSettings` maupun migrasi `settings.custom`, dan sudah punya
+jalur pratinjau langsung (`data-variant` dipasang editor Tampilan sejak #103).
+Kertas abu tak bisa digabung dengan Sepia/Merah, dan varian Warta memang berarti
+"kertas + tinta" — jadi satu varian, bukan sakelar terpisah.
+
+- **Judul dua bahasa:** pengecualian bahasa #123 tetap untuk tiga varian lain;
+  Edisi Indonesia menerjemahkan SEMUA judul dekoratif (teks acuan dipakai
+  persis, sisanya padanan selaras; "BY THE FAMILY" tetap Inggris seperti acuan).
+  Judul section dirender dua bahasa (`lang="en"`/`lang="id"`) dan disaring CSS
+  `[data-variant]` — pratinjau langsung editor tak merender ulang iframe, jadi
+  hanya CSS yang bisa menukar teks seketika; yang tak tampil `display:none`
+  (tak dibaca pembaca layar).
+- **Foto cerita per edisi:** `ThemeMedia.story.aspectPerVarian` (data, bukan
+  fungsi — `ThemeOptions` dikirim ke editor klien); halaman Edit memilih rasio
+  dari varian tersimpan (`resolveAppearance`).
+- **Font:** acuan memakai *Kemasyuran Jawa* — lisensi CC BY-NC-SA 3.0
+  (NON-komersial), ditolak. Pengganti pilihan pemilik: **Dhaksinarga**
+  (Locomotype, 2021) — paket resminya memuat SIL OFL 1.1 dengan Reserved Font
+  Name "Dhaksinarga". Dipakai **berkas OTF asli tanpa diubah** (10,8 KB; tanpa
+  subset/konversi, sehingga bukan karya turunan dan nama terpesan tak jadi
+  soal); teks OFL disertakan di repo. Bentuknya miring; ditegakkan dengan
+  `skewX` CSS pada judul (render, bukan modifikasi font). `preload:false`:
+  hanya diunduh undangan yang memakai edisi ini.
+
+**Asal lisensi font (bukti):** paket resmi `dhaksinarga-font.zip` (19.055 B)
+dari fontspace.com/dhaksinarga-font-f90030 (11 Nov 2026) memuat
+`misc/OFL-002a.txt` ("Copyright (c) 2021, Locomotype Studio … with Reserved Font
+Name Dhaksinarga … licensed under the SIL Open Font License, Version 1.1") dan
+readme perancang ("Dhaksinarga memiliki lisensi OFL"); halaman Behance perancang
+(behance.net/gallery/117073823) menyatakan hal yang sama. Metadata di dalam OTF
+berbunyi "(c) 2020 … All rights reserved" dan menautkan FAQ lisensi vendor —
+dibiarkan, karena menyunting tabel `name` menjadikannya karya turunan yang wajib
+berganti nama (RFN). Berkas di repo identik dengan paket (sha256
+`d9cf2a20…ecd475`); teks OFL disajikan publik di `/fonts/Dhaksinarga-OFL.txt`
+(pola Great Vibes/Crimson Text).
+
+**Penjaga hasil tinjauan:** foto berita `loading="eager"` (layar pertama sebelum
+hidrasi → kandidat LCP; tanpa `fetchPriority` tinggi — milik foto sampul);
+`adjustFontFallback:false` untuk Dhaksinarga (fallback Arial terukur lebih lebar
+dan menggeser foto berita saat font tiba; PT Serif membungkus sama); galat RSVP
+merah tua di kertas abu (3,8 → 5,9:1); judul cerita kiri `overflow-wrap:anywhere`.
+**Diketahui:** Dhaksinarga menggambar "v" seperti "u" (dan "&" mirip "8") — judul
+tetap tema dihindari ("RSVP" → "Kehadiran"); judul cerita KANAN ketikan pemilik
+tetap memakai font ini sesuai acuan (dirilis begitu, 11 Nov). Bila nama ber-"v"
+terbaca salah, gantinya cukup serif seperti judul kiri (satu aturan CSS edisi).
+
+**Ditolak:** gaya (`styles`) — khusus Premium, sedangkan Warta bertier standard
+(Basic tak bisa memilih); field kontrak baru `custom.edition` — mengubah
+CUSTOMIZER-SPEC, dua skema, resolver, dan editor, dengan risiko kunci terbuang
+diam-diam oleh `z.object` di autosave; tema terpisah — kode ganda, dan ganti
+tema mereset `custom` (#124).
+
+---
+
+## #131 — 2026-11-11 · Foto khas tema (`content.themePhotos`) — "Foto berita utama" Warta
+
+**Keputusan (pemilik):** halaman Berita Warta mendapat bidang foto sendiri
+(bukan foto sampul dipakai ulang). Kontrak sudah mengizinkan slot `x-…` + label
+(THEME-CONTRACT §2) tetapi belum punya tempat simpan; kini **generik**:
+`content.themePhotos: Record<"x-…", Photo>` (kunci divalidasi regex — menolak
+`__proto__`; foto rusak gugur sendiri), di-resolve server ke
+`InvitationData.themePhotos` hanya untuk path milik undangan itu, dirender
+editor di langkah Galeri dari `media.slots` tema. Warta: `x-berita`, 3:2, lebar
+penuh di bawah teks pembuka, kedua edisi.
+
+**Retensi (UU PDP):** purge & hapus draft memanen nilai `themePhotos` dengan
+regex foto bernama yang sama (migrasi baru + pgTAP); `PhotoField` membuang objek
+lama saat diganti/dibuang.
+
+**Ditolak:** `content.newsPhoto` khusus Warta — nama satu tema di kontrak inti,
+dan setiap slot `x-` berikutnya butuh kolom + migrasi purge sendiri.
+
+---
+
 ## Template entri baru
 
 ```

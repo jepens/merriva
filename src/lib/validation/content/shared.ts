@@ -258,8 +258,40 @@ export const loveStoryEntrySchema = storyEntrySchema.extend({
  * (SPEC §4.4 step 7) tetapi secara data adalah KONTEN (ditampilkan di undangan),
  * bukan `settings` (perilaku/tampilan).
  */
+/** Kunci foto khas tema = id slot `x-…` di `media.slots` tema (THEME-CONTRACT §2). */
+export const THEME_PHOTO_KEY_RE = /^x-[a-z0-9-]{1,30}$/;
+/** Jauh di atas kebutuhan tema mana pun (warta: 1) — pagar JSONB liar saja. */
+const MAX_THEME_PHOTOS = 8;
+
+/**
+ * Foto khas tema (DECISIONS #131), mis. `{ "x-berita": { path, x, y, zoom } }`
+ * — foto bernama milik SATU tema yang tak punya kunci tetap di `content`.
+ * Kunci & nilai disaring satu per satu, bukan ditolak sekaligus: kunci di luar
+ * pola (termasuk `__proto__`) atau foto rusak hanya GUGUR, supaya satu nilai
+ * liar tak menjatuhkan parse SELURUH konten (pola `customMusic`). Kosong →
+ * `undefined`.
+ */
+export const themePhotosSchema = z.preprocess(
+  (v) => {
+    if (!v || typeof v !== "object" || Array.isArray(v)) return undefined;
+    const out: Record<string, unknown> = {};
+    let n = 0;
+    for (const [k, p] of Object.entries(v)) {
+      if (n >= MAX_THEME_PHOTOS || !THEME_PHOTO_KEY_RE.test(k)) continue;
+      const r = photoSchema.safeParse(p);
+      if (!r.success) continue;
+      out[k] = r.data;
+      n += 1;
+    }
+    return n > 0 ? out : undefined;
+  },
+  z.record(z.string().regex(THEME_PHOTO_KEY_RE), photoSchema).optional(),
+);
+
 export const commonContentFields = {
   coverPhoto: photoSchema.optional(),
+  /** Foto khas tema (`x-…`) — lihat `themePhotosSchema`. */
+  themePhotos: themePhotosSchema,
   greetingOpen: z.string().trim().max(L.common.greeting).optional(),
   greetingClose: z.string().trim().max(L.common.greeting).optional(),
   quote: quoteSchema.optional(),

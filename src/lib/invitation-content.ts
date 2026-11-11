@@ -138,6 +138,9 @@ export function parseContentForRender(
   // Field display bersama (greeting/quote/media/video/amplop) sama di semua kategori.
   const common = {
     coverPhoto: d.coverPhoto,
+    // Foto khas tema (#131) — sudah disaring skema draft; tanpa ini pratinjau
+    // draft yang belum lengkap kehilangan foto berita Warta.
+    themePhotos: d.themePhotos,
     greetingOpen: d.greetingOpen,
     greetingClose: d.greetingClose,
     quote: coerceQuote(d.quote),

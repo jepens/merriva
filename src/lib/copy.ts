@@ -1063,6 +1063,9 @@ export const copy = {
       storyLabel: "Foto cerita",
       storyHint:
         "Opsional. Tampil bersama cerita ini. Tidak mengurangi kuota galeri.",
+      // Foto khas tema (`x-…`, #131) — label dari `media.slots` tema.
+      themeHint:
+        "Tampil di halaman undangan pada tema ini. Tidak mengurangi kuota galeri.",
       // Tema dengan `media.story.galleryFallback` (warta, `fotoCerita`).
       storyFallbackNote:
         "Selama belum ada foto cerita yang diunggah, tema ini memakai foto galeri secara berurutan. Begitu satu foto cerita diunggah, hanya foto cerita yang tampil — cerita tanpa foto tampil tanpa foto.",

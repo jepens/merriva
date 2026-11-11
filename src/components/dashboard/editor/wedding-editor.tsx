@@ -7,7 +7,7 @@ import type { InvitationMediaView } from "@/types/invitation";
 import { EditorShell, type EditorStep } from "./editor-shell";
 import { CoupleStep } from "./steps/couple-step";
 import { EnvelopeStep } from "./steps/envelope-step";
-import { GalleryStep } from "./steps/gallery-step";
+import { GalleryStep, slotFotoTema } from "./steps/gallery-step";
 import { InfoStep } from "./steps/info-step";
 import { ScheduleStep } from "./steps/schedule-step";
 import { SettingsStep } from "./steps/settings-step";
@@ -35,6 +35,7 @@ const galleryStep = (showGallery: boolean): EditorStep => ({
       form={c.form}
       invitationId={c.invitationId}
       coverSlot={c.photoSlots.cover}
+      themeSlots={slotFotoTema(c.photoSlots)}
       maxPhotos={c.maxPhotos}
       media={c.media}
       setMedia={c.setMedia}

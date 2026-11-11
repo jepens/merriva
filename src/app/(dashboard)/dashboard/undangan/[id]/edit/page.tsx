@@ -8,6 +8,8 @@ import { CorporateEditor } from "@/components/dashboard/editor/corporate-editor"
 import { FamilyEditor } from "@/components/dashboard/editor/family-editor";
 import { WeddingEditor } from "@/components/dashboard/editor/wedding-editor";
 import { copy } from "@/lib/copy";
+import { resolveAppearance } from "@/lib/customizer/resolve";
+import { storyAspectForVariant } from "@/lib/customizer/theme-options";
 import { stepKeyFromParam } from "@/lib/editor-links";
 import { isUuid } from "@/lib/id";
 import {
@@ -177,6 +179,12 @@ export default async function EditInvitationPage({
       return content.category === "wedding"
         ? content.bride?.photo?.path
         : undefined;
+    // Foto khas tema (#131): kuncinya = id slot. Path ditulis klien → hanya
+    // foto bernama milik undangan INI yang diberi URL.
+    if (id.startsWith("x-")) {
+      const p = content.themePhotos?.[id]?.path;
+      return p && isNamedPhotoPath(inv.id, p) ? p : undefined;
+    }
     return undefined;
   };
   // Foto SAMPUL adalah pengecualian yang disengaja dari aturan "dirakit dari
@@ -196,6 +204,7 @@ export default async function EditInvitationPage({
           aspect: slot.aspect,
           url: p ? storage.getPublicUrl(displayPath(p)) : null,
           ...(slot === slotSampul ? {} : { inTheme: true }),
+          ...("label" in slot && slot.label ? { label: slot.label } : {}),
         },
       ];
     }),
@@ -204,10 +213,16 @@ export default async function EditInvitationPage({
   // Foto per entri cerita (#127): bidangnya hanya bila tema aktif merendernya
   // (`media.story`). URL foto tersimpan dirakit di sini per path — hanya foto
   // bernama milik undangan INI (path di `content` ditulis klien).
+  // Rasio bingkainya mengikuti varian TERSIMPAN (#130: warta Edisi Indonesia
+  // berbingkai lain) — `resolveAppearance` = jalur yang sama dengan render,
+  // jadi id varian yang tak dikenal jatuh ke bawaan di kedua tempat.
+  const varianTersimpan = opsiTema
+    ? resolveAppearance(opsiTema, settings.custom).variantId
+    : null;
   const storyPhoto: StoryPhotoSlot | null =
     opsiTema?.media?.story && content.category === "wedding"
       ? {
-          aspect: opsiTema.media.story.aspect,
+          aspect: storyAspectForVariant(opsiTema.media.story, varianTersimpan),
           galleryFallback: Boolean(opsiTema.media.story.galleryFallback),
           urls: Object.fromEntries(
             (content.story ?? []).flatMap((s) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
-import type { UseFormReturn } from "react-hook-form";
+import type { Path, UseFormReturn } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
@@ -16,7 +16,16 @@ import {
 import type { InvitationMediaView } from "@/types/invitation";
 
 import { PhotoField } from "../photo-field";
-import type { EditorValues, PhotoSlotView } from "../types";
+import type { EditorValues, PhotoSlots, PhotoSlotView } from "../types";
+
+/** Slot foto khas tema (`x-…`, DECISIONS #131) dari `photoSlots`, urut deklarasi tema. */
+export function slotFotoTema(
+  photoSlots: PhotoSlots,
+): Array<{ id: string; slot: PhotoSlotView }> {
+  return Object.entries(photoSlots).flatMap(([id, slot]) =>
+    id.startsWith("x-") && slot ? [{ id, slot }] : [],
+  );
+}
 
 /**
  * Langkah Galeri (SPEC §4.4 step 4). Kompresi 2 varian WebP di klien lalu unggah
@@ -32,6 +41,7 @@ export function GalleryStep({
   media,
   setMedia,
   showGallery = true,
+  themeSlots = [],
 }: {
   form: UseFormReturn<EditorValues>;
   invitationId: string;
@@ -45,9 +55,13 @@ export function GalleryStep({
    * tak ditawarkan, karena fotonya memakan kuota paket tanpa pernah tampil.
    */
   showGallery?: boolean;
+  /** Foto khas tema aktif (`slotFotoTema`), mis. "Foto berita utama" warta. */
+  themeSlots?: ReadonlyArray<{ id: string; slot: PhotoSlotView }>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const cover = form.watch("content.coverPhoto") as Photo | undefined;
+  const fotoTema = form.watch("content.themePhotos") as
+    Record<string, Photo | undefined> | undefined;
   const [pending, setPending] = useState(0);
   const [removing, setRemoving] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -155,10 +169,36 @@ export function GalleryStep({
     </>
   ) : null;
 
+  // Foto khas tema (#131): satu bidang per slot `x-…` yang dirender TEMA AKTIF
+  // — juga di luar batas foto paket. Disimpan di `content.themePhotos[id]`.
+  const khasTema = themeSlots.length ? (
+    <>
+      {themeSlots.map(({ id, slot }) => (
+        <PhotoField
+          key={id}
+          invitationId={invitationId}
+          label={slot.label ?? id}
+          hint={copy.editor.photo.themeHint}
+          aspect={slot.aspect}
+          value={fotoTema?.[id]}
+          initialUrl={slot.url}
+          onChange={(next) =>
+            form.setValue(
+              `content.themePhotos.${id}` as Path<EditorValues>,
+              next,
+            )
+          }
+        />
+      ))}
+      <hr className="border-border" />
+    </>
+  ) : null;
+
   if (!showGallery) {
     return (
       <div className="space-y-4">
         {sampul}
+        {khasTema}
         <p className="text-muted-foreground text-sm">
           {copy.editor.gallery.notInTheme}
         </p>
@@ -169,6 +209,7 @@ export function GalleryStep({
   return (
     <div className="space-y-4">
       {sampul}
+      {khasTema}
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-xs">

@@ -37,12 +37,19 @@
 -- menyimpan `story` yang BUKAN array (tak boleh menggagalkan purge), E menyimpan
 -- array berisi elemen rusak yang harus tersaring seluruhnya.
 --
+-- FOTO KHAS TEMA (DECISIONS #131, migrasi 20261111120000):
+-- `content.themePhotos` = objek `{ "x-…": foto }`, nilainya `photoSchema` yang
+-- sama. F membawa bentuk editor — OBJEK, STRING lama, path undangan LAIN, dan
+-- rujukan ganda (ke sampul & antar-slot). G menyimpan nilai-nilai RUSAK yang
+-- harus tersaring. D (STRING) dan H (ARRAY) menyimpan `themePhotos` yang BUKAN
+-- objek — `jsonb_each` padanya melempar dan tak boleh menggagalkan purge.
+--
 -- Hasil ditangkap ke tabel sementara karena panggilan kedua pada undangan yang
 -- sama menjawab `already_purged` — daftar pathnya hanya ada di panggilan
 -- PERTAMA.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(27);
 
 -- Fixture ---------------------------------------------------------------------
 insert into auth.users (id, email) values
@@ -58,6 +65,9 @@ insert into public.themes (id, slug, name, categories) values
 -- C: content kosong (penjaga regresi).
 -- D: bentuk-bentuk RUSAK yang harus tersaring seluruhnya.
 -- E: wedding — `story` array berisi elemen RUSAK, harus tersaring seluruhnya.
+-- F: wedding — `themePhotos` bentuk editor (DECISIONS #131).
+-- G: wedding — `themePhotos` objek berisi nilai RUSAK.
+-- H: wedding — `themePhotos` ARRAY, bukan objek.
 insert into public.invitations
   (id, user_id, theme_id, slug, category, status, active_until, content)
 values
@@ -90,6 +100,8 @@ values
   -- logo: tipe yang bukan objek maupun string.
   -- story: OBJEK, bukan array — `jsonb_array_elements` padanya melempar dan
   --   menggagalkan SELURUH purge bila penjaga `jsonb_typeof` hilang.
+  -- themePhotos: STRING path sah, bukan objek — tak dibaca; `jsonb_each`
+  --   padanya melempar bila penjaga `jsonb_typeof` hilang.
   ('0d810000-0000-4000-8000-0000000000a4', '0d810000-0000-4000-8000-00000000000a',
    '0d810000-0000-4000-8000-0000000000e0', 'pgtap-foto-d', 'wedding', 'expired',
    '2026-01-01 00:00:00+00',
@@ -97,7 +109,8 @@ values
      "groom":{"photo":{"path":"inv/0d810000-0000-4000-8000-0000000000a1/foto/0d810000-0000-4000-8000-0000000000c1"}},
      "bride":{"photo":"inv/0d810000-0000-4000-8000-0000000000a4/foto/../../lain"},
      "logo":42,
-     "story":{"photo":"inv/0d810000-0000-4000-8000-0000000000a4/foto/0d810000-0000-4000-8000-0000000000c8"}}'::jsonb),
+     "story":{"photo":"inv/0d810000-0000-4000-8000-0000000000a4/foto/0d810000-0000-4000-8000-0000000000c8"},
+     "themePhotos":"inv/0d810000-0000-4000-8000-0000000000a4/foto/0d810000-0000-4000-8000-0000000000d9"}'::jsonb),
   -- story array berisi: angka, path telanjang SEBAGAI entri (bukan `photo`),
   -- null, `photo` angka, `photo` objek tanpa `path`, dan traversal.
   ('0d810000-0000-4000-8000-0000000000a5', '0d810000-0000-4000-8000-00000000000a',
@@ -110,7 +123,42 @@ values
        {"title":"x","photo":42},
        {"title":"y","photo":{"x":0.5,"y":0.5,"zoom":1}},
        {"title":"z","photo":"inv/0d810000-0000-4000-8000-0000000000a5/foto/../../lain"}
-     ]}'::jsonb);
+     ]}'::jsonb),
+  -- themePhotos: OBJEK d2, STRING lama d3, path milik undangan LAIN (a1), dan
+  -- dua rujukan ganda — d1 (= sampul) dan d2 (= slot lain).
+  ('0d810000-0000-4000-8000-0000000000a6', '0d810000-0000-4000-8000-00000000000a',
+   '0d810000-0000-4000-8000-0000000000e0', 'pgtap-foto-f', 'wedding', 'expired',
+   '2026-01-01 00:00:00+00',
+   '{"coverPhoto":{"path":"inv/0d810000-0000-4000-8000-0000000000a6/foto/0d810000-0000-4000-8000-0000000000d1","x":0.5,"y":0.5,"zoom":1},
+     "themePhotos":{
+       "x-berita":{"path":"inv/0d810000-0000-4000-8000-0000000000a6/foto/0d810000-0000-4000-8000-0000000000d2","x":0.5,"y":0.4,"zoom":1.2},
+       "x-lama":"inv/0d810000-0000-4000-8000-0000000000a6/foto/0d810000-0000-4000-8000-0000000000d3",
+       "x-asing":{"path":"inv/0d810000-0000-4000-8000-0000000000a1/foto/0d810000-0000-4000-8000-0000000000d4","x":0.5,"y":0.5,"zoom":1},
+       "x-sampul":{"path":"inv/0d810000-0000-4000-8000-0000000000a6/foto/0d810000-0000-4000-8000-0000000000d1","x":0.5,"y":0.5,"zoom":1},
+       "x-ganda":"inv/0d810000-0000-4000-8000-0000000000a6/foto/0d810000-0000-4000-8000-0000000000d2"
+     }}'::jsonb),
+  -- themePhotos berisi nilai rusak: angka, null, boolean, objek tanpa `path`,
+  -- `path` angka, `path` bersarang (->> menjawab teks JSON), array berisi path,
+  -- path varian (bukan prefix), dan traversal.
+  ('0d810000-0000-4000-8000-0000000000a7', '0d810000-0000-4000-8000-00000000000a',
+   '0d810000-0000-4000-8000-0000000000e0', 'pgtap-foto-g', 'wedding', 'expired',
+   '2026-01-01 00:00:00+00',
+   '{"themePhotos":{
+       "x-angka":42,
+       "x-null":null,
+       "x-bool":true,
+       "x-tanpa-path":{"x":0.5,"y":0.5,"zoom":1},
+       "x-path-angka":{"path":42},
+       "x-bersarang":{"path":{"path":"inv/0d810000-0000-4000-8000-0000000000a7/foto/0d810000-0000-4000-8000-0000000000d5"}},
+       "x-array":["inv/0d810000-0000-4000-8000-0000000000a7/foto/0d810000-0000-4000-8000-0000000000d6"],
+       "x-varian":"inv/0d810000-0000-4000-8000-0000000000a7/foto/0d810000-0000-4000-8000-0000000000d7/1600.webp",
+       "x-traversal":"inv/0d810000-0000-4000-8000-0000000000a7/foto/../../lain"
+     }}'::jsonb),
+  -- themePhotos ARRAY berisi foto sah — bukan bentuk editor, tak dibaca.
+  ('0d810000-0000-4000-8000-0000000000a8', '0d810000-0000-4000-8000-00000000000a',
+   '0d810000-0000-4000-8000-0000000000e0', 'pgtap-foto-h', 'wedding', 'expired',
+   '2026-01-01 00:00:00+00',
+   '{"themePhotos":[{"path":"inv/0d810000-0000-4000-8000-0000000000a8/foto/0d810000-0000-4000-8000-0000000000d8","x":0.5,"y":0.5,"zoom":1}]}'::jsonb);
 
 -- `media.storage_path` dibatasi check constraint `media_storage_path_format`
 -- ke `inv/<invitation_id>/<id>` barisnya sendiri PERSIS (20261103045611), jadi
@@ -129,6 +177,12 @@ create temporary table hasil_d on commit drop as
   select * from public.purge_invitation_data('0d810000-0000-4000-8000-0000000000a4');
 create temporary table hasil_e on commit drop as
   select * from public.purge_invitation_data('0d810000-0000-4000-8000-0000000000a5');
+create temporary table hasil_f on commit drop as
+  select * from public.purge_invitation_data('0d810000-0000-4000-8000-0000000000a6');
+create temporary table hasil_g on commit drop as
+  select * from public.purge_invitation_data('0d810000-0000-4000-8000-0000000000a7');
+create temporary table hasil_h on commit drop as
+  select * from public.purge_invitation_data('0d810000-0000-4000-8000-0000000000a8');
 
 -- Assert ----------------------------------------------------------------------
 select is((select result from hasil_a), 'purged',
@@ -196,6 +250,41 @@ select is((select result from hasil_e), 'purged',
 select is(
   (select coalesce(array_length(media_paths, 1), 0) from hasil_e), 0,
   'elemen story rusak tersaring seluruhnya');
+
+-- Foto khas tema (DECISIONS #131) ------------------------------------------------
+select is((select result from hasil_f), 'purged',
+  'undangan berfoto khas tema terpurge');
+select ok((select 'inv/0d810000-0000-4000-8000-0000000000a6/foto/0d810000-0000-4000-8000-0000000000d2' = any(media_paths) from hasil_f),
+  'foto KHAS TEMA bentuk OBJEK ikut daftar hapus');
+select ok((select 'inv/0d810000-0000-4000-8000-0000000000a6/foto/0d810000-0000-4000-8000-0000000000d3' = any(media_paths) from hasil_f),
+  'foto KHAS TEMA bentuk STRING lama ikut daftar hapus');
+select ok(
+  (select not exists (
+     select 1 from unnest((select media_paths from hasil_f)) as p
+     where p like 'inv/0d810000-0000-4000-8000-0000000000a1/%'
+   )),
+  'foto khas tema yang merujuk undangan LAIN tak ikut terhapus');
+-- Sampul d1 + slot d2 + slot d3: d1 & d2 yang dirujuk dua kali muncul sekali.
+select is(
+  (select array(select p from unnest(media_paths) as p order by p) from hasil_f),
+  array[
+    'inv/0d810000-0000-4000-8000-0000000000a6/foto/0d810000-0000-4000-8000-0000000000d1',
+    'inv/0d810000-0000-4000-8000-0000000000a6/foto/0d810000-0000-4000-8000-0000000000d2',
+    'inv/0d810000-0000-4000-8000-0000000000a6/foto/0d810000-0000-4000-8000-0000000000d3'
+  ]::text[],
+  'daftar F tepat sampul + 2 foto khas tema — tanpa duplikat');
+
+select is((select result from hasil_g), 'purged',
+  'themePhotos berisi nilai rusak tetap terpurge tanpa galat');
+select is(
+  (select coalesce(array_length(media_paths, 1), 0) from hasil_g), 0,
+  'nilai themePhotos rusak tersaring seluruhnya');
+
+select is((select result from hasil_h), 'purged',
+  'themePhotos ARRAY tetap terpurge tanpa galat');
+select is(
+  (select coalesce(array_length(media_paths, 1), 0) from hasil_h), 0,
+  'themePhotos yang bukan objek tak dibaca');
 
 select * from finish();
 rollback;

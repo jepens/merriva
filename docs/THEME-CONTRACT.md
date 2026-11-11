@@ -117,7 +117,14 @@ media: {
   tema membaca `storyPhotos`) dan hanya mengizinkannya pada tema bersection
   `story`. `galleryFallback: true` menyatakan tema memakai foto galeri
   berurutan selama tak ada satu pun foto cerita (`warta`) — editor lalu
-  menjelaskannya di langkah Cerita.
+  menjelaskannya di langkah Cerita. `aspectPerVarian: { [idVarian]: aspect }`
+  menimpa `aspect` untuk varian tertentu (warta Edisi Indonesia `[8/9, 5/7]`,
+  DECISIONS #130); editor memilihnya dari varian TERSIMPAN.
+- **Slot khas tema `x-…`** (DECISIONS #131) disimpan di
+  `content.themePhotos[id]` (bentuk `photoSchema`, jalur foto bernama), sampai ke
+  tema sebagai `data.themePhotos[id]` (`PhotoView`, hanya foto milik undangan
+  itu), dan dirender editor di langkah Galeri dengan `label` slot. Test
+  konformansi: slot `x-` dideklarasikan ⇔ tema membaca `themePhotos`.
 
 Konsekuensi langsung: `cover` dan `logo` yang hari ini bisa diunggah tetapi tak
 dirender tema mana pun akan **hilang dari editor** sampai ada tema yang

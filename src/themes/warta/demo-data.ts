@@ -1,13 +1,16 @@
 import { demoPhoto, demoPhotosFor } from "@/themes/_shared/demo-photos";
 import type { InvitationData, InvitationMediaView } from "@/types/invitation";
 
+import { SLOT_FOTO_BERITA } from "./options";
+
 /**
  * Data contoh tema Warta (koran retro) untuk katalog & `/preview/tema/warta`.
- * Memamerkan semua halaman koran: berita pembuka 2 kolom, kutipan, profil
- * mempelai berfoto, dua feature kisah, kalender + hitung mundur, dua iklan
- * acara di hari yang sama, arsip foto, dan kupon amplop bertab (rekening +
- * alamat kado). Foto meminjam set demo `eternal-rose` (kredit ikut — lihat
- * `_shared/demo-photos.ts`); fallback = gradasi abu-abu kertas koran.
+ * Memamerkan semua halaman koran: berita pembuka 2 kolom + foto berita utama
+ * (slot `x-berita`), kutipan, profil mempelai berfoto, dua feature kisah,
+ * kalender + hitung mundur, dua iklan acara di hari yang sama, arsip foto, dan
+ * kupon amplop bertab (rekening + alamat kado). Edisi Indonesia:
+ * `?variant=indonesia`. Foto meminjam set demo `eternal-rose` (kredit ikut —
+ * lihat `_shared/demo-photos.ts`); fallback = gradasi abu-abu kertas koran.
  */
 function swatch(from: string, to: string): string {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${from}'/><stop offset='1' stop-color='${to}'/></linearGradient></defs><rect width='800' height='800' fill='url(#g)'/></svg>`;
@@ -33,6 +36,12 @@ const media: InvitationMediaView[] = set
       photo("#c6c0b5", "#5c5751"),
       photo("#e0dbd1", "#8a847a"),
     ].map((p, i) => ({ id: `demo-m${i}`, ...p }));
+
+// Foto berita utama (slot `x-berita`, lebar penuh 3:2 di halaman Berita): foto
+// set yang tak dipakai sampul/mempelai/feature. Foto demo potret → titik fokus
+// dinaikkan ke wajah, bukan tengah bingkai.
+const fotoBerita = demoPhoto(set?.[4]?.url);
+const berita = fotoBerita ? { ...fotoBerita, y: 0.06 } : null;
 
 export const demoInvitationData: InvitationData = {
   slug: "demo",
@@ -124,6 +133,7 @@ export const demoInvitationData: InvitationData = {
   groomPhoto: demoPhoto(set?.[3]?.url),
   bridePhoto: demoPhoto(set?.[5]?.url),
   coverPhoto: demoPhoto(set?.[1]?.url),
+  themePhotos: berita ? { [SLOT_FOTO_BERITA]: berita } : undefined,
   music: null,
   watermark: true,
 };

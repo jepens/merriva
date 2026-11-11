@@ -130,6 +130,20 @@
   border: 0;
 }
 
+/* Judul dekoratif dua edisi (sections.tsx `Dwi`, DECISIONS #130): keduanya
+   ada di HTML, edisi yang tak aktif `display:none` → tak tampil & tak dibaca
+   pembaca layar. Edisi Indonesia = `data-variant="indonesia"` di akar (server
+   & pratinjau langsung editor Tampilan). */
+.wt-bi[lang="id"] {
+  display: none;
+}
+.wt[data-variant="indonesia"] .wt-bi[lang="en"] {
+  display: none;
+}
+.wt[data-variant="indonesia"] .wt-bi[lang="id"] {
+  display: inline;
+}
+
 /* Kepala halaman: "PAGE 3 · COUPLE ………… THE WEDDING POST". */
 .wt-folio {
   display: flex;
@@ -338,6 +352,12 @@ hr.wt-rule {
 }
 .wt-profile--right .wt-photo--portrait {
   transform: rotate(1.2deg);
+}
+/* Foto berita utama (slot `x-berita`, `options.ts` 3:2): selebar halaman di
+   bawah teks pembuka. */
+.wt-photo--news {
+  aspect-ratio: 3 / 2;
+  margin-top: 26px;
 }
 .wt-photo--wide {
   aspect-ratio: 4 / 3;
@@ -1524,6 +1544,225 @@ hr.wt-rule {
 .wt-music:focus-visible {
   outline: 2px solid var(--wt-ink);
   outline-offset: 2px;
+}
+
+/* --------------------------------------------------- Edisi Indonesia ----- */
+/* Varian `indonesia` (DECISIONS #130) — halaman acuan pemilik: kertas abu-abu,
+   foto hitam-putih POLOS, folio bergaris tebal, judul bernuansa aksara Jawa
+   (Dhaksinarga), kutipan tanpa kotak. SEMUA aturan di bawah `[data-variant]`:
+   Koran/Sepia/Merah tak berubah. `--wt-paper` (#c6c6c6) datang dari varian
+   (inline di akar); turunan non-inline di bawah ini menang atas `.wt` karena
+   lebih spesifik. Ukuran = tabel piksel acuan (408 px CSS). */
+.wt[data-variant="indonesia"] {
+  /* Teks kecil abu tua #383838 (acuan ±#404040) — 6,9:1 terukur di kertas
+     abu, 5,8:1 di permukaan --wt-paper-2 (sampul, watermark). */
+  --wt-muted: color-mix(in srgb, var(--wt-ink) 80%, var(--wt-paper));
+  /* Permukaan kedua (sampul, latar foto, watermark) abu sedikit lebih terang
+     — tanpa campuran cokelat newsprint varian krem. */
+  --wt-paper-2: color-mix(in srgb, var(--wt-paper) 86%, #ffffff);
+  --wt-sans: Arial, Helvetica, "Liberation Sans", Roboto, sans-serif;
+}
+
+/* Foto polos: tanpa raster titik (foto & pita berfoto). */
+.wt[data-variant="indonesia"] .wt-photo::after,
+.wt[data-variant="indonesia"] .wt-band::after {
+  display: none;
+}
+.wt[data-variant="indonesia"] .wt-photo img {
+  filter: grayscale(1);
+}
+
+/* Folio "HALAMAN 2 . BERITA ……… UNDANGAN PERNIKAHAN" + garis tebal. */
+.wt[data-variant="indonesia"] .wt-folio {
+  padding: 14px 10px 5px;
+  margin-bottom: 22px;
+  border-bottom: 3px solid
+    color-mix(in srgb, var(--wt-ink) 70%, var(--wt-paper));
+  font-family: var(--wt-sans);
+  font-size: 9px;
+  letter-spacing: 0.09em;
+}
+.wt[data-variant="indonesia"] .wt-folio__n::before {
+  content: "Halaman " counter(wt-page);
+}
+/* Halaman Fitur acuan: judul rapat ke folio. */
+.wt[data-variant="indonesia"] .wt-feature .wt-folio {
+  margin-bottom: 12px;
+}
+
+/* "BERITA UTAMA !" — serif tebal kondensed (PT Serif 700 dipadatkan). */
+.wt[data-variant="indonesia"] .wt-kicker {
+  font-family: var(--wt-body), Georgia, serif;
+  font-weight: 700;
+  font-size: 25.5px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+.wt[data-variant="indonesia"] .wt-kicker .wt-bi[lang="id"] {
+  display: inline-block;
+  transform: scaleX(0.82);
+}
+
+/* Judul section & judul cerita kanan: Dhaksinarga. Glyph-nya miring →
+   ditegakkan `skewX` (render, bukan modifikasi berkas font — OFL). */
+.wt[data-variant="indonesia"] .wt-h2 {
+  font-family: var(--wt-jawa), var(--wt-body), serif;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+.wt[data-variant="indonesia"] .wt-h2 .wt-bi[lang="id"],
+.wt[data-variant="indonesia"] .wt-story--right .wt-h3__t {
+  display: inline-block;
+  transform: skewX(14deg);
+}
+/* Glyph Dhaksinarga jauh lebih lebar dari Anton: ukuran diturunkan supaya
+   judul acuan muat satu baris di 408 px (berita ±331 px, "Kisah Cinta Kami"
+   ±290 px) dan tetap selebar kolom di 320 px. */
+.wt[data-variant="indonesia"] .wt-h2--sm {
+  font-size: clamp(18px, 5.6vw, 23px);
+}
+.wt[data-variant="indonesia"] .wt-h2--md {
+  font-size: 15.8px;
+}
+.wt[data-variant="indonesia"] .wt-h2--lg {
+  font-size: clamp(24px, 7.6vw, 31px);
+}
+.wt[data-variant="indonesia"] .wt-h2--xl {
+  font-size: clamp(26px, 8.2vw, 34px);
+}
+.wt[data-variant="indonesia"] .wt-reply .wt-h2--xl {
+  font-size: 40px;
+}
+.wt[data-variant="indonesia"] .wt-news .wt-h2 {
+  margin-top: 4px;
+}
+
+.wt[data-variant="indonesia"] .wt-eyebrow {
+  font-family: var(--wt-sans);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+.wt[data-variant="indonesia"] .wt-news .wt-eyebrow {
+  margin-top: 22px;
+}
+.wt[data-variant="indonesia"] .wt-eyebrow--light {
+  letter-spacing: 0.24em;
+}
+
+/* Huruf awal serif REGULER setinggi 3 baris; tanpa byline. */
+.wt[data-variant="indonesia"] .wt-dropcap::first-letter {
+  font-family: var(--wt-body), Georgia, serif;
+  font-weight: 400;
+  font-size: 62px;
+  line-height: 0.8;
+  padding: 4px 8px 0 0;
+}
+.wt[data-variant="indonesia"] .wt-byline {
+  display: none;
+}
+.wt[data-variant="indonesia"] .wt-photo--news {
+  margin-top: 4px;
+}
+
+/* Kutipan ayat tanpa kotak: italic serif kecil terpusat, sumber sebaris dalam
+   kurung — "… kepadanya. (QS. AR-RUM : 21)". */
+.wt[data-variant="indonesia"] .wt-quote {
+  margin: 0;
+  padding: 0 20px;
+  border: 0;
+  /* Di blok induknya, bukan hanya di p/cite inline: strut baris ikut
+     ukuran & tinggi baris blok (16px × 1,6 bawaan .wt = baris terlalu lebar). */
+  font-size: 11.5px;
+  line-height: 1.78;
+}
+.wt[data-variant="indonesia"] .wt-quote__mark {
+  display: none;
+}
+.wt[data-variant="indonesia"] .wt-quote p,
+.wt[data-variant="indonesia"] .wt-quote cite {
+  display: inline;
+  margin: 0;
+  font-family: var(--wt-body), Georgia, serif;
+  font-style: italic;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: 0;
+  color: var(--wt-ink);
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+/* Sumber utuh di satu baris bila muat ("AR-" / "RŪM" tak terpisah di tanda
+   hubung); yang lebih panjang dari baris tetap membungkus di dalamnya. */
+.wt[data-variant="indonesia"] .wt-quote cite {
+  display: inline-block;
+  margin-left: 0.3em;
+}
+.wt[data-variant="indonesia"] .wt-quote cite::before {
+  content: "(";
+}
+.wt[data-variant="indonesia"] .wt-quote cite::after {
+  content: ")";
+}
+
+/* Feature: judul cerita kiri serif tebal berjarak huruf, kanan Dhaksinarga;
+   bingkai foto 8:9 lalu 5:7 (`options.ts` `aspectPerVarian`). */
+.wt[data-variant="indonesia"] .wt-story .wt-h3 {
+  font-family: var(--wt-body), Georgia, serif;
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  /* Judul ketikan pemilik: satu kata panjang ("Ketidaksengajaan") di 26px
+     berjarak huruf melewati kolom 320px dan terpotong `overflow-x: clip`. */
+  overflow-wrap: anywhere;
+}
+/* Galat RSVP langsung di atas kertas abu: merah bawaan #b3261e hanya 3,8:1
+   (teks 13,6px) — merah tua ini 5,9:1. Varian lain tak berubah. */
+.wt[data-variant="indonesia"] .gb-error {
+  color: #7f1d1d;
+}
+.wt[data-variant="indonesia"] .wt-story--right .wt-h3 {
+  font-family: var(--wt-jawa), var(--wt-body), serif;
+  font-weight: 400;
+  font-size: clamp(24px, 7.6vw, 31px);
+  letter-spacing: 0.02em;
+}
+.wt[data-variant="indonesia"] .wt-story:first-of-type {
+  margin-top: 6px;
+}
+.wt[data-variant="indonesia"] .wt-story--right {
+  margin-top: 64px;
+}
+.wt[data-variant="indonesia"] .wt-photo--wide {
+  aspect-ratio: 8 / 9;
+}
+.wt[data-variant="indonesia"] .wt-photo--tall {
+  aspect-ratio: 5 / 7;
+}
+.wt[data-variant="indonesia"] .wt-caption {
+  margin-top: 10px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+/* Dinding ucapan = "Surat Pembaca". Judulnya (teks bersama guestbook, satu
+   blok dengan eyebrow ::before → tak bisa di-skew) serif tebal berjarak huruf
+   seperti judul cerita kiri, bukan Anton. */
+.wt[data-variant="indonesia"] .gb-wall__title {
+  font-family: var(--wt-body), Georgia, serif;
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+}
+.wt[data-variant="indonesia"] .gb-wall__title::before {
+  content: "Surat Pembaca";
+  margin-bottom: 8px;
+  font-family: var(--wt-sans);
+  font-weight: 400;
+  font-size: 9px;
+  letter-spacing: 0.1em;
 }
 
 /* ---------------------------------------------------- reduced motion ----- */

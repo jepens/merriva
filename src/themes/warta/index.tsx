@@ -23,8 +23,8 @@ import { WartaCover } from "./cover";
 import { fotoCerita } from "./foto-cerita";
 import { WartaFx } from "./fx";
 import { kotaDari } from "./kota";
-import { L } from "./labels";
-import { wartaOptions } from "./options";
+import { DEKOR, dwi, edisiDari } from "./labels";
+import { SLOT_FOTO_BERITA, wartaOptions } from "./options";
 import {
   CountdownBlock,
   Couple,
@@ -168,6 +168,30 @@ const wtSign = localFont({
   // WAJIB tetap false — lihat catatan PER-1.
   preload: false,
 });
+// Judul Edisi Indonesia (DECISIONS #130): Dhaksinarga (Locomotype, SIL OFL 1.1
+// + Reserved Font Name — teks lisensi di src/fonts/themes/dhaksinarga-OFL.txt).
+// Berkas OTF ASLI, jangan disubset/dikonversi/diubah. Glyph-nya miring
+// (italicAngle 0) — ditegakkan CSS `skewX` di judul, bukan di berkasnya. Hanya
+// dirujuk CSS di bawah `[data-variant="indonesia"]` → dengan preload:false
+// varian lain tak pernah mengunduhnya.
+const wtJawa = localFont({
+  src: [
+    {
+      path: "../../fonts/themes/dhaksinarga-400.otf",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+  variable: "--wt-jawa",
+  display: "swap",
+  // WAJIB tetap false — lihat catatan PER-1.
+  preload: false,
+  // Tanpa fallback Arial yang diukur next/font: rantai judul lalu jatuh ke
+  // PT Serif (`var(--wt-jawa), var(--wt-body), serif`), yang membungkus judul
+  // Berita SAMA dengan Dhaksinarga di 360–428 px — fallback Arial lebih lebar
+  // dan menggeser foto berita saat font tiba (tinjauan #130).
+  adjustFontFallback: false,
+});
 
 const FONT_VARS = [
   wtDispA.variable,
@@ -177,6 +201,7 @@ const FONT_VARS = [
   wtCaps.variable,
   wtType.variable,
   wtSign.variable,
+  wtJawa.variable,
 ].join(" ");
 
 /** Foto galeri sebagai foto latar (titik fokus tengah, tanpa perbesaran). */
@@ -257,6 +282,9 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
 
   const custom = settings.custom ?? null;
   const resolved = custom ? resolveAppearance(wartaOptions, custom) : null;
+  // Edisi varian TERSIMPAN — hanya untuk sampul (klien, satu bahasa). Judul
+  // section dirender dua edisi & disaring CSS `data-variant` (sections.tsx).
+  const edisi = edisiDari(resolved?.variantId);
   const order =
     resolved?.sections ?? defaultSectionOrder(wartaOptions, settings);
 
@@ -290,15 +318,16 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
   const sectionNodes: Record<string, ReactNode> = {
     hero: (
       <Hero
-        rubric={L.folio.hero}
+        rubric={dwi((d) => d.folio.hero)}
         greetingOpen={content.greetingOpen}
         city={city}
+        photo={data.themePhotos?.[SLOT_FOTO_BERITA] ?? null}
       />
     ),
     quote: content.quote?.text ? <QuoteBox quote={content.quote} /> : null,
     couple: (
       <Couple
-        rubric={L.folio.couple}
+        rubric={dwi((d) => d.folio.couple)}
         groom={content.groom}
         bride={content.bride}
         groomPhoto={data.groomPhoto}
@@ -308,7 +337,7 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
     story:
       content.story.length > 0 ? (
         <Story
-          rubric={L.folio.story}
+          rubric={dwi((d) => d.folio.story)}
           items={content.story}
           photos={fotoCerita(
             content.story.length,
@@ -319,7 +348,7 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
       ) : null,
     countdown: countdownTarget ? (
       <CountdownBlock
-        rubric={L.folio.countdown}
+        rubric={dwi((d) => d.folio.countdown)}
         targetIso={countdownTarget}
         localDate={localDate}
         numericDate={numericDate}
@@ -329,7 +358,7 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
     schedule:
       data.events.length > 0 ? (
         <Schedule
-          rubric={L.folio.schedule}
+          rubric={dwi((d) => d.folio.schedule)}
           events={data.events}
           tz={tz}
           slug={data.slug}
@@ -338,16 +367,16 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
       ) : null,
     video: hasVideo ? (
       <VideoSection
-        rubric={L.folio.video}
+        rubric={dwi((d) => d.folio.video)}
         video={data.video}
         youtubeUrl={content.youtubeUrl}
       />
     ) : null,
-    rsvp: <Rsvp rubric={L.folio.rsvp} slug={data.slug} />,
+    rsvp: <Rsvp rubric={dwi((d) => d.folio.rsvp)} slug={data.slug} />,
     gallery:
       data.media.length > 0 ? (
         <Lightbox media={data.media}>
-          <Gallery rubric={L.folio.gallery} media={data.media} />
+          <Gallery rubric={dwi((d) => d.folio.gallery)} media={data.media} />
         </Lightbox>
       ) : null,
     envelope: hasEnvelope ? (
@@ -363,6 +392,11 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
   const appearance = resolved
     ? {
         style: appearanceStyle(wartaOptions.preview.vars, resolved),
+        // `data-variant` di akar: Edisi Indonesia mengganti judul (dua edisi,
+        // disaring CSS), font, foto, dan kertas — bukan hanya peta
+        // `preview.vars`. Editor Tampilan memasangnya juga saat pratinjau
+        // langsung (#103), jadi teks & rupanya ikut berganti tanpa render ulang.
+        data: { variant: resolved.variantId },
         motion: resolved.motion,
       }
     : undefined;
@@ -381,10 +415,13 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
           groomName={groomName}
           brideName={brideName}
           dateLabel={dateLabel}
-          tickerLine={[L.cover.saveTheDate, numericDate, venueLine].filter(
-            (x): x is string => Boolean(x),
-          )}
+          tickerLine={[
+            DEKOR[edisi].cover.saveTheDate,
+            numericDate,
+            venueLine,
+          ].filter((x): x is string => Boolean(x))}
           photo={data.coverPhoto ?? null}
+          edisi={edisi}
         />
       }
       fx={<WartaFx />}

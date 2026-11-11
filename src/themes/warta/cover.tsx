@@ -7,13 +7,17 @@ import { pasangPengepasSampul } from "@/themes/_shared/fit-names";
 import { fotoStyle } from "@/themes/_shared/foto";
 import type { PhotoView } from "@/types/invitation";
 
-import { L } from "./labels";
+import { DEKOR, L, type Edisi } from "./labels";
 
 /**
  * Halaman muka koran (klien, tier Craft): kop blackletter, baris edisi, pita
  * ticker berjalan (CSS), judul utama Anton, foto halftone, keterangan foto,
  * kartu tamu, tombol "Baca Selengkapnya". TANPA gsap/canvas — entrance & wipe
  * (halaman muka terangkat ke atas) digerakkan CSS `.is-motion`/`.is-open`.
+ *
+ * Bahasa kop & judul = `edisi` pilihan SERVER (varian tersimpan, DECISIONS
+ * #130) — satu bahasa saja, tak dirender ganda seperti judul section: pengepas
+ * nama mengukur teks judul, dan editor Tampilan langsung membuka sampul.
  */
 export function WartaCover({
   groomName,
@@ -21,16 +25,20 @@ export function WartaCover({
   dateLabel,
   tickerLine,
   photo,
+  edisi,
 }: {
   groomName: string;
   brideName: string;
   dateLabel: string | null;
   tickerLine: string[];
   photo: PhotoView | null;
+  /** Bahasa kop & judul sampul (varian tersimpan). */
+  edisi: Edisi;
 }) {
   const { open, opened, recipientName } = useCoverGate();
   const innerRef = useRef<HTMLDivElement>(null);
-  const headline = L.cover.headline(groomName, brideName);
+  const D = DEKOR[edisi];
+  const headline = D.cover.headline(groomName, brideName);
 
   // Nama satu kata yang sangat panjang tak boleh meluap keluar layar di
   // 320 px: judul dikecilkan HANYA bila kata terlebarnya melampaui wadah
@@ -49,7 +57,7 @@ export function WartaCover({
   }, [headline]);
 
   // Pita ticker: isi digandakan supaya geser −50% berulang mulus.
-  const tick = tickerLine.length > 0 ? tickerLine : [L.cover.saveTheDate];
+  const tick = tickerLine.length > 0 ? tickerLine : [D.cover.saveTheDate];
   const run = (
     <span className="wt-ticker__run">
       {tick.map((t, i) => (
@@ -63,12 +71,12 @@ export function WartaCover({
   return (
     <div className="wt-cover__inner" ref={innerRef}>
       <header className="wt-mast">
-        <h1 className="wt-mast__title">{L.masthead}</h1>
+        <h1 className="wt-mast__title">{D.masthead}</h1>
         <div className="wt-mast__rule" aria-hidden />
         <div className="wt-mast__dateline">
-          <span>{L.edition}</span>
+          <span>{D.edition}</span>
           {dateLabel ? <span>{dateLabel}</span> : null}
-          <span>{L.free}</span>
+          <span>{D.free}</span>
         </div>
       </header>
 
@@ -102,7 +110,7 @@ export function WartaCover({
           {/* Keterangan foto hanya bila memang ada foto (bukan monogram). */}
           {photo ? <em>{L.cover.caption}</em> : <span />}
           {/* Halaman berita (hero) terkunci di depan → selalu halaman 2. */}
-          <span>{L.cover.continued(2)}</span>
+          <span>{D.cover.continued(2)}</span>
         </figcaption>
       </figure>
 

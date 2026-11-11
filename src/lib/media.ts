@@ -165,14 +165,16 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 /**
- * Prefix SEMUA foto bernama yang dirujuk `content`: sampul, mempelai, logo, dan
- * foto per entri cerita `story[].photo` (DECISIONS #127). Dipakai hapus draft,
- * yang tak melewati purge — tanpa ini objeknya tertinggal tanpa rujukan.
+ * Prefix SEMUA foto bernama yang dirujuk `content`: sampul, mempelai, logo,
+ * foto per entri cerita `story[].photo` (DECISIONS #127), dan foto khas tema
+ * `themePhotos` (DECISIONS #131). Dipakai hapus draft, yang tak melewati purge
+ * — tanpa ini objeknya tertinggal tanpa rujukan.
  *
- * Cermin pemanenan `purge_invitation_data` (migrasi 20261111090000) — kunci,
+ * Cermin pemanenan `purge_invitation_data` (migrasi 20261111120000) — kunci,
  * bentuk, dan saringannya harus berubah bersama: foto boleh OBJEK `{path,…}`
- * (`photoSchema` hari ini) atau STRING lama; `story` hanya dibaca bila array;
- * bentuk lain tersaring. `content` ditulis klien, jadi hanya path yang lolos
+ * (`photoSchema` hari ini) atau STRING lama; `story` hanya dibaca bila array,
+ * `themePhotos` hanya bila objek (setiap NILAI-nya, apa pun kuncinya); bentuk
+ * lain tersaring. `content` ditulis klien, jadi hanya path yang lolos
  * `isNamedPhotoPath` untuk undangan INI yang dikembalikan. Tanpa duplikat.
  */
 export function namedPhotoPathsFromContent(
@@ -182,12 +184,16 @@ export function namedPhotoPathsFromContent(
   if (!isRecord(content)) return [];
   const photoOf = (v: unknown) => (isRecord(v) ? v.photo : undefined);
   const story = Array.isArray(content.story) ? content.story : [];
+  const themePhotos = isRecord(content.themePhotos)
+    ? Object.values(content.themePhotos)
+    : [];
   const kandidat: unknown[] = [
     content.coverPhoto,
     photoOf(content.groom),
     photoOf(content.bride),
     content.logo,
     ...story.map(photoOf),
+    ...themePhotos,
   ];
   const paths = new Set<string>();
   for (const nilai of kandidat) {

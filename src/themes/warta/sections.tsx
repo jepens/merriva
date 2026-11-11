@@ -25,12 +25,13 @@ import type {
 } from "@/types/invitation";
 
 import type { FotoCerita } from "./foto-cerita";
-import { L } from "./labels";
+import { DEKOR, dwi, L, type Dwibahasa } from "./labels";
 
 /**
  * Halaman-halaman koran tema `warta` (tier Craft) — SERVER components. Motion
  * hanya `Reveal` bersama (IO) + CSS; foto selalu hitam-putih + raster halftone
  * (CSS `.wt-photo`), jadi foto berwarna apa pun tampil seperti cetakan koran.
+ * Edisi Indonesia (`data-variant="indonesia"`) mencetaknya polos.
  */
 
 const PRELINE = { whiteSpace: "pre-line" as const };
@@ -38,17 +39,53 @@ const PRELINE = { whiteSpace: "pre-line" as const };
 /** `sizes` foto selebar kolom isi (`.wt-inner`: 100% − 2×24 px, maks 440). */
 const LEBAR_KOLOM = "(max-width: 488px) calc(100vw - 48px), 440px";
 
+/** Teks dekoratif: satu string (sama di kedua edisi) atau pasangan en/id. */
+export type Teks = string | Dwibahasa;
+
 /**
- * Kepala halaman koran: "PAGE 3 · COUPLE ………… THE WEDDING POST". Dekoratif.
- * Nomornya CSS counter (`.wt-folio__n::before`, sampul = halaman 1): mengikuti
- * urutan DOM dan melewati section tersembunyi — juga di pratinjau langsung
- * editor yang mengurutkan ulang tanpa render ulang.
+ * Judul dekoratif DUA EDISI (DECISIONS #130): keduanya dirender, CSS
+ * `.wt[data-variant="indonesia"]` memilih yang tampil (yang lain
+ * `display:none` → tak dibaca pembaca layar, heading tetap satu). Bukan
+ * pilihan server: pratinjau langsung editor Tampilan hanya mengganti
+ * `data-variant` di iframe tanpa render ulang, jadi hanya CSS yang bisa
+ * menukar teksnya seketika.
  */
-function Folio({ rubric }: { rubric: string }) {
+function Dwi({ t }: { t: Teks }) {
+  if (typeof t === "string") return t;
+  return (
+    <>
+      <span className="wt-bi" lang="en">
+        {t.en}
+      </span>
+      <span className="wt-bi" lang="id">
+        {t.id}
+      </span>
+    </>
+  );
+}
+
+/**
+ * Kepala halaman koran: "PAGE 3 · COUPLE ………… THE WEDDING POST" / "HALAMAN 3
+ * . MEMPELAI ………… UNDANGAN PERNIKAHAN". Dekoratif. Nomornya CSS counter
+ * (`.wt-folio__n::before`, sampul = halaman 1): mengikuti urutan DOM dan
+ * melewati section tersembunyi — juga di pratinjau langsung editor yang
+ * mengurutkan ulang tanpa render ulang.
+ */
+function Folio({ rubric }: { rubric: Teks }) {
+  const r = typeof rubric === "string" ? { en: rubric, id: rubric } : rubric;
   return (
     <div className="wt-folio" aria-hidden>
-      <span className="wt-folio__n">{` · ${rubric}`}</span>
-      <span>{L.masthead}</span>
+      <span className="wt-folio__n">
+        <Dwi
+          t={{
+            en: `${DEKOR.en.folioSep}${r.en}`,
+            id: `${DEKOR.id.folioSep}${r.id}`,
+          }}
+        />
+      </span>
+      <span>
+        <Dwi t={dwi((d) => d.folioRight)} />
+      </span>
     </div>
   );
 }
@@ -60,10 +97,13 @@ function NamedPhoto({
   photo,
   initial,
   className,
+  loading = "lazy",
 }: {
   photo?: PhotoView | null;
   initial: string;
   className: string;
+  /** "eager" HANYA untuk foto di layar pertama (foto berita) — lihat Hero. */
+  loading?: "lazy" | "eager";
 }) {
   return (
     <div className={`wt-photo ${className}`}>
@@ -72,7 +112,7 @@ function NamedPhoto({
         <img
           src={photo.url}
           alt=""
-          loading="lazy"
+          loading={loading}
           decoding="async"
           style={{ width: "100%", height: "100%", ...fotoStyle(photo) }}
         />
@@ -131,20 +171,33 @@ export function Hero({
   rubric,
   greetingOpen,
   city,
+  photo,
 }: {
   /** Rubrik halaman koran ("News", "Couple", …). */
-  rubric: string;
+  rubric: Teks;
   greetingOpen?: string;
   city: string | null;
+  /**
+   * Foto berita utama (slot `x-berita`, DECISIONS #131) — lebar penuh di
+   * bawah teks pembuka, di kedua edisi. Tanpa foto: tak ada wadah sama sekali
+   * (bukan monogram) — halaman Berita tampil seperti sebelumnya.
+   */
+  photo?: PhotoView | null;
 }) {
   return (
     <section className="wt-page wt-news">
       <Folio rubric={rubric} />
       <div className="wt-inner">
         <Reveal className="wt-center">
-          <p className="wt-kicker">{L.hero.kicker}</p>
-          <h2 className="wt-h2 wt-h2--md">{L.hero.headline}</h2>
-          <p className="wt-eyebrow">{L.hero.reported(city)}</p>
+          <p className="wt-kicker">
+            <Dwi t={dwi((d) => d.hero.kicker)} />
+          </p>
+          <h2 className="wt-h2 wt-h2--md">
+            <Dwi t={dwi((d) => d.hero.headline)} />
+          </h2>
+          <p className="wt-eyebrow">
+            <Dwi t={dwi((d) => d.hero.reported(city))} />
+          </p>
         </Reveal>
         <Reveal delay={120}>
           <p className="wt-cols wt-dropcap" style={PRELINE}>
@@ -155,6 +208,19 @@ export function Hero({
           </p>
         </Reveal>
       </div>
+      {photo ? (
+        <Reveal>
+          <NamedPhoto
+            photo={photo}
+            initial=""
+            className="wt-photo--news"
+            // Halaman Berita sudah di layar pertama sebelum hidrasi: foto ini
+            // bisa jadi elemen LCP, dan `lazy` menunda unduhannya sampai tata
+            // letak. Tanpa fetchPriority tinggi — itu milik foto sampul.
+            loading="eager"
+          />
+        </Reveal>
+      ) : null}
     </section>
   );
 }
@@ -187,7 +253,7 @@ function Profile({
   roleWord,
   side,
 }: {
-  heading: string;
+  heading: Teks;
   caption: string;
   person: Person;
   photo?: PhotoView | null;
@@ -202,7 +268,9 @@ function Profile({
   return (
     <article className={`wt-profile wt-profile--${side}`}>
       <Reveal>
-        <h2 className="wt-h2 wt-h2--sm">{heading}</h2>
+        <h2 className="wt-h2 wt-h2--sm">
+          <Dwi t={heading} />
+        </h2>
       </Reveal>
       <Reveal className={side === "left" ? "wt-from-left" : "wt-from-right"}>
         <figure className="wt-fig">
@@ -233,7 +301,7 @@ export function Couple({
   bridePhoto,
 }: {
   /** Rubrik halaman koran ("News", "Couple", …). */
-  rubric: string;
+  rubric: Teks;
   groom: Person;
   bride: Person;
   groomPhoto?: PhotoView | null;
@@ -244,7 +312,7 @@ export function Couple({
       <Folio rubric={rubric} />
       <div className="wt-inner">
         <Profile
-          heading={L.couple.bride}
+          heading={dwi((d) => d.couple.bride)}
           caption={L.couple.brideCaption}
           person={bride}
           photo={bridePhoto}
@@ -255,7 +323,7 @@ export function Couple({
       <hr className="wt-rule" />
       <div className="wt-inner">
         <Profile
-          heading={L.couple.groom}
+          heading={dwi((d) => d.couple.groom)}
           caption={L.couple.groomCaption}
           person={groom}
           photo={groomPhoto}
@@ -274,18 +342,22 @@ export function Story({
   photos,
 }: {
   /** Rubrik halaman koran ("News", "Couple", …). */
-  rubric: string;
+  rubric: Teks;
   items: StoryEntry[];
   /** Foto pendamping per entri (`fotoCerita`) — `null` = tanpa foto. */
   photos: FotoCerita[];
 }) {
   return (
-    <section className="wt-page">
+    <section className="wt-page wt-feature">
       <Folio rubric={rubric} />
       <div className="wt-inner">
         <Reveal>
-          <h2 className="wt-h2 wt-h2--lg">{L.story.heading}</h2>
-          <p className="wt-eyebrow wt-eyebrow--start">{L.story.eyebrow}</p>
+          <h2 className="wt-h2 wt-h2--lg">
+            <Dwi t={dwi((d) => d.story.heading)} />
+          </h2>
+          <p className="wt-eyebrow wt-eyebrow--start">
+            <Dwi t={dwi((d) => d.story.eyebrow)} />
+          </p>
         </Reveal>
         {items.map((s, i) => {
           const ph = photos[i];
@@ -298,7 +370,11 @@ export function Story({
               className={`wt-story ${right ? "wt-story--right" : ""}`}
             >
               <Reveal>
-                <h3 className="wt-h3">{s.title}</h3>
+                <h3 className="wt-h3">
+                  {/* Pembungkus inline: Edisi Indonesia menegakkan judul
+                      kanan ber-font Dhaksinarga dengan skewX (warta.css). */}
+                  <span className="wt-h3__t">{s.title}</span>
+                </h3>
               </Reveal>
               {ph ? (
                 <Reveal>
@@ -418,7 +494,7 @@ export function CountdownBlock({
   photo,
 }: {
   /** Rubrik halaman koran ("News", "Couple", …). */
-  rubric: string;
+  rubric: Teks;
   targetIso: string;
   localDate: string | null;
   numericDate: string | null;
@@ -429,9 +505,15 @@ export function CountdownBlock({
       <Folio rubric={rubric} />
       <div className="wt-inner wt-center">
         <Reveal>
-          <p className="wt-eyebrow">{L.countdown.eyebrow}</p>
-          <h2 className="wt-h2 wt-h2--xl">{L.countdown.heading}</h2>
-          <p className="wt-sub">{L.countdown.sub}</p>
+          <p className="wt-eyebrow">
+            <Dwi t={dwi((d) => d.countdown.eyebrow)} />
+          </p>
+          <h2 className="wt-h2 wt-h2--xl">
+            <Dwi t={dwi((d) => d.countdown.heading)} />
+          </h2>
+          <p className="wt-sub">
+            <Dwi t={dwi((d) => d.countdown.sub)} />
+          </p>
         </Reveal>
       </div>
       {localDate ? (
@@ -441,13 +523,17 @@ export function CountdownBlock({
       ) : null}
       {numericDate ? (
         <Reveal className="wt-center">
-          <p className="wt-stamp">{L.countdown.stamp(numericDate)}</p>
+          <p className="wt-stamp">
+            <Dwi t={dwi((d) => d.countdown.stamp(numericDate))} />
+          </p>
         </Reveal>
       ) : null}
       <div className="wt-band">
         <BandPhoto photo={photo} />
         <div className="wt-band__body">
-          <p className="wt-eyebrow wt-eyebrow--light">{L.countdown.band}</p>
+          <p className="wt-eyebrow wt-eyebrow--light">
+            <Dwi t={dwi((d) => d.countdown.band)} />
+          </p>
           <div className="wt-cd">
             <Countdown
               targetIso={targetIso}
@@ -475,7 +561,7 @@ export function Schedule({
   livestreamUrl,
 }: {
   /** Rubrik halaman koran ("News", "Couple", …). */
-  rubric: string;
+  rubric: Teks;
   events: InvitationEventView[];
   tz: TimezoneId;
   slug: string;
@@ -490,9 +576,13 @@ export function Schedule({
       <Folio rubric={rubric} />
       <div className="wt-inner">
         <Reveal className="wt-center">
-          <h2 className="wt-h2 wt-h2--lg">{L.schedule.heading}</h2>
+          <h2 className="wt-h2 wt-h2--lg">
+            <Dwi t={dwi((d) => d.schedule.heading)} />
+          </h2>
           <p className="wt-eyebrow">
-            {L.schedule.announcements(events.length, sameDay)}
+            <Dwi
+              t={dwi((d) => d.schedule.announcements(events.length, sameDay))}
+            />
           </p>
         </Reveal>
         <div className="wt-events">
@@ -606,7 +696,7 @@ export function VideoSection({
   youtubeUrl,
 }: {
   /** Rubrik halaman koran ("News", "Couple", …). */
-  rubric: string;
+  rubric: Teks;
   video: VideoView | null | undefined;
   youtubeUrl: string | undefined;
 }) {
@@ -615,8 +705,12 @@ export function VideoSection({
       <Folio rubric={rubric} />
       <div className="wt-inner">
         <Reveal className="wt-center">
-          <p className="wt-eyebrow">{L.video.eyebrow}</p>
-          <h2 className="wt-h2 wt-h2--lg">{L.video.heading}</h2>
+          <p className="wt-eyebrow">
+            <Dwi t={dwi((d) => d.video.eyebrow)} />
+          </p>
+          <h2 className="wt-h2 wt-h2--lg">
+            <Dwi t={dwi((d) => d.video.heading)} />
+          </h2>
         </Reveal>
         <Reveal>
           <div className="wt-video">
@@ -633,14 +727,18 @@ export function VideoSection({
 }
 
 /* ------------------------------------------------------- Reply (RSVP) ----- */
-export function Rsvp({ rubric, slug }: { rubric: string; slug: string }) {
+export function Rsvp({ rubric, slug }: { rubric: Teks; slug: string }) {
   return (
     <section className="wt-page wt-reply">
       <Folio rubric={rubric} />
       <div className="wt-inner">
         <Reveal className="wt-center">
-          <p className="wt-eyebrow">{L.rsvp.eyebrow}</p>
-          <h2 className="wt-h2 wt-h2--xl">{L.rsvp.heading}</h2>
+          <p className="wt-eyebrow">
+            <Dwi t={dwi((d) => d.rsvp.eyebrow)} />
+          </p>
+          <h2 className="wt-h2 wt-h2--xl">
+            <Dwi t={dwi((d) => d.rsvp.heading)} />
+          </h2>
           <p className="wt-lead">{L.rsvp.lead}</p>
         </Reveal>
         <GuestbookSection slug={slug} />
@@ -655,7 +753,7 @@ export function Gallery({
   media,
 }: {
   /** Rubrik halaman koran ("News", "Couple", …). */
-  rubric: string;
+  rubric: Teks;
   media: InvitationMediaView[];
 }) {
   const [lead, ...rest] = media;
@@ -664,7 +762,9 @@ export function Gallery({
       <Folio rubric={rubric} />
       <div className="wt-inner">
         <Reveal className="wt-center">
-          <h2 className="wt-h2 wt-h2--lg">{L.gallery.heading}</h2>
+          <h2 className="wt-h2 wt-h2--lg">
+            <Dwi t={dwi((d) => d.gallery.heading)} />
+          </h2>
         </Reveal>
         {lead ? (
           <Reveal>
@@ -799,14 +899,21 @@ export function Envelope({
         <Reveal>
           <div className="wt-coupon">
             <div className="wt-coupon__in">
-              <p className="wt-eyebrow">{L.envelope.clip}</p>
-              <h2 className="wt-coupon__title">{L.envelope.heading}</h2>
+              <p className="wt-eyebrow">
+                <Dwi t={dwi((d) => d.envelope.clip)} />
+              </p>
+              <h2 className="wt-coupon__title" id="wt-gift-title">
+                <Dwi t={dwi((d) => d.envelope.heading)} />
+              </h2>
               <p className="wt-lead">{L.envelope.note}</p>
               {tabs ? (
                 <div
                   className="wt-gift"
                   role="group"
-                  aria-label={L.envelope.heading}
+                  // Nama grup = judul kupon yang TAMPIL: `aria-label` tak bisa
+                  // ikut berganti edisi di pratinjau langsung, sedangkan
+                  // labelledby melewati span edisi yang `display:none`.
+                  aria-labelledby="wt-gift-title"
                 >
                   {/* Tab tanpa JS: radio + label; panel ditampilkan CSS. */}
                   <input
@@ -878,7 +985,9 @@ export function Footer({
         <BandPhoto photo={photo} />
         <div className="wt-band__body">
           <Reveal>
-            <p className="wt-eyebrow wt-eyebrow--light">{L.footer.eyebrow}</p>
+            <p className="wt-eyebrow wt-eyebrow--light">
+              <Dwi t={dwi((d) => d.footer.eyebrow)} />
+            </p>
             <p className="wt-footer__thanks" style={PRELINE}>
               {greetingClose || L.footer.thanks}
             </p>
@@ -890,9 +999,15 @@ export function Footer({
           {/* Tanpa Reveal: blok pendek di dasar dokumen tak pernah terpicu di
               layar tinggi (tablet potret, desktop 1440p) bila tanpa watermark
               — kelas bug DECISIONS #112. */}
-          <p className="wt-footer__mast">{L.masthead}</p>
-          <p className="wt-footer__motto">{L.footer.motto}</p>
-          <p className="wt-footer__printed">{L.footer.printed(city)}</p>
+          <p className="wt-footer__mast">
+            <Dwi t={dwi((d) => d.masthead)} />
+          </p>
+          <p className="wt-footer__motto">
+            <Dwi t={dwi((d) => d.footer.motto)} />
+          </p>
+          <p className="wt-footer__printed">
+            <Dwi t={dwi((d) => d.footer.printed(city))} />
+          </p>
         </div>
       </div>
       {watermark ? (

@@ -118,12 +118,26 @@ export interface ThemeMedia {
      * pertama "menghapus" foto entri lain tanpa penjelasan.
      */
     galleryFallback?: boolean;
+    /**
+     * Rasio wadah per id VARIAN (DECISIONS #130), menimpa `aspect` untuk varian
+     * itu — warta Edisi Indonesia memakai bingkai lain. Data, bukan fungsi:
+     * `ThemeOptions` dikirim ke editor klien.
+     */
+    aspectPerVarian?: Readonly<Record<string, number | readonly number[]>>;
   };
+}
+
+/** Rasio wadah foto cerita untuk varian `variantId` (`aspectPerVarian` menang). */
+export function storyAspectForVariant(
+  story: NonNullable<ThemeMedia["story"]>,
+  variantId: string | null | undefined,
+): number | readonly number[] {
+  return (variantId && story.aspectPerVarian?.[variantId]) || story.aspect;
 }
 
 /** Rasio wadah foto cerita entri ke-`i` (`ThemeMedia.story`, bergiliran). */
 export function storyPhotoAspect(
-  story: NonNullable<ThemeMedia["story"]>,
+  story: { aspect: number | readonly number[] },
   i: number,
 ): number {
   const a = story.aspect;

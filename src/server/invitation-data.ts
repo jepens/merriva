@@ -241,6 +241,13 @@ export function buildInvitationData(args: {
             : null,
         )
       : undefined;
+  // Foto khas tema (#131, mis. warta `x-berita`) — pengikat path yang sama
+  // dengan foto cerita: hanya foto bernama milik undangan INI.
+  const themePhotos = Object.fromEntries(
+    Object.entries(content.themePhotos ?? {}).flatMap(([id, p]) =>
+      isNamedPhotoPath(args.invitationId, p.path) ? [[id, resolve(p)!]] : [],
+    ),
+  );
 
   // Video unggahan → URL domain sendiri (path objek penuh, bukan prefix).
   const v = content.video;
@@ -295,6 +302,7 @@ export function buildInvitationData(args: {
     groomPhoto,
     bridePhoto,
     ...(storyPhotos ? { storyPhotos } : {}),
+    ...(Object.keys(themePhotos).length > 0 ? { themePhotos } : {}),
     video,
     music,
     watermark: args.watermark,

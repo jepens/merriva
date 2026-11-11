@@ -4,8 +4,8 @@ import { namedPhotoPathsFromContent } from "@/lib/media";
 
 /**
  * `namedPhotoPathsFromContent` — panen prefix foto bernama dari `content` untuk
- * hapus draft (DECISIONS #127). Cermin pemanenan `purge_invitation_data`
- * (migrasi 20261111090000; pgTAP `purge_named_photos.test.sql`): kunci yang
+ * hapus draft (DECISIONS #127, #131). Cermin pemanenan `purge_invitation_data`
+ * (migrasi 20261111120000; pgTAP `purge_named_photos.test.sql`): kunci yang
  * sama, bentuk yang sama, saringan terikat undangan yang sama.
  *
  * Fixture memakai bentuk yang ditulis editor (`photoSchema` → OBJEK
@@ -134,4 +134,62 @@ describe("namedPhotoPathsFromContent", () => {
   ])("content %s → daftar kosong tanpa galat", (_n, content) => {
     expect(namedPhotoPathsFromContent(content, INV)).toEqual([]);
   });
+});
+
+/**
+ * Foto khas tema (DECISIONS #131): `content.themePhotos = { "x-…": foto }`.
+ * Kasusnya cermin undangan D/F/G/H di `purge_named_photos.test.sql`.
+ */
+describe("namedPhotoPathsFromContent — foto khas tema (themePhotos)", () => {
+  it("memanen nilai OBJEK & STRING lama; path undangan LAIN dan rujukan ganda tersaring", () => {
+    const content = {
+      coverPhoto: objek(foto(1)),
+      themePhotos: {
+        "x-berita": objek(foto(2)),
+        "x-lama": foto(3),
+        "x-asing": objek(foto(4, INV_LAIN)),
+        "x-sampul": objek(foto(1)), // = sampul
+        "x-ganda": foto(2), // = slot lain
+      },
+    };
+
+    expect(namedPhotoPathsFromContent(content, INV).sort()).toEqual(
+      [foto(1), foto(2), foto(3)].sort(),
+    );
+  });
+
+  it("kuncinya tak dibaca — nilai di kunci di luar pola `x-…` tetap dipanen", () => {
+    // Lebih baik menghapus foto milik undangan ini yang tersimpan di kunci liar
+    // daripada meninggalkannya; path tetap wajib lolos `isNamedPhotoPath`.
+    const content = { themePhotos: { berita: objek(foto(5)) } };
+    expect(namedPhotoPathsFromContent(content, INV)).toEqual([foto(5)]);
+  });
+
+  it("nilai rusak tersaring seluruhnya", () => {
+    const themePhotos: Record<string, unknown> = {
+      "x-angka": 42,
+      "x-null": null,
+      "x-bool": true,
+      "x-tanpa-path": { x: 0.5, y: 0.5, zoom: 1 },
+      "x-path-angka": { path: 42 },
+      "x-bersarang": { path: objek(foto(5)) },
+      "x-array": [foto(6)],
+      "x-varian": `${foto(7)}/1600.webp`,
+      "x-traversal": `inv/${INV}/foto/../../lain`,
+    };
+    expect(namedPhotoPathsFromContent({ themePhotos }, INV)).toEqual([]);
+  });
+
+  it.each([
+    ["string", foto(8)],
+    ["array", [objek(foto(8))]],
+    ["null", null],
+    ["angka", 42],
+  ])(
+    "`themePhotos` yang BUKAN objek (%s) diabaikan, bukan dibaca",
+    (_n, themePhotos) => {
+      // Cermin penjaga `jsonb_typeof(...) = 'object'` di SQL.
+      expect(namedPhotoPathsFromContent({ themePhotos }, INV)).toEqual([]);
+    },
+  );
 });

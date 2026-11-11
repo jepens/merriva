@@ -1,13 +1,26 @@
 import type { ThemeOptions } from "@/lib/customizer/theme-options";
 
 /**
+ * Id varian "Edisi Indonesia" (DECISIONS #130) — juga nilai `data-variant` di
+ * akar yang menyaring judul dua bahasa & gaya edisinya di warta.css.
+ */
+export const VARIAN_EDISI_INDONESIA = "indonesia";
+
+/** Slot foto khas Warta: foto lebar penuh halaman Berita (DECISIONS #131). */
+export const SLOT_FOTO_BERITA = "x-berita";
+
+/**
  * Kontrak kustomisasi tema `warta` (CUSTOMIZER-SPEC §3, THEME-CONTRACT) —
  * undangan berwujud koran retro ("The Wedding Post"), tier Craft.
  *
  * Varian = warna TINTA cetak di atas kertas koran: aksen dipakai pita ticker,
  * tombol, garis kop, dan hati di kalender. `customAccent:false` — kurasi menjaga
- * kontras pita gelap. Satu pasangan font: Anton (judul) + PT Serif (isi); font
- * kop (UnifrakturMaguntia), subjudul (Playfair), eyebrow (Montserrat), mesin
+ * kontras pita gelap. Varian keempat "Edisi Indonesia" (DECISIONS #130) lebih
+ * dari warna: `data-variant="indonesia"` di akar menukar judul dekoratif ke
+ * bahasa Indonesia, foto polos tanpa raster, dan font Dhaksinarga (warta.css).
+ *
+ * Satu pasangan font: Anton (judul) + PT Serif (isi); font kop
+ * (UnifrakturMaguntia), subjudul (Playfair), eyebrow (Montserrat), mesin
  * ketik (Special Elite), dan tanda tangan (Great Vibes) adalah IDENTITAS tema,
  * bukan pilihan.
  */
@@ -33,6 +46,14 @@ export const wartaOptions: ThemeOptions = {
       acc: "#9b1c1c",
       paper: "#fbf9f4",
       ink: "#191715",
+    },
+    {
+      // Kertas abu-abu halaman acuan pemilik (terukur #c6c6c6).
+      id: VARIAN_EDISI_INDONESIA,
+      name: "Edisi Indonesia",
+      acc: "#1c1c1c",
+      paper: "#c6c6c6",
+      ink: "#141414",
     },
   ],
   fontPairs: [
@@ -65,11 +86,18 @@ export const wartaOptions: ThemeOptions = {
       { id: "cover", aspect: 4 / 3 },
       { id: "bride", aspect: 4 / 5 },
       { id: "groom", aspect: 4 / 5 },
+      // `.wt-photo--news`, kedua edisi; tanpa foto = tak dirender.
+      { id: SLOT_FOTO_BERITA, label: "Foto berita utama", aspect: 3 / 2 },
     ],
     // Feature: entri genap lanskap (`wt-photo--wide`), ganjil potret
     // (`wt-photo--tall`) — warta.css.
     // `galleryFallback`: tanpa foto cerita, galeri berurutan (`fotoCerita`).
-    story: { aspect: [4 / 3, 3 / 4], galleryFallback: true },
+    // Edisi Indonesia: bingkai acuan pemilik ±8:9 lalu ±5:7 (warta.css).
+    story: {
+      aspect: [4 / 3, 3 / 4],
+      galleryFallback: true,
+      aspectPerVarian: { [VARIAN_EDISI_INDONESIA]: [8 / 9, 5 / 7] },
+    },
   },
   preview: {
     root: "wt",

@@ -47,6 +47,8 @@ export type PhotoSlotView = {
    * di halaman undangan — label & petunjuk bidangnya berbeda.
    */
   inTheme?: boolean;
+  /** Label slot khas tema (`x-…`, wajib di `media.slots`), mis. "Foto berita utama". */
+  label?: string;
 };
 
 export type PhotoSlots = Readonly<Partial<Record<string, PhotoSlotView>>>;

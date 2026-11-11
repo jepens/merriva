@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { copy } from "@/lib/copy";
+import { THEME_PHOTO_KEY_RE } from "@/lib/validation/content";
 import { themeCatalogMeta } from "@/themes/catalog-meta";
 import { demoDataRegistry } from "@/themes/demo-data-registry";
 import { themeRegistry } from "@/themes/registry";
@@ -303,6 +304,49 @@ describe.each(themes)("foto cerita tema '%s'", (slug, opt) => {
         ? `${slug}: membaca storyPhotos tetapi tak mendeklarasikan media.story — bidang unggahnya tak akan pernah muncul`
         : `${slug}: mendeklarasikan media.story tetapi tak membaca storyPhotos — foto cerita pemilik tak akan pernah tampil`,
     ).toBe(merender);
+  });
+});
+
+/**
+ * Foto khas tema (`x-…`, DECISIONS #131): slot `x-` disimpan di
+ * `content.themePhotos[id]` dan sampai ke tema lewat `data.themePhotos`.
+ * Slot `x-` yang dideklarasikan tanpa tema membaca `themePhotos` = bidang unggah
+ * yang fotonya tak pernah tampil (dan pemindai `fotoStyle` di atas tak bisa
+ * membedakannya dari foto mempelai). `aspectPerVarian` hanya boleh menyebut
+ * varian yang ada.
+ */
+describe.each(themes)("foto khas tema '%s'", (slug, opt) => {
+  const khas = (opt.media?.slots ?? []).filter((s) => s.id.startsWith("x-"));
+
+  it("slot `x-` dideklarasikan ⇔ tema membaca themePhotos", () => {
+    const dir = join(process.cwd(), "src", "themes", slug);
+    const membaca = readdirSync(dir)
+      .filter((f) => f.endsWith(".tsx"))
+      .some((f) => readFileSync(join(dir, f), "utf8").includes("themePhotos"));
+    expect(
+      khas.length > 0,
+      membaca
+        ? `${slug}: membaca themePhotos tetapi tak mendeklarasikan slot x- — bidang unggahnya tak akan muncul`
+        : `${slug}: mendeklarasikan slot x- tetapi tak membaca themePhotos — fotonya tak akan pernah tampil`,
+    ).toBe(membaca);
+  });
+
+  it("id slot `x-` cocok dengan kunci themePhotos yang diterima skema", () => {
+    for (const s of khas) {
+      expect(THEME_PHOTO_KEY_RE.test(s.id), `${slug}: '${s.id}'`).toBe(true);
+    }
+  });
+
+  it("aspectPerVarian hanya untuk varian yang ada, rasio masuk akal", () => {
+    const per = opt.media?.story?.aspectPerVarian ?? {};
+    const ids = new Set(opt.variants.map((v) => v.id));
+    for (const [varian, a] of Object.entries(per)) {
+      expect(ids.has(varian), `${slug}: varian '${varian}' tak ada`).toBe(true);
+      for (const x of typeof a === "number" ? [a] : a) {
+        expect(x).toBeGreaterThan(0.4);
+        expect(x).toBeLessThan(2.5);
+      }
+    }
   });
 });
 

@@ -23,7 +23,7 @@ export const STEP_FIELDS: Readonly<Record<string, readonly string[]>> = {
   ],
   couple: ["content.groom", "content.bride"],
   detail: ["content.description", "content.pic", "content.logo"],
-  gallery: ["content.coverPhoto"],
+  gallery: ["content.coverPhoto", "content.themePhotos"],
   schedule: ["events"],
   story: ["content.story"],
   agenda: ["content.agenda"],

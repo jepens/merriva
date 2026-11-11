@@ -16,6 +16,9 @@ const { refs } = vi.hoisted(() => ({
     inv: null as unknown,
     temaSlug: "warta",
     storyPhoto: undefined as unknown,
+    photoSlots: undefined as unknown,
+    settings: null as unknown,
+    themePhotos: undefined as unknown,
   },
 }));
 
@@ -63,8 +66,9 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 // Yang diuji adalah props yang dirakit halaman, bukan editornya.
 vi.mock("@/components/dashboard/editor/wedding-editor", () => ({
-  WeddingEditor: (props: { storyPhoto?: unknown }) => {
+  WeddingEditor: (props: { storyPhoto?: unknown; photoSlots?: unknown }) => {
     refs.storyPhoto = props.storyPhoto;
+    refs.photoSlots = props.photoSlots;
     return null;
   },
 }));
@@ -77,6 +81,7 @@ vi.mock("@/components/dashboard/editor/corporate-editor", () => ({
 
 import EditInvitationPage from "@/app/(dashboard)/dashboard/undangan/[id]/edit/page";
 import { DEFAULT_SETTINGS, emptyContent } from "@/lib/validation/content";
+import { wartaOptions } from "@/themes/warta/options";
 
 const ID = "9a500f03-f12d-4d66-85fc-af8ebcedd350";
 const LAIN = "11111111-2222-4333-8444-555555555555";
@@ -98,9 +103,10 @@ async function buka(category: "wedding" | "corporate" = "wedding") {
               { title: "B", narrative: "b", photo: ASING },
               { title: "C", narrative: "c" },
             ],
+            ...(refs.themePhotos ? { themePhotos: refs.themePhotos } : {}),
           }
         : emptyContent("corporate"),
-    settings: DEFAULT_SETTINGS,
+    settings: refs.settings ?? DEFAULT_SETTINGS,
     event_date: null,
     package_id: "pkg-basic",
     theme_id: "t-1",
@@ -119,6 +125,9 @@ async function buka(category: "wedding" | "corporate" = "wedding") {
 beforeEach(() => {
   refs.temaSlug = "warta";
   refs.storyPhoto = undefined;
+  refs.photoSlots = undefined;
+  refs.settings = null;
+  refs.themePhotos = undefined;
 });
 afterEach(cleanup);
 
@@ -138,5 +147,47 @@ describe("halaman edit — slot foto cerita", () => {
 
   it("kategori tanpa love story → tak ada slot", async () => {
     expect(await buka("corporate")).toBe("tak-dikirim");
+  });
+});
+
+describe("halaman edit — Warta Edisi Indonesia & foto berita (#130, #131)", () => {
+  const custom = (variant: string) => ({
+    v: 1,
+    variant,
+    accent: null,
+    fontPair: wartaOptions.fontPairs[0]!.id,
+    sections: wartaOptions.sections.map((s) => ({ id: s.id, visible: true })),
+    styles: {},
+    motion: "full",
+    grain: true,
+  });
+
+  it("varian tersimpan Edisi Indonesia → bingkai foto cerita ±8:9 lalu ±5:7", async () => {
+    refs.settings = { ...DEFAULT_SETTINGS, custom: custom("indonesia") };
+    expect(await buka()).toMatchObject({ aspect: [8 / 9, 5 / 7] });
+  });
+
+  it("varian lain / id tak dikenal → bingkai bawaan Warta", async () => {
+    refs.settings = { ...DEFAULT_SETTINGS, custom: custom("sepia") };
+    expect(await buka()).toMatchObject({ aspect: [4 / 3, 3 / 4] });
+    refs.settings = { ...DEFAULT_SETTINGS, custom: custom("tak-ada") };
+    expect(await buka()).toMatchObject({ aspect: [4 / 3, 3 / 4] });
+  });
+
+  it("slot x-berita: label dari tema; URL hanya untuk foto milik undangan ini", async () => {
+    refs.themePhotos = { "x-berita": { path: SENDIRI } };
+    await buka();
+    expect((refs.photoSlots as Record<string, unknown>)["x-berita"]).toEqual({
+      aspect: 3 / 2,
+      url: `/media/${SENDIRI}/1600.webp`,
+      inTheme: true,
+      label: "Foto berita utama",
+    });
+
+    refs.themePhotos = { "x-berita": ASING };
+    await buka();
+    expect(
+      (refs.photoSlots as Record<string, { url: unknown }>)["x-berita"]?.url,
+    ).toBeNull();
   });
 });

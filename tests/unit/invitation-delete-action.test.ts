@@ -464,6 +464,25 @@ describe("deleteInvitationAction — hapus draft + foto bernama & foto cerita (D
     expect(dihapus).toEqual(varian(foto(7)));
   });
 
+  it("foto khas tema (`themePhotos`, DECISIONS #131) ikut dihapus; milik undangan LAIN tidak", async () => {
+    invRow.data = { id: INV, status: "draft", slug: "draft-abc", content: {} };
+    draft.terhapus = [
+      {
+        id: INV,
+        content: {
+          themePhotos: {
+            "x-berita": { path: foto(8), x: 0.5, y: 0.5, zoom: 1 },
+            "x-asing": foto(9, INV_LAIN),
+          },
+        },
+      },
+    ];
+
+    expect((await deleteInvitationAction(INV)).status).toBe("success");
+    const dihapus = storage.delete.mock.calls.map((c) => c[0]);
+    expect(dihapus).toEqual(varian(foto(8)));
+  });
+
   it("objek foto gagal dihapus → dilaporkan (satu-satunya jejaknya)", async () => {
     storage.delete.mockImplementation((p: string) =>
       p.endsWith("400.webp")

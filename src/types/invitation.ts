@@ -77,6 +77,13 @@ export interface InvitationData {
    */
   storyPhotos?: (PhotoView | null)[];
   /**
+   * Foto khas tema (DECISIONS #131) per id slot `x-…` yang dideklarasikan tema
+   * di `media.slots` (mis. warta `x-berita`), sudah di-resolve di server —
+   * hanya foto milik undangan ini. Kunci tak ada = belum diunggah. Opsional
+   * supaya demo-data tema tak perlu menyebutnya.
+   */
+  themePhotos?: Readonly<Record<string, PhotoView>>;
+  /**
    * Video unggahan (FASE J) sudah di-resolve ke URL domain sendiri, atau `null`.
    * Bersama `content.youtubeUrl` ia sudah DISARING paket di server
    * (`limits.youtube`): paket tanpa fitur video menerima `null` DAN
