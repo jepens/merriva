@@ -7681,6 +7681,55 @@ dan setiap slot `x-` berikutnya butuh kolom + migrasi purge sendiri.
 
 ---
 
+## #132 — 2026-11-11 · Narasi love story opsional — entri tampil bila berjudul
+
+**Masalah (pemilik, 11 Nov 2026):** dua cerita ditambahkan, hanya satu tampil.
+Entri kedua ("Lamaran") berisi judul, foto, dan keterangan, tetapi narasinya
+kosong — persis halaman "LAMARAN" di acuan Edisi Indonesia (#130). Aturan render
+lama mensyaratkan judul DAN narasi, jadi entri itu gugur DIAM-DIAM saat render
+(skema simpan draft menerimanya, editor tak memberi tanda apa pun).
+
+**Keputusan:** khusus love story (wedding), narasi opsional: skema ketat
+`loveStoryEntrySchema` menerima narasi kosong (keluarannya tetap string, "" bila
+kosong — kontrak `StoryEntry` tema tak berubah), dan aturan tampil
+`ceritaTampil` = berjudul (sesudah trim) — satu aturan untuk render dan bingkai
+foto editor. Semua tema tak merender paragraf narasi yang kosong. Label editor
+"Narasi (opsional)". Agenda (korporat) & doa/harapan (keluarga) tetap wajib
+bernarasi — skema bersama `storyEntrySchema` tak berubah.
+
+**Penjaga hasil tinjauan:** (1) entri love story yang sudah diisi (keterangan,
+foto, atau narasi) tetapi TANPA judul kini diberi tahu di editor ("Cerita tanpa
+judul tidak ditampilkan di undangan") — satu-satunya syarat tampil tersisa tak
+boleh gugur diam-diam juga. (2) Aria: jarak antarentri `.ar-story + .ar-story`
+tak pernah berlaku (tiap entri di `Reveal` sendiri); selama narasi wajib,
+paragrafnya menutupi itu — kini dipasang di pembungkus (`.ar-story-wrap`), jadi
+jarak 40px rancangan asli kembali untuk SEMUA undangan Aria.
+
+**Ditolak:** hanya memberi peringatan "entri tanpa narasi tak ditampilkan" di
+editor — memaksa pemilik menulis narasi yang memang tak ada di desainnya.
+
+---
+
+## #133 — 2026-11-11 · Isian kutipan ayat di langkah Pengaturan (+ praset QS. Ar-Rum : 21)
+
+**Masalah (pemilik, 11 Nov 2026):** halaman "BERITA UTAMA !" Warta di acuan
+memuat QS. Ar-Rum : 21 di bawah foto berita, tetapi di rani-wanda tak muncul.
+Penyebab: `content.quote` kosong — dan editor TAK PERNAH punya isian kutipan,
+padahal SPEC §4.4 langkah 7 menyebutnya dan semua tema merendernya (`quoteSchema`
+sudah ada sejak awal). Kutipan hanya pernah tampil di data demo tema.
+
+**Keputusan:** langkah Pengaturan mendapat isian "Kutipan / ayat" (maks 500) dan
+"Sumber kutipan" (maks 120), plus tombol "Pakai QS. Ar-Rum : 21" yang mengisi
+terjemahan persis seperti halaman acuan pemilik. Tombol hanya tampil selama
+kutipan kosong — tak pernah menimpa ketikan. Tanpa kutipan bawaan otomatis:
+ayat suci tak dipasang ke undangan siapa pun tanpa dipilih pemiliknya.
+
+**Juga (acuan yang sama):** judul "PASANGAN BAHAGIA MENGUNDANG ANDA" Edisi
+Indonesia kini mengecil mengikuti lebar layar (maks 15,8px) — di 15,8px tetap ia
+baru muat satu baris mulai ±390px, jadi di 360–375px "anda" turun sendirian.
+
+---
+
 ## Template entri baru
 
 ```

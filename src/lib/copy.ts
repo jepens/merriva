@@ -926,6 +926,15 @@ export const copy = {
       sectionLegend: "Tampilkan bagian",
       greetingOpen: "Sapaan pembuka",
       greetingClose: "Sapaan penutup",
+      // Kutipan ayat/quote (#133). Teks praset = terjemahan Ar-Rum 21 persis
+      // seperti halaman acuan pemilik (Warta Edisi Indonesia).
+      quoteText: "Kutipan / ayat",
+      quoteSource: "Sumber kutipan",
+      quoteSourcePlaceholder: "QS. Ar-Rum : 21",
+      quotePreset: "Pakai QS. Ar-Rum : 21",
+      quotePresetText:
+        "Dan di antara tanda-tanda (kebesaran)-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya.",
+      quotePresetSource: "QS. Ar-Rum : 21",
       youtubeUrl: "Tautan YouTube (Premium)",
       livestreamUrl: "Tautan live streaming (Premium)",
       // Corporate
@@ -950,6 +959,8 @@ export const copy = {
       addBank: "Tambah rekening",
       addEwallet: "Tambah e-wallet",
       remove: "Hapus",
+      // Love story: satu-satunya syarat tampil adalah judul (#132).
+      untitledStoryHidden: "Cerita tanpa judul tidak ditampilkan di undangan.",
       storyItem: "Cerita",
       bankSection: "Rekening bank",
       ewalletSection: "E-wallet",
@@ -979,7 +990,8 @@ export const copy = {
         title: "Judul",
         date: "Tanggal",
         datePlaceholder: "Maret 2020",
-        narrative: "Narasi",
+        // Opsional khusus love story (#132); agenda & doa/harapan tetap wajib.
+        narrative: "Narasi (opsional)",
         section: "Cerita / love story",
       },
       corporate: {

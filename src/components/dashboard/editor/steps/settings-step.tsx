@@ -3,6 +3,7 @@
 import { useContext } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -49,6 +50,8 @@ export function SettingsStep({
   // Unggahan lagu yang sedang berjalan menahan "Selesai" di kerangka editor.
   const onUploadingChange = useContext(EditorUploadContext);
   const videoValue = useWatch({ control, name: "content.video" });
+  const kutipan = useWatch({ control, name: "content.quote.text" }) as
+    string | undefined;
   const customMusicValue = useWatch({ control, name: "content.customMusic" });
   const m = copy.editor.music;
   // Pratinjau: lacak pilihan aktif agar `<audio>` menunjuk lagu terpilih.
@@ -148,6 +151,42 @@ export function SettingsStep({
           max={L.common.greeting}
         />
       </Field>
+      {/* Kutipan ayat/quote (SPEC §4.4 langkah 7, DECISIONS #133) — dirender
+          semua tema yang punya bagian kutipan; dulu tak ada isiannya sama sekali. */}
+      <Field label={copy.editor.fields.quoteText}>
+        <LimitedTextarea
+          form={form}
+          name="content.quote.text"
+          max={L.quote.text}
+        />
+      </Field>
+      <Field label={copy.editor.fields.quoteSource}>
+        <Input
+          placeholder={copy.editor.fields.quoteSourcePlaceholder}
+          maxLength={L.quote.source}
+          {...register("content.quote.source")}
+        />
+      </Field>
+      {/* Hanya selama kutipan masih kosong — tak pernah menimpa ketikan. */}
+      {!kutipan?.trim() ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            form.setValue(
+              "content.quote.text",
+              copy.editor.fields.quotePresetText,
+            );
+            form.setValue(
+              "content.quote.source",
+              copy.editor.fields.quotePresetSource,
+            );
+          }}
+        >
+          {copy.editor.fields.quotePreset}
+        </Button>
+      ) : null}
       <VideoField
         invitationId={invitationId}
         allowed={video.allowed}

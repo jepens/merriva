@@ -250,6 +250,10 @@ export const storyEntrySchema = z.object({
  * kerangka kosong) — fotonya saja yang gugur.
  */
 export const loveStoryEntrySchema = storyEntrySchema.extend({
+  // Narasi love story OPSIONAL (#132): halaman cerita boleh hanya judul +
+  // foto + keterangan ("Lamaran" di acuan Warta). Keluarannya tetap string
+  // ("" bila kosong) supaya kontrak `StoryEntry` di tema tak berubah.
+  narrative: z.string().trim().max(L.storyEntry.narrative).default(""),
   photo: photoSchema.optional().catch(undefined),
 });
 

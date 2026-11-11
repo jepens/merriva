@@ -461,8 +461,9 @@ describe("editor — langkah Cerita", () => {
   it("bingkai memakai indeks entri SEBAGAIMANA DIRENDER — entri belum lengkap di depan tak dihitung", () => {
     render(
       <Induk
-        // Narasi hanya spasi = kosong sesudah trim skema → A gugur saat render.
-        story={[{ title: "A", narrative: "   " }, entri("B", objek(1))]}
+        // Judul hanya spasi = kosong sesudah trim skema → A gugur saat render
+        // (narasi sendiri opsional sejak #132).
+        story={[{ title: "   ", narrative: "Narasi A" }, entri("B", objek(1))]}
         photo={SLOT}
       />,
     );
@@ -471,10 +472,10 @@ describe("editor — langkah Cerita", () => {
     // A gugur saat render → B tampil di indeks 0 → lanskap 4/3 (bukan 3/4).
     expect(bingkai().style.aspectRatio).toBe(`${4 / 3} / 1`);
 
-    // A dilengkapi → B kini indeks 1 → potret 3/4, tanpa muat ulang.
+    // A diberi judul → B kini indeks 1 → potret 3/4, tanpa muat ulang.
     act(() => {
-      fireEvent.change(screen.getAllByRole("textbox")[2], {
-        target: { value: "Narasi A" },
+      fireEvent.change(screen.getAllByRole("textbox")[0], {
+        target: { value: "Judul A" },
       });
     });
     expect(bingkai().style.aspectRatio).toBe(`${3 / 4} / 1`);
@@ -561,5 +562,130 @@ describe("Warta — Story merender foto unggahan dengan titik fokusnya", () => {
     expect(imgs[1]?.getAttribute("srcset")).toContain("400.webp 400w");
     expect(imgs[2]).toBeNull();
     vi.unstubAllGlobals();
+  });
+});
+
+describe("narasi love story opsional (#132)", () => {
+  it('skema ketat menerima entri tanpa narasi (keluaran ""); agenda tetap wajib', () => {
+    const r = weddingContentSchema.parse({
+      ...WEDDING,
+      story: [{ title: "Lamaran", date: "Sebuah cincin.", photo: foto(2) }],
+    });
+    expect(r.story[0]).toMatchObject({ title: "Lamaran", narrative: "" });
+    expect(
+      corporateContentSchema.safeParse({
+        ...emptyContent("corporate"),
+        eventName: "Rapat",
+        agenda: [{ title: "Pembukaan" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("render: entri berjudul tanpa narasi TAMPIL bersama fotonya; tanpa judul gugur", () => {
+    const c = parseContentForRender(
+      {
+        ...emptyContent("wedding"),
+        story: [
+          entri("A", foto(1)),
+          { title: "Lamaran", date: "Sebuah cincin.", photo: foto(2) },
+          { title: "  ", narrative: "Tanpa judul" },
+        ],
+      },
+      "wedding",
+    );
+    expect(c.category === "wedding" && c.story.map((s) => s.title)).toEqual([
+      "A",
+      "Lamaran",
+    ]);
+    expect(c.category === "wedding" && c.story[1]?.photo?.path).toBe(foto(2));
+  });
+
+  it("Warta: entri tanpa narasi → judul + foto + keterangan, tanpa paragraf kosong", async () => {
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const { Story } = await import("@/themes/warta/sections");
+    const { container } = render(
+      <Story
+        rubric="Feature"
+        items={[
+          entri("A"),
+          { title: "Lamaran", date: "Sebuah cincin.", narrative: "" },
+        ]}
+        photos={[
+          null,
+          {
+            unggah: { url: "https://cdn.test/l.webp", x: 0.5, y: 0.5, zoom: 1 },
+          },
+        ]}
+      />,
+    );
+    const [a, b] = [...container.querySelectorAll("article")];
+    expect(a?.querySelector(".wt-cols")).not.toBeNull();
+    expect(b?.textContent).toContain("Lamaran");
+    expect(b?.querySelector("img")?.getAttribute("src")).toBe(
+      "https://cdn.test/l.webp",
+    );
+    expect(b?.textContent).toContain("Sebuah cincin.");
+    expect(b?.querySelector(".wt-cols")).toBeNull();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("editor — cerita tanpa judul diberi tahu (#132)", () => {
+  function Induk(props: { story: unknown[] }) {
+    const f = useForm<EditorValues>({
+      defaultValues: {
+        eventDate: "",
+        content: {
+          ...emptyContent("wedding"),
+          story: props.story,
+        } as DraftContent,
+        settings: DEFAULT_SETTINGS,
+        events: [],
+      },
+    });
+    return (
+      <TimelineStep
+        form={f}
+        name="content.story"
+        labels={copy.editor.timeline.wedding}
+        invitationId={INV}
+        photo={null}
+      />
+    );
+  }
+  const PESAN = copy.editor.list.untitledStoryHidden;
+
+  it("entri baru (kosong total) → tanpa peringatan", () => {
+    render(<Induk story={[{ title: "", date: "", narrative: "" }]} />);
+    expect(screen.queryByText(PESAN)).toBeNull();
+  });
+
+  it("entri berisi (keterangan/foto/narasi) tanpa judul → peringatan", () => {
+    render(
+      <Induk
+        story={[
+          { title: "  ", date: "Sebuah cincin." },
+          { title: "", photo: { path: foto(1), x: 0.5, y: 0.5, zoom: 1 } },
+        ]}
+      />,
+    );
+    expect(screen.getAllByText(PESAN)).toHaveLength(2);
+  });
+
+  it("entri berjudul (narasi kosong pun) → tanpa peringatan; mengisi judul menghapusnya", () => {
+    render(<Induk story={[{ title: "", narrative: "Isi" }]} />);
+    expect(screen.getByText(PESAN)).toBeInTheDocument();
+    act(() => {
+      fireEvent.change(screen.getAllByRole("textbox")[0], {
+        target: { value: "Lamaran" },
+      });
+    });
+    expect(screen.queryByText(PESAN)).toBeNull();
   });
 });

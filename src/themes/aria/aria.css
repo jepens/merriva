@@ -475,7 +475,10 @@
 }
 
 /* Kisah -------------------------------------------------------------------- */
-.ar-story + .ar-story {
+/* Pada pembungkus Reveal, bukan `.ar-story + .ar-story`: tiap entri ada di
+   Reveal-nya sendiri sehingga selector lama tak pernah cocok — tanpa narasi
+   (opsional sejak #132) entri jadi menempel ke tanggal entri berikutnya. */
+.ar-story-wrap + .ar-story-wrap {
   margin-top: 40px;
 }
 .ar-story__date {

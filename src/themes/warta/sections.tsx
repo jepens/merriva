@@ -400,11 +400,14 @@ export function Story({
               ) : s.date ? (
                 <p className="wt-caption">{s.date}</p>
               ) : null}
-              <Reveal>
-                <p className="wt-cols" style={PRELINE}>
-                  {s.narrative}
-                </p>
-              </Reveal>
+              {/* Narasi opsional (#132): "Lamaran" acuan = judul + foto + keterangan. */}
+              {s.narrative ? (
+                <Reveal>
+                  <p className="wt-cols" style={PRELINE}>
+                    {s.narrative}
+                  </p>
+                </Reveal>
+              ) : null}
             </article>
           );
         })}

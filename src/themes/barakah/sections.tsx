@@ -378,7 +378,10 @@ export function Story({ story }: { story: StoryEntry[] }) {
             <div className="bk-story">
               {s.date ? <p className="bk-story__date">{s.date}</p> : null}
               <h3 className="bk-story__title">{s.title}</h3>
-              <p className="bk-story__body">{s.narrative}</p>
+              {/* Narasi love story opsional (#132). */}
+              {s.narrative ? (
+                <p className="bk-story__body">{s.narrative}</p>
+              ) : null}
             </div>
           </div>
         ))}

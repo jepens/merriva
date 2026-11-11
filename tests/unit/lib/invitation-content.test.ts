@@ -19,14 +19,15 @@ describe("parseContentForRender", () => {
     }
   });
 
-  it("draft belum lengkap → coerce (nama kosong, story tak lengkap dibuang)", () => {
+  it("draft belum lengkap → coerce (nama kosong, story tanpa judul dibuang)", () => {
     const raw = {
       category: "wedding",
       groom: { nickname: "Bima" }, // tanpa name
       bride: {},
       story: [
         { title: "Bertemu", narrative: "..." },
-        { title: "Tanpa narasi" }, // dibuang
+        { title: "Tanpa narasi" }, // TETAP — narasi love story opsional (#132)
+        { narrative: "Tanpa judul" }, // dibuang
       ],
       quote: { text: "" }, // kosong → undefined
       envelope: {
@@ -38,7 +39,11 @@ describe("parseContentForRender", () => {
     if (out.category !== "wedding") throw new Error("expected wedding");
     expect(out.groom.name).toBe("Bima"); // fallback ke nickname
     expect(out.bride.name).toBe("");
-    expect(out.story).toHaveLength(1); // entri tanpa narasi dibuang
+    // Entri tanpa judul dibuang; tanpa narasi tetap, narasinya "" (#132).
+    expect(out.story.map((s) => [s.title, s.narrative])).toEqual([
+      ["Bertemu", "..."],
+      ["Tanpa narasi", ""],
+    ]);
     expect(out.quote).toBeUndefined();
     expect(out.envelope.enabled).toBe(true);
     expect(out.envelope.banks).toHaveLength(1);

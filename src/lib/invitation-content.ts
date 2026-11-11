@@ -60,14 +60,16 @@ function coerceStories(arr: unknown): StoryEntry[] {
  * pratinjau.
  */
 /**
- * Entri cerita yang DIRENDER tema: judul DAN narasi terisi (sesudah trim).
- * Satu aturan untuk jalur render draft (`coerceLoveStories`) dan bingkai foto
- * cerita di editor (#127) — keduanya harus sepakat soal indeks entri.
+ * Entri LOVE STORY yang DIRENDER tema: berjudul (sesudah trim) — narasi
+ * opsional sejak #132 (halaman "Lamaran" = judul + foto + keterangan). Satu
+ * aturan untuk jalur render draft (`coerceLoveStories`) dan bingkai foto cerita
+ * di editor (#127) — keduanya harus sepakat soal indeks entri; skema ketat
+ * (`loveStoryEntrySchema`) mewajibkan judul yang sama.
  */
 export function ceritaTampil(
-  s: { title?: string | null; narrative?: string | null } | null | undefined,
+  s: { title?: string | null } | null | undefined,
 ): boolean {
-  return Boolean(s?.title?.trim() && s?.narrative?.trim());
+  return Boolean(s?.title?.trim());
 }
 
 function coerceLoveStories(
@@ -79,12 +81,12 @@ function coerceLoveStories(
   }>,
 ): LoveStoryEntry[] {
   return arr.flatMap((s) =>
-    s.title && s.narrative && ceritaTampil(s)
+    s.title && ceritaTampil(s)
       ? [
           {
             title: s.title,
             date: s.date || undefined,
-            narrative: s.narrative,
+            narrative: s.narrative ?? "",
             ...(s.photo ? { photo: s.photo } : {}),
           },
         ]

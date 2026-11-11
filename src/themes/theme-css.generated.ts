@@ -4,7 +4,7 @@
 // Lihat docs/DECISIONS.md #31 dan docs/THEME-PORTING.md §2.
 
 export const themeCssHrefs: Record<string, string> = {
-  "aria": "/themes/aria.b3f550dd7a.css",
+  "aria": "/themes/aria.6431b68f57.css",
   "barakah": "/themes/barakah.594a133984.css",
   "eternal-rose": "/themes/eternal-rose.928839d128.css",
   "festa": "/themes/festa.d1f360b373.css",
@@ -18,5 +18,5 @@ export const themeCssHrefs: Record<string, string> = {
   "prisma": "/themes/prisma.dc23f3e444.css",
   "sakinah": "/themes/sakinah.862d09ccd4.css",
   "verdant": "/themes/verdant.b287649871.css",
-  "warta": "/themes/warta.457b662a6f.css",
+  "warta": "/themes/warta.f2460bcaaa.css",
 };

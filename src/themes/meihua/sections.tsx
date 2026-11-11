@@ -370,7 +370,10 @@ export function Story({ story }: { story: StoryEntry[] }) {
             <h3 className="mh-beat__title">
               <MaskLine>{s.title}</MaskLine>
             </h3>
-            <p className="mh-beat__text">{s.narrative}</p>
+            {/* Narasi love story opsional (#132). */}
+            {s.narrative ? (
+              <p className="mh-beat__text">{s.narrative}</p>
+            ) : null}
           </article>
         ))}
       </div>

@@ -97,9 +97,25 @@ export function TimelineStep({
   const isiCerita = useWatch({
     control,
     name: "content.story" as Path<EditorValues>,
-  }) as Array<{ title?: string; narrative?: string }> | undefined;
+  }) as
+    | Array<{
+        title?: string;
+        date?: string;
+        narrative?: string;
+        photo?: unknown;
+      }>
+    | undefined;
   const indeksTampil = (i: number) =>
     (isiCerita ?? []).slice(0, i).filter(ceritaTampil).length;
+  /** Entri love story yang sudah diisi tetapi tak berjudul → tak tampil (#132). */
+  const tanpaJudulTerisi = (i: number) => {
+    const e = isiCerita?.[i];
+    return (
+      loveStory &&
+      !ceritaTampil(e) &&
+      Boolean(e?.date?.trim() || e?.narrative?.trim() || e?.photo)
+    );
+  };
 
   /**
    * Foto entri `id` berubah. Unggahan butuh beberapa detik di 4G dan bisa
@@ -159,6 +175,13 @@ export function TimelineStep({
               {...register(path(i, "title"))}
             />
           </Field>
+          {/* Satu-satunya syarat tampil love story adalah judul — entri berisi
+              tanpa judul gugur saat render; katakan, jangan diam (#132). */}
+          {tanpaJudulTerisi(i) ? (
+            <p className="text-xs text-amber-700">
+              {copy.editor.list.untitledStoryHidden}
+            </p>
+          ) : null}
           <Field label={labels.date}>
             <Input
               placeholder={labels.datePlaceholder}

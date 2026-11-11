@@ -336,11 +336,14 @@ export function StoryBlock({ no, story }: { no: string; story: StoryEntry[] }) {
     <section className="ar-section">
       <SecHead no={no} title={L.sec.story} />
       {story.map((s, i) => (
-        <Reveal key={i}>
+        // Kelas di PEMBUNGKUS Reveal: `.ar-story` tak pernah bersaudara langsung
+        // (tiap entri di Reveal sendiri), jadi jarak antarentri dipasang di sini.
+        <Reveal key={i} className="ar-story-wrap">
           <div className="ar-story">
             {s.date ? <span className="ar-story__date">{s.date}</span> : null}
             <div className="ar-big ar-big--sm">{s.title}</div>
-            <p className="ar-body">{s.narrative}</p>
+            {/* Narasi love story opsional (#132). */}
+            {s.narrative ? <p className="ar-body">{s.narrative}</p> : null}
           </div>
         </Reveal>
       ))}

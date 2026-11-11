@@ -441,9 +441,12 @@ export function Story({ story }: { story: StoryEntry[] }) {
             <h3 className="kr-step__title">
               <MaskLine>{s.title}</MaskLine>
             </h3>
-            <div className="kr-reveal">
-              <p className="kr-step__meta">{s.narrative}</p>
-            </div>
+            {/* Narasi love story opsional (#132). */}
+            {s.narrative ? (
+              <div className="kr-reveal">
+                <p className="kr-step__meta">{s.narrative}</p>
+              </div>
+            ) : null}
           </article>
         ))}
       </div>

@@ -280,9 +280,12 @@ export function Timeline({
               <div className="lm-story">
                 {s.date ? <p className="lm-story__date">{s.date}</p> : null}
                 <h3 className="lm-story__title">{s.title}</h3>
-                <p className="lm-story__body" style={PRELINE}>
-                  {s.narrative}
-                </p>
+                {/* Narasi love story opsional (#132); agenda & doa tetap wajib. */}
+                {s.narrative ? (
+                  <p className="lm-story__body" style={PRELINE}>
+                    {s.narrative}
+                  </p>
+                ) : null}
               </div>
             </Reveal>
           ))}

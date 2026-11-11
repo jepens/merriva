@@ -138,7 +138,7 @@ Form terstruktur per bagian; skema field **berbeda per kategori acara** namun di
 | 2. Detail pihak | Mempelai pria & wanita + nama orang tua, urutan anak, foto masing-masing | Deskripsi acara, logo perusahaan, kontak PIC | Nama lengkap anak, orang tua |
 | 3. Jadwal | Akad, resepsi (multi-sesi) — masing-masing: nama, tanggal-jam mulai/selesai, nama gedung, alamat, link Google Maps | Sesi/rundown (multi) | Sesi acara |
 | 4. Galeri & media | Upload foto (limit per paket), video — unggah klip atau embed YouTube (Premium; klip menang bila keduanya diisi), musik latar — pilih dari pustaka, atau unggah satu MP3 sendiri (Premium; lagu unggahan menang saat diputar) | Sama | Sama |
-| 5. Cerita | Love story timeline (judul-tanggal-narasi, multi-entri; foto opsional per entri bila tema menampilkannya — "Foto cerita" di bawah) | Agenda/sambutan | Doa/harapan |
+| 5. Cerita | Love story timeline (judul-tanggal-narasi, multi-entri; foto opsional per entri bila tema menampilkannya — "Foto cerita" di bawah; narasi love story opsional — entri tampil bila berjudul, DECISIONS #132) | Agenda/sambutan | Doa/harapan |
 | 6. Amplop digital | Multi-rekening (bank, no., a.n.) + e-wallet + alamat kirim kado — toggle on/off | Opsional (mis. donasi) | Sama dengan pernikahan |
 | 7. Pengaturan | Ucapan pembuka/penutup, kutipan ayat/quote, toggle tampil/sembunyi per section, moderasi ucapan on/off. Tema diganti lewat tombol "Ganti Tema" (lihat "Ganti tema" di bawah); varian warna, font & urutan bagian lewat "Kustomisasi Tampilan" | Sama | Sama |
 
@@ -177,6 +177,7 @@ Perilaku form: autosave per step (debounce) · indikator step selesai · upload 
 - Mengganti foto atau menghapus entri menghapus berkas lamanya. Foto cerita ikut dibersihkan saat draft dihapus, saat purge retensi, dan saat hapus akun.
 - Halaman tamu hanya menampilkan foto milik undangan itu sendiri (`inv/<id>/foto/<uuid>`).
 - Agenda (korporat) dan doa/harapan (keluarga) tidak punya foto.
+- **Narasi love story opsional (DECISIONS #132):** entri tampil bila berjudul — mis. halaman "Lamaran" yang hanya berisi judul, foto, dan keterangan. Isian "Tanggal" menjadi keterangan foto di Warta. Agenda dan doa/harapan tetap wajib bernarasi.
 
 **Kriteria terima:** unggah foto di entri cerita → foto tampil di pratinjau & halaman tamu Warta dengan titik fokusnya → muat ulang editor, foto tetap ada → hapus entri → berkasnya terhapus → tema tanpa foto cerita tidak menampilkan bidang unggahnya → purge undangan memanen foto cerita (pgTAP).
 

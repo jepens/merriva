@@ -1622,8 +1622,11 @@ hr.wt-rule {
 .wt[data-variant="indonesia"] .wt-h2--sm {
   font-size: clamp(18px, 5.6vw, 23px);
 }
+/* "PASANGAN BAHAGIA MENGUNDANG ANDA" satu baris seperti acuan: lebarnya ±21,2×
+   ukuran huruf, kolom = layar − 48px — di 15,8px tetap ia baru muat mulai
+   ±390px, jadi di 360–375px (mayoritas ponsel) "anda" turun sendirian. */
 .wt[data-variant="indonesia"] .wt-h2--md {
-  font-size: 15.8px;
+  font-size: clamp(12px, calc((100vw - 56px) / 21.5), 15.8px);
 }
 .wt[data-variant="indonesia"] .wt-h2--lg {
   font-size: clamp(24px, 7.6vw, 31px);
