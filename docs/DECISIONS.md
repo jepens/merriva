@@ -7730,6 +7730,28 @@ baru muat satu baris mulai ±390px, jadi di 360–375px "anda" turun sendirian.
 
 ---
 
+## #134 — 2026-11-12 · Tanda tangan penutup Warta selalu satu baris
+
+**Masalah (pemilik, 12 Nov 2026):** nama penutup "Wanda Sucipto & Rani Dwi
+Safitri" (Great Vibes) satu baris di sebagian ponsel, dua baris di ponsel lain.
+Penyebab terbukti: (1) pengepas nama bersama (`fitToLine`) hanya mengecilkan
+KATA yang melampaui kolom — nama berkata banyak bebas membungkus, jadi hasilnya
+bergantung lebar layar; (2) begitu dibuat `nowrap`, trek grid `.wt-band` yang
+`auto` melebar mengikuti teks, dan lebar `.wt-band__body` (100% − gutter) ikut
+membengkak — pengepas mengukur kolom yang salah dan teks tetap meluap.
+
+**Keputusan:** `.wt-footer__names { white-space: nowrap }` + `.wt-band {
+grid-template-columns: minmax(0, 1fr) }`; pengepas lalu mengecilkan seluruh baris
+sampai muat (terukur 20px di 320px … 29px di 430px, selalu di dalam kolom, kedua
+edisi). Tanda tangan dan nama mempelai kini dua kelompok pengepas
+(`data-wt-fit="ttd"`/`"nama"`) — pengepas memuat face pasangan PERTAMA saja,
+jadi kelompok sendiri memastikan ukur ulang sesudah Great Vibes tiba (pengaman;
+keterlambatan font tak berhasil direproduksi di uji lokal). Nama sangat panjang
+menjadi lebih kecil, bukan dua baris (permintaan pemilik). Pengepas bersama
+(`_shared/fit-names.ts`, dipakai 5 tema) tidak diubah.
+
+---
+
 ## Template entri baru
 
 ```

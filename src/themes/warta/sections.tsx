@@ -283,7 +283,7 @@ function Profile({
         </figure>
       </Reveal>
       <Reveal delay={90}>
-        <h3 className="wt-profile__name" data-wt-fit>
+        <h3 className="wt-profile__name" data-wt-fit="nama">
           {person.name || "—"}
         </h3>
         {of ? <p className="wt-profile__of">{of}</p> : null}
@@ -994,7 +994,7 @@ export function Footer({
             <p className="wt-footer__thanks" style={PRELINE}>
               {greetingClose || L.footer.thanks}
             </p>
-            <p className="wt-footer__names" data-wt-fit>
+            <p className="wt-footer__names" data-wt-fit="ttd">
               {names}
             </p>
           </Reveal>

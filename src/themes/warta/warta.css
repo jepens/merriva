@@ -821,6 +821,10 @@ hr.wt-rule {
 .wt-band {
   position: relative;
   display: grid;
+  /* Kolom = lebar pita, bukan `auto`: trek auto melebar mengikuti teks
+     `nowrap` (tanda tangan penutup), lalu lebar `.wt-band__body` (100% −
+     gutter) ikut membengkak dan pengepas nama mengukur kolom yang salah. */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   min-height: 180px;
   overflow: hidden;
@@ -1477,6 +1481,10 @@ hr.wt-rule {
   font-size: 34px;
   line-height: 1.2;
   color: var(--wt-light);
+  /* Tanda tangan SATU baris di semua lebar layar: pengepas (fx.tsx, kelompok
+     "ttd") mengecilkan seluruh barisnya sampai muat kolom. Tanpa nowrap ia
+     membungkus di layar yang sedikit lebih sempit dan tak pernah dikecilkan. */
+  white-space: nowrap;
 }
 .wt-footer__rule {
   height: 1px;

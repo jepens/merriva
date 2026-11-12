@@ -58,6 +58,7 @@ vi.mock("@/lib/image/compress", () => ({
 }));
 
 import { TimelineStep } from "@/components/dashboard/editor/steps/timeline-step";
+import { Story } from "@/themes/warta/sections";
 
 const INV = "85d261d6-1c2b-4e3a-9f00-0a1b2c3d4e5f";
 const LAIN = "11111111-2222-4333-8444-555555555555";
@@ -527,7 +528,6 @@ describe("Warta — Story merender foto unggahan dengan titik fokusnya", () => {
         disconnect() {}
       },
     );
-    const { Story } = await import("@/themes/warta/sections");
     const m = {
       id: "m1",
       url: "https://cdn.test/g/1600.webp",
@@ -608,7 +608,6 @@ describe("narasi love story opsional (#132)", () => {
         disconnect() {}
       },
     );
-    const { Story } = await import("@/themes/warta/sections");
     const { container } = render(
       <Story
         rubric="Feature"

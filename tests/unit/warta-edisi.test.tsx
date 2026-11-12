@@ -9,6 +9,7 @@ import {
   wartaOptions,
 } from "@/themes/warta/options";
 import type { PhotoView } from "@/types/invitation";
+import { Hero, Story } from "@/themes/warta/sections";
 
 /**
  * Warta "Edisi Indonesia" (DECISIONS #130) & foto berita utama (#131).
@@ -173,7 +174,6 @@ const FOTO: PhotoView = {
 
 describe("Hero — foto berita utama", () => {
   it("ada foto → satu foto lebar penuh dengan titik fokus & perbesaran pemilik", async () => {
-    const { Hero } = await import("@/themes/warta/sections");
     const { container } = render(
       <Hero rubric={dwi((d) => d.folio.hero)} city="Jakarta" photo={FOTO} />,
     );
@@ -196,7 +196,6 @@ describe("Hero — foto berita utama", () => {
   });
 
   it("tanpa foto → tak ada wadah, monogram, maupun gambar", async () => {
-    const { Hero } = await import("@/themes/warta/sections");
     for (const photo of [undefined, null]) {
       const { container, unmount } = render(
         <Hero rubric={dwi((d) => d.folio.hero)} city={null} photo={photo} />,
@@ -217,7 +216,6 @@ describe("judul section dua edisi (span lang en/id)", () => {
     ]);
 
   it("Hero: kicker, judul, eyebrow & folio merender KEDUA edisi", async () => {
-    const { Hero } = await import("@/themes/warta/sections");
     const { container } = render(
       <Hero rubric={dwi((d) => d.folio.hero)} city="Jakarta" />,
     );
@@ -253,7 +251,6 @@ describe("judul section dua edisi (span lang en/id)", () => {
   });
 
   it("Story: judul & eyebrow dua edisi; judul entri dibungkus untuk skew", async () => {
-    const { Story } = await import("@/themes/warta/sections");
     const { container } = render(
       <Story
         rubric={dwi((d) => d.folio.story)}
@@ -281,7 +278,6 @@ describe("judul section dua edisi (span lang en/id)", () => {
   });
 
   it("rubrik string tunggal tetap didukung (sama di kedua edisi)", async () => {
-    const { Story } = await import("@/themes/warta/sections");
     const { container } = render(
       <Story rubric="Feature" items={[]} photos={[]} />,
     );
