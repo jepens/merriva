@@ -205,8 +205,12 @@ export function SettingsStep({
           />
         </Field>
       </VideoField>
-      <Field label={copy.editor.fields.livestreamUrl}>
+      <Field
+        label={copy.editor.fields.livestreamUrl}
+        hint={copy.editor.fields.livestreamHint}
+      >
         <Input
+          placeholder={copy.editor.fields.livestreamPlaceholder}
           maxLength={L.common.livestreamUrl}
           {...register("content.livestreamUrl")}
         />

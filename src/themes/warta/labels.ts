@@ -147,7 +147,8 @@ const EN: Dekor = {
 };
 
 const ID: Dekor = {
-  masthead: "Warta Pernikahan",
+  // Nama tampilan tema = "Berita" (#136); kode/slug tetap `warta`.
+  masthead: "Berita Pernikahan",
   folioRight: "Undangan Pernikahan",
   folioSep: " . ",
   folio: {
@@ -282,7 +283,11 @@ export const L = {
     calendar: "Simpan Kalender",
     calendarGoogle: "Google Kalender",
     calendarIcs: "Apple / Outlook",
-    livestream: "Tonton Siaran Langsung",
+  },
+  // Info live di bawah video "Di Layar" (#135) — bukan lagi di section acara.
+  live: {
+    badge: "Live",
+    watch: "Tonton Siaran Langsung",
   },
   rsvp: {
     lead: "Mohon konfirmasi kehadiran Anda agar kami dapat menyiapkan tempat dengan sebaik-baiknya.",

@@ -936,7 +936,12 @@ export const copy = {
         "Dan di antara tanda-tanda (kebesaran)-Nya ialah Dia menciptakan pasangan-pasangan untukmu dari jenismu sendiri, agar kamu cenderung dan merasa tenteram kepadanya.",
       quotePresetSource: "QS. Ar-Rum : 21",
       youtubeUrl: "Tautan YouTube (Premium)",
-      livestreamUrl: "Tautan live streaming (Premium)",
+      // Tautan ATAU tulisan biasa (DECISIONS #135); kunci isian tetap
+      // `livestreamUrl`. Tulisan biasa hanya dirender tema Berita (kode `warta`).
+      livestreamUrl: "Live streaming (Premium)",
+      livestreamPlaceholder: "https://youtube.com/live/… atau nama kanal",
+      livestreamHint:
+        "Isi tautan siaran (diawali https://) agar tampil sebagai tombol, atau tulisan biasa seperti nama kanal YouTube. Tulisan biasa saat ini hanya tampil di tema Berita.",
       // Corporate
       eventName: "Nama acara",
       eventNamePlaceholder: "Annual Summit 2026",

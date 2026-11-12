@@ -14,9 +14,11 @@ import type { PhotoView } from "@/types/invitation";
  * `index.tsx`; isi section diuji di warta-edisi.test.tsx.
  */
 
-const { heroProps, coverProps } = vi.hoisted(() => ({
+const { heroProps, coverProps, videoProps, scheduleProps } = vi.hoisted(() => ({
   heroProps: [] as { photo?: PhotoView | null }[],
   coverProps: [] as { edisi: Edisi; tickerLine: string[] }[],
+  videoProps: [] as Record<string, unknown>[],
+  scheduleProps: [] as Record<string, unknown>[],
 }));
 
 // next/font hanya hidup di kompiler Next — di test cukup nama variabelnya.
@@ -38,8 +40,14 @@ vi.mock("@/themes/warta/sections", () => {
     Couple: Kosong,
     Story: Kosong,
     CountdownBlock: Kosong,
-    Schedule: Kosong,
-    VideoSection: Kosong,
+    Schedule: (p: Record<string, unknown>) => {
+      scheduleProps.push(p);
+      return null;
+    },
+    VideoSection: (p: Record<string, unknown>) => {
+      videoProps.push(p);
+      return <section data-testid="layar" />;
+    },
     Rsvp: Kosong,
     Gallery: Kosong,
     Envelope: Kosong,
@@ -145,5 +153,60 @@ describe("akar Warta — data-variant & foto berita", () => {
     expect(heroProps.at(-1)?.photo).toBeNull();
     renderVarian("koran", undefined);
     expect(heroProps.at(-1)?.photo).toBeNull();
+  });
+});
+
+describe("akar Warta — info live di halaman Di Layar (#135)", () => {
+  function renderLive(extra: Record<string, unknown>, content = {}) {
+    videoProps.length = 0;
+    scheduleProps.length = 0;
+    const data = {
+      ...demoInvitationData,
+      ...extra,
+      content: { ...demoInvitationData.content, ...content },
+    };
+    return render(<WartaTheme data={data} />);
+  }
+
+  it("tautan https (sudah digerbang server) → live.url", () => {
+    renderLive({}, { livestreamUrl: "https://youtube.com/live/abc" });
+    expect(videoProps.at(-1)?.live).toEqual({
+      url: "https://youtube.com/live/abc",
+    });
+  });
+
+  it("tulisan biasa → live.text; Di Layar tampil walau TANPA video", () => {
+    const { getByTestId } = renderLive({ livestreamText: "@LADOMAX Mediapro" });
+    expect(getByTestId("layar")).toBeInTheDocument();
+    expect(videoProps.at(-1)?.live).toEqual({ text: "@LADOMAX Mediapro" });
+  });
+
+  it("tanpa video & tanpa info live → tak ada halaman Di Layar", () => {
+    const { queryByTestId } = renderLive({});
+    expect(queryByTestId("layar")).toBeNull();
+    expect(videoProps).toHaveLength(0);
+  });
+
+  it("section acara tak lagi menerima tautan live", () => {
+    renderLive({}, { livestreamUrl: "https://youtube.com/live/abc" });
+    expect(scheduleProps.length).toBeGreaterThan(0);
+    expect(scheduleProps.at(-1)).not.toHaveProperty("livestreamUrl");
+  });
+
+  it("section video disembunyikan pemilik → info live ikut tersembunyi", () => {
+    const custom = defaultCustomSettings(wartaOptions);
+    const { queryByTestId } = renderLive({
+      livestreamText: "@LADOMAX Mediapro",
+      settings: {
+        ...demoInvitationData.settings,
+        custom: {
+          ...custom,
+          sections: custom.sections.map((x) =>
+            x.id === "video" ? { ...x, visible: false } : x,
+          ),
+        },
+      },
+    });
+    expect(queryByTestId("layar")).toBeNull();
   });
 });

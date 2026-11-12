@@ -279,6 +279,15 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
       envelope.ewallets.length > 0 ||
       Boolean(envelope.giftAddress));
   const hasVideo = hasVideoSection(data.video, content.youtubeUrl);
+  // Info live (#135) di bawah video "Di Layar" — sudah digerbang Premium &
+  // dipilah server: https → tombol, selain itu → tulisan. Halaman "Di Layar"
+  // tampil walau tanpa video bila info live ada.
+  const live = content.livestreamUrl
+    ? { url: content.livestreamUrl }
+    : data.livestreamText
+      ? { text: data.livestreamText }
+      : null;
+  const hasLayar = hasVideo || live !== null;
 
   const custom = settings.custom ?? null;
   const resolved = custom ? resolveAppearance(wartaOptions, custom) : null;
@@ -299,7 +308,7 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
     story: content.story.length > 0,
     countdown: Boolean(countdownTarget),
     schedule: data.events.length > 0,
-    video: hasVideo,
+    video: hasLayar,
     rsvp: true,
     gallery: data.media.length > 0,
     envelope: hasEnvelope,
@@ -362,14 +371,14 @@ export default function WartaTheme({ data }: ThemeComponentProps) {
           events={data.events}
           tz={tz}
           slug={data.slug}
-          livestreamUrl={content.livestreamUrl}
         />
       ) : null,
-    video: hasVideo ? (
+    video: hasLayar ? (
       <VideoSection
         rubric={dwi((d) => d.folio.video)}
         video={data.video}
         youtubeUrl={content.youtubeUrl}
+        live={live}
       />
     ) : null,
     rsvp: <Rsvp rubric={dwi((d) => d.folio.rsvp)} slug={data.slug} />,

@@ -91,6 +91,13 @@ export interface InvitationData {
    * Opsional supaya demo-data tema tak perlu menyebutnya.
    */
   video?: VideoView | null;
+  /**
+   * Info live streaming berupa TULISAN BIASA (mis. nama kanal), DECISIONS #135
+   * — sudah digerbang Premium di server. Isian berupa tautan https tidak
+   * pernah ada di sini: ia menjadi `content.livestreamUrl` (tombol). Paling
+   * banyak satu dari keduanya terisi. Saat ini hanya Warta yang merendernya.
+   */
+  livestreamText?: string;
   /** Musik latar terpilih, sudah di-resolve dari `songs` (URL domain sendiri). */
   music: { url: string; title: string } | null;
   /** Watermark footer untuk paket Basic (SPEC §2). */

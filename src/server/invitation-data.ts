@@ -107,8 +107,13 @@ export async function liveCustomMusicPaths(
   return (rows ?? []).map((r) => r.path);
 }
 
+/**
+ * Isian yang SELURUHNYA satu tautan https. Spasi di dalamnya = tautan + tulisan
+ * (mis. "https://youtube.com/@kanal Nama Kanal"): `new URL()` menerimanya dengan
+ * meng-encode spasi → tombol menuju 404 dan tulisannya hilang (#135).
+ */
 function isHttpsUrl(url: string | undefined): url is string {
-  if (!url) return false;
+  if (!url || /\s/.test(url)) return false;
   try {
     return new URL(url).protocol === "https:";
   } catch {
@@ -172,13 +177,16 @@ export function buildInvitationData(args: {
   const gated = args.videoAllowed
     ? parsed
     : { ...parsed, youtubeUrl: undefined, video: undefined };
-  // Live streaming: fitur Premium (SPEC §2) dan hanya URL https — skema draft
-  // sengaja longgar saat mengetik (hanya menolak skema berbahaya), jadi bentuk
-  // tautannya dipastikan di sini sebelum menjadi `href` di tema.
-  const content =
-    premium && isHttpsUrl(gated.livestreamUrl)
-      ? gated
-      : { ...gated, livestreamUrl: undefined };
+  // Live streaming: fitur Premium (SPEC §2). Isiannya tautan https ATAU tulisan
+  // biasa (#135) — dipilah di SINI, satu titik untuk semua tema:
+  // `content.livestreamUrl` hanya pernah berisi https (menjadi `href` tombol di
+  // ke-15 tema), sedangkan selain itu diteruskan sebagai `livestreamText`
+  // (dirender sebagai teks, saat ini hanya oleh Warta).
+  const live = premium ? gated.livestreamUrl?.trim() : undefined;
+  const content = isHttpsUrl(live)
+    ? { ...gated, livestreamUrl: live }
+    : { ...gated, livestreamUrl: undefined };
+  const livestreamText = live && !isHttpsUrl(live) ? live : undefined;
 
   // Hanya sesi BERJAM yang sampai ke tema (DECISIONS #42): sesi draft tanpa jam
   // tersimpan agar isian pemilik tak hilang, tetapi tak pernah tampil ke tamu.
@@ -304,6 +312,7 @@ export function buildInvitationData(args: {
     ...(storyPhotos ? { storyPhotos } : {}),
     ...(Object.keys(themePhotos).length > 0 ? { themePhotos } : {}),
     video,
+    ...(livestreamText ? { livestreamText } : {}),
     music,
     watermark: args.watermark,
   };

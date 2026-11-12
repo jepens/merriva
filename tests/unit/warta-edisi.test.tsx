@@ -111,6 +111,8 @@ describe("kamus judul dekoratif dua edisi", () => {
     expect(DEKOR.id.folioSep).toBe(" . ");
     expect(DEKOR.id.folio.hero.toUpperCase()).toBe("BERITA");
     expect(DEKOR.id.folio.story.toUpperCase()).toBe("FITUR");
+    // Nama tampilan tema "Berita" (#136) — judul koran sampul & penutup.
+    expect(DEKOR.id.masthead).toBe("Berita Pernikahan");
   });
 
   it("edisi mengikuti id varian terselesaikan; tanpa kustomisasi = Inggris", () => {

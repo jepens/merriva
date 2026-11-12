@@ -7752,6 +7752,83 @@ menjadi lebih kecil, bukan dua baris (permintaan pemilik). Pengepas bersama
 
 ---
 
+## #135 — 2026-11-12 · Info live streaming Warta di bawah video "Di Layar" (tautan atau tulisan)
+
+**Masalah (pemilik, 12 Nov 2026):** isian live streaming diisi nama kanal
+("@LADOMAX Mediapro"), bukan tautan, sehingga senyap tak tampil di mana pun.
+Pemilik ingin info live di halaman "Di Layar" Warta, di bawah video, dengan
+ikon merah berkedip khas live; isiannya boleh tautan YouTube atau tulisan biasa.
+
+**Keputusan (pemilik — ketiga rekomendasi dipilih):**
+1. **Pindah, bukan dobel.** Di Warta info live hanya tampil di bawah video
+   "Di Layar"; tombol di "Rangkaian Acara" dihapus. Halaman "Di Layar" tampil
+   walau tanpa video bila info live ada.
+2. **Tulisan biasa hanya di Warta.** Isian tetap SATU (`content.livestreamUrl`,
+   nama kunci historis — mengganti nama = migrasi data JSONB tanpa manfaat bagi
+   tamu). `buildInvitationData` memilahnya di satu titik: https →
+   `content.livestreamUrl` (tombol di ke-15 tema, kontrak 14 tema lain tak
+   berubah), selain itu → `data.livestreamText` (dirender sebagai teks, hanya
+   Warta). Keduanya digerbang Premium seperti sebelumnya (#116); paket tak
+   berubah. Editor memberi petunjuk bahwa tulisan biasa hanya tampil di Warta.
+3. **Tautan → tombol + lencana.** Lencana merah "LIVE" (#c8102e, warna siaran
+   tetap di semua varian) dengan titik putih berkedip, lalu tombol "Tonton
+   Siaran Langsung" (tab baru, `noopener`); tulisan biasa tampil di bawah
+   lencana yang sama.
+
+**Juga:** skema strict kini menerima tulisan biasa (tetap menolak skema
+`javascript:`/`data:`/`vbscript:`/`file:`, maks 500) — sebelumnya isian bukan
+https menjatuhkan seluruh `content` ke jalur parse draft saat render. "Tautan"
+= isian SELURUHNYA satu URL https tanpa spasi: `new URL()` menerima spasi di
+path (di-encode `%20`), jadi "https://youtube.com/@kanal Nama Kanal" dulu
+menjadi tombol menuju 404 di ke-15 tema dan tulisannya hilang — kini tulisan
+(temuan review). Kedipan murni CSS (opacity, compositor), siklus 1,2 dtk (jauh
+di bawah ambang 3 kilatan/dtk), dengan gerbang gerak yang sama dengan pita
+berjalan Warta (`.wt.is-js.is-motion`, ditambah `:not([data-motion="calm"])`
+agar pratinjau Tampilan langsung berhenti) di dalam `prefers-reduced-motion:
+no-preference` — Gerak "Tenang", tier perangkat lemah, dan preferensi
+perangkat semuanya menghentikannya (temuan review: versi awal hanya membaca
+media query).
+
+**Ditolak:**
+- *Dua isian (tautan + keterangan)* — pemilik meminta satu isian yang bisa
+  keduanya; dua isian menambah UI untuk kasus yang jarang.
+- *Tautan di dalam tulisan dibuat bisa diklik (linkify)* — tautan hanya dari
+  isian yang SELURUHNYA https; menghindari penguraian URL di teks bebas.
+- *Tulisan biasa di ke-14 tema lain* — tak diminta; menyentuh 14 tema.
+
+**Konsekuensi:**
+- Live streaming Warta kini ikut section **Video**, bukan section acara:
+  menyembunyikan section Video di editor Tampilan ikut menyembunyikan info live
+  (#116 "ikut section acara" tetap berlaku untuk 14 tema lain).
+- Isian `http://…` atau tanpa skema tampil di Warta sebagai tulisan (tak bisa
+  diklik) dan tak tampil di tema lain — petunjuk editor meminta `https://`.
+
+---
+
+## #136 — 2026-11-12 · Tema "Warta" berganti nama tampilan menjadi "Berita"
+
+**Keputusan (pemilik, 12 Nov 2026 — opsi "nama yang terlihat saja"):** yang
+dilihat pelanggan & tamu berganti: nama katalog `themes.name` = "Berita"
+(migrasi `20261112150000`; katalog `/tema`, pemilih & ganti tema, dashboard,
+admin, dialog "Pakai tema …?" membacanya dari DB), judul koran Edisi Indonesia
+di sampul & penutup "Warta Pernikahan" → "Berita Pernikahan", dan petunjuk
+isian live streaming di editor. Edisi Inggris ("The Wedding Post") tetap.
+
+**Tetap `warta`:** slug DB, kunci registry, folder `src/themes/warta/`, prefiks
+kelas `wt-`, aset `/themes/warta.*.css`, alamat pratinjau `/preview/tema/warta`.
+Di dokumen & kode, "Warta" = tema ini (entri lama tak ditulis ulang).
+
+**Ditolak:** *mengganti slug/alamat juga* — slug adalah kunci registry; mengganti
+slug DB dan kode tak bisa serentak (jeda deploy ±5–7 menit = halaman undangan
+aktif 404, termasuk rani-wanda) tanpa alias sementara, padahal tamu tak pernah
+melihat slug.
+
+**Konsekuensi:** migrasi wajib diterapkan ke cloud (atau admin mengganti nama
+lewat `/admin/tema`) — tanpa itu katalog produksi tetap menampilkan "Warta"
+walau sampul Edisi Indonesia sudah "Berita Pernikahan".
+
+---
+
 ## Template entri baru
 
 ```

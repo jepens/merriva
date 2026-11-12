@@ -18,6 +18,7 @@ import { fotoStyle } from "@/themes/_shared/foto";
 import { LightboxThumb } from "@/themes/_shared/lightbox";
 import { Countdown, Reveal } from "@/themes/_shared/motion";
 import { ThemeVideo, type VideoView } from "@/themes/_shared/video";
+import { hasVideoSection } from "@/themes/_shared/video-gate";
 import type {
   InvitationEventView,
   InvitationMediaView,
@@ -561,15 +562,12 @@ export function Schedule({
   events,
   tz,
   slug,
-  livestreamUrl,
 }: {
   /** Rubrik halaman koran ("News", "Couple", …). */
   rubric: Teks;
   events: InvitationEventView[];
   tz: TimezoneId;
   slug: string;
-  /** Sudah digerbang server: Premium + https (DECISIONS #116). */
-  livestreamUrl?: string;
 }) {
   const icsServable = !isReservedSlug(slug) && !isDraftSlug(slug);
   const tanggal = (utc: string) => utcToLocal(utc, tz).slice(0, 10);
@@ -674,35 +672,34 @@ export function Schedule({
             );
           })}
         </div>
-        {livestreamUrl ? (
-          <Reveal className="wt-center">
-            <a
-              className="wt-btn wt-live"
-              href={livestreamUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Radio size={14} aria-hidden />
-              {L.schedule.livestream}
-            </a>
-          </Reveal>
-        ) : null}
       </div>
     </section>
   );
 }
 
 /* ------------------------------------------------------------- Video ------ */
+/**
+ * Info live streaming (#135): tautan https → tombol, tulisan biasa → teks.
+ * Sudah digerbang & dipilah server (`buildInvitationData`) — paling banyak satu
+ * yang terisi; `url` selalu https.
+ */
+export type InfoLive = { url: string } | { text: string };
+
 export function VideoSection({
   rubric,
   video,
   youtubeUrl,
+  live,
 }: {
   /** Rubrik halaman koran ("News", "Couple", …). */
   rubric: Teks;
   video: VideoView | null | undefined;
   youtubeUrl: string | undefined;
+  /** Info live di bawah video; section tampil walau tanpa video bila ada. */
+  live?: InfoLive | null;
 }) {
+  // Kembaran SERVER `hasThemeVideo` (modul itu "use client").
+  const adaVideo = hasVideoSection(video, youtubeUrl);
   return (
     <section className="wt-page">
       <Folio rubric={rubric} />
@@ -715,15 +712,40 @@ export function VideoSection({
             <Dwi t={dwi((d) => d.video.heading)} />
           </h2>
         </Reveal>
-        <Reveal>
-          <div className="wt-video">
-            <ThemeVideo
-              video={video}
-              youtubeUrl={youtubeUrl}
-              labels={copy.public.video}
-            />
-          </div>
-        </Reveal>
+        {adaVideo ? (
+          <Reveal>
+            <div className="wt-video">
+              <ThemeVideo
+                video={video}
+                youtubeUrl={youtubeUrl}
+                labels={copy.public.video}
+              />
+            </div>
+          </Reveal>
+        ) : null}
+        {live ? (
+          <Reveal className="wt-onair">
+            {/* Lencana siaran: titik berkedip hanya bila gerak diizinkan
+                (CSS `prefers-reduced-motion`). */}
+            <span className="wt-onair__badge">
+              <span className="wt-onair__dot" aria-hidden />
+              {L.live.badge}
+            </span>
+            {"url" in live ? (
+              <a
+                className="wt-btn"
+                href={live.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Radio size={14} aria-hidden />
+                {L.live.watch}
+              </a>
+            ) : (
+              <p className="wt-onair__text">{live.text}</p>
+            )}
+          </Reveal>
+        ) : null}
       </div>
     </section>
   );

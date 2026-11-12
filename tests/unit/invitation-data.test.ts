@@ -252,22 +252,68 @@ describe("buildInvitationData — yang tampil = yang dibayar (DECISIONS #116)", 
     expect(c.accent).toBe("#aa3355");
   });
 
-  it("live streaming: hanya Premium, hanya https", () => {
+  it("live streaming: hanya Premium; hanya https yang menjadi tautan", () => {
     const https = "https://youtube.com/live/abc";
-    expect(
-      bangun({ watermark: false, content: { livestreamUrl: https } }).content
-        .livestreamUrl,
-    ).toBe(https);
-    expect(
-      bangun({ watermark: true, content: { livestreamUrl: https } }).content
-        .livestreamUrl,
-    ).toBeUndefined();
+    const premium = bangun({
+      watermark: false,
+      content: { livestreamUrl: https },
+    });
+    expect(premium.content.livestreamUrl).toBe(https);
+    expect(premium.livestreamText).toBeUndefined();
+    const basic = bangun({
+      watermark: true,
+      content: { livestreamUrl: https },
+    });
+    expect(basic.content.livestreamUrl).toBeUndefined();
+    expect(basic.livestreamText).toBeUndefined();
+    // Bukan https → TAK PERNAH jadi `href` (ke-15 tema memakainya sebagai
+    // tombol); diteruskan sebagai tulisan biasa (#135).
+    const http = bangun({
+      watermark: false,
+      content: { livestreamUrl: "http://contoh.test/live" },
+    });
+    expect(http.content.livestreamUrl).toBeUndefined();
+    expect(http.livestreamText).toBe("http://contoh.test/live");
+  });
+
+  it("live streaming tulisan biasa (#135): Premium saja, dipangkas, kosong = tiada", () => {
+    const teks = bangun({
+      watermark: false,
+      content: { livestreamUrl: "  @LADOMAX Mediapro  " },
+    });
+    expect(teks.livestreamText).toBe("@LADOMAX Mediapro");
+    expect(teks.content.livestreamUrl).toBeUndefined();
     expect(
       bangun({
+        watermark: true,
+        content: { livestreamUrl: "@LADOMAX Mediapro" },
+      }),
+    ).not.toHaveProperty("livestreamText");
+    for (const kosong of ["", "   "]) {
+      const d = bangun({
         watermark: false,
-        content: { livestreamUrl: "http://contoh.test/live" },
-      }).content.livestreamUrl,
-    ).toBeUndefined();
+        content: { livestreamUrl: kosong },
+      });
+      expect(d).not.toHaveProperty("livestreamText");
+      expect(d.content.livestreamUrl).toBeUndefined();
+    }
+  });
+
+  it("tautan + tulisan (berspasi) = tulisan, BUKAN tombol menuju 404 (#135)", () => {
+    // `new URL()` menerima spasi di path (di-encode %20) — tanpa penjaga,
+    // seluruh isian menjadi `href` dan tulisannya hilang.
+    for (const campur of [
+      "https://www.youtube.com/@LADOMAX Mediapro",
+      "https://youtube.com/live/abc mulai 09.00 WIB",
+      "https://youtube.com/live/abc\tmulai",
+    ]) {
+      const d = bangun({
+        watermark: false,
+        content: { livestreamUrl: campur },
+      });
+      expect(d.content.livestreamUrl, campur).toBeUndefined();
+      expect(d.livestreamText, campur).toBe(campur);
+    }
   });
 });
 

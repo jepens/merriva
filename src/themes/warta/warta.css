@@ -982,9 +982,6 @@ hr.wt-rule {
   outline: 2px solid var(--wt-ink);
   outline-offset: 2px;
 }
-.wt-live {
-  margin-top: 22px;
-}
 .wt-cal-menu {
   position: relative;
 }
@@ -1099,6 +1096,62 @@ hr.wt-rule {
 .wt .video-lite:focus-visible {
   outline: 2px solid var(--wt-light);
   outline-offset: -5px;
+}
+
+/* Info live di bawah video (#135). Merah siaran TETAP di semua varian (bukan
+   aksen tema): teks putih di atas #c8102e = 5,9:1; lencana vs kertas abu
+   Edisi Indonesia (#c6c6c6) = 3,4:1. Titiknya berkedip dengan gerbang gerak
+   yang sama dengan pita berjalan (`is-motion`: preferensi perangkat + tier
+   perangkat + Gerak "Tenang"); `data-motion="calm"` ikut disaring agar
+   pratinjau Tampilan langsung berhenti, dan media query menangkap preferensi
+   yang berubah sesudah mount. Tanpa JS: titik diam. */
+.wt-onair {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  text-align: center;
+}
+.wt-onair__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px 6px 9px;
+  border-radius: 3px;
+  background: #c8102e;
+  color: #fff;
+  font-family: var(--wt-caps), sans-serif;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.wt-onair__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .wt.is-js.is-motion:not([data-motion="calm"]) .wt-onair__dot {
+    animation: wt-onair 1.2s ease-in-out infinite;
+  }
+}
+@keyframes wt-onair {
+  50% {
+    opacity: 0.15;
+  }
+}
+.wt-onair__text {
+  max-width: 100%;
+  margin: 0;
+  font-family: var(--wt-body), Georgia, serif;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--wt-ink);
+  overflow-wrap: anywhere;
 }
 
 /* ------------------------------------------------------------- reply ----- */

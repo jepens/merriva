@@ -312,13 +312,20 @@ export const commonContentFields = {
    * metadata, dan gambar OG jatuh ke kerangka kosong. Satu-satunya penulis
    * sahnya editor kita, yang selalu menulis bentuk yang dikembalikan route. */
   customMusic: customMusicSchema.optional().catch(undefined),
-  /** Tautan live streaming (fitur Premium — SPEC §2). WAJIB https. */
-  livestreamUrl: optionalFormat(
-    httpsUrlSchema(
-      L.common.livestreamUrl,
-      "Tautan live harus URL https yang valid",
-    ),
-  ),
+  /**
+   * Info live streaming (fitur Premium — SPEC §2): tautan https ATAU tulisan
+   * biasa, mis. nama kanal (DECISIONS #135; nama kuncinya historis). Bentuk
+   * dipilah saat render (`buildInvitationData`): hanya https yang menjadi
+   * `href`, selebihnya tulisan yang dirender sebagai teks. Skema berbahaya
+   * tetap ditolak sebagai lapis kedua, sama dengan skema draft.
+   */
+  livestreamUrl: z
+    .string()
+    .trim()
+    .max(L.common.livestreamUrl)
+    .refine(noDangerousUrlScheme, "Tautan tidak valid")
+    .transform((v) => v || undefined)
+    .optional(),
   // Factory default: setiap parse dapat array `banks`/`ewallets` SEGAR.
   // `.default(objek)` akan meng-alias referensi array antar-parse (Zod v4
   // shallowClone) → mutasi in-place bocor lintas undangan. (Temuan review M1.2.)
