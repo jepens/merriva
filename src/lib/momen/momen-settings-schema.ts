@@ -32,31 +32,20 @@ const guestName = z
   .max(MOMEN_LIMITS.guestNameMax)
   .refine((v) => !/[\p{Cc}\p{Cf}<>]/u.test(v), "karakter tidak diizinkan");
 
-/** Pengaturan album oleh host — payload server action `updateMomenSettings`. */
-export const momenSettingsSchema = z
-  .strictObject({
-    quotaPerGuest: z
-      .number()
-      .int()
-      .min(MOMEN_LIMITS.quotaPerGuestMin)
-      .max(MOMEN_LIMITS.quotaPerGuestMax),
-    /**
-     * Niat host dikirim EKSPLISIT. Tanpa ini server tak bisa membedakan
-     * "Langsung tampil" dari "Jadwal sendiri yang tanggalnya lupa diisi" —
-     * keduanya mengirim `revealAt: null`, sehingga salah-isi diam-diam menjadi
-     * "semua foto tamu langsung publik": kebalikan niat host, pada fitur privasi,
-     * dan TAK BISA dibatalkan setelah foto terlihat.
-     */
-    revealMode: z.enum(["instant", "schedule"]),
-    /** ISO datetime dengan offset (timestamptz) atau null = instan. */
-    revealAt: z.iso.datetime({ offset: true }).nullable(),
-    defaultFilter: filterEnum,
-    allowLibraryUpload: z.boolean(),
-  })
-  .refine((v) => v.revealMode === "instant" || v.revealAt !== null, {
-    message: "waktu reveal wajib diisi pada mode jadwal",
-    path: ["revealAt"],
-  });
+/**
+ * Pengaturan album oleh host — payload server action `updateMomenSettings`.
+ * Tanpa waktu reveal sejak DECISIONS #137 (tamu langsung melihat fotonya
+ * sendiri); `strictObject` menolak `revealMode`/`revealAt` dari klien lama.
+ */
+export const momenSettingsSchema = z.strictObject({
+  quotaPerGuest: z
+    .number()
+    .int()
+    .min(MOMEN_LIMITS.quotaPerGuestMin)
+    .max(MOMEN_LIMITS.quotaPerGuestMax),
+  defaultFilter: filterEnum,
+  allowLibraryUpload: z.boolean(),
+});
 
 export type MomenSettings = z.infer<typeof momenSettingsSchema>;
 

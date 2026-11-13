@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 
 import { copy } from "@/lib/copy";
 import { isUuid } from "@/lib/id";
-import { resolveAlbumPhase } from "@/lib/momen/album-phase";
 import { reportHandledError } from "@/lib/observability";
 import {
   momenModerationSchema,
@@ -15,8 +14,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
- * Aksi HOST Album Momen (dashboard) — pengaturan, moderasi, reveal (MOMEN-SPEC
- * §5). Pola: **auth → cek kepemilikan (RLS undangan) → operasi (service_role) →
+ * Aksi HOST Album Momen (dashboard) — pengaturan & moderasi (MOMEN-SPEC §5). Pola: **auth → cek kepemilikan (RLS undangan) → operasi (service_role) →
  * revalidate**. Baris `momen_albums`/`momen_photos` hanya bisa DIUBAH via
  * service_role (RLS: pemilik SELECT saja, admin ALL) → kepemilikan diverifikasi
  * di server SEBELUM mutasi service_role.
@@ -31,7 +29,7 @@ export type MomenManageResult =
  */
 async function resolveOwnedAlbumId(
   invitationId: string,
-): Promise<{ albumId: string; revealAt: string | null } | null> {
+): Promise<{ albumId: string } | null> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -48,18 +46,21 @@ async function resolveOwnedAlbumId(
   const admin = createSupabaseAdminClient();
   const { data: album } = await admin
     .from("momen_albums")
-    .select("id, reveal_at")
+    .select("id")
     .eq("invitation_id", invitationId)
     .maybeSingle();
   if (!album) return null;
-  return { albumId: album.id, revealAt: album.reveal_at };
+  return { albumId: album.id };
 }
 
 function revalidate(invitationId: string): void {
   revalidatePath(`/dashboard/undangan/${invitationId}/momen`);
 }
 
-/** Simpan pengaturan album (jatah/tamu, reveal, filter default, upload galeri). */
+/**
+ * Simpan pengaturan album (jatah/tamu, filter default, upload galeri). Kolom
+ * `reveal_at` tak lagi ditulis (DECISIONS #137) — nilainya diabaikan di mana pun.
+ */
 export async function updateMomenSettingsAction(
   invitationId: string,
   raw: unknown,
@@ -76,10 +77,6 @@ export async function updateMomenSettingsAction(
     .from("momen_albums")
     .update({
       quota_per_guest: parsed.data.quotaPerGuest,
-      // Mode "instant" selalu menulis null; mode "schedule" dijamin skema punya
-      // tanggal (refine) → tak ada jalan diam-diam ke "langsung tampil".
-      reveal_at:
-        parsed.data.revealMode === "instant" ? null : parsed.data.revealAt,
       default_filter: parsed.data.defaultFilter,
       allow_library_upload: parsed.data.allowLibraryUpload,
     })
@@ -93,41 +90,19 @@ export async function updateMomenSettingsAction(
   return { status: "success" };
 }
 
-/** Buka foto untuk semua sekarang (reveal_at = instan). Tak bisa dibatalkan. */
-export async function revealMomenNowAction(
-  invitationId: string,
-): Promise<MomenManageResult> {
-  if (!isUuid(invitationId)) return { status: "error" };
-  const owned = await resolveOwnedAlbumId(invitationId);
-  if (!owned) return { status: "error", message: copy.auth.genericAuthError };
-
-  const admin = createSupabaseAdminClient();
-  const { error } = await admin
-    .from("momen_albums")
-    .update({ reveal_at: null })
-    .eq("id", owned.albumId);
-  if (error) {
-    reportHandledError(error, "momen.reveal", { albumId: owned.albumId });
-    return { status: "error", message: copy.common.error };
-  }
-
-  revalidate(invitationId);
-  return { status: "success" };
-}
-
 /**
- * Moderasi satu foto: sembunyikan / tampilkan / hapus. Host boleh melihat semua
- * foto pra-reveal (jalur dashboard service_role). Hapus = buang baris + objek
- * storage (best-effort) + turunkan `photo_count` (rem plafon tetap konsisten).
+ * Moderasi satu foto: sembunyikan / tampilkan / hapus. Host melihat seluruh
+ * foto (jalur dashboard service_role). Hapus = buang baris + objek storage
+ * (best-effort) + turunkan `photo_count` (rem plafon tetap konsisten).
  *
- * "Sembunyikan" SADAR-FASE (AUDIT-2026-09-04 KEA-3, DECISIONS #33). Bucket media
- * publik + cache 1 tahun, jadi setelah reveal URL foto sudah tersebar ke setiap
- * tamu: menandai `status='hidden'` saja membuat baris hilang dari galeri
- * sementara OBJEKNYA TETAP MELAYANI 200 selamanya — UI berbohong.
- *   * Pra-reveal  → objek belum pernah publik: cukup penanda status, dapat
- *     ditampilkan lagi.
- *   * Pasca-reveal → objek DIHAPUS dan `purged_at` dicatat; permanen, dan
- *     "Tampilkan" tak lagi ditawarkan untuk foto itu.
+ * "Sembunyikan" SELALU mencabut objeknya (AUDIT-2026-09-04 KEA-3, DECISIONS #33
+ * diperluas #137). Bucket media publik + cache 1 tahun, dan URL foto sudah
+ * sampai ke perangkat pemotretnya begitu foto tampil di galeri "Fotomu":
+ * menandai `status='hidden'` saja membuat baris hilang dari galeri sementara
+ * OBJEKNYA TETAP MELAYANI 200 selamanya — UI berbohong. Maka objek DIHAPUS dan
+ * `purged_at` dicatat; permanen, dan "Tampilkan" tak lagi ditawarkan. (Dulu,
+ * pra-reveal cukup penanda status; foto lama semacam itu — `purged_at` kosong —
+ * tetap bisa ditampilkan lagi.)
  * Baris tetap dipertahankan: jatah jepret tamu & slot peserta yang sudah
  * terpakai TIDAK dikembalikan oleh moderasi.
  */
@@ -184,8 +159,8 @@ export async function moderateMomenPhotoAction(
       storage.delete(photo.thumb_path),
     ]);
   } else if (parsed.data.action === "show") {
-    // Objek sudah dihapus pada moderasi pasca-reveal → tak ada yang bisa
-    // ditampilkan kembali. Tolak eksplisit (UI juga menyembunyikan tombolnya).
+    // Objek sudah dihapus saat disembunyikan → tak ada yang bisa ditampilkan
+    // kembali. Tolak eksplisit (UI juga menyembunyikan tombolnya).
     if (photo.purged_at) {
       return { status: "error", message: copy.momen.manage.showPurged };
     }
@@ -201,18 +176,15 @@ export async function moderateMomenPhotoAction(
       return { status: "error", message: copy.common.error };
     }
   } else {
-    // hide — pencabutan bergantung fase (lihat docstring).
-    const revealed =
-      resolveAlbumPhase(Date.now(), owned.revealAt) === "revealed";
+    // hide — selalu mencabut objek (lihat docstring); sekali saja per foto.
+    const purge = !photo.purged_at;
     const { error } = await admin
       .from("momen_photos")
       .update({
         status: "hidden",
         // Dicatat SEBELUM penghapusan: bila proses mati di tengah, foto tetap
         // ditandai tercabut (fail-closed) alih-alih tampak masih bisa dipulihkan.
-        ...(revealed && !photo.purged_at
-          ? { purged_at: new Date().toISOString() }
-          : {}),
+        ...(purge ? { purged_at: new Date().toISOString() } : {}),
       })
       .eq("id", photo.id)
       .eq("album_id", owned.albumId);
@@ -223,7 +195,7 @@ export async function moderateMomenPhotoAction(
       return { status: "error", message: copy.common.error };
     }
 
-    if (revealed && !photo.purged_at) {
+    if (purge) {
       const storage = getStorage();
       const hasil = await Promise.allSettled([
         storage.delete(photo.storage_path),
@@ -234,7 +206,7 @@ export async function moderateMomenPhotoAction(
       // yang tak pantas, atau orang di dalamnya memintanya turun. Bedanya
       // dengan hapus best-effort lain yang sengaja dibiarkan bisu (orphan tak
       // berbahaya, pathnya tak tertebak): di sini pathnya SUDAH tersebar.
-      // Tamu melihatnya saat reveal dan bisa menyimpan URL-nya, dan objeknya
+      // Pemotretnya melihatnya di galeri dan bisa menyimpan URL-nya, dan objeknya
       // disajikan `Cache-Control: immutable` setahun. `purged_at` sudah
       // terisi, tombol "Tampilkan" ditolak permanen, foto hilang dari galeri —
       // sementara URL-nya tetap menjawab 200. UI-nya berbohong, persis yang

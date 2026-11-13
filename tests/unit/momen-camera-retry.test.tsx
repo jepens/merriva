@@ -74,14 +74,9 @@ const props = {
   quotaPerGuest: 5,
   defaultFilter: "hangat",
   allowLibraryUpload: true,
-  revealAtIso: null,
   heroTitle: "Andi & Sinta",
   dateLabel: null,
   turnstileSiteKey: null,
-  initialPhotos: [],
-  initialCursor: null,
-  totalPhotos: 0,
-  photographers: 0,
 };
 
 let revoked: string[] = [];
@@ -97,6 +92,12 @@ beforeEach(() => {
     deviceCount: 0,
   });
   uploadMomenPhotoAction.mockReset();
+  loadMomenPhotosAction.mockReset();
+  loadMomenPhotosAction.mockResolvedValue({
+    status: "ok",
+    photos: [],
+    nextCursor: null,
+  });
 
   // Kanvas jsdom tak punya konteks 2d; cukup sediakan API yang dipakai.
   const ctx = {
@@ -357,9 +358,9 @@ describe("MomenCamera — kirim ulang jepretan", () => {
 
     fireEvent.click(screen.getByRole("button", { name: c.camera.close }));
 
-    // Ke layar mana pun ✕ membawa tamu (galeri untuk album reveal-instan,
-    // habis/masuk untuk album terjadwal), jepretannya harus tetap terjangkau
-    // DI LAYAR ITU — bukan sekadar ada di DOM layar yang tersembunyi.
+    // Ke layar mana pun ✕ membawa tamu (galeri bila sudah ada jepretan, masuk
+    // bila belum), jepretannya harus tetap terjangkau DI LAYAR ITU — bukan
+    // sekadar ada di DOM layar yang tersembunyi.
     const keluar = layarAktif(container);
     expect(keluar.getByText(c.camera.pendingShot)).toBeTruthy();
     expect(
@@ -676,24 +677,19 @@ describe("MomenCamera — kirim ulang jepretan", () => {
   });
 });
 
-describe("MomenCamera — galeri 'muat lebih' gagal", () => {
-  const galleryProps = {
-    ...props,
-    // Sudah lewat → fase "revealed", galeri terbuka.
-    revealAtIso: "2020-01-01T00:00:00Z",
-    initialCursor: "2026-12-20T02:00:00Z",
-    initialPhotos: [
-      {
-        id: "p1",
-        guestName: "Sasa",
-        filterId: "hangat",
-        url: "blob:a",
-        thumbUrl: "blob:a",
-      },
-    ],
-    totalPhotos: 1,
-    photographers: 1,
+describe("MomenCamera — galeri 'Fotomu' (DECISIONS #137)", () => {
+  const FOTO = {
+    id: "p1",
+    guestName: "Sasa",
+    filterId: "hangat",
+    url: "/media/momen/a/p1/display.webp",
+    thumbUrl: "/media/momen/a/p1/thumb.webp",
   };
+  const halaman = (nextCursor: string | null = null) => ({
+    status: "ok" as const,
+    photos: [FOTO],
+    nextCursor,
+  });
 
   async function bukaGaleri() {
     await act(async () => {
@@ -702,7 +698,7 @@ describe("MomenCamera — galeri 'muat lebih' gagal", () => {
     fireEvent.change(screen.getByLabelText(c.masuk.nameLabel), {
       target: { value: "Sasa" },
     });
-    // Tombol "Lihat Album" ada di layar masuk DAN layar habis; yang pertama
+    // Tombol "Lihat Fotoku" ada di layar masuk DAN layar habis; yang pertama
     // (urutan DOM) milik layar masuk.
     fireEvent.click(
       screen.getAllByRole("button", { name: c.habis.toGallery })[0]!,
@@ -710,9 +706,113 @@ describe("MomenCamera — galeri 'muat lebih' gagal", () => {
     await waitFor(() => expect(startMomenSessionAction).toHaveBeenCalled());
   }
 
-  it("gagal → pesan di LAYAR GALERI + tombol 'Muat lebih' tetap ada", async () => {
-    loadMomenPhotosAction.mockResolvedValue({ status: "error" });
-    render(<MomenCamera {...galleryProps} />);
+  it("foto dimuat dari aksi ber-sesi saat galeri dibuka — tanpa nama pemotret", async () => {
+    loadMomenPhotosAction.mockResolvedValue(halaman());
+    const { container } = render(<MomenCamera {...props} />);
+    await bukaGaleri();
+
+    await waitFor(() =>
+      expect(
+        container.querySelectorAll(".mn-galeri.mn-on .mn-ph"),
+      ).toHaveLength(1),
+    );
+    // Halaman pertama, bukan kelanjutan: kursor null.
+    expect(loadMomenPhotosAction).toHaveBeenCalledWith(SLUG, null);
+    const galeri = di(container, ".mn-galeri.mn-on");
+    expect(galeri.getByText(c.gallery.note)).toBeTruthy();
+    // Galeri hanya milik tamu ini → kapsi tak lagi menyebut nama.
+    expect(
+      container.querySelector(".mn-galeri .mn-who")?.textContent ?? "",
+    ).not.toContain("Sasa");
+  });
+
+  it("pemuatan GAGAL → pesan + 'Coba lagi' (bukan 'belum ada foto')", async () => {
+    loadMomenPhotosAction
+      .mockResolvedValueOnce({ status: "error" })
+      .mockResolvedValueOnce(halaman());
+    const { container } = render(<MomenCamera {...props} />);
+    await bukaGaleri();
+
+    const galeri = () => di(container, ".mn-galeri.mn-on");
+    await waitFor(() =>
+      expect(galeri().getByText(c.error.temporary)).toBeTruthy(),
+    );
+    expect(galeri().queryByText(c.gallery.empty)).toBeNull();
+
+    fireEvent.click(galeri().getByRole("button", { name: c.gallery.retry }));
+    await waitFor(() =>
+      expect(container.querySelectorAll(".mn-galeri .mn-ph")).toHaveLength(1),
+    );
+    expect(galeri().queryByText(c.error.temporary)).toBeNull();
+  });
+
+  it("sesi tak berlaku → kembali ke layar nama dengan pesan sesi", async () => {
+    loadMomenPhotosAction.mockResolvedValue({ status: "session" });
+    const { container } = render(<MomenCamera {...props} />);
+    await bukaGaleri();
+
+    await waitFor(() =>
+      expect(
+        di(container, ".mn-masuk.mn-on").getByText(c.error.session),
+      ).toBeTruthy(),
+    );
+    expect(container.querySelectorAll(".mn-ph")).toHaveLength(0);
+  });
+
+  it("kirim ulang yang BERHASIL dari layar galeri memuat ulang galerinya", async () => {
+    // Sudah pernah memotret → ✕ dari kamera mendarat di galeri.
+    startMomenSessionAction.mockResolvedValue({
+      status: "ok",
+      remaining: 4,
+      deviceCount: 1,
+    });
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "error",
+      message: c.error.temporary,
+      retryable: true,
+    });
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    await kamera(container).findByRole("button", { name: c.camera.retryPhoto });
+    fireEvent.click(screen.getByRole("button", { name: c.camera.close }));
+
+    const galeri = di(container, ".mn-galeri.mn-on");
+    await waitFor(() => expect(loadMomenPhotosAction).toHaveBeenCalledTimes(1));
+    uploadMomenPhotoAction.mockResolvedValueOnce({
+      status: "ok",
+      remaining: 3,
+    });
+    loadMomenPhotosAction.mockResolvedValue(halaman());
+    fireEvent.click(galeri.getByRole("button", { name: c.camera.retryPhoto }));
+
+    await waitFor(() => expect(loadMomenPhotosAction).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(container.querySelectorAll(".mn-galeri .mn-ph")).toHaveLength(1),
+    );
+  });
+
+  it("jepretan TERAKHIR → galeri terbuka sendiri dan dimuat", async () => {
+    uploadMomenPhotoAction.mockResolvedValue({ status: "ok", remaining: 0 });
+    loadMomenPhotosAction.mockResolvedValue(halaman());
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+
+    await waitFor(
+      () => expect(container.querySelector(".mn-galeri.mn-on")).not.toBeNull(),
+      { timeout: 2500 },
+    );
+    await waitFor(() =>
+      expect(container.querySelectorAll(".mn-galeri .mn-ph")).toHaveLength(1),
+    );
+    // Blob lokal tak dipakai galeri (galeri memuat versi tersimpan) → dilepas.
+    expect(revoked).toContain(urls[0]);
+  });
+
+  it("muat lebih gagal → pesan di LAYAR GALERI + tombol 'Muat lebih' tetap ada", async () => {
+    loadMomenPhotosAction
+      .mockResolvedValueOnce(halaman("2026-12-20T02:00:00Z"))
+      .mockResolvedValue({ status: "error" });
+    render(<MomenCamera {...props} />);
     await bukaGaleri();
 
     const more = await screen.findByRole("button", {
@@ -728,9 +828,11 @@ describe("MomenCamera — galeri 'muat lebih' gagal", () => {
     ).toBeTruthy();
   });
 
-  it("aksi MELEMPAR → pesan yang sama, tombol tetap hidup", async () => {
-    loadMomenPhotosAction.mockRejectedValue(new Error("Failed to fetch"));
-    render(<MomenCamera {...galleryProps} />);
+  it("muat lebih MELEMPAR → pesan yang sama, tombol tetap hidup", async () => {
+    loadMomenPhotosAction
+      .mockResolvedValueOnce(halaman("2026-12-20T02:00:00Z"))
+      .mockRejectedValue(new Error("Failed to fetch"));
+    render(<MomenCamera {...props} />);
     await bukaGaleri();
 
     fireEvent.click(

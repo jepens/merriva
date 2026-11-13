@@ -5,12 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { GuestPrivacyNote } from "@/components/public/guest-privacy-note";
 import { copy } from "@/lib/copy";
 import { encodeCanvas, type EncodedFormat } from "@/lib/image/encode";
-import {
-  countdownParts,
-  msUntilReveal,
-  resolveAlbumPhase,
-  type AlbumPhase,
-} from "@/lib/momen/album-phase";
 import { getDefaultFilmBaker } from "@/lib/momen/film-bake";
 import { FILM_PRESETS, getFilmPreset } from "@/lib/momen/film-presets";
 import { cn } from "@/lib/utils";
@@ -42,16 +36,9 @@ export interface MomenCameraProps {
   quotaPerGuest: number;
   defaultFilter: string;
   allowLibraryUpload: boolean;
-  revealAtIso: string | null;
   heroTitle: string;
   dateLabel: string | null;
   turnstileSiteKey: string | null;
-  initialPhotos: MomenPhotoView[];
-  /** Kursor halaman berikutnya (PER-4); null = album sudah termuat semua. */
-  initialCursor: string | null;
-  /** Jumlah foto & fotografer dari AGREGAT DB — bukan dari daftar yang termuat. */
-  totalPhotos: number;
-  photographers: number;
 }
 
 type Screen = "masuk" | "kamera" | "habis" | "galeri";
@@ -167,12 +154,9 @@ export function MomenCamera(props: MomenCameraProps) {
     quotaPerGuest,
     defaultFilter,
     allowLibraryUpload,
-    revealAtIso,
     heroTitle,
     dateLabel,
     turnstileSiteKey,
-    initialPhotos,
-    initialCursor,
   } = props;
 
   const [screen, setScreen] = useState<Screen>("masuk");
@@ -182,8 +166,17 @@ export function MomenCamera(props: MomenCameraProps) {
   const [remaining, setRemaining] = useState(quotaPerGuest);
   const [taken, setTaken] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState(defaultFilter);
-  const [photos, setPhotos] = useState<MomenPhotoView[]>(initialPhotos);
-  const [cursor, setCursor] = useState<string | null>(initialCursor);
+  /**
+   * Galeri "Fotomu" (DECISIONS #137): HANYA foto perangkat ini, dimuat dari
+   * server setiap kali layar galeri dibuka — halaman tak lagi membawa foto.
+   */
+  const [photos, setPhotos] = useState<MomenPhotoView[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  /** Pemuatan galeri GAGAL (bukan kosong) → tampilkan galat + "Coba lagi". */
+  const [galleryFailed, setGalleryFailed] = useState(false);
+  /** Hanya respons pemuatan TERAKHIR yang boleh mengisi daftar. */
+  const galleryReq = useRef(0);
   const [loadingMore, setLoadingMore] = useState(false);
   /**
    * Galat "muat lebih" punya state SENDIRI: panel galat & toast hanya hidup di
@@ -191,9 +184,6 @@ export function MomenCamera(props: MomenCameraProps) {
    * berarti tamu tak melihat apa pun saat halaman berikutnya gagal.
    */
   const [galleryError, setGalleryError] = useState<string | null>(null);
-  // Angka ringkasan berasal dari agregat server; hitungan lokal hanya menambah
-  // foto yang BARU saja diunggah tamu ini (galeri tak lagi memuat album penuh).
-  const [totalPhotos, setTotalPhotos] = useState(props.totalPhotos);
   const [busy, setBusy] = useState(false);
   /**
    * Jepretan yang GAGAL diunggah, disimpan untuk dikirim ulang (DECISIONS
@@ -206,7 +196,6 @@ export function MomenCamera(props: MomenCameraProps) {
   const [tsReset, setTsReset] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [camError, setCamError] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
   const [lightbox, setLightbox] = useState<MomenPhotoView | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -215,11 +204,6 @@ export function MomenCamera(props: MomenCameraProps) {
   const facingRef = useRef<"environment" | "user">("environment");
   const flashRef = useRef<HTMLDivElement>(null);
 
-  const phase: AlbumPhase = resolveAlbumPhase(now, revealAtIso);
-  // Saat reveal tiba sambil di layar "habis", tampilkan galeri lewat DERIVASI
-  // (bukan setState dalam efek → hindari set-state-in-effect).
-  const shownScreen: Screen =
-    screen === "habis" && phase === "revealed" ? "galeri" : screen;
   const preset = getFilmPreset(selectedFilter);
 
   // Init identitas perangkat + nama tersimpan (localStorage). setState di callback
@@ -237,16 +221,6 @@ export function MomenCamera(props: MomenCameraProps) {
     }, 0);
     return () => clearTimeout(id);
   }, []);
-
-  // Detak untuk countdown + flip fase saat reveal terlampaui. BERHENTI setelah
-  // reveal: tanpa ini React mendiff seluruh grid foto tiap detik selamanya —
-  // termasuk saat tamu sedang membidik (AUDIT PER-7).
-  useEffect(() => {
-    if (revealAtIso === null) return;
-    if (resolveAlbumPhase(Date.now(), revealAtIso) === "revealed") return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [revealAtIso]);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -348,6 +322,52 @@ export function MomenCamera(props: MomenCameraProps) {
     });
   };
 
+  /**
+   * Sesi tak berlaku lagi (cookie 24 jam habis / milik album lain) → kembali ke
+   * layar nama. Token Turnstile lama sudah hangus, jadi widget diminta ulang.
+   */
+  function expireSession() {
+    setScreen("masuk");
+    setError(c.error.session);
+    setTsToken("");
+    setTsReset((n) => n + 1);
+  }
+
+  /**
+   * Muat ulang galeri "Fotomu" dari awal — daftar DIGANTI utuh, bukan ditambal
+   * (foto yang disembunyikan host ikut hilang). Respons yang terlambat dari
+   * pemuatan sebelumnya diabaikan.
+   */
+  async function loadGallery() {
+    const req = ++galleryReq.current;
+    setGalleryLoading(true);
+    setGalleryFailed(false);
+    setGalleryError(null);
+    try {
+      const res = await loadMomenPhotosAction(slug, null);
+      if (req !== galleryReq.current) return;
+      if (res.status === "session") {
+        expireSession();
+        return;
+      }
+      if (res.status !== "ok") {
+        setGalleryFailed(true);
+        return;
+      }
+      setPhotos(res.photos);
+      setCursor(res.nextCursor);
+    } catch {
+      if (req === galleryReq.current) setGalleryFailed(true);
+    } finally {
+      if (req === galleryReq.current) setGalleryLoading(false);
+    }
+  }
+
+  function openGallery() {
+    setScreen("galeri");
+    void loadGallery();
+  }
+
   async function beginSession(goGallery: boolean) {
     const trimmed = name.trim();
     if (!trimmed || !deviceId || starting) return;
@@ -370,13 +390,10 @@ export function MomenCamera(props: MomenCameraProps) {
       lsSet(NAME_KEY, trimmed);
       setRemaining(res.remaining);
       setTaken(res.deviceCount);
-      if (goGallery || (phase === "revealed" && res.remaining === 0)) {
-        setScreen("galeri");
-      } else {
-        // Jatah sudah habis pada album TERJADWAL (tamu membuka link lagi) →
-        // layar "habis" + countdown, bukan kamera dengan shutter mati senyap.
-        setScreen(res.remaining <= 0 ? "habis" : "kamera");
-      }
+      // Jatah sudah habis (tamu membuka QR lagi) → langsung ke fotonya, bukan
+      // kamera dengan shutter mati senyap.
+      if (goGallery || res.remaining <= 0) openGallery();
+      else setScreen("kamera");
     } catch {
       // Aksi MELEMPAR (jaringan venue putus) — tanpa ini tamu hanya melihat
       // tombol kembali aktif tanpa satu pun penjelasan. Pesannya BUKAN "gagal
@@ -437,30 +454,12 @@ export function MomenCamera(props: MomenCameraProps) {
     setRemaining(res.remaining);
     setTaken((t) => t + 1);
     flash();
-    popToast(
-      phase === "revealed" ? c.camera.savedInstant : c.camera.savedHidden,
-    );
-    if (phase === "revealed") {
-      setTotalPhotos((n) => n + 1);
-      setPhotos((prev) => [
-        {
-          id: `local-${Date.now()}`,
-          guestName: name.trim() || "Tamu",
-          filterId,
-          url: v.displayUrl,
-          thumbUrl: v.displayUrl,
-        },
-        ...prev,
-      ]);
-    } else {
-      URL.revokeObjectURL(v.displayUrl);
-    }
-    if (res.remaining <= 0) {
-      window.setTimeout(
-        () => setScreen(phase === "revealed" ? "galeri" : "habis"),
-        900,
-      );
-    }
+    popToast(c.camera.saved);
+    // Galeri dimuat dari server saat dibuka (versi tersimpan, bukan blob lokal).
+    URL.revokeObjectURL(v.displayUrl);
+    // Kirim ulang yang berhasil DARI layar galeri → fotonya harus ikut muncul.
+    if (screen === "galeri") void loadGallery();
+    if (res.remaining <= 0) window.setTimeout(openGallery, 900);
   }
 
   /** Kirim ulang jepretan yang gagal (foto yang sama, bukan jepretan baru). */
@@ -556,6 +555,10 @@ export function MomenCamera(props: MomenCameraProps) {
     setGalleryError(null);
     try {
       const res = await loadMomenPhotosAction(slug, cursor);
+      if (res.status === "session") {
+        expireSession();
+        return;
+      }
       if (res.status !== "ok") {
         // Kursor & tombol dipertahankan (#46); tamu diberi tahu, tak dibiarkan
         // mengira album memang habis sampai di situ.
@@ -575,8 +578,7 @@ export function MomenCamera(props: MomenCameraProps) {
   }
 
   function closeCamera() {
-    if (phase === "revealed") setScreen("galeri");
-    else if (taken > 0) setScreen("habis");
+    if (taken > 0) openGallery();
     else setScreen("masuk");
   }
 
@@ -619,7 +621,6 @@ export function MomenCamera(props: MomenCameraProps) {
   ) : null;
 
   const previewFilter = preset.css === "none" ? undefined : preset.css;
-  const cd = countdownParts(msUntilReveal(now, revealAtIso));
   const cols: MomenPhotoView[][] = [[], []];
   photos.forEach((p, i) => cols[i % 2]!.push(p));
 
@@ -632,20 +633,13 @@ export function MomenCamera(props: MomenCameraProps) {
           `.mn-screen.mn-on` tak pernah cocok dan SEMUA layar tetap
           `display:none`. Lihat AUDIT-2026-09-04 KUA-1. */}
       <section
-        className={cn("mn-screen mn-masuk", shownScreen === "masuk" && "mn-on")}
+        className={cn("mn-screen mn-masuk", screen === "masuk" && "mn-on")}
       >
         <div className="mn-brand">{c.brand}</div>
         <div className="mn-hero">
           {dateLabel ? <div className="mn-kicker">{dateLabel}</div> : null}
           <h1>{heroTitle}</h1>
-          <p>
-            {revealAtIso === null
-              ? c.masuk.introInstant(c.masuk.quota(quotaPerGuest))
-              : c.masuk.introReveal(
-                  c.masuk.quota(quotaPerGuest),
-                  revealLabel(revealAtIso),
-                )}
-          </p>
+          <p>{c.masuk.intro(c.masuk.quota(quotaPerGuest))}</p>
           <div className="mn-pills">
             {c.masuk.pills.map((p) => (
               <span key={p} className="mn-pill">
@@ -687,17 +681,17 @@ export function MomenCamera(props: MomenCameraProps) {
             {/* Sebelum kamera terbuka: tamu di sini menyerahkan FOTO WAJAHNYA,
                 permukaan dengan risiko tertinggi di seluruh produk. */}
             <GuestPrivacyNote className="mn-privacy" />
-            {phase === "revealed" ? (
-              <button
-                type="button"
-                className="mn-ghost"
-                style={{ width: "100%", marginTop: 10 }}
-                disabled={name.trim().length === 0 || starting}
-                onClick={() => void beginSession(true)}
-              >
-                {c.habis.toGallery}
-              </button>
-            ) : null}
+            {/* Kembali ke foto sendiri (mis. membuka QR lagi sesudah acara):
+                sesi baru diperlukan karena galeri hanya untuk perangkat ber-sesi. */}
+            <button
+              type="button"
+              className="mn-ghost"
+              style={{ width: "100%", marginTop: 10 }}
+              disabled={name.trim().length === 0 || starting}
+              onClick={() => void beginSession(true)}
+            >
+              {c.habis.toGallery}
+            </button>
             {errorLine}
             {pendingRow}
             <div className="mn-note">
@@ -709,10 +703,7 @@ export function MomenCamera(props: MomenCameraProps) {
 
       {/* ===== KAMERA ===== */}
       <section
-        className={cn(
-          "mn-screen mn-kamera",
-          shownScreen === "kamera" && "mn-on",
-        )}
+        className={cn("mn-screen mn-kamera", screen === "kamera" && "mn-on")}
       >
         <div className="mn-stage">
           <video
@@ -871,53 +862,54 @@ export function MomenCamera(props: MomenCameraProps) {
 
       {/* ===== HABIS ===== */}
       <section
-        className={cn("mn-screen mn-habis", shownScreen === "habis" && "mn-on")}
+        className={cn("mn-screen mn-habis", screen === "habis" && "mn-on")}
       >
         <div className="mn-emoji">🎞️</div>
         <h2>{c.habis.title}</h2>
         {errorLine}
         {pendingRow}
-        {phase === "revealed" ? (
-          <>
-            <p>{c.habis.revealed}</p>
-            <button
-              type="button"
-              className="mn-ghost"
-              onClick={() => setScreen("galeri")}
-            >
-              {c.habis.toGallery}
-            </button>
-          </>
-        ) : (
-          <>
-            <p>{c.habis.body(taken)}</p>
-            <div className="mn-countwrap">
-              <Cell v={cd.d * 24 + cd.h} label={c.habis.h} />
-              <Cell v={cd.m} label={c.habis.m} />
-              <Cell v={cd.s} label={c.habis.s} />
-            </div>
-          </>
-        )}
+        <p>{c.habis.body}</p>
+        <button type="button" className="mn-ghost" onClick={openGallery}>
+          {c.habis.toGallery}
+        </button>
       </section>
 
       {/* ===== GALERI ===== */}
       <section
-        className={cn(
-          "mn-screen mn-galeri",
-          shownScreen === "galeri" && "mn-on",
-        )}
+        className={cn("mn-screen mn-galeri", screen === "galeri" && "mn-on")}
       >
         <div className="mn-galhead">
-          <div className="mn-kicker">{c.gallery.kickerRevealed}</div>
+          <div className="mn-kicker">{c.gallery.kicker}</div>
           <h2>{heroTitle}</h2>
-          <p>{c.gallery.sub(totalPhotos, props.photographers)}</p>
-          {/* Album reveal-instan: ✕ dari kamera mendarat DI SINI, jadi jepretan
-              tertunda harus bisa dikirim ulang dari layar ini juga. */}
+          {/* Hanya foto perangkat ini (#137) — katakan terus terang, termasuk
+              bahwa galerinya terikat pada HP & browser ini. */}
+          <p>{c.gallery.note}</p>
+          {/* ✕ dari kamera mendarat DI SINI, jadi jepretan tertunda harus bisa
+              dikirim ulang dari layar ini juga. */}
           {errorLine}
           {pendingRow}
         </div>
+        {galleryFailed ? (
+          <div className="mn-more">
+            <div className="mn-err" role="alert">
+              {c.error.temporary}
+            </div>
+            <button
+              type="button"
+              className="mn-ghost"
+              onClick={() => void loadGallery()}
+              disabled={galleryLoading}
+            >
+              {galleryLoading ? c.gallery.loading : c.gallery.retry}
+            </button>
+          </div>
+        ) : null}
         {photos.length === 0 ? (
-          <div className="mn-empty">{c.gallery.empty}</div>
+          galleryFailed ? null : (
+            <div className="mn-empty">
+              {galleryLoading ? c.gallery.loading : c.gallery.empty}
+            </div>
+          )
         ) : (
           <div className="mn-grid">
             {cols.map((col, ci) => (
@@ -937,7 +929,6 @@ export function MomenCamera(props: MomenCameraProps) {
                       loading="lazy"
                     />
                     <figcaption className="mn-who">
-                      <b>{p.guestName}</b>
                       <i>{getFilmPreset(p.filterId).name}</i>
                     </figcaption>
                   </figure>
@@ -981,7 +972,6 @@ export function MomenCamera(props: MomenCameraProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={lightbox.url} alt={c.gallery.by(lightbox.guestName)} />
             <div className="mn-lbcap">
-              {c.gallery.by(lightbox.guestName)} ·{" "}
               {getFilmPreset(lightbox.filterId).name}
             </div>
             <div className="mn-lbrow">
@@ -1007,24 +997,4 @@ export function MomenCamera(props: MomenCameraProps) {
       </div>
     </div>
   );
-}
-
-function Cell({ v, label }: { v: number; label: string }) {
-  return (
-    <div className="mn-cell">
-      <b>{String(v).padStart(2, "0")}</b>
-      <span>{label}</span>
-    </div>
-  );
-}
-
-/** Label jam reveal (WIB). */
-function revealLabel(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Jakarta",
-  }).format(d);
 }

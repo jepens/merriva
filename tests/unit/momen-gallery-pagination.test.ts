@@ -7,9 +7,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *  - PERFORMA: query selalu ber-`limit`, kursor keyset memakai `created_at`
  *    baris terakhir, dan halaman berikutnya dideteksi dengan mengambil satu
  *    baris lebih (bukan query hitung terpisah);
- *  - KEAMANAN: `loadMomenPhotosAction` adalah aksi PUBLIK, jadi gerbang fase
- *    diperiksa ULANG di dalamnya — pra-reveal tak boleh memancarkan foto,
- *    berapa pun kursor yang dikirim klien.
+ *  - KEAMANAN (DECISIONS #137): `loadMomenPhotosAction` adalah SATU-SATUNYA
+ *    jalur baca tamu — tanpa sesi ber-tanda-tangan untuk album itu tak satu
+ *    foto pun keluar, dan dengan sesi hanya foto perangkat SESI itu.
  */
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -25,8 +25,16 @@ vi.mock("@/lib/request-ip", () => ({
   staticRateKey: () => "k",
   getClientIp: () => Promise.resolve("1.2.3.4"),
 }));
+const { cookieValue } = vi.hoisted(() => ({ cookieValue: { current: "" } }));
 vi.mock("next/headers", () => ({
-  cookies: () => Promise.resolve({ get: () => undefined, set: vi.fn() }),
+  cookies: () =>
+    Promise.resolve({
+      get: (name: string) =>
+        name === "momen_sess" && cookieValue.current
+          ? { value: cookieValue.current }
+          : undefined,
+      set: vi.fn(),
+    }),
 }));
 vi.mock("@/lib/storage", () => ({
   getStorage: () => ({
@@ -43,11 +51,24 @@ vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => adminRef.current,
 }));
 
+import { signMomenSession } from "@/lib/momen/session";
 import { fetchMomenPhotos, MOMEN_PAGE_SIZE } from "@/server/momen/photos";
 import { loadMomenPhotosAction } from "@/server/actions/momen-guest";
 
 const ALBUM = "11111111-1111-4111-8111-111111111111";
+const OTHER_ALBUM = "22222222-2222-4222-8222-222222222222";
 const SLUG = "andi-sinta";
+/** Perangkat tamu sesi — cocok dengan `device_id` baris ke-1 di `rows()`. */
+const DEVICE = "d1";
+
+function sesiUntuk(albumId: string): string {
+  return signMomenSession({
+    albumId,
+    deviceId: DEVICE,
+    guestName: "Sasa",
+    iat: Date.now(),
+  });
+}
 
 /** Baris foto sintetis; `created_at` menurun agar urutannya realistis. */
 function rows(n: number, status: "visible" | "hidden" = "visible") {
@@ -89,10 +110,13 @@ function makeChain(
   };
   chain.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => {
     const n = typeof calls.limit === "number" ? calls.limit : available.length;
-    const filtered =
-      calls["eq:status"] === "visible"
-        ? available.filter((r) => r.status === "visible")
-        : available;
+    const filtered = available
+      .filter((r) => calls["eq:status"] !== "visible" || r.status === "visible")
+      .filter(
+        (r) =>
+          calls["eq:device_id"] === undefined ||
+          r.device_id === calls["eq:device_id"],
+      );
     return Promise.resolve({ data: filtered.slice(0, n), error: null }).then(
       res,
       rej,
@@ -128,6 +152,8 @@ let calls: Record<string, unknown>;
 
 beforeEach(() => {
   calls = {};
+  process.env.MOMEN_SESSION_SECRET = "test-secret";
+  cookieValue.current = "";
 });
 
 describe("fetchMomenPhotos — paginasi kursor", () => {
@@ -179,14 +205,30 @@ describe("fetchMomenPhotos — paginasi kursor", () => {
     await fetchMomenPhotos(adminOwner, ALBUM, { includeHidden: true });
     expect(ownerCalls["eq:status"]).toBeUndefined();
   });
+
+  it("deviceId (jalur tamu) → filter `device_id`; tanpa deviceId (pemilik) → seluruh album", async () => {
+    const admin = makeAdmin(rows(3), calls) as never;
+    const page = await fetchMomenPhotos(admin, ALBUM, { deviceId: DEVICE });
+    expect(calls["eq:device_id"]).toBe(DEVICE);
+    expect(page.photos.map((p) => p.deviceId)).toEqual([DEVICE]);
+
+    const ownerCalls: Record<string, unknown> = {};
+    await fetchMomenPhotos(makeAdmin(rows(3), ownerCalls) as never, ALBUM, {
+      includeHidden: true,
+    });
+    expect(ownerCalls["eq:device_id"]).toBeUndefined();
+  });
 });
 
-describe("loadMomenPhotosAction — gerbang fase tetap fail-closed", () => {
-  /** Album aktif dengan `reveal_at` yang dapat diatur per-tes. */
-  function albumAdmin(revealAt: string | null, data = rows(3)) {
-    const photoChain = makeChain(data, {});
+describe("loadMomenPhotosAction — tamu hanya melihat fotonya sendiri (#137)", () => {
+  /** Album aktif; `photoCalls` merekam filter yang dikirim ke `momen_photos`. */
+  function albumAdmin(photoCalls: Record<string, unknown>, data = rows(3)) {
+    const photoChain = makeChain(data, photoCalls);
+    const from = vi.fn((table: string) =>
+      table === "momen_photos" ? photoChain : lookup(table),
+    );
 
-    const lookup = (table: string) => {
+    function lookup(table: string) {
       const chain: Record<string, unknown> = {};
       chain.select = () => chain;
       chain.eq = () => chain;
@@ -200,42 +242,65 @@ describe("loadMomenPhotosAction — gerbang fase tetap fail-closed", () => {
                   status: "active",
                   quota_per_guest: 5,
                   allow_library_upload: true,
-                  reveal_at: revealAt,
                 },
           error: null,
         });
       return chain;
-    };
+    }
 
-    return {
-      from: (table: string) =>
-        table === "momen_photos" ? photoChain : lookup(table),
-    };
+    return { from };
   }
 
-  it("PRA-REVEAL → daftar kosong meski klien mengirim kursor", async () => {
-    // Reveal masih jauh di masa depan.
-    adminRef.current = albumAdmin("2099-01-01T00:00:00+07:00") as never;
-
-    const res = await loadMomenPhotosAction(SLUG, "2026-09-13T10:00:30.000Z");
-
-    expect(res).toEqual({ status: "ok", photos: [], nextCursor: null });
-  });
-
-  it("SUDAH reveal → foto dikembalikan", async () => {
-    adminRef.current = albumAdmin(null) as never;
+  it("TANPA sesi → status 'session', DB tak disentuh sama sekali", async () => {
+    const admin = albumAdmin({});
+    adminRef.current = admin as never;
 
     const res = await loadMomenPhotosAction(SLUG, null);
 
+    expect(res).toEqual({ status: "session" });
+    expect(admin.from).not.toHaveBeenCalled();
+  });
+
+  it("cookie dirusak → status 'session'", async () => {
+    adminRef.current = albumAdmin({}) as never;
+    cookieValue.current = `${sesiUntuk(ALBUM)}x`;
+
+    expect(await loadMomenPhotosAction(SLUG, null)).toEqual({
+      status: "session",
+    });
+  });
+
+  it("sesi album LAIN → status 'session', tanpa membaca foto", async () => {
+    const photoCalls: Record<string, unknown> = {};
+    adminRef.current = albumAdmin(photoCalls) as never;
+    cookieValue.current = sesiUntuk(OTHER_ALBUM);
+
+    const res = await loadMomenPhotosAction(SLUG, null);
+
+    expect(res).toEqual({ status: "session" });
+    expect(photoCalls.limit).toBeUndefined();
+  });
+
+  it("sesi sah → HANYA foto perangkat sesi, status visible", async () => {
+    const photoCalls: Record<string, unknown> = {};
+    adminRef.current = albumAdmin(photoCalls) as never;
+    cookieValue.current = sesiUntuk(ALBUM);
+
+    const res = await loadMomenPhotosAction(SLUG, null);
+
+    expect(photoCalls["eq:device_id"]).toBe(DEVICE);
+    expect(photoCalls["eq:status"]).toBe("visible");
     expect(res.status).toBe("ok");
     if (res.status !== "ok") return;
-    expect(res.photos).toHaveLength(3);
+    // rows(3) berisi tiga perangkat berbeda; hanya milik sesi yang keluar.
+    expect(res.photos.map((p) => p.id)).toEqual(["p1"]);
     expect(res.photos[0]!.url).toContain("https://cdn.test/");
   });
 
   it("rem jaringan GALERI di-scope per acara (slug ter-normalisasi)", async () => {
     // PER-3: tanpa scope, semua acara di WiFi venue yang sama berbagi bucket.
-    adminRef.current = albumAdmin(null) as never;
+    adminRef.current = albumAdmin({}) as never;
+    cookieValue.current = sesiUntuk(ALBUM);
     checkClientRateLimit.mockClear();
 
     await loadMomenPhotosAction(" Andi-Sinta ", null);
@@ -248,7 +313,8 @@ describe("loadMomenPhotosAction — gerbang fase tetap fail-closed", () => {
   });
 
   it("kursor berbentuk liar ditolak (tak menyentuh DB)", async () => {
-    adminRef.current = albumAdmin(null) as never;
+    adminRef.current = albumAdmin({}) as never;
+    cookieValue.current = sesiUntuk(ALBUM);
 
     const res = await loadMomenPhotosAction(SLUG, "x".repeat(500));
 

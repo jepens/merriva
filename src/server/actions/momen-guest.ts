@@ -15,7 +15,6 @@ import {
   signMomenSession,
   verifyMomenSession,
 } from "@/lib/momen/session";
-import { canGuestViewPhotos, resolveAlbumPhase } from "@/lib/momen/album-phase";
 import { momenObjectPaths } from "@/lib/momen/storage-path";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -98,7 +97,6 @@ interface ActiveAlbum {
   albumId: string;
   quotaPerGuest: number;
   allowLibraryUpload: boolean;
-  revealAt: string | null;
 }
 
 /**
@@ -130,7 +128,7 @@ async function resolveActiveAlbum(
 
   const { data: album, error: albumError } = await admin
     .from("momen_albums")
-    .select("id, status, quota_per_guest, allow_library_upload, reveal_at")
+    .select("id, status, quota_per_guest, allow_library_upload")
     .eq("invitation_id", inv.id)
     .maybeSingle();
   if (albumError) {
@@ -145,7 +143,6 @@ async function resolveActiveAlbum(
       albumId: album.id,
       quotaPerGuest: album.quota_per_guest,
       allowLibraryUpload: album.allow_library_upload,
-      revealAt: album.reveal_at,
     },
   };
 }
@@ -222,8 +219,9 @@ async function bersihkanBilaYatim(
 /**
  * Baris foto dengan id ini, apa pun albumnya. Id foto DIPILIH KLIEN (idempotensi
  * kirim ulang, DECISIONS #46) sedangkan `momen_photos.id` adalah primary key
- * GLOBAL, jadi pemiliknya WAJIB diperiksa: id album lain bisa dipungut dari HTML
- * publik halaman album yang sudah reveal. Tanpa pemeriksaan ini, id pinjaman
+ * GLOBAL, jadi pemiliknya WAJIB diperiksa: id foto tak dianggap rahasia (dulu
+ * terpampang di HTML publik album yang sudah reveal; kini di galeri tamu
+ * pemotretnya, #137). Tanpa pemeriksaan ini, id pinjaman
  * membuat `confirm` gagal 23505 sementara objek storage-nya terlanjur ditulis —
  * lolos jatah tamu, slot peserta, dan `photo_ceiling`, dan tak pernah ikut
  * terhapus oleh purge (yang hanya mengenumerasi path dari BARIS).
@@ -639,15 +637,18 @@ export interface MomenGalleryPhoto {
 
 export type MomenGalleryState =
   | { status: "ok"; photos: MomenGalleryPhoto[]; nextCursor: string | null }
+  /** Tak ada sesi sah untuk album ini → tamu harus mengisi nama lagi. */
+  | { status: "session" }
   | { status: "error" };
 
 /**
- * Halaman BERIKUTNYA galeri album (PER-4). Halaman pertama dirender server di
- * `/{slug}/momen`; ini hanya dipanggil saat tamu menekan "muat lebih".
+ * Galeri "Fotomu" — SATU-SATUNYA jalur baca foto untuk tamu (DECISIONS #137).
+ * Halaman `/{slug}/momen` tak merender foto apa pun; klien memanggil ini tiap
+ * kali layar galeri dibuka (kursor null) dan saat "muat lebih".
  *
- * FAIL-CLOSED: gerbang fase diperiksa ULANG di sini — aksi ini publik, jadi
- * tidak boleh bergantung pada halaman yang memanggilnya. Pra-reveal → daftar
- * kosong, sama seperti render awal.
+ * FAIL-CLOSED: hanya foto `visible` milik perangkat DARI COOKIE ber-tanda-
+ * tangan untuk album yang sama. `deviceId` tak pernah diterima dari klien —
+ * tanpa sesi, tak satu foto pun keluar.
  */
 export async function loadMomenPhotosAction(
   slug: string,
@@ -667,18 +668,21 @@ export async function loadMomenPhotosAction(
       : null;
   if (cursor !== null && safeCursor === null) return { status: "error" };
 
+  // Sesi dulu (HMAC murah, tanpa I/O) — tanpa sesi tak ada alasan menyentuh DB.
+  const store = await cookies();
+  const session = verifyMomenSession(store.get(COOKIE_NAME)?.value);
+  if (!session) return { status: "session" };
+
   const admin = createSupabaseAdminClient();
   const lookup = await resolveActiveAlbum(admin, slug);
   if (lookup.kind !== "ok") return { status: "error" };
   const album = lookup.album;
-
-  // Gerbang fase FAIL-CLOSED — satu aturan bersama dengan render awal halaman.
-  if (!canGuestViewPhotos(resolveAlbumPhase(Date.now(), album.revealAt))) {
-    return { status: "ok", photos: [], nextCursor: null };
-  }
+  // Sesi album LAIN tak membuka galeri album ini (sama dengan jalur unggah).
+  if (album.albumId !== session.albumId) return { status: "session" };
 
   const page = await fetchMomenPhotos(admin, album.albumId, {
     cursor: safeCursor,
+    deviceId: session.deviceId,
   });
   // Bacaan gagal → status galat, BUKAN halaman kosong (#46): UI mempertahankan
   // kursor & tombol "Muat lebih" agar tamu bisa mencoba lagi.

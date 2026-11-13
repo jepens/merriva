@@ -27,8 +27,15 @@ vi.mock("@/lib/request-ip", () => ({
 }));
 vi.mock("@/lib/observability", () => ({ reportHandledError }));
 vi.mock("@/lib/turnstile", () => ({ verifyTurnstile: async () => true }));
+const { cookieValue } = vi.hoisted(() => ({ cookieValue: { current: "" } }));
 vi.mock("next/headers", () => ({
-  cookies: async () => ({ get: () => undefined, set: vi.fn() }),
+  cookies: async () => ({
+    get: (name: string) =>
+      name === "momen_sess" && cookieValue.current
+        ? { value: cookieValue.current }
+        : undefined,
+    set: vi.fn(),
+  }),
 }));
 vi.mock("@/lib/storage", () => ({
   getStorage: () => ({
@@ -64,6 +71,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 import { copy } from "@/lib/copy";
+import { signMomenSession } from "@/lib/momen/session";
 import { fetchMomenPhotos } from "@/server/momen/photos";
 import {
   loadMomenPhotosAction,
@@ -87,8 +95,6 @@ const ALBUM_AKTIF = {
     status: "active",
     quota_per_guest: 5,
     allow_library_upload: true,
-    // Sudah lewat → foto boleh tampil (gerbang fase bukan fokus berkas ini).
-    reveal_at: "2020-01-01T00:00:00Z",
   },
   error: null,
 };
@@ -107,6 +113,8 @@ beforeEach(() => {
     momen_photos: { data: [], error: null, count: 0 },
   };
   reportHandledError.mockClear();
+  process.env.MOMEN_SESSION_SECRET = "test-secret";
+  cookieValue.current = "";
 });
 
 describe("mulai sesi kamera — galat DB ≠ album tidak aktif", () => {
@@ -168,7 +176,17 @@ describe("mulai sesi kamera — galat DB ≠ album tidak aktif", () => {
   });
 });
 
-describe("galeri 'muat lebih' — gagal ≠ habis", () => {
+describe("galeri 'Fotomu' — gagal ≠ kosong", () => {
+  // Galeri menuntut sesi sah (#137); fokus berkas ini galat DB, bukan sesi.
+  beforeEach(() => {
+    cookieValue.current = signMomenSession({
+      albumId: ALBUM,
+      deviceId: DEVICE,
+      guestName: "Sasa",
+      iat: Date.now(),
+    });
+  });
+
   it("galat membaca foto → status galat (kursor & tombol dipertahankan UI)", async () => {
     refs.tables.momen_photos = { data: null, error: BOOM };
     expect(await loadMomenPhotosAction(SLUG, null)).toEqual({
@@ -183,7 +201,7 @@ describe("galeri 'muat lebih' — gagal ≠ habis", () => {
     });
   });
 
-  it("album memang kosong (tanpa galat) → status ok dengan daftar kosong", async () => {
+  it("belum ada foto (tanpa galat) → status ok dengan daftar kosong", async () => {
     expect(await loadMomenPhotosAction(SLUG, null)).toEqual({
       status: "ok",
       photos: [],

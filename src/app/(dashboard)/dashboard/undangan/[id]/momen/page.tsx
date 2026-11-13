@@ -16,7 +16,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { copy } from "@/lib/copy";
 import { appUrl } from "@/lib/env";
 import { isUuid } from "@/lib/id";
-import { resolveAlbumPhase } from "@/lib/momen/album-phase";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isPaymentExempt, requireUser } from "@/server/guards/auth";
@@ -110,7 +109,7 @@ export default async function MomenManagePage({
   const { data: album } = await admin
     .from("momen_albums")
     .select(
-      "id, quota_peserta, quota_per_guest, reveal_at, default_filter, allow_library_upload, photo_count",
+      "id, quota_peserta, quota_per_guest, default_filter, allow_library_upload, photo_count",
     )
     .eq("invitation_id", id)
     .maybeSingle();
@@ -243,11 +242,6 @@ export default async function MomenManagePage({
   const participants = stats.participantCount;
   const hiddenCount = stats.hiddenCount;
   const totalPhotos = stats.visibleCount + stats.hiddenCount;
-  // Server Component dinamis (dashboard = SSR ter-auth) — waktu per-request
-  // disengaja; aturan purity react-hooks tak berlaku di sini.
-  // eslint-disable-next-line react-hooks/purity
-  const nowMs = Date.now();
-  const revealed = resolveAlbumPhase(nowMs, album.reveal_at) === "revealed";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -264,10 +258,8 @@ export default async function MomenManagePage({
         photoCount={totalPhotos}
         participants={participants}
         hiddenCount={hiddenCount}
-        revealed={revealed}
         settings={{
           quotaPerGuest: album.quota_per_guest,
-          revealAt: album.reveal_at,
           defaultFilter: album.default_filter,
           allowLibraryUpload: album.allow_library_upload,
         }}

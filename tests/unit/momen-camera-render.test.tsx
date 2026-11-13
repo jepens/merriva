@@ -30,16 +30,10 @@ const baseProps = {
   quotaPerGuest: 5,
   defaultFilter: "hangat",
   allowLibraryUpload: true,
-  revealAtIso: null,
   heroTitle: "Andi & Sinta",
   dateLabel: "Sabtu, 12 Des 2026",
   // null → widget Turnstile tak dirender (tak ada skrip eksternal di test).
   turnstileSiteKey: null,
-  initialPhotos: [],
-  // Galeri ber-paginasi (PER-4): kursor null = tak ada halaman berikutnya.
-  initialCursor: null,
-  totalPhotos: 0,
-  photographers: 0,
 };
 
 function screens(root: HTMLElement) {
@@ -93,6 +87,14 @@ describe("MomenCamera — kelas layar (regresi KUA-1)", () => {
       baseProps.quotaPerGuest,
     );
     expect(container.querySelectorAll(".mn-pip.mn-used")).toHaveLength(0);
+  });
+
+  // DECISIONS #137: halaman tak lagi membawa foto, dan tak ada hitung mundur
+  // reveal — galeri hanya terisi lewat aksi ber-sesi.
+  it("render awal tanpa satu pun foto & tanpa hitung mundur", () => {
+    const { container } = render(<MomenCamera {...baseProps} />);
+    expect(container.querySelectorAll(".mn-ph")).toHaveLength(0);
+    expect(container.querySelector(".mn-countwrap")).toBeNull();
   });
 
   it("lightbox tertutup: `.mn-lightbox` ada tetapi tanpa `mn-on`", () => {

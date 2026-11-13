@@ -601,30 +601,6 @@
   line-height: 1.6;
   max-width: 32ch;
 }
-.mn-countwrap {
-  display: flex;
-  gap: 10px;
-  margin: 26px 0 8px;
-}
-.mn-cell {
-  background: var(--mn-card);
-  border: 1px solid var(--mn-line);
-  border-radius: 14px;
-  min-width: 64px;
-  padding: 12px 8px;
-  box-shadow: var(--mn-shadow);
-}
-.mn-cell b {
-  display: block;
-  font-size: 24px;
-  font-variant-numeric: tabular-nums;
-}
-.mn-cell span {
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mn-muted);
-}
 /* Di-scope `.mn-app` agar mengalahkan reset `.mn-app button { border: 0 }` di
    atas (0,1,1 > 0,1,0). Tanpa itu `border` di sini MATI dan setiap tombol ghost
    Album Momen — "Lihat Album", "Muat lebih banyak" — tampil seperti teks biasa. */

@@ -14,7 +14,6 @@ import { FILM_PRESETS, getFilmPreset } from "@/lib/momen/film-presets";
 import { cn } from "@/lib/utils";
 import {
   moderateMomenPhotoAction,
-  revealMomenNowAction,
   updateMomenSettingsAction,
 } from "@/server/actions/momen-manage";
 
@@ -28,7 +27,7 @@ export interface MomenPhotoRow {
   filterId: string;
   thumbUrl: string;
   status: "visible" | "hidden";
-  /** Berkas storage sudah dihapus saat moderasi pasca-reveal (KEA-3). */
+  /** Berkas storage sudah dihapus saat foto disembunyikan (KEA-3, #137). */
   purged: boolean;
 }
 
@@ -39,11 +38,8 @@ export interface MomenManagerProps {
   photoCount: number;
   participants: number;
   hiddenCount: number;
-  /** Dihitung di server (dinamis) — album sudah terbuka untuk tamu. */
-  revealed: boolean;
   settings: {
     quotaPerGuest: number;
-    revealAt: string | null;
     defaultFilter: string;
     allowLibraryUpload: boolean;
   };
@@ -52,66 +48,21 @@ export interface MomenManagerProps {
   moreHref: string | null;
 }
 
-/** datetime-local "YYYY-MM-DDTHH:mm" → ISO dengan offset WIB (+07:00). */
-function localToWibIso(local: string): string {
-  return `${local}:00+07:00`;
-}
-/** ISO (mengandung offset) → nilai datetime-local untuk input (jam WIB). */
-function isoToWibLocal(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  // Format komponen dalam zona Asia/Jakarta.
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Jakarta",
-  }).formatToParts(d);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
-}
-
 export function MomenManager(props: MomenManagerProps) {
   const { invitationId, guestUrl, quotaPeserta, settings, photos } = props;
   const router = useRouter();
   const confirm = useConfirm();
 
   const [quotaPerGuest, setQuotaPerGuest] = useState(settings.quotaPerGuest);
-  const [revealMode, setRevealMode] = useState<"instant" | "schedule">(
-    settings.revealAt === null ? "instant" : "schedule",
-  );
-  const [revealLocal, setRevealLocal] = useState(
-    isoToWibLocal(settings.revealAt),
-  );
   const [defaultFilter, setDefaultFilter] = useState(settings.defaultFilter);
   const [allowLibrary, setAllowLibrary] = useState(settings.allowLibraryUpload);
 
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
-  const [revealing, setRevealing] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [revealErr, setRevealErr] = useState<string | null>(null);
-  const [revealPast, setRevealPast] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  /**
-   * Perbandingan waktu dilakukan di HANDLER, bukan saat render — `Date.now()` di
-   * badan komponen melanggar `react-hooks/purity`.
-   */
-  function onRevealLocalChange(value: string) {
-    setRevealLocal(value);
-    setRevealErr(null);
-    setRevealPast(
-      value !== "" && new Date(localToWibIso(value)).getTime() <= Date.now(),
-    );
-  }
-
-  const revealed = props.revealed;
   const pesertaLabel =
     quotaPeserta === null
       ? copy.momen.activate.pesertaUnlimited
@@ -120,20 +71,10 @@ export function MomenManager(props: MomenManagerProps) {
   async function saveSettings() {
     setError(null);
     setSavedMsg(null);
-    // Mode "Jadwal sendiri" TANPA tanggal sebelumnya tersimpan diam-diam sebagai
-    // reveal_at = null = "langsung tampil" — sambil menampilkan "Tersimpan ✓".
-    // Blokir di klien (pesan di dekat field) DAN di skema server.
-    if (revealMode === "schedule" && !revealLocal) {
-      setRevealErr(m.revealNeedsDate);
-      return;
-    }
-    setRevealErr(null);
     setSaving(true);
     try {
       const res = await updateMomenSettingsAction(invitationId, {
         quotaPerGuest,
-        revealMode,
-        revealAt: revealMode === "schedule" ? localToWibIso(revealLocal) : null,
         defaultFilter,
         allowLibraryUpload: allowLibrary,
       });
@@ -148,33 +89,6 @@ export function MomenManager(props: MomenManagerProps) {
     }
   }
 
-  async function revealNow() {
-    const ok = await confirm({
-      title: m.revealNowConfirm,
-      description: m.revealNowConfirmBody,
-      confirmLabel: m.revealNowConfirmCta,
-      destructive: true,
-    });
-    if (!ok) return;
-    setError(null);
-    setRevealing(true);
-    try {
-      const res = await revealMomenNowAction(invitationId);
-      if (res.status === "success") {
-        setRevealMode("instant");
-        setRevealLocal("");
-        setRevealErr(null);
-        setRevealPast(false);
-        toast.success(m.revealNowDone);
-        router.refresh();
-      } else {
-        setError(res.message ?? m.error);
-      }
-    } finally {
-      setRevealing(false);
-    }
-  }
-
   async function moderate(photoId: string, action: "hide" | "show" | "delete") {
     if (action === "delete") {
       const ok = await confirm({
@@ -185,9 +99,9 @@ export function MomenManager(props: MomenManagerProps) {
       });
       if (!ok) return;
     }
-    // Pasca-reveal, "Sembunyikan" IKUT menghapus berkas agar tautan yang sudah
-    // tersebar ke tamu benar-benar mati (KEA-3) — permanen, jadi konfirmasi dulu.
-    if (action === "hide" && revealed) {
+    // "Sembunyikan" IKUT menghapus berkas agar tautan yang sudah sampai ke HP
+    // pemotretnya benar-benar mati (KEA-3, #137) — permanen, jadi konfirmasi.
+    if (action === "hide") {
       const ok = await confirm({
         title: m.hidePermanentConfirmTitle,
         description: m.hidePermanentConfirm,
@@ -303,49 +217,6 @@ export function MomenManager(props: MomenManagerProps) {
           </div>
 
           <div className="grid gap-1.5">
-            <span className="text-sm font-medium">{m.revealTitle}</span>
-            {revealed ? (
-              <p className="text-muted-foreground text-xs">{m.revealedNote}</p>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={revealMode}
-                onChange={(e) => {
-                  setRevealMode(e.target.value as "instant" | "schedule");
-                  setRevealErr(null);
-                }}
-                className={cn(field, "w-40")}
-              >
-                <option value="instant">{m.revealInstant}</option>
-                <option value="schedule">{m.revealSchedule}</option>
-              </select>
-              {revealMode === "schedule" ? (
-                <input
-                  type="datetime-local"
-                  value={revealLocal}
-                  onChange={(e) => onRevealLocalChange(e.target.value)}
-                  className={cn(field, "w-56")}
-                  aria-label={m.revealAtLabel}
-                  aria-invalid={revealErr !== null}
-                  aria-describedby={revealErr ? "mn-reveal-err" : undefined}
-                />
-              ) : null}
-            </div>
-            {revealErr ? (
-              <p
-                id="mn-reveal-err"
-                role="alert"
-                className="text-destructive text-xs"
-              >
-                {revealErr}
-              </p>
-            ) : null}
-            {revealMode === "schedule" && revealPast && !revealErr ? (
-              <p className="text-xs text-amber-600">{m.revealPastWarning}</p>
-            ) : null}
-          </div>
-
-          <div className="grid gap-1.5">
             <label className="text-sm font-medium" htmlFor="mn-filter">
               {m.defaultFilter}
             </label>
@@ -393,18 +264,6 @@ export function MomenManager(props: MomenManagerProps) {
                 m.save
               )}
             </Button>
-            {!revealed ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={revealing}
-                onClick={revealNow}
-              >
-                {revealing ? <Loader2 className="size-4 animate-spin" /> : null}
-                {m.revealNow}
-              </Button>
-            ) : null}
             {savedMsg ? (
               <span className="text-xs text-emerald-600">{savedMsg}</span>
             ) : null}

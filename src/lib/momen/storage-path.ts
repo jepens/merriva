@@ -4,9 +4,10 @@ import { extForFormat, type EncodedFormat } from "@/lib/image/encode";
  * Path objek storage foto Album Momen — MURNI (tanpa I/O). Wajib cocok dengan
  * constraint regex kolom `momen_photos.storage_path`/`thumb_path`
  * (`^momen/<album 36>/<photo 36>/(display|thumb)\.(webp|jpg)$`). Album & foto =
- * UUID (36 char) → path tak tertebak: pra-reveal, objek hanya aman selama URL-nya
- * tak dibagikan route (route SSR hanya memancarkan URL saat phase=revealed atau
- * ke pemilik). Ekstensi ikut `EncodedFormat` (jpg = fallback iOS).
+ * UUID (36 char) → path tak tertebak: objek hanya aman selama URL-nya tak
+ * dibagikan route (URL hanya dipancarkan ke pemotretnya sendiri — aksi galeri
+ * ber-sesi, #137 — atau ke pemilik). Ekstensi ikut `EncodedFormat` (jpg =
+ * fallback iOS).
  */
 
 export function momenPrefix(albumId: string, photoId: string): string {

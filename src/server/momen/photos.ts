@@ -27,7 +27,7 @@ export interface MomenPhotoRecord {
   url: string;
   thumbUrl: string;
   status: "visible" | "hidden";
-  /** Objek storage sudah dihapus saat moderasi pasca-reveal (KEA-3). */
+  /** Objek storage sudah dihapus saat foto disembunyikan (KEA-3, #137). */
   purged: boolean;
   createdAt: string;
 }
@@ -59,6 +59,10 @@ export const MOMEN_PAGE_SIZE = 40;
  *
  * `includeHidden` HANYA untuk jalur pemilik (dashboard) — jalur tamu wajib
  * membiarkannya `false` supaya foto yang dimoderasi tak pernah terpancar.
+ *
+ * `deviceId` WAJIB diisi jalur tamu (DECISIONS #137: tamu hanya melihat
+ * fotonya sendiri) dan HARUS berasal dari cookie sesi ber-tanda-tangan, bukan
+ * dari klien. Jalur pemilik membiarkannya kosong (seluruh album).
  */
 export async function fetchMomenPhotos(
   admin: SupabaseClient<Database>,
@@ -67,6 +71,7 @@ export async function fetchMomenPhotos(
     cursor?: string | null;
     limit?: number;
     includeHidden?: boolean;
+    deviceId?: string;
   } = {},
 ): Promise<MomenPhotoPage> {
   const limit = opts.limit ?? MOMEN_PAGE_SIZE;
@@ -82,6 +87,8 @@ export async function fetchMomenPhotos(
     .limit(limit + 1);
 
   if (!opts.includeHidden) query = query.eq("status", "visible");
+  // Index `(album_id, device_id)` sudah ada; jatah ≤ 20 foto per perangkat.
+  if (opts.deviceId) query = query.eq("device_id", opts.deviceId);
   if (opts.cursor) query = query.lt("created_at", opts.cursor);
 
   const { data, error } = await query;

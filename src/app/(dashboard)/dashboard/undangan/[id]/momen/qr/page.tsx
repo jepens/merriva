@@ -46,8 +46,11 @@ export default async function MomenQrPage({
     redirect(`/dashboard/undangan/${id}/momen`);
   }
 
+  // Tautan HANYA di dalam QR, tak ditulis sebagai teks di kartu (permintaan
+  // pemilik 13 Nov 2026): kartu dipajang di venue, jadi teks alamat mudah
+  // difoto & disebar ke yang tak hadir. Catatan: alamatnya tetap bisa ditebak
+  // dari slug undangan — menyembunyikan teks bukan gerbang akses.
   const guestUrl = `${appUrl}/${inv.slug}/momen`;
-  const shortUrl = guestUrl.replace(/^https?:\/\//, "");
   const parsed = parseContentForRender(inv.content, inv.category);
   const title =
     parsed.category === "wedding"
@@ -79,7 +82,6 @@ export default async function MomenQrPage({
         <div className="mn-qr-title">{title}</div>
         <div className="mn-qr-svg" dangerouslySetInnerHTML={{ __html: svg }} />
         <p className="mn-qr-instruction">{q.instruction}</p>
-        <p className="mn-qr-url">{shortUrl}</p>
         <p className="mn-qr-hint">{q.hint}</p>
       </div>
 

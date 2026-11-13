@@ -34,7 +34,7 @@ export interface MomenReceiptEmailData {
   orderCode: string;
   /** Sudah diformat (mis. "30 Januari 2027, 14.00 WIB") atau null. */
   paidAtLabel: string | null;
-  /** Halaman kelola album (dashboard) — tempat atur reveal & cetak QR. */
+  /** Halaman kelola album (dashboard) — tempat cetak QR & unduh ZIP. */
   manageUrl: string;
 }
 

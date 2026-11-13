@@ -1,19 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  canGuestViewPhotos,
-  countdownParts,
-  msUntilReveal,
-  resolveAlbumPhase,
-} from "./album-phase";
 import { FILM_PRESETS, getFilmPreset, isFilmPresetId } from "./film-presets";
 import {
   momenModerationSchema,
   momenSettingsSchema,
   momenUploadMetaSchema,
 } from "./momen-settings-schema";
-
-const NOW = Date.parse("2026-09-05T12:00:00+07:00");
 
 describe("film-presets", () => {
   it("id unik, ada 6 preset, polos netral", () => {
@@ -46,100 +38,26 @@ describe("film-presets", () => {
   });
 });
 
-describe("album-phase", () => {
-  it("null = instan (revealed)", () => {
-    expect(resolveAlbumPhase(NOW, null)).toBe("revealed");
-    expect(msUntilReveal(NOW, null)).toBe(0);
-  });
-
-  it("sebelum reveal → hidden + countdown benar", () => {
-    const at = "2026-09-05T19:30:00+07:00";
-    expect(resolveAlbumPhase(NOW, at)).toBe("hidden");
-    expect(msUntilReveal(NOW, at)).toBe(7.5 * 3600 * 1000);
-  });
-
-  it("tepat & sesudah reveal → revealed, countdown 0", () => {
-    const at = "2026-09-05T12:00:00+07:00";
-    expect(resolveAlbumPhase(NOW, at)).toBe("revealed");
-    expect(resolveAlbumPhase(NOW + 1, at)).toBe("revealed");
-    expect(msUntilReveal(NOW + 999, at)).toBe(0);
-  });
-
-  it("string korup → FAIL-CLOSED (hidden), countdown 0", () => {
-    expect(resolveAlbumPhase(NOW, "besok sore")).toBe("hidden");
-    expect(msUntilReveal(NOW, "besok sore")).toBe(0);
-  });
-
-  // Gerbang fail-closed jalur tamu. Akses pemilik TIDAK diwakili di sini —
-  // ia dipisahkan secara struktural (route dashboard terautentikasi tanpa
-  // gerbang fase), bukan lewat flag (AUDIT KUA-6 / DECISIONS #34).
-  it("canGuestViewPhotos: tamu HANYA saat revealed", () => {
-    expect(canGuestViewPhotos("hidden")).toBe(false);
-    expect(canGuestViewPhotos("revealed")).toBe(true);
-  });
-
-  it("countdownParts membagi hari/jam/menit/detik", () => {
-    expect(countdownParts(0)).toEqual({ d: 0, h: 0, m: 0, s: 0 });
-    expect(countdownParts(90_061_000)).toEqual({ d: 1, h: 1, m: 1, s: 1 });
-    expect(countdownParts(-5000)).toEqual({ d: 0, h: 0, m: 0, s: 0 });
-  });
-});
-
 describe("momenSettingsSchema", () => {
   const valid = {
     quotaPerGuest: 5,
-    revealMode: "schedule" as const,
-    revealAt: "2026-09-05T21:00:00+07:00",
     defaultFilter: "hangat",
     allowLibraryUpload: false,
   };
 
-  it("payload sah lolos (offset & UTC & instan)", () => {
+  it("payload sah lolos", () => {
     expect(momenSettingsSchema.safeParse(valid).success).toBe(true);
-    expect(
-      momenSettingsSchema.safeParse({
-        ...valid,
-        revealAt: "2026-09-05T14:00:00Z",
-      }).success,
-    ).toBe(true);
+  });
+
+  // Waktu reveal dihapus (DECISIONS #137): klien lama yang masih mengirimnya
+  // ditolak (strict), bukan diam-diam menulis `reveal_at`.
+  it("field reveal lama DITOLAK (strict)", () => {
     expect(
       momenSettingsSchema.safeParse({
         ...valid,
         revealMode: "instant",
         revealAt: null,
       }).success,
-    ).toBe(true);
-  });
-
-  // Invarian privasi: mode "jadwal" TANPA tanggal tidak boleh lolos menjadi
-  // reveal_at null (= semua foto tamu langsung publik). Lihat AUDIT UXA-6.
-  it("mode jadwal tanpa tanggal DITOLAK (tak jadi 'langsung tampil')", () => {
-    expect(
-      momenSettingsSchema.safeParse({
-        ...valid,
-        revealMode: "schedule",
-        revealAt: null,
-      }).success,
-    ).toBe(false);
-  });
-
-  it("mode reveal wajib ada & hanya instant|schedule", () => {
-    const { revealMode: _drop, ...tanpaMode } = valid;
-    expect(momenSettingsSchema.safeParse(tanpaMode).success).toBe(false);
-    expect(
-      momenSettingsSchema.safeParse({ ...valid, revealMode: "nanti" }).success,
-    ).toBe(false);
-  });
-
-  it("datetime tanpa zona / teks bebas ditolak", () => {
-    expect(
-      momenSettingsSchema.safeParse({
-        ...valid,
-        revealAt: "2026-09-05T21:00:00",
-      }).success,
-    ).toBe(false);
-    expect(
-      momenSettingsSchema.safeParse({ ...valid, revealAt: "besok" }).success,
     ).toBe(false);
   });
 

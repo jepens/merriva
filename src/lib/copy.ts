@@ -1518,16 +1518,16 @@ export const copy = {
     brand: "Merriva Momen",
     notActive: {
       title: "Album Momen belum aktif",
-      body: "Undangan ini belum mengaktifkan kamera bersama. Hubungi tuan rumah bila kamu ingin ikut memotret momen acara.",
+      body: "Undangan ini belum mengaktifkan Album Momen. Hubungi tuan rumah bila kamu ingin ikut memotret momen acara.",
     },
     masuk: {
       quota: (n: number) => `${n} jepretan`,
-      introInstant: (shots: string) =>
-        `Jadilah fotografer di acara ini! Kamu punya ${shots} — foto langsung tampil di album bersama.`,
-      introReveal: (shots: string, revealLabel: string) =>
-        `Jadilah fotografer di acara ini! Kamu punya ${shots} — semua foto tersembunyi dan terbuka serentak pada ${revealLabel}.`,
-      pills: ["Tanpa install aplikasi", "6 filter film", "Terbuka bersama"],
-      nameLabel: "Namamu (tampil di fotomu)",
+      // Tamu hanya melihat fotonya sendiri; album lengkap untuk tuan rumah
+      // (DECISIONS #137) — jangan janjikan galeri bersama.
+      intro: (shots: string) =>
+        `Jadilah fotografer di acara ini! Kamu punya ${shots}. Fotomu langsung tersimpan untuk tuan rumah dan bisa kamu lihat & unduh di sini.`,
+      pills: ["Tanpa install aplikasi", "6 filter film", "Unduh fotomu"],
+      nameLabel: "Namamu (tercatat di fotomu)",
       namePlaceholder: "mis. Sasa",
       start: "Mulai Memotret",
       starting: "Menyiapkan…",
@@ -1541,7 +1541,6 @@ export const copy = {
       shutter: "Jepret",
       fromGallery: "Unggah dari galeri",
       uploading: "Menyimpan…",
-      savedHidden: "Tersimpan ✓ — tersembunyi sampai reveal",
       // Kirim ulang jepretan yang gagal diunggah (DECISIONS #46) — fotonya
       // disimpan klien, jadi tamu tak perlu (dan sering tak bisa) mengulang.
       retryPhoto: "Kirim ulang foto",
@@ -1549,29 +1548,25 @@ export const copy = {
       // (mis. tamu lalu memilih berkas HEIC): tombol kirim ulang tetap ada,
       // tetapi harus jelas foto mana yang dimaksud.
       pendingShot: "Satu jepretan sebelumnya belum terkirim.",
-      savedInstant: "Tersimpan ✓",
+      saved: "Tersimpan ✓",
       permissionHint:
         "Izinkan akses kamera di browser, atau unggah foto dari galeri.",
     },
     habis: {
       title: "Jatahmu terpakai semua!",
-      body: (total: number) =>
-        `Terima kasih sudah ikut memotret. ${total} foto sudah terkumpul di album. Semua terbuka serentak dalam:`,
-      revealed: "Album sudah terbuka — lihat semua foto sekarang.",
-      toGallery: "Lihat Album",
-      d: "Hari",
-      h: "Jam",
-      m: "Menit",
-      s: "Detik",
+      body: "Terima kasih sudah ikut memotret. Semua fotomu sudah sampai ke tuan rumah.",
+      toGallery: "Lihat Fotoku",
     },
     gallery: {
-      kickerRevealed: "Album Momen · Terbuka 🎉",
-      sub: (photos: number, people: number) =>
-        `${photos} foto oleh ${people} fotografer dadakan`,
-      empty: "Belum ada foto di album. Jadilah yang pertama memotret!",
+      kicker: "Album Momen · Fotomu",
+      // Galeri terikat perangkat (DECISIONS #137): tamu yang ganti HP/browser
+      // tak bisa membukanya lagi — katakan sekarang, saat ia masih bisa unduh.
+      note: "Hanya kamu yang melihat foto-foto ini; tuan rumah menerima semuanya. Unduh yang kamu suka — galeri ini hanya terbuka lagi dari HP & browser yang sama.",
+      empty: "Belum ada foto. Yuk mulai memotret!",
       cameraAgain: "Kamera",
       loadMore: "Muat lebih banyak",
       loading: "Memuat…",
+      retry: "Coba lagi",
       downloadPhoto: "Unduh foto",
       close: "Tutup",
       by: (name: string) => `oleh ${name}`,
@@ -1605,7 +1600,7 @@ export const copy = {
       closedBody:
         "Add-on ini masih kami siapkan dan belum bisa diaktifkan. Undangan Anda tetap berjalan normal — kami kabari begitu Album Momen tersedia.",
       intro:
-        "Kamera bersama untuk tamu — jatah jepret terbatas + filter film + foto terbuka serentak saat reveal. Pilih kapasitas peserta:",
+        "Kamera sekali pakai untuk tamu — jatah jepret terbatas + filter film. Tiap tamu melihat fotonya sendiri; seluruh album hanya untuk Anda. Pilih kapasitas peserta:",
       peserta: (n: number) => `${n} peserta`,
       pesertaUnlimited: "Peserta tak terbatas",
       free: "Gratis",
@@ -1634,7 +1629,7 @@ export const copy = {
       back: "Kembali ke dashboard",
       activeTitle: "Album Momen aktif 🎉",
       activeBody:
-        "Pembayaranmu terverifikasi. Bagikan link kamera atau cetak QR meja untuk tamu.",
+        "Pembayaranmu terverifikasi. Cetak QR meja dan pajang di lokasi acara untuk tamu.",
       manage: "Kelola album",
       expiredTitle: "Pesanan kedaluwarsa",
       expiredBody:
@@ -1663,38 +1658,24 @@ export const copy = {
       settingsTitle: "Pengaturan",
       quotaPerGuest: "Jatah per tamu",
       quotaPerGuestHint: "1–20 jepretan tiap tamu",
-      revealTitle: "Waktu reveal",
-      revealInstant: "Langsung tampil",
-      revealSchedule: "Jadwal sendiri",
-      revealAtLabel: "Buka pada (WIB)",
-      revealNeedsDate:
-        'Isi dulu tanggal & jam bukanya. Bila ingin foto tampil seketika, pilih "Langsung tampil".',
-      revealPastWarning:
-        "Waktu itu sudah lewat — album akan langsung terbuka begitu disimpan.",
       defaultFilter: "Filter bawaan",
       allowLibrary: "Izinkan unggah dari galeri",
       allowLibraryHint: "Mati = hanya jepretan langsung",
       save: "Simpan pengaturan",
       saving: "Menyimpan…",
       saved: "Tersimpan ✓",
-      revealNow: "Reveal sekarang",
-      revealNowConfirm: "Buka semua foto untuk tamu sekarang?",
-      revealNowConfirmBody: "Tindakan ini tak bisa dibatalkan.",
-      revealNowConfirmCta: "Ya, buka sekarang",
-      revealNowDone: "Album dibuka untuk semua 🎉",
-      revealedNote: "Album sudah terbuka untuk tamu.",
       moderationTitle: "Moderasi foto",
       moderationHint:
-        "Kamu bisa melihat semua foto sebelum reveal. Sembunyikan atau hapus yang tak pantas.",
+        "Hanya Anda yang melihat seluruh foto; tiap tamu hanya melihat foto yang ia potret sendiri. Sembunyikan atau hapus yang tak pantas.",
       moderationEmpty: "Belum ada foto masuk.",
       moderationMore: "Muat lebih banyak foto",
       hide: "Sembunyikan",
       show: "Tampilkan",
-      // Pasca-reveal, menyembunyikan IKUT menghapus berkas (KEA-3) — host wajib
-      // tahu sebelum menekan, karena tindakannya permanen.
+      // Menyembunyikan IKUT menghapus berkas (KEA-3, #137) — host wajib tahu
+      // sebelum menekan, karena tindakannya permanen.
       hidePermanentConfirmTitle: "Sembunyikan sekaligus hapus foto ini?",
       hidePermanentConfirm:
-        "Album sudah terbuka untuk tamu, jadi menyembunyikan foto ini sekaligus MENGHAPUS berkasnya agar tautannya tak bisa dibuka lagi. Tindakan ini permanen — foto tak bisa ditampilkan kembali.",
+        "Tamu yang memotretnya sudah bisa membuka foto ini, jadi menyembunyikannya sekaligus MENGHAPUS berkasnya agar tautannya tak bisa dibuka lagi. Tindakan ini permanen — foto tak bisa ditampilkan kembali.",
       hidePermanentConfirmCta: "Ya, sembunyikan & hapus",
       purgedBadge: "Berkas dihapus",
       showPurged:
@@ -1706,7 +1687,8 @@ export const copy = {
       deleted: "Foto dihapus.",
       hiddenBadge: "Disembunyikan",
       guestLinkTitle: "Link kamera tamu",
-      guestLinkHint: "Bagikan / tempel di QR meja.",
+      guestLinkHint:
+        "Untuk uji coba Anda. Tamu masuk lewat QR meja — sebaiknya tautan ini tidak disebar.",
       copy: "Salin",
       copied: "Tersalin ✓",
       qrCta: "Cetak QR meja (A6)",
@@ -1719,7 +1701,7 @@ export const copy = {
       title: "QR Meja — Album Momen",
       kicker: "Album Momen",
       instruction: "Pindai untuk ikut memotret momen acara",
-      hint: "Setiap tamu dapat jatah jepretan terbatas + filter film. Foto terbuka bersama saat reveal.",
+      hint: "Setiap tamu dapat jatah jepretan terbatas + filter film, lalu bisa langsung melihat & mengunduh fotonya sendiri.",
       print: "Cetak / Simpan PDF",
       back: "Kembali",
     },
@@ -1825,19 +1807,19 @@ export const copy = {
     // Kuitansi add-on Album Momen (dikirim saat order add-on → paid). Album ikut
     // masa retensi undangan (bukan durasi paket) → tanpa baris "aktif hingga".
     momenReceipt: {
-      subject: "Album Momen aktif — undangan Anda kini punya kamera bersama",
+      subject: "Album Momen aktif — tamu Anda kini bisa ikut memotret",
       preheader: "Pembayaran diterima. Album Momen siap dibagikan ke tamu.",
       heading: "Album Momen aktif 📸",
       greeting: (name: string | null) => (name ? `Halo ${name},` : "Halo,"),
       intro:
-        "Terima kasih. Pembayaran Anda telah kami terima dan Album Momen kini aktif. Tamu bisa memotret momen acara Anda lewat kamera bersama.",
+        "Terima kasih. Pembayaran Anda telah kami terima dan Album Momen kini aktif. Tamu bisa memotret momen acara Anda lewat kamera di HP mereka, dan seluruh fotonya terkumpul untuk Anda.",
       pkg: "Paket",
       total: "Total",
       order: "Kode order",
       paidAt: "Tanggal bayar",
       cta: "Kelola Album Momen",
       outro:
-        "Buka pengaturan album untuk mengatur waktu buka foto & mencetak QR bagi tamu. Simpan email ini sebagai bukti pembayaran.",
+        "Buka halaman kelola album untuk mencetak QR meja bagi tamu dan mengunduh seluruh foto. Simpan email ini sebagai bukti pembayaran.",
     },
     // Pengingat masa aktif (cron H-14).
     reminder: {

@@ -7829,6 +7829,65 @@ walau sampul Edisi Indonesia sudah "Berita Pernikahan".
 
 ---
 
+## #137 — 2026-11-13 · Album Momen: tamu hanya melihat fotonya sendiri, tanpa reveal; kartu QR tanpa teks alamat
+
+**Keputusan (pemilik, 13 Nov 2026):**
+1. **Kartu QR meja tanpa teks alamat.** Alamat `/{slug}/momen` hanya ada di
+   dalam kode QR; teks di bawahnya dihapus (layar & cetak). Isi QR tak
+   berubah, jadi kartu yang sudah dicetak tetap berfungsi. Teks dashboard yang
+   menyuruh "bagikan link kamera" diganti ajakan mencetak QR. Ini PENGHALANG,
+   bukan gerbang: alamatnya tetap bisa ditebak dari slug undangan.
+2. **Tamu hanya melihat foto yang ia potret sendiri**, di SEMUA album tanpa
+   pengaturan. Seluruh album hanya untuk pemilik acara (dashboard + ZIP).
+3. **Langsung terlihat, tanpa reveal.** Foto tampil di galeri tamu begitu
+   tersimpan. Pengaturan waktu reveal, tombol "Reveal sekarang", dan hitung
+   mundur di layar tamu dihapus.
+
+**Penegakan:**
+- `/{slug}/momen` tak lagi merender foto apa pun. Sebelumnya, sesudah reveal,
+  HTML-nya memuat 40 foto pertama beserta nama pemotretnya untuk SIAPA PUN
+  yang membuka alamat itu (tanpa sesi), dan aksi "muat lebih" juga publik.
+- `loadMomenPhotosAction` menuntut cookie sesi ber-tanda-tangan untuk album
+  yang sama, lalu memfilter `device_id` = perangkat DARI COOKIE. Tanpa sesi →
+  `status: "session"`, tamu kembali ke layar nama.
+- Galeri dimuat ulang tiap kali dibuka (daftar diganti utuh). Ini sekaligus
+  menutup bug lama: bila waktu reveal tiba saat tamu sedang di layar "habis",
+  galeri tampil kosong sampai halaman dimuat ulang.
+- "Sembunyikan" SELALU menghapus berkas + mencatat `purged_at` (#33 dulu hanya
+  pasca-reveal). URL foto sudah sampai ke perangkat pemotretnya begitu foto
+  tampil di galerinya; perilakunya sama dengan mode "Langsung tampil" lama.
+  Foto lama yang disembunyikan pra-reveal (berkas masih ada) tetap bisa
+  "Tampilkan".
+- Kolom `momen_albums.reveal_at` dibiarkan (tanpa migrasi destruktif), tak
+  dibaca/ditulis lagi. `src/lib/momen/album-phase.ts` dihapus.
+
+**Alasan:** foto acara milik tuan rumah; pemilik tak ingin tamu, apalagi orang
+yang sekadar memegang alamatnya, melihat foto orang lain. Pemilik memilih
+"langsung terlihat" daripada "foto sendiri pun menunggu reveal".
+
+**Ditolak:**
+- *Kunci rahasia di QR* (`?k=…`) — mematikan QR yang sudah dicetak, dan hanya
+  membuktikan seseorang memegang tautannya (QR bisa difoto & diteruskan).
+  Sesudah butir 2, penebak alamat tak melihat foto siapa pun.
+- *Foto sendiri tersembunyi sampai reveal* — diajukan; pemilik memilih
+  langsung terlihat.
+- *Pengaturan per album "semua tamu / foto sendiri"* dan *tombol "Bagikan
+  album ke tamu"* — belum diminta klien; ditunda sampai ada yang meminta.
+
+**Konsekuensi:**
+- "Fotonya sendiri" = `device_id` di localStorage + cookie sesi 24 jam. Ganti
+  HP/browser, mode penyamaran, atau data browser terhapus → galerinya tak bisa
+  dibuka lagi; tuan rumah tetap memegang semuanya (kirim dari ZIP). Layar
+  galeri mengatakannya dan mengajak mengunduh.
+- Nama tamu kini hanya dilihat tuan rumah (moderasi & ZIP); galeri tamu tanpa
+  nama dan tanpa angka album.
+- Janji "foto terbuka serentak/bersama" dihapus dari layar tamu, kartu QR,
+  panel beli, dan email kuitansi add-on.
+- "Sembunyikan" kini permanen (dengan konfirmasi). Bedanya dengan "Hapus":
+  barisnya dipertahankan (jatah tamu tak kembali, tercatat di "Disembunyikan").
+
+---
+
 ## Template entri baru
 
 ```
