@@ -111,6 +111,7 @@ export default async function MomenGuestPage({
   return (
     <MomenCamera
       slug={slug}
+      albumId={album.id}
       quotaPerGuest={album.quota_per_guest}
       defaultFilter={album.default_filter}
       allowLibraryUpload={album.allow_library_upload}

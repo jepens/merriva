@@ -27,6 +27,7 @@ afterEach(cleanup);
 
 const baseProps = {
   slug: "andi-sinta",
+  albumId: "9b595692-928e-4aed-be90-b717cfeb41a0",
   quotaPerGuest: 5,
   defaultFilter: "hangat",
   allowLibraryUpload: true,

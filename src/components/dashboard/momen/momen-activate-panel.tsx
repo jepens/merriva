@@ -114,8 +114,9 @@ export function MomenActivatePanel({
                     <Check className="text-primary size-3.5" /> 6 filter film
                   </li>
                   <li className="flex items-center gap-1.5">
-                    <Check className="text-primary size-3.5" /> Reveal +
-                    moderasi
+                    {/* Tanpa reveal sejak DECISIONS #137. */}
+                    <Check className="text-primary size-3.5" /> Moderasi + album
+                    lengkap untuk Anda
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="text-primary size-3.5" /> QR meja + unduh

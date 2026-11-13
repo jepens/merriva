@@ -348,17 +348,18 @@ music_uploads     id, invitation_id→invitations (cascade), user_id→profiles 
 -- Album Momen (add-on, FASE H — detail: docs/MOMEN-SPEC.md)
 momen_albums      id, invitation_id→invitations UNIQUE, status('active'|'archived'),
                   quota_peserta int (NULL=∞), photo_ceiling int (NULL=tanpa plafon),
-                  quota_per_guest int 1..20, reveal_at timestamptz (NULL=instan),
+                  quota_per_guest int 1..20, reveal_at timestamptz (TAK DIPAKAI sejak #137),
                   default_filter, allow_library_upload bool, photo_count int, created_at
 momen_photos      id, album_id→momen_albums, guest_name, device_id uuid, filter_id,
                   storage_path, thumb_path, width, height, bytes,
                   status('visible'|'hidden'), created_at
-                  -- PRIVAT pra-reveal; device_id = identitas peserta (unit yang dijual)
+                  -- tamu hanya membaca foto device_id-nya sendiri, seluruh album hanya pemilik (#137);
+                  -- device_id = identitas peserta (unit yang dijual), dibuat per album di perangkat
 ```
 
 `packages` memperoleh kolom `kind('invitation'|'addon_momen')` — add-on adalah baris `packages` biasa sehingga `orders.package_id` tidak berubah bentuk.
 
-**Row Level Security (wajib aktif di semua tabel):** klien hanya membaca/menulis baris miliknya; halaman undangan publik dilayani dari server (service role) dengan penyaringan eksplisit — data yang boleh publik hanya: `content`, `settings`, `events`, `media`, ucapan yang tidak disembunyikan; `guests`, `gift_notes`, `orders` **tidak pernah** dikirim ke klien publik. Insert `rsvps` publik lewat server action dengan Turnstile + rate limit, tidak langsung dari browser ke Supabase. `momen_albums`/`momen_photos` mengikuti pola yang sama namun lebih ketat: **anon tanpa policy sama sekali** (fail-closed) — seluruh baca/tulis tamu lewat server action service_role yang memverifikasi sesi HMAC + fase reveal terlebih dahulu. `music_uploads` juga **tanpa policy** dan hanya bisa disentuh `service_role` (SELECT/INSERT/UPDATE, tanpa DELETE). Pemilik undangan pun tidak bisa membaca atau menulis catatan unggahnya sendiri, dan justru karena itu catatannya bisa dipercaya. `invitations.music_locked_at` tidak termasuk allowlist kolom yang boleh di-UPDATE pemilik.
+**Row Level Security (wajib aktif di semua tabel):** klien hanya membaca/menulis baris miliknya; halaman undangan publik dilayani dari server (service role) dengan penyaringan eksplisit — data yang boleh publik hanya: `content`, `settings`, `events`, `media`, ucapan yang tidak disembunyikan; `guests`, `gift_notes`, `orders` **tidak pernah** dikirim ke klien publik. Insert `rsvps` publik lewat server action dengan Turnstile + rate limit, tidak langsung dari browser ke Supabase. `momen_albums`/`momen_photos` mengikuti pola yang sama namun lebih ketat: **anon tanpa policy sama sekali** (fail-closed) — seluruh baca/tulis tamu lewat server action service_role yang memverifikasi sesi HMAC untuk album itu terlebih dahulu; baca tamu hanya mengembalikan foto `visible` ber-`device_id` DARI sesi, dan halaman `/{slug}/momen` tak merender foto apa pun (DECISIONS #137). `music_uploads` juga **tanpa policy** dan hanya bisa disentuh `service_role` (SELECT/INSERT/UPDATE, tanpa DELETE). Pemilik undangan pun tidak bisa membaca atau menulis catatan unggahnya sendiri, dan justru karena itu catatannya bisa dipercaya. `invitations.music_locked_at` tidak termasuk allowlist kolom yang boleh di-UPDATE pemilik.
 
 ---
 

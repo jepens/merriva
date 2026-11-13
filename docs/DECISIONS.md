@@ -7886,6 +7886,51 @@ yang sekadar memegang alamatnya, melihat foto orang lain. Pemilik memilih
 - "Sembunyikan" kini permanen (dengan konfirmasi). Bedanya dengan "Hapus":
   barisnya dipertahankan (jatah tamu tak kembali, tercatat di "Disembunyikan").
 
+**Koreksi review (13 Nov, sesudah ff5f5da — review adversarial 4 dimensi):**
+- **`device_id` kini per album** (`momen-device:{albumId}` di localStorage;
+  dulu satu kunci `momen-device` untuk semua acara). Sejak butir 2, `device_id`
+  adalah satu-satunya kunci galeri, padahal pemilik album bisa membacanya
+  (`authenticated` punya SELECT `momen_photos`, policy pemilik). Dengan id
+  global, pemilik acara A bisa memulai sesi di acara B memakai id tamunya
+  (`startMomenSessionAction` menerima `deviceId` dari form sesudah Turnstile)
+  lalu melihat foto tamu itu di acara B — bocor lintas tenant. Per album: id
+  yang terbaca pemilik hanya berlaku di album yang memang sudah ia lihat
+  seluruhnya. Kunci global lama sengaja TIDAK dipakai sebagai cadangan.
+  Dikunci **id album, bukan slug**: aplikasi hanya mengizinkan ganti slug
+  saat draft, tetapi `authenticated` masih punya UPDATE(slug) dan RLS hanya
+  memeriksa pemilik — slug undangan aktif bisa diubah lewat API mentah lalu
+  diklaim tenant lain, sehingga id ber-kunci slug bisa terbawa ke album orang.
+  Ditolak:
+  - *REVOKE kolom `device_id` dari `authenticated`* — butuh migrasi cloud +
+    pgTAP, dan sendirian tak menutup tautan lintas album bila id bocor lewat
+    jalan lain.
+  - *Penjaga server "tolak `deviceId` yang sudah punya baris di album lain"* —
+    hanya relevan untuk baris LAMA (lihat sisa di bawah); kueri per mulai
+    sesi tanpa indeks `device_id`. Dipasang bila pemeriksaan produksi > 0.
+
+  Sisa yang diketahui: baris yang diunggah SEBELUM perbaikan ini memakai id
+  global lama, dan server tetap menerima `deviceId` dari form. Celah baru
+  nyata bila satu browser pernah mengunggah ke dua album milik pemilik
+  BERBEDA sebelum deploy (Momen baru hidup; satu-satunya album pelanggan,
+  rani-wanda, acaranya 6 Des). Pemeriksaan baca-saja di produksi —
+  `select count(*) from (select p.device_id from momen_photos p join
+  momen_albums a on a.id = p.album_id join invitations i on i.id =
+  a.invitation_id group by p.device_id having count(distinct i.user_id) > 1)
+  s;` — harus 0; bila tidak, pasang penjaga server di atas.
+
+  Biaya: perangkat yang SUDAH mengunggah ke sebuah album sebelum deploy
+  mendapat id baru bila memotret lagi — galeri "Fotomu"-nya kosong (foto lama
+  tetap di album pemilik), jatahnya mulai lagi, dan ia terhitung dua kali di
+  `quota_peserta`. Foto uji di album yang belum berlangsung sebaiknya dihapus
+  pemilik ("Hapus" membebaskan slot peserta).
+- ✕ di kamera SELALU ke galeri (dulu: ke layar nama bila belum memotret) —
+  token Turnstile sekali pakai sudah terpakai, jadi "Mulai"/"Lihat Fotoku" di
+  layar nama ditolak "Verifikasi anti-bot gagal".
+- Foto yang tersimpan sesudah tamu menekan ✕ di tengah unggahan kini ikut
+  muncul (galeri dimuat ulang berdasarkan layar SAAT INI, bukan nilai lama).
+- Panel beli tak lagi menjual "Reveal + moderasi"; SPEC §5, DATA-MODEL, dan
+  peta dokumen CLAUDE.md diselaraskan dengan #137.
+
 ---
 
 ## Template entri baru

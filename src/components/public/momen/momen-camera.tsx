@@ -21,7 +21,17 @@ const c = copy.momen;
 const DISPLAY_MAX = 1600;
 const THUMB_MAX = 400;
 const NAME_KEY = "momen-nama";
-const DEVICE_KEY = "momen-device";
+/**
+ * Identitas perangkat PER ALBUM (`momen-device:{albumId}`). Sejak #137
+ * `device_id` adalah satu-satunya kunci galeri "Fotomu", padahal pemilik album
+ * bisa membaca `device_id` tamunya sendiri. Bila satu id dipakai di SEMUA
+ * album, pemilik acara A bisa memakai id tamunya untuk membuka foto tamu itu
+ * di acara B. Dikunci id album, BUKAN slug: slug undangan aktif masih bisa
+ * diubah lewat API mentah, lalu dipakai tenant lain. Jangan pernah jatuh
+ * kembali ke kunci global lama `momen-device` — itu menghidupkan lagi tautan
+ * lintas album.
+ */
+const deviceKeyFor = (albumId: string) => `momen-device:${albumId}`;
 
 export interface MomenPhotoView {
   id: string;
@@ -33,6 +43,9 @@ export interface MomenPhotoView {
 
 export interface MomenCameraProps {
   slug: string;
+  /** Id album — kunci identitas perangkat (lihat `deviceKeyFor`). Bukan rahasia:
+   *  sudah tampak di URL `/media/momen/{albumId}/…`. */
+  albumId: string;
   quotaPerGuest: number;
   defaultFilter: string;
   allowLibraryUpload: boolean;
@@ -151,6 +164,7 @@ async function bakeAndEncode(
 export function MomenCamera(props: MomenCameraProps) {
   const {
     slug,
+    albumId,
     quotaPerGuest,
     defaultFilter,
     allowLibraryUpload,
@@ -212,15 +226,16 @@ export function MomenCamera(props: MomenCameraProps) {
   useEffect(() => {
     const id = setTimeout(() => {
       setName(lsGet(NAME_KEY) ?? "");
-      let dev = lsGet(DEVICE_KEY);
+      const key = deviceKeyFor(albumId);
+      let dev = lsGet(key);
       if (!dev) {
         dev = crypto.randomUUID();
-        lsSet(DEVICE_KEY, dev);
+        lsSet(key, dev);
       }
       setDeviceId(dev);
     }, 0);
     return () => clearTimeout(id);
-  }, []);
+  }, [albumId]);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -263,8 +278,8 @@ export function MomenCamera(props: MomenCameraProps) {
   useEffect(() => () => stopStream(), [stopStream]);
 
   // Lepas object URL jepretan tertunda saat halaman ditinggalkan. Ref dipakai
-  // agar pelepasan HANYA terjadi saat unmount: `pending` yang berubah menjadi
-  // null pada jalur sukses masih memakai URL itu untuk pratinjau galeri.
+  // agar pelepasan HANYA terjadi saat unmount (jalur sukses melepasnya sendiri
+  // di `sendPhoto`).
   const pendingRef = useRef<PendingShot | null>(null);
   useEffect(() => {
     pendingRef.current = pending;
@@ -276,6 +291,14 @@ export function MomenCamera(props: MomenCameraProps) {
     },
     [],
   );
+
+  // Layar yang SEDANG tampil, untuk kode async: `sendPhoto` menutup nilai
+  // `screen` saat rana ditekan, padahal tamu bisa menekan ✕ selama unggahan
+  // berjalan — tanpa ref, foto itu tak pernah muncul di galeri yang ia buka.
+  const screenRef = useRef<Screen>("masuk");
+  useEffect(() => {
+    screenRef.current = screen;
+  }, [screen]);
 
   const flash = () => {
     const el = flashRef.current;
@@ -457,9 +480,12 @@ export function MomenCamera(props: MomenCameraProps) {
     popToast(c.camera.saved);
     // Galeri dimuat dari server saat dibuka (versi tersimpan, bukan blob lokal).
     URL.revokeObjectURL(v.displayUrl);
-    // Kirim ulang yang berhasil DARI layar galeri → fotonya harus ikut muncul.
-    if (screen === "galeri") void loadGallery();
-    if (res.remaining <= 0) window.setTimeout(openGallery, 900);
+    // Tersimpan saat tamu SUDAH di galeri (kirim ulang dari sana, atau ✕
+    // ditekan selama unggahan) → muat ulang agar fotonya ikut muncul. Kalau
+    // belum, jepretan terakhir membuka galeri sendiri. Saling eksklusif: satu
+    // pemuatan cukup (aksi galeri ber-rate-limit).
+    if (screenRef.current === "galeri") void loadGallery();
+    else if (res.remaining <= 0) window.setTimeout(openGallery, 900);
   }
 
   /** Kirim ulang jepretan yang gagal (foto yang sama, bukan jepretan baru). */
@@ -577,17 +603,22 @@ export function MomenCamera(props: MomenCameraProps) {
     }
   }
 
+  /**
+   * ✕ selalu ke galeri, BUKAN kembali ke layar nama: token Turnstile sudah
+   * terpakai saat sesi dimulai (sekali pakai), jadi "Mulai"/"Lihat Fotoku"
+   * dari layar nama akan ditolak "Verifikasi anti-bot gagal". Galeri kosong
+   * tetap punya tombol Kamera.
+   */
   function closeCamera() {
-    if (taken > 0) openGallery();
-    else setScreen("masuk");
+    openGallery();
   }
 
   /**
-   * Jepretan tertunda harus terjangkau dari layar mana pun: menutup kamera
-   * (✕) memindahkan tamu ke "habis"/"masuk", dan dulu tombol kirim ulang hanya
-   * hidup di layar kamera — fotonya ikut terkubur di sana (koreksi review #46).
-   */
-  /**
+   * Jepretan tertunda harus terjangkau dari layar mana pun: ✕ memindahkan tamu
+   * ke galeri, dan dulu tombol kirim ulang hanya hidup di layar kamera —
+   * fotonya ikut terkubur di sana (koreksi review #46). Baris di bawah dirender
+   * di layar masuk, habis, DAN galeri.
+   *
    * Pesan galat untuk layar TERANG (masuk/habis/galeri). Panel merah & toast
    * hanya hidup di layar kamera, jadi tanpa baris ini penolakan PERMANEN atas
    * kirim ulang — jatah habis, album diarsipkan host, sesi kedaluwarsa —
@@ -907,7 +938,9 @@ export function MomenCamera(props: MomenCameraProps) {
         {photos.length === 0 ? (
           galleryFailed ? null : (
             <div className="mn-empty">
-              {galleryLoading ? c.gallery.loading : c.gallery.empty}
+              {/* `busy`: ✕ ditekan saat jepretan masih diunggah — jangan
+                  menyuruh tamu "mulai memotret" padahal fotonya sedang dikirim. */}
+              {galleryLoading || busy ? c.gallery.loading : c.gallery.empty}
             </div>
           )
         ) : (

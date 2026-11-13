@@ -55,6 +55,7 @@ import { MomenCamera } from "@/components/public/momen/momen-camera";
 
 const c = copy.momen;
 const SLUG = "andi-sinta";
+const ALBUM_ID = "9b595692-928e-4aed-be90-b717cfeb41a0";
 
 /**
  * Query di dalam layar yang BENAR-BENAR TAMPIL. jsdom tak menerapkan
@@ -71,6 +72,7 @@ const layarAktif = (container: HTMLElement) =>
 
 const props = {
   slug: SLUG,
+  albumId: ALBUM_ID,
   quotaPerGuest: 5,
   defaultFilter: "hangat",
   allowLibraryUpload: true,
@@ -86,6 +88,8 @@ let urls: string[] = [];
 beforeEach(() => {
   revoked = [];
   urls = [];
+  localStorage.clear();
+  startMomenSessionAction.mockReset();
   startMomenSessionAction.mockResolvedValue({
     status: "ok",
     remaining: 5,
@@ -358,9 +362,8 @@ describe("MomenCamera — kirim ulang jepretan", () => {
 
     fireEvent.click(screen.getByRole("button", { name: c.camera.close }));
 
-    // Ke layar mana pun ✕ membawa tamu (galeri bila sudah ada jepretan, masuk
-    // bila belum), jepretannya harus tetap terjangkau DI LAYAR ITU — bukan
-    // sekadar ada di DOM layar yang tersembunyi.
+    // ✕ membawa tamu ke galeri; jepretannya harus tetap terjangkau DI LAYAR
+    // ITU — bukan sekadar ada di DOM layar yang tersembunyi.
     const keluar = layarAktif(container);
     expect(keluar.getByText(c.camera.pendingShot)).toBeTruthy();
     expect(
@@ -760,12 +763,7 @@ describe("MomenCamera — galeri 'Fotomu' (DECISIONS #137)", () => {
   });
 
   it("kirim ulang yang BERHASIL dari layar galeri memuat ulang galerinya", async () => {
-    // Sudah pernah memotret → ✕ dari kamera mendarat di galeri.
-    startMomenSessionAction.mockResolvedValue({
-      status: "ok",
-      remaining: 4,
-      deviceCount: 1,
-    });
+    // ✕ dari kamera selalu mendarat di galeri; kirim ulang dilakukan dari sana.
     uploadMomenPhotoAction.mockResolvedValueOnce({
       status: "error",
       message: c.error.temporary,
@@ -808,6 +806,89 @@ describe("MomenCamera — galeri 'Fotomu' (DECISIONS #137)", () => {
     expect(revoked).toContain(urls[0]);
   });
 
+  it("✕ DI TENGAH unggahan → foto yang kemudian tersimpan ikut dimuat ke galeri", async () => {
+    // Bake+encode+unggah memakan 0,5–2 dtk di HP murah dan ✕ tak dikunci selama
+    // itu. Pembacaan galeri saat ✕ ditekan terjadi SEBELUM fotonya tersimpan.
+    let selesai: (v: unknown) => void = () => {};
+    uploadMomenPhotoAction.mockReturnValueOnce(
+      new Promise((r) => {
+        selesai = r;
+      }),
+    );
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+
+    fireEvent.click(screen.getByRole("button", { name: c.camera.close }));
+    expect(container.querySelector(".mn-galeri.mn-on")).not.toBeNull();
+    await waitFor(() => expect(loadMomenPhotosAction).toHaveBeenCalledTimes(1));
+
+    loadMomenPhotosAction.mockResolvedValue(halaman());
+    await act(async () => {
+      selesai({ status: "ok", remaining: 4 });
+    });
+
+    await waitFor(() => expect(loadMomenPhotosAction).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(container.querySelectorAll(".mn-galeri .mn-ph")).toHaveLength(1),
+    );
+  });
+
+  it("✕ sebelum memotret → galeri, BUKAN layar nama (token Turnstile sudah terpakai)", async () => {
+    const { container } = render(<MomenCamera {...props} />);
+    await masukKamera();
+
+    fireEvent.click(screen.getByRole("button", { name: c.camera.close }));
+
+    expect(container.querySelector(".mn-galeri.mn-on")).not.toBeNull();
+    expect(container.querySelector(".mn-masuk.mn-on")).toBeNull();
+    // Galeri benar-benar dimuat, dan galeri kosong tetap menawarkan kamera.
+    await waitFor(() => expect(loadMomenPhotosAction).toHaveBeenCalledTimes(1));
+    const galeri = di(container, ".mn-galeri.mn-on");
+    await waitFor(() => expect(galeri.getByText(c.gallery.empty)).toBeTruthy());
+    fireEvent.click(
+      galeri.getByRole("button", { name: c.gallery.cameraAgain }),
+    );
+    expect(container.querySelector(".mn-kamera.mn-on")).not.toBeNull();
+  });
+
+  it("jepretan terakhir tersimpan SAAT tamu sudah di galeri → galeri dimuat sekali, bukan dua kali", async () => {
+    let selesai: (v: unknown) => void = () => {};
+    uploadMomenPhotoAction.mockReturnValueOnce(
+      new Promise((r) => {
+        selesai = r;
+      }),
+    );
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    fireEvent.click(screen.getByRole("button", { name: c.camera.close }));
+    await waitFor(() => expect(loadMomenPhotosAction).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      selesai({ status: "ok", remaining: 0 });
+    });
+    await waitFor(() => expect(loadMomenPhotosAction).toHaveBeenCalledTimes(2));
+    // Pembuka-galeri berjeda 900 ms tak boleh ikut menembak lagi.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 1100));
+    });
+    expect(loadMomenPhotosAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("✕ saat jepretan pertama masih diunggah → galeri bilang 'Memuat…', bukan 'Belum ada foto'", async () => {
+    uploadMomenPhotoAction.mockReturnValueOnce(new Promise(() => {}));
+    const { container } = render(<MomenCamera {...props} />);
+    await unggahDariGaleri(container);
+    fireEvent.click(screen.getByRole("button", { name: c.camera.close }));
+
+    const galeri = di(container, ".mn-galeri.mn-on");
+    await waitFor(() => expect(loadMomenPhotosAction).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(galeri.queryByText(c.gallery.empty)).toBeNull();
+    expect(galeri.getByText(c.gallery.loading)).toBeTruthy();
+  });
+
   it("muat lebih gagal → pesan di LAYAR GALERI + tombol 'Muat lebih' tetap ada", async () => {
     loadMomenPhotosAction
       .mockResolvedValueOnce(halaman("2026-12-20T02:00:00Z"))
@@ -845,5 +926,71 @@ describe("MomenCamera — galeri 'Fotomu' (DECISIONS #137)", () => {
         screen.getByRole("button", { name: c.gallery.loadMore }),
       ).not.toBeDisabled(),
     );
+  });
+});
+
+describe("MomenCamera — identitas perangkat PER ALBUM (koreksi #137)", () => {
+  /**
+   * Pemilik album bisa membaca `device_id` tamunya. Bila id itu berlaku di
+   * album lain, pemilik acara A bisa membuka galeri tamunya di acara B. Kunci
+   * localStorage wajib per album (id album, bukan slug), dan kunci global
+   * lama tak boleh dipakai.
+   */
+  const GLOBAL_LAMA = "99999999-9999-4999-8999-999999999999";
+  const ALBUM_LAIN = "88888888-8888-4888-8888-888888888888";
+
+  /** Mulai sesi di album ini; kembalikan argumen panggilan TERAKHIR. */
+  async function mulaiSesi() {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    fireEvent.change(screen.getByLabelText(c.masuk.nameLabel), {
+      target: { value: "Sasa" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Mulai Memotret/ }));
+    await waitFor(() => expect(startMomenSessionAction).toHaveBeenCalled());
+    const calls = startMomenSessionAction.mock.calls;
+    const [slug, fd] = calls[calls.length - 1]!;
+    return { slug, deviceId: String((fd as FormData).get("deviceId")) };
+  }
+
+  it("id disimpan di kunci `momen-device:{albumId}` dan itulah yang dikirim", async () => {
+    render(<MomenCamera {...props} />);
+    const { slug, deviceId } = await mulaiSesi();
+
+    expect(slug).toBe(SLUG);
+    expect(deviceId).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(localStorage.getItem(`momen-device:${ALBUM_ID}`)).toBe(deviceId);
+  });
+
+  it("kunjungan berikutnya di album yang SAMA memakai id yang sama (galeri & jatah tetap)", async () => {
+    localStorage.setItem(`momen-device:${ALBUM_ID}`, GLOBAL_LAMA);
+    render(<MomenCamera {...props} />);
+    const { deviceId } = await mulaiSesi();
+
+    expect(deviceId).toBe(GLOBAL_LAMA);
+  });
+
+  it("kunci GLOBAL lama `momen-device` TIDAK dipakai (tak ada tautan lintas album)", async () => {
+    localStorage.setItem("momen-device", GLOBAL_LAMA);
+    render(<MomenCamera {...props} />);
+    const { deviceId } = await mulaiSesi();
+
+    expect(deviceId).not.toBe(GLOBAL_LAMA);
+  });
+
+  it("dua album di perangkat yang SAMA → id BERBEDA", async () => {
+    render(<MomenCamera {...props} />);
+    const a = await mulaiSesi();
+    cleanup();
+    startMomenSessionAction.mockClear();
+
+    render(<MomenCamera {...props} albumId={ALBUM_LAIN} slug="acara-lain" />);
+    const b = await mulaiSesi();
+
+    expect(b.slug).toBe("acara-lain");
+    expect(b.deviceId).not.toBe(a.deviceId);
+    expect(localStorage.getItem(`momen-device:${ALBUM_ID}`)).toBe(a.deviceId);
+    expect(localStorage.getItem(`momen-device:${ALBUM_LAIN}`)).toBe(b.deviceId);
   });
 });

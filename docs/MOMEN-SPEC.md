@@ -23,7 +23,7 @@ Keputusan (26 Agu 2026):
 
 **Host (pembeli):** dashboard undangan → beli add-on Momen (alur order & gateway yang sama dengan aktivasi undangan) → atur: jatah/tamu, filter default, izinkan-upload-galeri → cetak QR (halaman cetak A6 per meja; kartu TIDAK menuliskan alamat sebagai teks — alamat hanya di dalam QR) → selama & sesudah acara: pantau jumlah foto, **moderasi** (hanya host yang melihat seluruh foto; sembunyikan/hapus yang tak pantas), unduh **ZIP** seluruh album.
 
-**Visibilitas (DECISIONS #137):** tak ada lagi waktu reveal. Tamu melihat fotonya sendiri begitu tersimpan; foto tamu lain tak pernah sampai ke perangkatnya. Identitas "fotonya sendiri" = `device_id` (localStorage) yang terikat di cookie sesi — ganti HP/browser, mode penyamaran, atau data browser terhapus berarti galerinya tak bisa dibuka lagi; tuan rumah tetap memegang semuanya (kirim dari ZIP).
+**Visibilitas (DECISIONS #137):** tak ada lagi waktu reveal. Tamu melihat fotonya sendiri begitu tersimpan; foto tamu lain tak pernah sampai ke perangkatnya. Identitas "fotonya sendiri" = `device_id` yang dibuat **per album** di localStorage (`momen-device:{albumId}` — id album, bukan slug yang masih bisa diubah lewat API mentah) lalu terikat di cookie sesi. Harus per album karena pemilik album bisa membaca `device_id` tamunya (RLS pemilik), sehingga id yang sama di acara lain akan membuka galeri tamu itu di sana. Akibatnya, ganti HP/browser, mode penyamaran, atau data browser terhapus berarti galerinya tak bisa dibuka lagi; tuan rumah tetap memegang semuanya (kirim dari ZIP).
 
 ## 3. Filter film (6 preset — nama sendiri, bukan merek)
 
