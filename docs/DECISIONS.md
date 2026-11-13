@@ -7916,7 +7916,9 @@ yang sekadar memegang alamatnya, melihat foto orang lain. Pemilik memilih
   `select count(*) from (select p.device_id from momen_photos p join
   momen_albums a on a.id = p.album_id join invitations i on i.id =
   a.invitation_id group by p.device_id having count(distinct i.user_id) > 1)
-  s;` — harus 0; bila tidak, pasang penjaga server di atas.
+  s;` — harus 0; bila tidak, pasang penjaga server di atas. **Diperiksa
+  pemilik 13 Nov 2026 sesudah deploy: 0** — penjaga server tak dipasang.
+  Album rani-wanda saat itu berisi 2 foto dari 1 perangkat.
 
   Biaya: perangkat yang SUDAH mengunggah ke sebuah album sebelum deploy
   mendapat id baru bila memotret lagi — galeri "Fotomu"-nya kosong (foto lama
@@ -7971,7 +7973,13 @@ sejak awal draft-only. Keduanya kini mengikuti perilaku yang berjalan.
 **Konsekuensi:** migrasi wajib diterapkan ke cloud (SQL Editor atau
 `supabase db push`; idempoten). Sampai itu, celah ini tetap terbuka di
 produksi walau kode sudah ter-deploy — aplikasi sendiri tak bergantung pada
-trigger ini.
+trigger ini. **Diterapkan pemilik lewat SQL Editor 13 Nov 2026**, bersama
+`20261112150000` (nama "Berita"). Diverifikasi dengan kueri baca-saja: trigger
+aktif, isi fungsi = md5 versi yang lolos CI (tanpa `\r`), SECURITY INVOKER,
+tak bisa dipanggil sebagai RPC. Karena lewat SQL Editor, versi keduanya tak
+otomatis tercatat di `supabase_migrations.schema_migrations` — pemilik
+mencatatnya manual hari itu (`insert … on conflict (version) do nothing`),
+sehingga `supabase db push` tak menganggapnya tertunda.
 
 ---
 
