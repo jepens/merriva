@@ -104,7 +104,7 @@ Login sebagai admin → dashboard metrik (undangan baru, konversi bayar, revenue
 
 ### Edge cases yang harus ditangani
 
-Pembayaran expired/gagal (order bisa dibuat ulang, draft tidak hilang) · klien mengedit undangan setelah aktif (boleh, kecuali slug — ganti slug maks. 1× setelah aktif) · undangan melewati masa aktif (halaman menampilkan pesan "undangan berakhir" + CTA perpanjang, data tidak dihapus hingga 6 bulan setelah expired) · slug bentrok/kata terlarang (blocklist) · dua orang mengedit bersamaan (last-write-wins + peringatan) · tamu membuka link tanpa token `?g=` (tetap bisa lihat & RSVP manual, nama diketik sendiri).
+Pembayaran expired/gagal (order bisa dibuat ulang, draft tidak hilang) · klien mengedit undangan setelah aktif (boleh, kecuali slug — slug terkunci begitu undangan keluar dari draft, ditegakkan juga di database; admin & jalur server dikecualikan — DECISIONS #138) · undangan melewati masa aktif (halaman menampilkan pesan "undangan berakhir" + CTA perpanjang, data tidak dihapus hingga 6 bulan setelah expired) · slug bentrok/kata terlarang (blocklist) · dua orang mengedit bersamaan (last-write-wins + peringatan) · tamu membuka link tanpa token `?g=` (tetap bisa lihat & RSVP manual, nama diketik sendiri).
 
 ---
 

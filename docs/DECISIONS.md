@@ -7933,6 +7933,48 @@ yang sekadar memegang alamatnya, melihat foto orang lain. Pemilik memilih
 
 ---
 
+## #138 — 2026-11-13 · Slug undangan terkunci di database begitu keluar dari draft
+
+**Keputusan (pemilik, 13 Nov 2026):** slug hanya bisa diganti pemilik selama
+undangan `draft`. Aturan ini sudah dipakai aplikasi sejak awal
+(`updateInvitationSlugAction` memfilter `status = 'draft'`), tetapi database
+tak menegakkannya: `authenticated` punya UPDATE kolom `slug` (init_schema),
+policy `invitations_update` hanya memeriksa kepemilikan, dan tak ada trigger.
+Pemilik undangan aktif bisa mengganti slug-nya langsung lewat PostgREST.
+Migrasi `20261113130000` menambah trigger `enforce_slug_lock` (BEFORE UPDATE
+OF slug): peran klien (`authenticated`/`anon`) non-admin ditolak bila status
+LAMA bukan `draft` (42501).
+
+**Alasan:** slug adalah alamat yang sudah tersebar lewat WhatsApp dan tercetak
+di QR (termasuk QR Album Momen). Mengubahnya memutus semua tautan itu, dan
+slug lama BEBAS diklaim pelanggan lain, sehingga tamu yang membuka tautan lama
+mendarat di undangan orang lain. Ditemukan saat review #137: kunci perangkat
+Album Momen sempat berbasis slug.
+
+**Cakupan:** meniru policy `invitations_delete` (pemilik hanya menghapus
+draft; admin bebas). Jalur server tepercaya — `service_role`, pemilik DB di
+SQL Editor, fungsi security definer — tak dibatasi, untuk perbaikan darurat.
+Mengirim slug yang sama (no-op) tetap lolos. Fungsi SECURITY INVOKER agar
+`current_user` adalah peran pemanggil.
+
+**SPEC berubah:** SPEC §3 (baris kasus tepi) dan DATA-MODEL dulu menulis
+"ganti slug maks. 1× setelah aktif". Aturan itu tak pernah dibangun; kode
+sejak awal draft-only. Keduanya kini mengikuti perilaku yang berjalan.
+
+**Ditolak:**
+- *Cabut UPDATE(slug) dari `authenticated` + aksi server service_role* —
+  mengubah jalur aplikasi yang sudah benar; trigger cukup dan tak menyentuh
+  kode.
+- *Izinkan ganti 1× setelah aktif (teks SPEC lama)* — butuh kolom penghitung
+  dan pengalihan alamat lama agar tautan tak mati; belum pernah diminta.
+
+**Konsekuensi:** migrasi wajib diterapkan ke cloud (SQL Editor atau
+`supabase db push`; idempoten). Sampai itu, celah ini tetap terbuka di
+produksi walau kode sudah ter-deploy — aplikasi sendiri tak bergantung pada
+trigger ini.
+
+---
+
 ## Template entri baru
 
 ```
